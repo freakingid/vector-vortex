@@ -34,7 +34,7 @@
      Contract: EXTERNAL-FILES.md rule 1. -->
 <script type="module">
   try {
-    const m = await import("./lib/kit-leaderboard.js");
+    const m = await import("./lib/kit-leaderboard/kit-leaderboard.js");
     window.KitLeaderboard = m;
   } catch (e) {
     /* absence is the normal fallback path — the game plays with no leaderboard */

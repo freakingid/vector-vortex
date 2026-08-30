@@ -10,25 +10,24 @@ OUT_DIR="$GAME_DIR/dist"
 OUT_ZIP="$OUT_DIR/vector-vortex-itch.zip"
 
 HTML_FILE="dist/vector-vortex.html"
-LIB_FILE="lib/kit-leaderboard.js"
+LIB_FILES=(lib/kit-names/kit-names.js lib/kit-storage/kit-storage.js lib/kit-leaderboard/kit-leaderboard.js lib/kit-profile/kit-profile.js)
 
 cd "$GAME_DIR"
 
 # Always build fresh — shipping a stale dist/ is a class of bug worth one line.
 node build.js
 
-for f in "$HTML_FILE" "$LIB_FILE"; do
+for f in "$HTML_FILE" "${LIB_FILES[@]}"; do
   [[ -f "$f" ]] || { echo "Missing expected file: $GAME_DIR/$f" >&2; exit 1; }
 done
 
 STAGE_DIR="$(mktemp -d)"
 trap 'rm -rf "$STAGE_DIR"' EXIT
 
-mkdir -p "$STAGE_DIR/lib"
 cp "$HTML_FILE" "$STAGE_DIR/index.html"
-cp "$LIB_FILE"  "$STAGE_DIR/lib/kit-leaderboard.js"
+for f in "${LIB_FILES[@]}"; do mkdir -p "$STAGE_DIR/$(dirname "$f")"; cp "$f" "$STAGE_DIR/$f"; done
 
 mkdir -p "$OUT_DIR"; rm -f "$OUT_ZIP"
-( cd "$STAGE_DIR" && zip -q -r "$OUT_ZIP" index.html lib/kit-leaderboard.js )
+( cd "$STAGE_DIR" && zip -q -r "$OUT_ZIP" index.html lib )
 
 echo "Packaged: $OUT_ZIP"; unzip -l "$OUT_ZIP"

@@ -24,12 +24,20 @@ script, and so the game itself, is untouched either way.
 
 ## Inventory
 
-| File | What | Load style | Absent behaviour |
+Vendored from coinless-kit, mirroring its `modules/` layout so relative imports
+between them stay byte-identical to upstream. Each carries a `.NOTES.md`
+backport packet.
+
+| File | Version | Load style | Absent behaviour |
 |---|---|---|---|
-| `lib/kit-leaderboard.js` | Coinless Kit online leaderboard client | `<script type="module">` bridge → `window.KitLeaderboard` | No online board; local scores unaffected |
+| `lib/kit-names/kit-names.js` | 0.1.0 | imported by the others | — |
+| `lib/kit-storage/kit-storage.js` | 0.1.0 | imported by kit-profile | No persistence; in-memory shim |
+| `lib/kit-profile/kit-profile.js` | 0.1.1 | module bridge | Single anonymous session |
+| `lib/kit-leaderboard/kit-leaderboard.js` | 0.2.0 | module bridge → `window.KitLeaderboard` | No online board; local scores unaffected |
 
-**Pinning:** record the kit version this game is built against here whenever
-`lib/kit-leaderboard.js` is updated. Games pin a version deliberately rather
-than tracking the kit's `main`.
+⛔ **Vendored copies are pinned by the `VERSION` string inside each file**, not
+by a git tag on this repo. Update the table whenever a copy is refreshed or
+edited, and record the edit in that module's `.NOTES.md`.
 
-- Current: *(not yet vendored — see GDD §21 #3)*
+⛔ The whole `lib/` tree fails on `file://` by design (rule 2) — the game plays
+without it.

@@ -255,21 +255,27 @@ absence costs a life.
 
 ### Save data
 
-⛔ **Once shipped, a `localStorage` key is never renamed, merged, or
-version-bumped.** Renaming silently wipes every player's data.
+⛔ **`kit-storage` owns the keyspace.** The game never chooses a raw
+`localStorage` key name and never enumerates storage — no `key(i)`, no `.length`,
+no `Object.keys` over storage, anywhere in the build. All keys are
+`coinless.<gameId>.<key>`, declared up front; `get`/`set` on an undeclared key
+throws.
 
-| Key | Scope | Lazy? |
-|---|---|---|
-| `vv_settings_v1` | Per-profile | No |
-| `vv_achievements_v1` | Per-profile | No |
-| `vv_scores_v1` | Machine-wide, shared | No |
-| `vv_profiles_v1` | Global | No |
-| `vv_telemetry_v1` | Per-profile | Yes |
+| Declared key | Scope |
+|---|---|
+| `settings` | Per-profile |
+| `achievements` | Per-profile |
+| `scores` | Root, shared across profiles |
+| `telemetry` | Per-profile, lazy |
 
-⛔ **A row-shape change bumps the stored envelope's `v`, never the key name.**
+⛔ **A row-shape change bumps that key's declared version and supplies a
+`migrate`, never a new key name.** Renaming a key silently wipes player data.
 
 ⛔ **New state is additive, under known-value-else-default loading.** Removing a
 field needs no migration — a saved value for a deleted field orphans harmlessly.
+
+⛔ **Vector Vortex has no legacy stores.** `kit-profile` is wired with empty
+`legacyRosterKey`/`legacyProbeKeys` so its `afd_*` import path never runs.
 
 ⛔ **Achievement `id` values are save data and are never renamed**, however
 dated the spelling looks. Renaming one drops that unlock for every player.
@@ -303,6 +309,81 @@ trigger to fill the enum.
 ⛔ **Read the Worker's registered `statsFields` from
 `github.com/freakingid/coinless-kit`'s `services/leaderboard/src/registry.js`
 before sending a stats key.** An unregistered key flags every row it posts.
+
+---
+
+## Kit modules and extraction
+
+This game both **consumes** Coinless Kit modules and **produces** new ones. Both
+directions obey the same boundary.
+
+### ⛔ The boundary contract
+
+**A kit module never reaches into game state.** No `state`, no `C`, no game
+object, no game global — in either direction. Everything crosses the boundary as
+an explicit parameter or a callback the game supplies:
+
+```js
+// right
+const board = KitLeaderboard.create({ getPlayer: () => profiles.player() });
+// wrong — the module now knows what a Skimmer is
+const board = KitLeaderboard.create({ game: state });
+```
+
+This mirrors the kit's own hard constraint in reverse ("no game code lives
+here, ever"). A module that violates it is not extractable, and extraction is
+the whole point.
+
+### Vendored modules — editing a copy in `lib/`
+
+Kit modules are vendored into `lib/` at a pinned version and used directly.
+
+⛔ **Fix a kit module HERE, in `lib/`, not in the coinless-kit repo.** That is
+deliberate — the change gets exercised by a real game before it lands in the
+shared repo.
+
+⛔ **The edit must stay game-agnostic.** If a change can only work for Vector
+Vortex, it does not belong in a kit module; put it in the game's own wrapper.
+
+⛔ **Bump the module's `VERSION` string** per the kit's semver rule: PATCH for a
+fix with no contract change, MINOR for additive, MAJOR for breaking.
+
+⛔ **Backporting to coinless-kit is a separate, manual step**, done later,
+verified against that repo's own suite. Editing a file here never implies it.
+
+### ⛔ Every `lib/` module carries a sibling `.NOTES.md`
+
+`lib/kit-leaderboard.js` → `lib/kit-leaderboard.NOTES.md`. This is the backport
+packet: a reviewer merging into coinless-kit reads one file, not this game's
+whole decision history.
+
+Each entry records: version bumped, what changed, why, confirmation it is
+game-agnostic, and backport status (`not yet` / `backported YYYY-MM-DD` /
+`rejected — reason`). `DECISIONS.md` gets a one-line pointer, never the writeup.
+
+### Modules built here, destined for the kit
+
+Several systems in `src/` do not exist in the kit yet and are being built
+**kit-shaped from v1** so extraction is a copy, not a rewrite:
+
+| `src/` module | Future kit module |
+|---|---|
+| `04-input.js` | `kit-input` — four devices → one struct |
+| `15-render-hud.js` (menu/screen-state portion) | `kit-menu` |
+| `16-audio-engine.js` + `18-audio-director.js` | `kit-audio` — scheduler, buses, intensity |
+| `14-render-entities.js` (glow/particle primitives) | `kit-fx` |
+| `20-achievements.js` | `kit-achievements` |
+| `22-meta.js` (local high scores portion) | `kit-scores` |
+
+⛔ **These obey the boundary contract from their first commit** — explicit
+params and callbacks, no game reach. They also carry a `.NOTES.md` from the
+start, in `src/`, alongside the module; that file doubles as the module's draft
+kit documentation, so pushing it to coinless-kit is copying the code and its
+notes, not writing a doc from scratch.
+
+⚠ **SETTLED — kit-shaping these costs real overhead per phase and is worth it.**
+Paul's call, 2026-08-30. Do not "simplify" a module by letting it read game
+state because the boundary felt inconvenient in one phase.
 
 ---
 

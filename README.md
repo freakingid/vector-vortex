@@ -37,7 +37,7 @@ oracle.
 src/          numbered modules, concatenated in build.js MANIFEST order
 tools/        design instruments (music-lab, well-lab) — not shipped
 scratchpad/   Node test harness and suite
-lib/          vendored third-party runtime modules
+lib/          vendored kit modules, each with a .NOTES.md backport packet
 log/          per-changeset narrative logs
 archive/      spent planning docs
 dist/         generated — do not edit

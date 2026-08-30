@@ -661,21 +661,31 @@ Content gated behind clearing 99 levels is content for nobody. Revisit if teleme
 
 Specced against Orbital Overhaul's shipped, working implementations rather than invented.
 
-### 15.1 Storage keys
+### 15.1 Storage
 
-New game, clean slate — no legacy keys to freeze. Prefix `vv_`.
+⛔ **`kit-storage` owns the keyspace.** The game does not choose raw
+`localStorage` key names. All keys are `coinless.<gameId>.<key>`, declared up
+front via `create({gameId, keys})` with a version and optional `migrate` per key;
+`get`/`set` on an undeclared key throws.
 
-| Key | Owner | Scope | Lazy? |
-|---|---|---|---|
-| `vv_settings_v1` | Options | Per-profile | No |
-| `vv_achievements_v1` | Achievements | Per-profile | No |
-| `vv_scores_v1` | Local high scores | ⛔ Machine-wide, shared | No |
-| `vv_profiles_v1` | Profile roster | Global | No |
-| `vv_telemetry_v1` | Telemetry ring | Per-profile | ⛔ Yes |
+⛔ **Vector Vortex is a new game with no legacy stores.** `kit-profile` is wired
+with empty `legacyRosterKey` / `legacyProbeKeys` so its `afd_*` import path —
+Orbital Overhaul's — never runs here.
 
-⛔ **Once shipped, a key is never renamed, merged, or version-bumped** — renaming silently wipes every player's data. New state is additive under known-value-else-default loading, so removing a field needs no migration: a saved value for a deleted field orphans harmlessly.
+| Declared key | Scope | Notes |
+|---|---|---|
+| `settings` | Per-profile, via `scope(profileId)` | Options, bindings, track choice |
+| `achievements` | Per-profile | Lifetime + weekly + tiers |
+| `scores` | Root store, shared across profiles | Records stamped `profileId`/`profileName` |
+| `telemetry` | Per-profile | ⛔ Lazy — untouched unless capture is on |
 
-⛔ **A row-shape change bumps the envelope's `v`, never the key name.**
+The profile roster itself is `kit-profile`'s, not ours.
+
+⛔ **A row-shape change bumps that key's declared version and supplies a
+`migrate`, never a new key name.**
+
+⛔ **New state is additive under known-value-else-default loading.** Removing a
+field needs no migration — a saved value for a deleted field orphans harmlessly.
 
 ### 15.2 Profiles
 
@@ -743,6 +753,43 @@ Columns come in three kinds and the names do not tell you which: **instantaneous
 This is a tuning and debugging instrument. Because the simulation is deterministic — seeded RNG, fixed timestep, one input struct — a run is described by `{seed, mode, startDepth, inputEvents[]}` and replays exactly. ⛔ **It is explicitly not an anti-cheat mechanism** (§15.4).
 
 **⚠ OPEN #5** — aggregate telemetry destination. See §21.
+
+---
+
+### 15.7 Kit boundary and extraction
+
+⛔ **A kit module never reaches into game state**, in either direction. No
+`state`, no `C`, no game object. Everything crosses as an explicit parameter or a
+callback the game supplies. This mirrors the kit's own "no game code lives here,
+ever" constraint, and it is what makes extraction a copy rather than a rewrite.
+
+**Consuming.** Kit modules are vendored into `lib/` at a pinned `VERSION`. A fix
+is made to the vendored copy **here**, so it is exercised by a real game before
+landing in the shared repo; it must stay game-agnostic; the `VERSION` is bumped
+per semver; and backporting to coinless-kit is a **separate manual step**, never
+implied by the edit.
+
+⛔ **Every `lib/` module carries a sibling `.NOTES.md`** — the backport packet.
+Version bumped, what changed, why, game-agnostic confirmation, backport status.
+A coinless-kit reviewer reads that one file, not this game's decision history.
+Template: `lib/MODULE-NOTES-TEMPLATE.md`.
+
+**Producing.** Six systems here do not exist in the kit yet and are built
+kit-shaped from v1, each carrying a `.NOTES.md` from its first commit that
+doubles as draft kit documentation:
+
+| `src/` module | Future kit module |
+|---|---|
+| `04-input.js` | `kit-input` |
+| `15-render-hud.js` (menu/screen-state) | `kit-menu` |
+| `16-audio-engine.js` + `18-audio-director.js` | `kit-audio` |
+| `14-render-entities.js` (glow/particle primitives) | `kit-fx` |
+| `20-achievements.js` | `kit-achievements` |
+| `22-meta.js` (local high scores) | `kit-scores` |
+
+⚠ **SETTLED — the per-phase overhead of kit-shaping is accepted deliberately**
+(Paul, 2026-08-30). Do not let a module read game state because the boundary felt
+inconvenient in one phase.
 
 ---
 
@@ -909,14 +956,18 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 | 27 | **Multi-file `src/` + concat build** | Paul's direction, 2026-08-30; differs from OO's single-script invariant |
 | 28 | Overdrive is flags in the config, not a fork | One oracle, one test surface |
 | 29 | Doc and session conventions carried from Orbital Overhaul | 41 changesets of evidence |
+| 30 | Start Depth bonus counts toward score; `start_depth` also a stats field | Preserves the arcade feel while leaving a board filter possible |
+| 31 | Kit modules vendored to `lib/` at a pinned VERSION, fixed here, backported manually | The fix is exercised by a real game before it reaches the shared repo |
+| 32 | Every kit module carries a sibling `.NOTES.md` backport packet | A coinless-kit reviewer reads one file, not this game's history |
+| 33 | Six further systems built kit-shaped from v1 | Extraction becomes a copy rather than a rewrite; overhead accepted |
 
 ---
 
 ## 21. Open questions
 
 1. **Dim band (§3.7)** — keep at 65–80, move earlier, or cut? At a ~35–40 ceiling it is content almost nobody sees. Blocks the rendering spec.
-2. **Start Depth and the board (§4.6)** — include the bonus in submitted score, include it with a `start_depth` stats field plus a "Depth 1 only" filter, or exclude it? I recommend the middle. Blocks the Worker registry entry.
-3. **Kit consumption (§15.2)** — Orbital Overhaul has its own `Profiles`; the kit has `kit-profile` extracted from it, plus `kit-storage` and `kit-names`, all currently untagged while `kit-leaderboard` is pinned `v0.2.0`. Does Vector Vortex consume the kit modules or implement locally and extract later? Blocks the meta spec.
+2. ~~**Start Depth and the board (§4.6)**~~ — **RESOLVED 2026-08-30.** The bonus counts toward the submitted score, and `start_depth` ships as a registered stats field so a "from level 1" board filter is possible later without a schema change.
+3. ~~**Kit consumption (§15.2)**~~ — **RESOLVED 2026-08-30.** Kit modules are vendored into `lib/` at a pinned `VERSION` and used directly. Fixes are made to the vendored copy here, kept game-agnostic, and backported to coinless-kit as a separate manual step. Six further systems are built kit-shaped from v1 for later extraction. See §15.7.
 4. **Achievements (§15.5)** — local-only, or eventually server-backed? Changes whether the evaluator emits a submittable payload.
 5. **Aggregate telemetry (§15.6)** — anything posted anywhere, or strictly local export?
 6. **Mimic** — comfortable building an enemy I have flagged as likely to be cut? ~100 lines, cheap to try.

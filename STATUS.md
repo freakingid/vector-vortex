@@ -21,8 +21,17 @@ Version: 0.0.1 · Changeset: CS001 · Phase: P0 · Wells: 0/16 · Tracks: 0/5
 
 ## Open questions (blocking)
 
-- GDD §21 #3 — kit consumption vs local implementation. Blocks `22-meta.js`.
-- GDD §21 #2 — Start Depth bonus treatment. Blocks the Worker registry entry.
+- None. GDD §21 #2 and #3 both resolved 2026-08-30 — see `DECISIONS.md`.
+
+## Carried tasks (not blocking CS001)
+
+- Register `vector-vortex` in the Worker's `services/leaderboard/src/registry.js`
+  with the seven stats keys, before any submission is attempted.
+- ~~Vendor kit modules~~ — done. All four (`kit-names` 0.1.0, `kit-storage`
+  0.1.0, `kit-profile` 0.1.1, `kit-leaderboard` 0.2.0) are in `lib/`, unmodified,
+  each with a `.NOTES.md`.
+- GDD §15.1 was rewritten: `kit-storage` owns the keyspace, so the invented
+  `vv_*` key table is gone. `CLAUDE.md`'s save-data table follows it.
 
 ## Next up
 
