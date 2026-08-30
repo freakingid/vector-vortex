@@ -119,7 +119,7 @@ function buildGame(opts = {}) {
     "mulberry32", "rngInt", "rngPick", "invPerspective",
     "Enemy", "Vaulter", "entityPoints", "VAULTER_POLY", "drawVaulter",
     // the spawner and the well lifecycle (08/23, CS003 P2)
-    "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit",
+    "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit", "ENEMY_KINDS",
     "enterWell", "nextWell", "startGame",
     // collision and the Purge (09-collision.js, CS003 P3)
     "updateCollisions", "collideShots", "collideSkimmer", "killSkimmer",

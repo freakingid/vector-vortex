@@ -1,184 +1,73 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS003 (P4 of 5 done) · Wells: 16/16 · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS004 (not started) · Wells: 16/16 · Enemies: 1/6 Classic · Tracks: 0/5
 
-## Phase ledger — CS003
+## Phase ledger — CS004
 
-- **P1 — the RNG, the entity contract, the Vaulter.** Done 2026-08-30.
-- **P2 — the spawner and the well lifecycle.** Done 2026-08-30.
-- **P3 — collision and the Purge.** Done 2026-08-30.
-- **P4 — death, lives, respawn.** Done 2026-08-30.
-
-`01-rng.js`: `mulberry32` + `rngInt` / `rngPick`; `state.seed` and `state.rng`
-default from `C.RNG_DEFAULT_SEED`, and `startGame()` (P2) mints the run's real
-one. `07-enemies.js`: the `Enemy` base — six fields, three signatures, no
-behaviour — and the Vaulter (climb, the L2 vault gate, ungated rim hunting,
-`killDepth = 1 - RIM_CONTACT_DEPTH`). Every hop goes through `laneHop()` and
-writes back the `dir` it returns. `14-render-entities.js`: `entityPoints()`,
-the shared projection all nine enemies will use, plus `invPerspective()` in
-`03-wells.js` — an enemy's drawn depth extent scales with its own perspective
-position, so it shrinks with distance instead of growing.
-
-Judgment calls: **(a)** added `C.RNG_DEFAULT_SEED` beyond the phase's listed
-constants — a default seed is a magic number, and the no-inline-numbers
-invariant outranks the list. **(b)** `entityPoints` pulls a silhouette inward
-when it would reach past the rim, rather than letting the clamp flatten a
-rim-hunting Vaulter into a different shape. **(c)** the hop timer runs during a
-hop, so hop *starts* are one `VAULT_INTERVAL` apart; reaching the rim resets it,
-so arrival never lunges.
-
-**P2.** `08-spawner.js`: `spawnEnemy(kind, lane, depth)` is the ONE way an
-enemy enters `state.enemies` — it owns GDD §6.3's safe-spawn rule (a spawn in
-the Skimmer's lane is LOWERED to `SAFE_SPAWN_DEPTH`, never relocated sideways,
-so CS004's Carrier splits keep the shape they teach) and the `ENEMY_CAP`
-ceiling. `updateSpawner` counts UP to `SPAWN_INTERVAL` and HOLDS there when the
-board is full, so a freed slot refills the same step. `wellCleared` is the two
-conditions, quota AND no `blocksClear` survivor. `23-main.js`: `enterWell()` /
-`nextWell()` / `startGame(seed)`, the enemy pass + end-of-frame filter, the
-⚠ temporary `WELL_CLEAR_HOLD` branch, and enemies in the z-order between the
-well and the shots. Boot now calls `startGame()`; the debug cycler routes
-through `enterWell()`.
-
-Judgment calls: **(a)** `enterWell()` mints a fresh Skimmer at lane 0 — well
-lane counts differ, so carrying the craft over is not free, and lives/respawn
-are P4's. **(b)** "near the throat" for the lane redraw reuses
-`C.READABILITY_DEPTH` rather than adding a knob for the same band. **(c)** the
-spawn heading draw happens inside `spawnEnemy`, one draw per spawn, so the
-stream stays aligned however a caller got there. **(d)** `update()` calls
-`enterWell()` when it finds no Skimmer, which is what keeps `reset()` a pure
-shipped-defaults write and still gives the suite a live well on its first step.
-
-**P3.** `09-collision.js`: the ONE collision pass — shots vs enemies then
-enemies vs the Skimmer, each front to back, called from `Game.update()` after
-the entity pass and before the filters. ⛔ 1-D throughout: `laneDelta` within
-`C.HIT_LANE_TOL` plus a `depth` overlap within `C.HIT_DEPTH_TOL`, no projected
-point anywhere. A shot resolves against at most one enemy per step — the
-`break` is unconditional, so an enemy that declines the shot stops its search
-too. `killSkimmer()` is the one death route and today sets `dead` only, so P4
-fills in one function. The Purge is here too: `state.purgeUses` counts up (1 =
-clear every `purgeable`, 2 = the rim-nearest one, 3+ = nothing), re-armed to
-zero by `enterWell()`, fired on the rising edge of the held `input.purge`
-against `state.purgeLatched`. `Game.update()` now filters BOTH arrays after the
-pass, so a consumed shot frees its `SHOT_MAX` slot the same step.
-
-Judgment calls: **(a)** the Purge consumer lives in `09-collision.js`, not
-`05-skimmer.js` — CLAUDE.md's code map assigns it to 05, but that map also
-assigns "firing" there and firing shipped in `06-shots.js` in CS002; it is a
-read-order skeleton, and the Purge is mass entity destruction over the same
-array the collision pass walks. Worth a line in CLAUDE.md's map when someone is
-next editing it. **(b)** `state.purgeReady` (P2's boolean) was REPLACED by
-`purgeUses`, not supplemented — a boolean cannot express GDD 4.3's weak second
-use, and P2's own carried task predicted this. `test-cs003-p2.js` and
-`test-registry.js` were updated; no assertion was weakened. **(c)** the Purge
-resolves BEFORE collision, so a charge spent on the step an enemy arrives in
-your lane saves you rather than firing one step late. **(d)** `enterWell()`
-deliberately does NOT clear `purgeLatched` — it is input state, not well state,
-and clearing it would let a player still holding the button spend the new
-charge without releasing. **(e)** a second use with no legal target is still
-spent; the charge is consumed by the press, not the result.
-
-**P4.** `killSkimmer()` is filled in and is the whole death sequence: the
-invulnerability guard, one life, `state.purgeLatched`, the `screen = "gameover"`
-stop at zero, and `Game.hitStop(C.HIT_STOP_DEATH)`. `state` gains `lives` and
-`invulnTime` (counts UP, starts AT `RESPAWN_INVULN` — already expired).
-`23-main.js` gains `spawnSkimmer()` — the ONE `new Skimmer` — and
-`respawnSkimmer()`, which fires on the first live step that sees `skimmer.dead`,
-pushes enemies down and mints the craft in the lane it died in. `update()` gains
-the game-over early return above everything, and the respawn/aging branch. `r`
-is a named debug action beside `cycleWell`, calling `startGame()`.
-
-Judgment calls: **(a)** ⚠ **SETTLED — Paul, 2026-08-30.** GDD 4.4's rim push is
-a CLAMP over every lane, not a narrow band at the rim — the narrow reading
-leaves a Vaulter at 0.9 climbing into the kill band well inside the
-invulnerability window, which is the death the rule exists to prevent. It is
-deliberately more generous than §4.4's wording alone requires; do not narrow it
-back. P5 writes this into §4.4's "Shipped, CS003" paragraph as settled, not as
-an inference. **(b)** the respawn lives in `23-main.js` beside
-`enterWell()`, not next to `killSkimmer()`: P3's comment said P4 would fill it
-in "HERE", but it cannot be inside `killSkimmer` (nothing scheduled at death
-advances during the freeze), and it moves enemies. **(c)** the invulnerability
-clock is the ELSE branch of the respawn check, so the respawn step is not also
-aged and the window is exactly `RESPAWN_INVULN`, not one step short. **(d)** the
-guard is in `killSkimmer()` and not the collision pass, so CS004/CS005's four
-remaining death conditions inherit it. **(e)** `runAction("restart")` clears
-`hitStopLeft` — `startGame()` cannot reach it, and a fresh run must not inherit
-the freeze that ended the last one. **(f)** `skimmerBlinkVisible()` takes the
-TIMER, not `state`, so `05-skimmer.js` still reads no game global.
+- No phases yet. `PLANNED-FEATURES-CS004.md` and
+  `IMPLEMENTATION-PHASES-CS004.md` have not been written.
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules); manifest is
-  checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes, 13 files, zero skips.
-- ⛔ P4's named invariants were mutation-checked, not merely asserted. Each of
-  these turns the suite red: an `invulnTime` born at 0, dropping the
-  invulnerability guard, dropping the rim push, making the push an assignment
-  instead of a clamp, dropping the purge re-latch, respawning at lane 0 instead
-  of the lane it died in, dropping the game-over early return, aging the invuln
-  clock on the respawn step too, a restart that inherits the old freeze, and
-  removing either the hit-stop or the `lives -= 1`.
-- ⛔ P3's named invariants were mutation-checked, not merely asserted. Each of
-  these turns the suite red: a conditional `break` in the shot loop, a bare
-  `(a - b)` in place of `laneDelta`, dropping the `killDepth === null` guard,
-  a tie-break to the highest lane, a `>=` that loses array order, firing the
-  Purge on the level instead of the edge, and a first Purge that ignores
-  `purgeable`.
-- ⛔ P2's three named invariants were mutation-checked: removing the
-  safe-spawn clamp, dropping the quota half of the clear condition, and
-  resetting the spawn timer on a blocked beat each turn the suite red.
-- ⛔ Both of P1's named invariants were mutation-checked, not just asserted: a
-  Vaulter that keeps its own heading fails 18 assertions across the six open
-  wells, and a constant-depth silhouette fails the two shrink-with-distance
-  assertions.
+- `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
+  is checked both directions against `src/`.
+- `node scratchpad/run-all.js` passes: 14 test files, zero skips.
 - CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer. Full
   narrative in `log/CS001.md`.
 - CS002 closed 2026-08-30 — the loop, the Skimmer, shots, and all four input
   devices (mouse/keyboard/touch/gamepad), verified on real hardware. Full
-  narrative, shipped constants, and the on-hardware pass results in
-  `log/CS002.md`.
+  narrative in `log/CS002.md`.
+- CS003 closed 2026-08-30 — the seeded RNG, the entity contract, the Vaulter,
+  the spawner and well lifecycle, the one collision pass, the Purge, death,
+  lives, respawn and the game-over stop. Shipped constants, every judgment call
+  and the mutation-check record are in `log/CS003.md`.
+- ⛔ GDD §17 item 1 (determinism) and item 3 (enemy wall behaviour) are both
+  covered by `scratchpad/test-cs003-p5.js`, driven through the real
+  `startGame` / `nextWell` / `update`. **Item 3's finding is worth knowing
+  before touching lane code:** a range check alone does not catch §3.5's bug —
+  a wrapped hop on a 13-lane strip lands inside `[0, 12]`. The tell is the
+  per-tick lane SPEED, and that is what the soak asserts.
+- ⛔ CS004 reads GDD §6.5 before adding an enemy. It now spells out the six
+  contract fields, the one enemy array, the one spawn entry point, the one
+  well entry and the one collision pass.
 - `tools/well-lab.html` — well polygons and the perspective curve.
-- `tools/feel-lab.html` — traverse-and-stop measurement across the four
-  device sensitivity/timing constants. Reachable over LAN via `npm run serve`.
+- `tools/feel-lab.html` — traverse-and-stop measurement across the four device
+  sensitivity/timing constants. Reachable over LAN via `npm run serve`.
 
 ## Known issues
 
-- **Two prior-phase test fixtures now reset before reading defaults.** Boot
-  calls `startGame()`, so the live `state` at load is a run in progress with a
-  time-derived seed. `test-cs002-p1.js` (the field inventory and
-  `skimmer === null`) and `test-cs003-p1.js` (`seed` defaults to
-  `RNG_DEFAULT_SEED`) each gained a `G.reset()` before the block that asserts
-  shipped defaults. No assertion was weakened or removed.
-- **`test-cs002-p2.js`'s movement soak now pins `invulnTime = 0`.** That soak
-  has run in a well with enemies in it since CS003 P2; P4 gave contact a
-  consequence, so three deaths reached the game-over stop and the craft stopped
-  moving for most of the remaining ticks — `sawIdle` failed on Trough,
-  Double-Vee and Fan. Holding the respawn window open makes the craft
-  unkillable, which restores the conditions the soak was written for. No
-  assertion was weakened; every one now gets its full `SOAK_TICKS`.
-- **The `state` field inventory moved to `scratchpad/test-registry.js`.**
-  `test-cs002-p1.js` asserted a bare `Object.keys(state).length === 8` as a
-  build-ahead guard; P1's two legitimate fields turned it into a false alarm.
-  An exhaustive list is a global count, and CLAUDE.md puts those in exactly one
-  file. A changeset now adds its fields under its own key there; the guard is
-  the sum, so a field no changeset claims still fails loudly.
+- **`tools/glow-lab.html` does not exist.** `CLAUDE.md`'s design-instruments
+  section lists it as the home of the line-weight and glow-falloff decisions
+  measured against a busy frame. It is also the instrument the two ⚠ colour
+  placeholders below are waiting on.
+- **`SKIMMER_COLOR` (`#FFFFFF`) and `VAULTER_COLOR` (`#FF4A4A`) are ⚠
+  placeholders**, recorded with a ⚠ in GDD §4.1, GDD §6.1 and in `C`. No enemy
+  palette is specified anywhere in the GDD. CS004 adds five more enemies and
+  will need five more colours — the palette decision should be made once,
+  deliberately, rather than five times by inference.
+- **`drawWell()`'s `laneState` parameter is still unwired.** Lane occupancy
+  lighting (GDD §3.7 — lanes light when occupied, when a shot travels them, and
+  when a Surger charges) belongs with the dim band, in CS005.
+- **GDD §12's four-second promise is not delivered.** A passive player does die
+  on level 1, but not reliably within four seconds — it needs spawn lanes
+  weighted toward the player's lane. That is onboarding tuning and is CS013's.
+  ⚠ `ROADMAP.md`'s assumption #6 reads the same behaviour as a CS005 spawner
+  tuning question; the two docs disagree about who owns it, and whoever gets
+  there first should settle it rather than assume.
 - **`_harness.js` exists twice** — the repo root holds a tracked, stale copy of
   `scratchpad/_harness.js` (older, exports only `C` and `state`). Nothing loads
   it today; a test that reaches one directory too far gets a silently smaller
-  surface. Delete or de-duplicate — not P1's to do unprompted.
-- A rim Vaulter hunts the Skimmer's *continuous* lane, so a player parked
-  between two lane centres has it hopping back and forth across them. It is
-  lethal either way (contact tolerance is half a lane, P3), and GDD 6.1 says
-  only "direction from `laneDelta`". Flagged for the CS005 tuning pass, in case
-  the jitter reads as indecision rather than menace.
-- GDD §3.3's `throatOffset` is undefined — no well uses it and the GDD never
-  says what it offsets. `wellThroat` defaults it to zero. Design call for
-  Paul, not an inference to make silently.
-- The Flat well (11) is geometrically degenerate: its rim is a straight line,
-  so it renders with zero depth. Same underlying question as `throatOffset`
-  above (an offset throat is what would fix it). Natural landing spot: CS004
-  (well progression, per `ROADMAP.md`).
-- `SKIMMER_COLOR` (`#FFFFFF`) and `VAULTER_COLOR` (`#FF4A4A`) are placeholders,
-  recorded with a ⚠ in GDD §4.1 and in `C`. No enemy palette is specified
-  anywhere, and `tools/glow-lab.html` does not exist yet.
+  surface. Delete or de-duplicate.
+- **A rim Vaulter hunts the Skimmer's *continuous* lane**, so a player parked
+  between two lane centres has it hopping back and forth across them. Lethal
+  either way (contact tolerance is half a lane), and GDD §6.1 says only
+  "direction from `laneDelta`". Flagged for CS005's tuning pass in case the
+  jitter reads as indecision rather than menace.
+- **GDD §3.3's `throatOffset` is undefined** — no well uses it and the GDD never
+  says what it offsets. `wellThroat` defaults it to zero. Design call for Paul.
+- **The Flat well (11) is geometrically degenerate**: its rim is a straight
+  line, so it renders with zero depth. Same underlying question as
+  `throatOffset` (an offset throat is what would fix it). Natural landing spot
+  is CS004 (well progression, per `ROADMAP.md`).
 
 ## Open questions (blocking)
 
@@ -189,35 +78,34 @@ TIMER, not `state`, so `05-skimmer.js` still reads no game global.
 - Register `vector-vortex` in the Worker's `services/leaderboard/src/registry.js`
   with the seven stats keys, before any submission is attempted.
 - Backport `kit-input` (`src/04-input.js`, all four devices, v0.3.0) to
-  coinless-kit — separate manual step, verified against that repo's own suite.
-- `scratchpad/test-registry.js`'s `enemies` count stays at 0 until CS003 P5
-  raises it to 1 — that is on P5's closing checklist, and no test reads it yet.
-- CLAUDE.md's code map still lists "firing, Purge" under `05-skimmer.js`; both
-  shipped elsewhere (`06-shots.js`, `09-collision.js`), and death/respawn is
-  split between `09-collision.js` and `23-main.js`. Not a phase's to rewrite a
-  rule doc unprompted — a correction for whoever next edits that map (P5 is
-  already scoped to touch it).
+  coinless-kit — a separate manual step, verified against that repo's own suite.
+- ⚠ `C.WELL_CLEAR_HOLD`, `state.clearHold` and the branch in `Game.update()`
+  that reads them are TEMPORARY and are CS005's to delete when the Dive lands.
 - `state.screen === "gameover"` is a STOP with nothing on screen but the frozen
   board and the craft that died on it. `r` restarts. CS006 owns the screen, the
   submission and the real restart flow, and the `restart` debug action should be
   folded into it rather than left as a second way in.
-- ⚠ `C.WELL_CLEAR_HOLD`, `state.clearHold` and the branch in `Game.update()`
-  that reads them are TEMPORARY and are CS005's to delete when the Dive lands.
+- `scratchpad/test-registry.js`'s `enemies` count is 1. CS004 raises it as the
+  rest of the Classic roster lands; that count lives there and in no other file.
 
 ## Next up
 
-- CS003 P5 — the invariant soak, the docs, and the close. The prompt is in
-  `IMPLEMENTATION-PHASES-CS003.md`. ⛔ Its closing checklist includes raising
-  `enemies` to 1 in `scratchpad/test-registry.js`, correcting GDD §6.5's "five
-  places" to six, and moving both CS003 planning docs into `archive/`.
+- CS004 — the rest of the Classic roster: Carrier and its three variants,
+  Weaver, Thorn, Drifter, Surger (GDD §6.1–6.3). Not yet specced;
+  `PLANNED-FEATURES-CS004.md` comes first.
+- ⛔ Before writing that spec: GDD §6.5's "Shipped, CS003" paragraph is the
+  contract every one of the five inherits, and each of them decides
+  `purgeable`, `blocksClear` and `killDepth` explicitly. The Thorn is the
+  roster's first `false` on the first two and the first entity whose `onShot`
+  chips rather than kills.
 
 ## Playtest asks (open only)
 
-- The Vaulter is now on screen: does the flattened X read as a *threat* at
-  throat depth, and is `VAULTER_SIZE` 0.70 enough silhouette to see it coming?
-- Does `SPAWN_INTERVAL` 1.60 with `ENEMY_CONCURRENT` 3 hit GDD §12's promise —
-  a passive player dead within four seconds, an active one with a kill? Both
-  halves are fully observable now — a death costs a life and freezes the board.
+- Does the flattened X read as a *threat* at throat depth, and is
+  `VAULTER_SIZE` 0.70 enough silhouette to see it coming?
+- Does `SPAWN_INTERVAL` 1.60 with `ENEMY_CONCURRENT` 3 produce level-1 pressure
+  that feels fair? Both halves are fully observable now — a death costs a life
+  and freezes the board.
 - Does the death sequence read? 1.2 s of hit-stop with no fragmentation and no
   sound is a long time to look at a frozen board — CS006 adds both, but the
   freeze LENGTH is settled now and worth judging bare.

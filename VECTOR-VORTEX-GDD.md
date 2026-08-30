@@ -235,11 +235,26 @@ The weak second use converts the Purge from a spam button into a decision. HUD s
 
 Clearing a well with the Purge unspent awards `PURGE_SAVED_BONUS` (500).
 
-**Shipped, CS003 P3.** `state.purgeUses` counts **up** from zero and is the whole rule — a count, not a flag, because a boolean cannot express the weak second use. `enterWell()` is the only thing that returns it to zero, so a charge carried through four wells is still one charge. Use 1 kills every enemy whose `purgeable` flag is true and leaves the others untouched — the flag is read off the entity, never a class name, which is why "does not remove Thorns" costs no special case here. Use 2 kills exactly one: highest `depth`, then lowest lane, then array order, all three deterministic so the player can predict the victim. Use 3 and later do nothing, though the count keeps rising so a HUD can tell *spent* from *spent twice*. ⛔ `input.purge` is a **level** — all four devices write a held boolean (§9.5) — so the edge is detected in the game against `state.purgeLatched` ("held last step"); holding the button spends exactly one charge. The Purge resolves *before* the collision pass, so a charge spent on the step an enemy arrives in your lane actually saves you. No bonus is awarded yet: `PURGE_SAVED_BONUS` waits for `addScore()` in CS006, and reads `purgeUses === 0`.
+**Shipped, CS003 P3.** `state.purgeUses` counts **up** from zero and is the whole rule — a count, not a flag, because a boolean cannot express the weak second use. `enterWell()` is the only thing that returns it to zero, so a charge carried through four wells is still one charge. Use 1 kills every enemy whose `purgeable` flag is true and leaves the others untouched — the flag is read off the entity, never a class name, which is why "does not remove Thorns" costs no special case here. Use 2 kills exactly one: highest `depth`, then lowest lane, then array order, all three deterministic so the player can predict the victim. Use 3 and later do nothing, though the count keeps rising so a HUD can tell *spent* from *spent twice*. ⛔ `input.purge` is a **level** — all four devices write a held boolean (§9.5) — so the edge is detected in the game against `state.purgeLatched` ("held last step"); holding the button spends exactly one charge. The Purge resolves *before* the collision pass, so a charge spent on the step an enemy arrives in your lane actually saves you. No bonus is awarded yet: `PURGE_SAVED_BONUS` waits for `addScore()` in CS006, and reads `purgeUses === 0`. **CS003 P4 added one rule to the edge:** death forces `purgeLatched` true, so a Purge held across the death freeze needs a genuine release before it can spend the new well's charge — see §4.4.
 
 ### 4.4 Lives
 
 Start 3. Extra life at 20,000 then every 40,000. Reserve cap 6; awards past the cap are lost with a distinct sound, never silently swallowed. Death: 1.2 s hit-stop, fragmentation, respawn in the same lane with `RESPAWN_INVULN` 1.5 s. ⛔ **Enemies at the rim are pushed to `depth = 0.55` on respawn** so the player is never killed on re-entry.
+
+| Property | Constant | Value |
+|---|---|---|
+| Starting reserve | `START_LIVES` | 3 |
+| Reserve ceiling | `LIVES_MAX` | 6 |
+| Death freeze | `HIT_STOP_DEATH` | 1.20 s |
+| Respawn invulnerability | `RESPAWN_INVULN` | 1.5 s |
+| Respawn push depth | `RESPAWN_PUSH_DEPTH` | 0.55 |
+| Respawn blink rate | `INVULN_BLINK_HZ` | 6 full cycles/s |
+
+**Shipped, CS003 P4.** `killSkimmer()` (`09-collision.js`) is the one death route and owns the whole sequence — the invulnerability guard, the life, the `purgeLatched` force, the freeze, and the stop — so the four death conditions CS004 and CS005 add inherit all of it without writing any of it. The **respawn is not in it**, and that is deliberate: `Game.update()` does not run during hit-stop, so anything scheduled at death sits unadvanced for the whole 1.2 s. The trigger is the state itself — the first live step that finds `skimmer.dead` respawns, in `respawnSkimmer()` (`23-main.js`), which also makes the sequence correct for a headless caller that drives `update()` directly and never freezes at all. `state.invulnTime` counts **up** and is born **at** `RESPAWN_INVULN`, already expired: ⛔ a fresh run is never invulnerable, and contact on the first step of a run kills. The aging is the *else* branch of the respawn check, so the window is exactly `RESPAWN_INVULN` rather than one step short of it. The blink is a draw-time decision only (`skimmerBlinkVisible()`, which takes the timer and not `state`) — the craft is fully simulated on the frames it is not painted, because a control dropout is pillar P1's one unforgivable failure.
+
+⚠ **SETTLED — Paul, 2026-08-30. The rim push is a CLAMP over every lane, not a band at the rim.** Everything above `RESPAWN_PUSH_DEPTH` comes down to it, in every lane. This is deliberately broader than the wording above requires: the narrow reading leaves a Vaulter at 0.9 climbing back into the kill band well inside the invulnerability window, which is the exact death the rule exists to prevent. A clamp is also monotonic — it can never move an entity *toward* the rim. **Do not narrow it back.** At `VAULT_CLIMB` 0.18 the climb from 0.55 outlasts `RESPAWN_INVULN`; that guarantee stops being provable the moment CS005's heat curve raises the climb rate, and re-checking it is part of that phase.
+
+Zero lives sets `screen = "gameover"`, which is a ⛔ **stop, not a screen**: `Game.update()` returns early above everything, so no clock, no spawner, no entity pass, no collision and no level advance run, while `draw()` is untouched and the board the player died on stays up. CS006 owns the game-over UI, the submission and the real restart flow. Nothing awards an extra life yet — `EXTRA_LIFE_FIRST`, `EXTRA_LIFE_EVERY` and `LIVES_MAX` are `addScore()`'s in CS006 and are deliberately unread.
 
 ### 4.5 Death conditions
 
@@ -300,6 +315,26 @@ In Overdrive the Dive becomes a ring-flight — §14.5.
 | **Drifter** | Tumbling spark cluster | L9 | Rides lane *boundaries* (invulnerable); crosses lanes (vulnerable); homes near rim | Contact, any depth, instant | Shots only while crossing; Purge anywhere | 250/500/750 by depth |
 | **Surger** | Zigzag bar | L13 | Climbs; periodically electrifies its whole lane | Discharge in your lane | Any shot, Purge | 200 |
 
+**Shipped, CS003 P1. One of the six: the Vaulter.** The other five are CS004's.
+
+| Property | Constant | Value |
+|---|---|---|
+| Silhouette width | `VAULTER_SIZE` | 0.70 lane widths |
+| Colour | `VAULTER_COLOR` | `#FF4A4A` ⚠ placeholder |
+| Climb rate | `VAULT_CLIMB` | 0.18 depth/s (throat→rim ≈ 5.5 s) |
+| Mid-climb hop interval | `VAULT_INTERVAL` | 2.20 s |
+| Rim hunt hop interval | `VAULT_RIM_INTERVAL` | 0.55 s |
+| Lane crossing time | `VAULT_HOP_TIME` | 0.28 s |
+| First vaulting level | `VAULT_FIRST_LEVEL` | 2 |
+
+⚠ `VAULTER_COLOR` has the same standing as `SKIMMER_COLOR` in §4.1 — no enemy palette is specified anywhere in this document, and CS003 P1 picked one so the enemy could be drawn. Confirm or replace it.
+
+The climb is **monotonic and stops at the rim**; `depth > 1` is not a legal position, and letting it run past would leave every downstream depth comparison (`killDepth`, the readability zone, the respawn push) reading a number no other system can produce. It kills by contact at `killDepth = 1 - RIM_CONTACT_DEPTH` — ⛔ expressed that way rather than as a second constant, so retuning the band moves this and every later rim-contact enemy together. `lane` is **continuous through a hop**, interpolated over `VAULT_HOP_TIME`, so the craft really is hittable in both lanes it is near for the whole crossing; landing is written exactly rather than as the last interpolated step, or the drift would compound hop by hop. ⛔ **Every hop goes through `laneHop()` and the `dir` it returns is written back** — an enemy that keeps its own heading grinds against an open well's end forever. Nothing in the Vaulter reads `well.closed`; the topology lives entirely inside `laneHop`/`laneDelta`/`laneNormalize`, which is the only reason it behaves on a Ring and on a Fan without a branch.
+
+Two timing details that look like polish and are not. The hop timer advances **during** a hop, so hop *starts* are one interval apart rather than interval-plus-crossing. And arriving at the rim resets the timer, so the first hunt hop lands a full `VAULT_RIM_INTERVAL` after arrival — otherwise whatever phase the climb's 2.2 s clock happened to be in decides whether the Vaulter lunges the instant it surfaces, which is an arrival that is sometimes fair and sometimes not for a reason the player cannot see (§1.1 P2).
+
+⚠ A rim Vaulter hunts the Skimmer's *continuous* lane, so a player parked between two lane centres has it hopping back and forth across them. It is lethal either way — contact tolerance is half a lane — and this section says only "direction from `laneDelta`". Flagged for CS005's tuning pass in case the jitter reads as indecision rather than menace.
+
 ### 6.2 Carrier variants
 
 Cargo shows as a glyph in the centre. Reading it fast is the skill that separates competent from good.
@@ -322,6 +357,12 @@ The two opposite correct responses make cargo-reading consequential rather than 
 
 ⛔ **Never spawn in the Skimmer's lane above `SAFE_SPAWN_DEPTH` (0.75).**
 
+**Shipped, CS003 P1/P2.** The level-1 rule is `C.VAULT_FIRST_LEVEL` and ⛔ **it gates vaulting only.** Rim hunting is *not* gated: §6.1 attaches "from L2" to vaulting, and §12 promises a passive player dies on level 1, which a Vaulter parked politely at the rim cannot deliver. Getting that split wrong in either direction is a level-1 experience that teaches the wrong thing.
+
+The safe-spawn rule is enforced inside `spawnEnemy()` — the one entry point (§6.5) — and ⛔ **by LOWERING the depth to `SAFE_SPAWN_DEPTH`, never by moving the lane and never by refusing the spawn.** CS004's Carrier has to put its two children somewhere specific ("adjacent", "flanking", §6.2), and relocating them sideways would break the shape the player is being taught to read; dropping one deeper only ever gives the player more time. "The Skimmer's lane" is read as anything within one lane of its *continuous* position rather than `Math.round()`'s single answer — a player parked between two centres is half in each, and the wider reading is the safe direction to be wrong in.
+
+The spawner also declines to stack a new enemy on one already sitting in the same lane down in the throat zone (`READABILITY_DEPTH`, §10.3, reused rather than given a second constant for the same band): two silhouettes at the same lane and nearly the same depth read as one, which is §1.1 P2 failing at the moment the player has the most time to react. ⛔ The retry is **bounded** by `SPAWN_LANE_TRIES` and settles for its last draw — the run has one RNG stream, and an unbounded search would spend a board-dependent number of draws and desynchronize every later draw in the run (§17 item 1).
+
 ### 6.4 Overdrive enemies
 
 **Reaver** (L6+), **Warden** (L11+), **Mimic** (L16+). Detailed with concerns in §14.6.
@@ -330,7 +371,32 @@ The two opposite correct responses make cargo-reading consequential rather than 
 
 ⛔ Matching Orbital Overhaul: every entity is a **class** with `constructor` / `update(dt)` / `draw()` / `dead`. Kill by setting `dead = true`; remove with an end-of-frame `.filter()`. **Never splice mid-loop.**
 
-⛔ **New enemies wire into five places:** `startGame` reset, `update()` entity pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order, and the well-clear condition. **Decide explicitly whether the new hazard can be destroyed by the Purge.**
+⛔ **New enemies wire into six places:** `startGame` reset, `update()` entity pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order, and the well-clear condition. **Decide explicitly whether the new hazard can be destroyed by the Purge.**
+
+**Shipped, CS003 P1–P3 — read this before adding an enemy.** `07-enemies.js` holds the base class `Enemy`, and ⛔ **it is fields and signatures only: no movement, no AI, no draw code.** It exists so the ninth enemy cannot silently forget a field; the value is the field list, not the inheritance. ⚠ **That is a slope.** The first time a climb rate or a hop timer lands in the base, five enemies that do not climb inherit one and the bug is invisible until one of them is given a reason to read it. If the base ever acquires behaviour, that is the signal to flatten it back to independent classes — not to add a second field to switch the behaviour off.
+
+**The six fields, and what each one decides:**
+
+| Field | Meaning |
+|---|---|
+| `lane`, `depth` | ⛔ The whole position (§3.2). Lane-centre units and 0 = throat, 1 = rim. No entity ever stores a screen coordinate. |
+| `dead` | Set true to kill. The caller's end-of-frame `.filter()` does the removal. |
+| `purgeable` | Whether the Purge destroys it (§4.3). CS004's Thorn is the roster's first `false`. |
+| `blocksClear` | Whether it must be gone before the well counts as clear. The Thorn is `false`, and that is *why* a Thorn is still standing during the Dive (§5) rather than an oversight in the clear check. |
+| `killDepth` | §4.5's contact rule as a number: contact kills when `depth >= killDepth` and the lanes match. `null` means contact never kills — the Weaver's body. The Drifter's is `0` (lethal at any depth). One comparison covers three of the five death conditions, which is why it is a field. |
+
+**The three methods:** `update(dt, well, state)`, `draw(ctx, well)`, and `onShot(shot)`. ⛔ **`onShot` returns whether the shot is CONSUMED**, and the *enemy* decides what a hit does — the collision pass only asks. `true` retires the shot; `false` lets it fly on to whatever is behind. That is what keeps the Thorn (chip, consume) and an armoured entity (no damage, do not consume) out of the collision pass as special cases. The base returns `false` deliberately, so a subclass that forgets to override it lets shots through — visible — rather than eating them silently.
+
+**Four singular things, and each one is singular on purpose:**
+
+- ⛔ **ONE array, `state.enemies`.** Thorns, Carriers and Drifters all live in it; the flags above decide behaviour, not a second array. A second array doubles all six wiring points.
+- ⛔ **ONE spawn entry point, `spawnEnemy(kind, lane, depth)`** (`08-spawner.js`). Every enemy that enters the array comes through it, including CS004's Carrier split. It owns §6.3's safe-spawn rule, the `ENEMY_CAP` ceiling, and the one RNG draw a spawn spends on its heading; a caller that pushes straight into the array re-implements all three and forgets one. A `kind` is a **string**, and `ENEMY_KINDS` is the one table where a string becomes a class — that is where the roster grows. A refused spawn returns `null` and is not an error; the interval spawner spends no quota on one.
+- ⛔ **ONE well entry, `enterWell()`** (`23-main.js`). A new run, the next level, the debug cycler and the restart all land there. It clears both entity arrays (**cleared, not filtered** — an enemy's lane is only meaningful against the well it was spawned into, and well lane counts differ), re-arms the Purge charge and the spawner, and mints the craft. It deliberately does **not** touch `state.lives` (the reserve belongs to the run) or `state.purgeLatched` (that is input state, not well state).
+- ⛔ **ONE collision pass** (`09-collision.js`), in a fixed order: shots against enemies, then enemies against the Skimmer, each front to back. §17 item 1's replay guarantee is why the order is written down. It is **1-D throughout** — a lane match within `HIT_LANE_TOL` via `laneDelta`, plus a `depth` overlap within `HIT_DEPTH_TOL`. No projected point appears anywhere in it: the same overlap would start passing at the rim and failing at the throat, because `perspective()` is not linear.
+
+**Where the six wiring points actually are today.** `startGame()` resets through `newState()`, so a field added in `02-state.js` is reset without `startGame` being touched. The entity pass, the Purge, the collision pass, both end-of-frame filters, the spawner and the well-clear check are all in `Game.update()` in that order; the z-order is in `Game.draw()`, with enemies between the well and the shots. The clear condition is `wellCleared()` — ⛔ **two conditions, quota spent AND no `blocksClear` survivor.** "The array is empty" alone is true one tick after `startGame()` and in every gap between spawns.
+
+⛔ **No enemy allocates per frame in its draw path.** `entityPoints()` (`14-render-entities.js`) is the shared projection every enemy uses; each polygon memoizes its own scratch array of screen points, so the array is **shared** — copy out of it if you need to keep it, and it is non-reentrant per polygon.
 
 ---
 

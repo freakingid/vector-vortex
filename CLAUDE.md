@@ -423,12 +423,15 @@ Read-order skeleton. GDD §16 is authoritative for what actually exists.
 
 ```
 src/00-config.js       C — every tunable, nothing else
-    01-rng.js          mulberry32, seeded
+    01-rng.js          mulberry32 — the run's ONE seeded stream
     02-state.js        the one mutable game object
-    03-wells.js        the 16 well definitions (DATA)
+    03-wells.js        the 16 well definitions (DATA) + the depth model
     04-input.js        four devices -> one input struct
-    05-skimmer.js      movement, snap assist, firing, Purge
-    06-shots.js        07-enemies.js   08-spawner.js   09-collision.js
+    05-skimmer.js      movement, snap assist, the wall squash, the blink
+    06-shots.js        firing, lane-locked travel
+    07-enemies.js      the entity contract + the Vaulter
+    08-spawner.js      spawnEnemy() — the ONE way in — cadence, quota, clear
+    09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge
     10-powerups.js     Overdrive tokens
     11-dive.js         12-scoring.js
     13-render-well.js  14-render-entities.js  15-render-hud.js
@@ -437,7 +440,7 @@ src/00-config.js       C — every tunable, nothing else
     18-audio-director.js intensity -> tier + filter sweep
     19-sfx.js          20-achievements.js  21-telemetry.js
     22-meta.js         profiles, scores, leaderboard wiring
-    23-main.js         loop, state machine
+    23-main.js         loop, state machine, well lifecycle, respawn
 ```
 
 When you add or rename a module, update `build.js`'s `MANIFEST`, this map, GDD

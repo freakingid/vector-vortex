@@ -12,7 +12,7 @@ const COUNTS = {
   wells: 16,        // GDD 3.4 — the sixteen well shapes
   openWells: 6,     // of those, open topology
   tracks: 0,        // GDD 11.7 — raise as tracks land
-  enemies: 0,       // GDD 6.1 — raise as enemies land
+  enemies: 1,       // GDD 6.1 — raise as enemies land
 };
 
 // ⛔ THE state FIELD INVENTORY (02-state.js). An exhaustive list is a global
