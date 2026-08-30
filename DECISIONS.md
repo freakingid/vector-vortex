@@ -56,3 +56,36 @@ per-module writeups live in those files, not here.
 **Six systems are built kit-shaped from v1** — input, menu/screen-state, audio,
 fx primitives, achievements, local scores. Paul's call. The per-phase overhead
 is accepted deliberately; see `CLAUDE.md` for the table and the ⚠ note.
+
+## 2026-08-30 — the last five GDD open questions
+
+**GDD §21 #1 — the dim band stays exactly as specced.** Levels 65–80 render at
+`DIM_BAND_ALPHA` 0.18, with lanes lighting on occupancy, shot travel and Surger
+charge. It is content almost nobody will see at a ~35–40 ceiling, but the
+renderer already tracks lane occupancy for everything else, so the band is a few
+lines on top of work that is required anyway. ⛔ No tuning time is spent on it.
+Revisit only if telemetry ever shows a player past level 65. Rejected: cutting
+it, which saves nothing real; and moving it earlier, which would break the
+16-level band structure in §3.6 for one effect.
+
+**GDD §21 #4 — achievements are local-only.** The evaluator returns a
+payload-shaped object from its first commit, so server-backing later is wiring
+rather than a rewrite.
+
+**GDD §21 #5 — telemetry is strictly local CSV export.** Nothing is posted
+anywhere. It is a tuning and debugging instrument and explicitly not anti-cheat;
+a destination adds a privacy surface and buys no tuning benefit.
+
+**GDD §21 #6 — the Mimic gets built.** ~100 lines against a shot path that
+already exists. The probation verdict in §14.6 needs a playtest, not an
+argument. ⚠ It stays flagged: cut it in CS014 without ceremony if reflected
+shots read as cheap.
+
+**GDD §21 #7 — three tracks at launch:** `title`, `pulse`, `drive`. `deep` and
+`rush` are new entries in a data table with no code change, so they are
+post-ship content rather than a scope cut. ⚠ Dropping to two is the third lever
+in the roadmap's cut order.
+
+**A changeset roadmap now exists as `ROADMAP.md`**, its own file rather than a
+section here — it is edited every time a changeset is renumbered, and this file
+is append-only.

@@ -181,7 +181,7 @@ Past 99 the counter holds and shapes come from the seeded RNG. Heat also holds �
 
 ### 3.7 The dim band
 
-Levels 65–80 render at 18% alpha; lanes light when occupied, when a shot travels them, and when a Surger charges. Full invisibility on unknown browser gamma is a P2 catastrophe. **⚠ OPEN #1** — see §21.
+Levels 65–80 render at 18% alpha; lanes light when occupied, when a shot travels them, and when a Surger charges. Full invisibility on unknown browser gamma is a P2 catastrophe. **⚠ SETTLED 2026-08-30** — the band stays at levels 65–80 and `DIM_BAND_ALPHA` 0.18 as specced; no tuning time is spent on it. Revisit only if telemetry shows a player past level 65. See §21 and `DECISIONS.md`.
 
 ---
 
@@ -247,7 +247,7 @@ This is the original's SkillStep, credited as the first selectable difficulty in
 
 ⛔ **No countdown timer on the Start Depth screen.** It waits. House rule.
 
-**⚠ OPEN #2** — leaderboard treatment of the bonus. See §21.
+**RESOLVED 2026-08-30** — the Start Depth bonus counts toward the submitted score, and `start_depth` ships as a registered stats field. See §21 and `DECISIONS.md`.
 
 ---
 
@@ -697,7 +697,7 @@ field needs no migration — a saved value for a deleted field orphans harmlessl
 
 ⛔ **Mint via a `crypto.randomUUID` → `crypto.getRandomValues` fallback.** An opaque origin (sandboxed iframe, itch.io-style embed) is never a secure context, and `randomUUID` is secure-context-only — this exact bug was found and fixed in `kit-profile` and most likely still exists in Orbital Overhaul.
 
-**⚠ OPEN #3** — whether to consume `kit-profile` or implement locally. See §21.
+**RESOLVED 2026-08-30** — `kit-profile` is vendored into `lib/` at a pinned `VERSION` and used directly, not reimplemented locally. See §21 and `DECISIONS.md`.
 
 ### 15.3 Local high scores
 
@@ -736,7 +736,7 @@ Structure follows Orbital Overhaul's proven v2 shape:
 
 ~24 lifetime plus 5 weekly, rotated deterministically by week number so every player sees the same five.
 
-**⚠ OPEN #4** — local-only or eventually server-backed. See §21.
+**⚠ SETTLED 2026-08-30** — local-only. The evaluator emits a payload-shaped object from day one so server-backing later is wiring, not a rewrite. See §21 and `DECISIONS.md`.
 
 ### 15.6 Telemetry
 
@@ -752,7 +752,7 @@ Columns come in three kinds and the names do not tell you which: **instantaneous
 
 This is a tuning and debugging instrument. Because the simulation is deterministic — seeded RNG, fixed timestep, one input struct — a run is described by `{seed, mode, startDepth, inputEvents[]}` and replays exactly. ⛔ **It is explicitly not an anti-cheat mechanism** (§15.4).
 
-**⚠ OPEN #5** — aggregate telemetry destination. See §21.
+**⚠ SETTLED 2026-08-30** — strictly local CSV export; nothing is posted anywhere. See §21 and `DECISIONS.md`.
 
 ---
 
@@ -828,6 +828,7 @@ vector-vortex/
 ├── STATUS.md                    # current changeset only, ⛔ under ~400 lines
 ├── RATIONALE.md                 # why the rules exist; read on demand only
 ├── DECISIONS.md                 # off-cycle judgment calls
+├── ROADMAP.md                   # changeset sequence to ship; on demand only
 ├── VECTOR-VORTEX-GDD.md         # this document, with its §0 read contract
 ├── DIFFICULTY-NOTES.md          # the heat curve, documented
 ├── EXTERNAL-FILES.md            # runtime files the build loads
@@ -965,13 +966,24 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 
 ## 21. Open questions
 
-1. **Dim band (§3.7)** — keep at 65–80, move earlier, or cut? At a ~35–40 ceiling it is content almost nobody sees. Blocks the rendering spec.
+None. All seven resolved as of 2026-08-30; see `DECISIONS.md`.
+
+1. ~~**Dim band (§3.7)**~~ — **RESOLVED 2026-08-30.** Kept as specced: levels
+   65–80 at `DIM_BAND_ALPHA` 0.18, lanes lighting on occupancy, shot travel and
+   Surger charge. ⛔ No tuning time is spent on it; revisit only if telemetry
+   shows a player past level 65.
 2. ~~**Start Depth and the board (§4.6)**~~ — **RESOLVED 2026-08-30.** The bonus counts toward the submitted score, and `start_depth` ships as a registered stats field so a "from level 1" board filter is possible later without a schema change.
 3. ~~**Kit consumption (§15.2)**~~ — **RESOLVED 2026-08-30.** Kit modules are vendored into `lib/` at a pinned `VERSION` and used directly. Fixes are made to the vendored copy here, kept game-agnostic, and backported to coinless-kit as a separate manual step. Six further systems are built kit-shaped from v1 for later extraction. See §15.7.
-4. **Achievements (§15.5)** — local-only, or eventually server-backed? Changes whether the evaluator emits a submittable payload.
-5. **Aggregate telemetry (§15.6)** — anything posted anywhere, or strictly local export?
-6. **Mimic** — comfortable building an enemy I have flagged as likely to be cut? ~100 lines, cheap to try.
-7. **Track count for v1** — five assumed. Each is real authoring work in `music-lab`, and the new layer discipline makes each one more work, not less. Three at launch is a legitimate reduction.
+4. ~~**Achievements (§15.5)**~~ — **RESOLVED 2026-08-30.** Local-only. The
+   evaluator emits a payload-shaped object from day one so server-backing later
+   is wiring, not a rewrite.
+5. ~~**Aggregate telemetry (§15.6)**~~ — **RESOLVED 2026-08-30.** Strictly local
+   CSV export; nothing is posted anywhere.
+6. ~~**Mimic**~~ — **RESOLVED 2026-08-30.** Build it. ⚠ Stays on probation —
+   cut in CS014 without ceremony if reflected shots read as cheap.
+7. ~~**Track count for v1**~~ — **RESOLVED 2026-08-30.** Three at launch:
+   `title`, `pulse`, `drive`. `deep` and `rush` are post-ship data-table
+   additions.
 
 ---
 

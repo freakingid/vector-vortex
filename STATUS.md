@@ -14,6 +14,8 @@ Version: 0.0.1 · Changeset: CS001 · Phase: P0 · Wells: 0/16 · Tracks: 0/5
   directions against `src/`.
 - `node scratchpad/run-all.js` passes, failure-only output.
 - Harness loads `dist/`, not `src/` — the oracle rule holds from commit one.
+- GDD §21 is closed — all seven open questions resolved 2026-08-30, see
+  `DECISIONS.md`. `ROADMAP.md` now exists.
 
 ## Known issues
 

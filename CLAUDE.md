@@ -89,6 +89,7 @@ problem. Never use "Tempest" or a `T-####` naming pattern in any file.
 | `EXTERNAL-FILES.md` | Runtime files the shipped game loads. | Adding one |
 | `RATIONALE.md` | Why the rules here exist. | On demand only |
 | `DECISIONS.md` | Judgment calls made outside the phase flow. | On demand only |
+| `ROADMAP.md` | Changeset sequence to ship. | On demand only |
 | `log/CS0##.md` | Per-changeset narrative log + version history. | **Never by default** |
 | `archive/` | Spent planning docs. | **Never by default** |
 
