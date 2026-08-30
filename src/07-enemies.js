@@ -271,3 +271,133 @@ class Vaulter extends Enemy {
     return true;
   }
 }
+
+// ---------------------------------------------------------------------------
+// ⛔ THE CARGO TABLE (GDD 6.2) — a cargo name -> what a Carrier of it splits
+// into.
+// ---------------------------------------------------------------------------
+//
+// ⛔ TWO NAMESPACES THAT HAPPEN TO COINCIDE, WHICH IS WHY THIS LOOKS LIKE AN
+// IDENTITY MAP AND IS NOT. The KEY is a cargo name: what the Carrier is
+// carrying, what its glyph draws (CARGO_GLYPHS, 14-render-entities.js), and
+// what GDD 6.2's variant table calls the row. The VALUE's `kind` is an
+// ENEMY_KINDS key (08-spawner.js): what actually gets spawned. They read the
+// same for every row GDD 6.2 lists, and they are not the same thing — the
+// spawner's table is where a string becomes a class, and this one is where a
+// cargo becomes a string.
+//
+// ⛔ THE SPLIT IS TABLE-DRIVEN AND STAYS THAT WAY. There is no branch on cargo
+// anywhere — not in onShot, not in splitLanes, not in the draw path. GDD 6.2
+// has three rows and only this one is buildable: the Drifter (L18) and the
+// Surger (L23) cannot be cargo before they are enemies, and they are CS005's.
+// Adding a row is: an entry here, an ENEMY_KINDS row for the carrier variant,
+// and a glyph in CARGO_GLYPHS — the same three-file shape every enemy already
+// has (behaviour, spawn string, silhouette). Nothing else.
+//
+// ⛔ GDD 6.2's "adjacent" (Vaulter cargo) and "flanking" (Surger cargo) are THE
+// SAME GEOMETRY. The distinction that section draws is between the correct
+// RESPONSES — move away versus hold still — which comes from what the cargo
+// does after it lands, not from where it lands. splitLanes() serves all three
+// rows; a second placement rule invented to justify the second word would be a
+// difference the player cannot see.
+const CARGO = {
+  vaulter: { kind: "vaulter" },
+};
+
+// ---------------------------------------------------------------------------
+// The Carrier (GDD 6.1, 6.2) — hollow diamond plus a cargo glyph, first at L3,
+// 100 points. Slow, ONE LANE, never hops. Kills by contact at the rim; any
+// shot kills it and it SPLITS into two of its cargo.
+// ---------------------------------------------------------------------------
+//
+// ⛔ IT DOES NOT TOUCH laneHop, laneDelta OR laneNormalize, AND THAT IS THE
+// POINT. `lane` is written exactly once, by the constructor, and is the lane it
+// was spawned into for its whole life — GDD 6.1's "one lane, never hops" is an
+// absence of code, not a flag, and CS004 P5's soak asserts the strong form
+// (exact lane equality every tick) rather than a range or a speed bound.
+class Carrier extends Enemy {
+  // `cargo` is a CARGO key, handed in by the ENEMY_KINDS factory — the kind
+  // string carries the variant, so the class does not need a branch.
+  constructor(lane, depth, cargo) {
+    super(lane, depth);
+
+    // GDD 4.5 item 1, the same expression the Vaulter uses. ⛔ Not a second
+    // constant: the band is measured DOWN from the rim, so retuning
+    // C.RIM_CONTACT_DEPTH moves every rim-contact enemy together.
+    this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
+
+    this.cargo = cargo;
+  }
+
+  // ⛔ Monotonic, and it STOPS at the rim rather than passing it — the same
+  // rule the Vaulter's climb carries and for the same reason: depth > 1 is not
+  // a legal position, and every downstream comparison (killDepth, the
+  // readability zone, the respawn push) would be reading a number no other
+  // system can produce.
+  //
+  // `well` and `state` are unused: a Carrier has no topology and no AI. The
+  // signature is the contract's (GDD 6.5), not this enemy's.
+  update(dt, well, state) {
+    if (this.depth < 1) {
+      this.depth += C.CARRIER_CLIMB * dt;
+      if (this.depth > 1) this.depth = 1;
+    }
+  }
+
+  draw(ctx, well) {
+    drawCarrier(ctx, well, this.lane, this.depth, this.cargo);
+  }
+
+  // Any shot kills it and the shot is spent (GDD 6.1) — and then it splits.
+  //
+  // ⛔ BOTH CHILDREN GO THROUGH spawnEnemy(), THE ONE ENTRY POINT (GDD 6.5).
+  // Four consequences, every one of them deliberate:
+  //
+  //   1. GDD 6.3's safe-spawn rule applies. A child landing in the Skimmer's
+  //      lane above C.SAFE_SPAWN_DEPTH is LOWERED to that line, never moved
+  //      sideways — which is exactly why CS003 P2 wrote that rule as a depth
+  //      clamp: relocating a child would break the shape GDD 6.2 is teaching
+  //      the player to read, and dropping one deeper only ever gives them more
+  //      time.
+  //   2. C.ENEMY_CAP applies. A Carrier killed on a full board loses its
+  //      children, and that is correct: the cap is a READABILITY ceiling, not a
+  //      difficulty knob, and "it is only a split" is precisely the bypass the
+  //      single entry point exists to prevent.
+  //   3. ⛔ Each call spends ONE RNG DRAW for the heading (08-spawner.js), so a
+  //      split spends TWO and shifts every later draw in the run. The run has
+  //      one stream and this is deterministic — a replay of the seed splits at
+  //      the same moment and draws the same numbers afterwards. Do not "save" a
+  //      draw here for a kind that ignores `dir`; that would make the stream
+  //      depend on which cargo was in the well.
+  //   4. ⚠ SETTLED — THIS PUSHES INTO state.enemies WHILE collideShots() IS
+  //      ITERATING IT (09-collision.js). That is safe, and it is safe for three
+  //      separate decisions in two files rather than by luck:
+  //        - the collision loop is INDEX-BASED and re-reads `.length`, so the
+  //          appended children are simply part of the array;
+  //        - the `break` after onShot is UNCONDITIONAL, so this shot resolves
+  //          against at most one enemy per step and cannot walk forward into
+  //          the children it just created;
+  //        - removal is still the end-of-frame `.filter()` in Game.update() —
+  //          nothing is spliced mid-loop (GDD 6.5).
+  //      ⛔ Do not "fix" this into a deferred spawn queue, and do not make that
+  //      `break` conditional. Either change turns a correct three-part
+  //      arrangement into a bug that only shows up on a busy board.
+  //
+  // The current well is read the same way spawnEnemy() itself reads it. An
+  // enemy has no well reference — `well` is handed to update() and draw() and
+  // deliberately not to onShot(), because what a hit DOES is not a question
+  // about geometry (GDD 6.5).
+  onShot(shot) {
+    this.dead = true;
+
+    const row = CARGO[this.cargo];
+    if (!row) return true;   // unknown cargo carries nothing, exactly as an
+                             // unknown kind spawns nothing. Never a throw.
+
+    const well = WELLS[state.wellIndex];
+    const lanes = splitLanes(well, this.lane);
+    spawnEnemy(row.kind, lanes[0], this.depth);
+    spawnEnemy(row.kind, lanes[1], this.depth);
+    return true;
+  }
+}

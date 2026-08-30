@@ -190,6 +190,49 @@ function laneAtWall(well, lane) {
   return lane <= 0 || lane >= well.lanes - 1;
 }
 
+// ⛔ THE SPLIT HELPER (GDD 6.2, 3.5). Where a Carrier's two children go: one
+// lane either side of the parent, as a pair of LEGAL, DISTINCT lanes.
+//
+// It lives here, beside laneHop, because the thing that makes it non-trivial
+// is GDD 3.5 and nothing about cargo: `laneNormalize` CLAMPS on an open well,
+// so the naive `[lane - 1, lane + 1]` puts BOTH children of a lane-0 Carrier
+// in lanes 0 and 1 — two silhouettes stacked in one lane, on the six wells
+// where the player has the least room to dodge, at the exact moment they are
+// being asked to read a split. That is GDD 1.1 P2 failing, and it fails on the
+// six open wells only, which is how it survives a closed-well playtest.
+//
+//   closed  lane ± 1, wrapped. There is no wall, so nothing else to do.
+//   open    lane ± 1, then the PAIR is shifted inward — never squashed —
+//           until both ends are inside [0, lanes-1]. The gap between the two
+//           children is therefore always exactly two lanes, at the wall as
+//           much as in the middle: a parent at lane 0 of the 13-lane Vee
+//           yields children at lanes 0 and 2, so one child still occupies the
+//           lane the parent died in and the trap stays honest at the wall.
+//
+// ⛔ Shifting, not clamping, is the whole point, and it is the same distinction
+// laneHop draws between a mirror-fold and a clamp. A caller that "simplifies"
+// this to laneNormalize(lane ± 1) reintroduces the stack.
+//
+// `lane` may be fractional — the debug bench spawns in the Skimmer's
+// continuous lane — and the arithmetic below carries that through unchanged.
+function splitLanes(well, lane) {
+  if (well.closed) {
+    return [laneWrap(well, lane - 1), laneWrap(well, lane + 1)];
+  }
+
+  const max = well.lanes - 1;
+  let a = lane - 1;
+  let b = lane + 1;
+
+  if (a < 0) { b -= a; a = 0; }               // shift the pair up off the wall
+  if (b > max) { a -= (b - max); b = max; }   // and down off the other one
+
+  // Only reachable on a well with fewer than three lanes, which no shipped
+  // well is. The pair collapses rather than reading off the end of the strip.
+  if (a < 0) a = 0;
+  return [a, b];
+}
+
 // ---- Projection -----------------------------------------------------------
 
 // depth -> the eased fraction of the way from throat to rim (GDD 3.2).

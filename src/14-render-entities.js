@@ -1,7 +1,8 @@
 // 14-render-entities.js — entity draw code, kept apart from 06-shots.js so the
 // glow/particle primitives here can move into kit-fx wholesale later (CLAUDE.md
 // "Modules built here, destined for the kit"). CS002 P3 added the shot streak;
-// CS003 P1 adds the shared entity projection helper and the Vaulter.
+// CS003 P1 adds the shared entity projection helper and the Vaulter; CS004 P2
+// adds the Carrier's hull and its cargo glyphs.
 //
 // ⛔ drawPoly + glowStroke only (GDD 10.2). No fill, no sprite, no texture.
 //
@@ -144,4 +145,83 @@ const VAULTER_POLY = [
 function drawVaulter(ctx, well, lane, depth) {
   drawPoly(ctx, entityPoints(well, lane, depth, VAULTER_POLY, C.VAULTER_SIZE), true);
   glowStroke(ctx, C.VAULTER_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
+// The Carrier's silhouette (GDD 6.1, 6.2, 18) — a hollow diamond hull with a
+// cargo glyph inside it.
+// ---------------------------------------------------------------------------
+//
+// ⛔ THE TWO SHAPES READ AS ONE ENTITY AND ARE TWO POLYS. entityPoints()
+// memoizes a scratch array PER POLY ARRAY (see its header), so a second poly
+// costs one more projection loop and zero allocation. Drawing the glyph as
+// extra points on the hull's own path would join them with a stroke and turn
+// two shapes into one scribble.
+//
+// ⛔ GDD 18 item 3: ours, not Atari's. GDD 6.1 names the silhouette — a hollow
+// diamond — and a rhombus outline is generic geometry, so the divergence has to
+// live somewhere else, and it does: the PROPORTION (this one is deep rather
+// than long, which is what makes it read as a container beside the Vaulter's
+// wide shallow X), the glyph, and GDD 10.1's depth-varying line weight and
+// glow. If a future pass wants more separation, add it here — do not reach for
+// a name or a colour from the game this is an homage to.
+//
+// Shape DATA, the same class of thing as WELLS' rim polygons. The lane extent
+// is scaled by C.CARRIER_SIZE; the depth extent is NOT (entityPoints scales `d`
+// by C.ENEMY_DEPTH_SCALE alone), so the ±0.85 below is what makes the hull
+// deeper than the Vaulter's ±0.55 at the same distance.
+const CARRIER_POLY = [
+  { l:  0.00, d: -0.85 },   // far tip, toward the throat
+  { l:  1.00, d:  0.00 },
+  { l:  0.00, d:  0.85 },   // near tip, toward the rim
+  { l: -1.00, d:  0.00 },
+];
+
+// ⛔ ONE GLYPH PER CARGO, keyed by the CARGO name (07-enemies.js). GDD 6.2 says
+// reading the glyph fast is the skill that separates competent from good, so
+// the design rule for a new row is legibility at THROAT depth, not detail at
+// the rim: two or three points, one unmistakable gesture, and no feature that
+// survives only at full size. CS005's rows are drifter and surger.
+//
+// The Vaulter's is a chevron aimed at the player — an OPEN path, so it never
+// reads as a second closed outline nested in the hull, and angled rather than
+// flat so it cannot be mistaken for a piece of the diamond it sits in. Its
+// extents are ~42% of the hull's on both axes (0.34 / 0.80 across the lanes,
+// 0.36 / 0.85 on depth), which is what keeps it visibly INSIDE the hull at
+// every depth but one: at the rim, entityPoints clamps every poly so its
+// outermost point lands exactly ON the rim, so the chevron's apex and the
+// hull's near tip meet there. That is inherent to the clamp, it happens to
+// both, and it is the depth at which the Carrier is about to kill you rather
+// than the depth at which you are reading its cargo.
+const CARGO_GLYPHS = {
+  vaulter: [
+    { l: -1.00, d: -0.36 },
+    { l:  0.00, d:  0.36 },
+    { l:  1.00, d: -0.36 },
+  ],
+};
+
+// ⛔ drawPoly + glowStroke, no fill (GDD 10.2), and FULL ALPHA AT EVERY DEPTH
+// for the same reason the Vaulter has it: GDD 10.3 governs what may be drawn
+// OVER the throat zone, and the enemy is the approaching thing that rule
+// protects.
+//
+// ⚠ The glyph is stroked in C.CARRIER_COLOR, the hull's own colour, rather than
+// in the cargo's. The palette note in 00-config.js is why: hue alone cannot
+// separate eight simultaneous things, so silhouette carries the read and the
+// palette's job is narrower. A cargo-coloured glyph is a real option for the
+// first art pass — it is one lookup — but it is an art decision and it is not
+// this phase's to make.
+function drawCarrier(ctx, well, lane, depth, cargo) {
+  drawPoly(ctx, entityPoints(well, lane, depth, CARRIER_POLY, C.CARRIER_SIZE), true);
+  glowStroke(ctx, C.CARRIER_COLOR, laneLineWidth(depth), 1);
+
+  // An unknown cargo draws the hull and nothing else, matching the way an
+  // unknown kind spawns nothing and an unknown cargo carries nothing. A
+  // Carrier with no glyph is visibly wrong; a thrown exception is a black
+  // screen.
+  const glyph = CARGO_GLYPHS[cargo];
+  if (!glyph) return;
+  drawPoly(ctx, entityPoints(well, lane, depth, glyph, C.CARRIER_GLYPH_SIZE), false);
+  glowStroke(ctx, C.CARRIER_COLOR, laneLineWidth(depth), 1);
 }

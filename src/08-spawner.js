@@ -24,6 +24,13 @@
 // caller and handed in, so an enemy that has no use for one simply ignores it.
 const ENEMY_KINDS = {
   vaulter: (lane, depth, dir) => new Vaulter(lane, depth, dir),
+  // ⛔ ONE ROW PER CARRIER VARIANT, not one row for "a Carrier". The cargo is
+  // half of what the entity IS (GDD 6.2 — reading the glyph is the skill), so
+  // it belongs in the string, exactly as the class it becomes belongs in this
+  // table. CS005's two rows are carrierDrifter and carrierSurger, alongside
+  // their CARGO entries (07-enemies.js). `dir` is ignored: a Carrier never
+  // hops, and the draw for it is still spent (see spawnEnemy below).
+  carrierVaulter: (lane, depth) => new Carrier(lane, depth, "vaulter"),
 };
 
 // How many enemies may be alive at once. ⛔ The MIN of the two, and they are

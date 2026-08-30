@@ -151,7 +151,7 @@ const C = {
   //
   // VAULTER_COLOR is the seventh member of this set; it sits with the Vaulter's
   // other tunables below, where CS003 P1 put it.
-  CARRIER_COLOR:        "#FFB84A",  // ⚠ warm amber; the hull, GDD 6.1
+  CARRIER_COLOR:        "#FFB84A",  // ⚠ warm amber; the hull AND its cargo glyph
   WEAVER_COLOR:         "#B6FF4A",  // ⚠ acid green
   WEAVER_BOLT_COLOR:    "#E8FF9A",  // ⚠ a paler relative of its parent
   THORN_COLOR:          "#A98CFF",  // ⚠ cool and inert — it is not a creature
@@ -166,6 +166,19 @@ const C = {
   VAULT_HOP_TIME:       0.28,   // s to cross one lane; hittable in both meanwhile
   VAULT_RIM_INTERVAL:   0.55,   // s between rim hunt hops
   VAULT_FIRST_LEVEL:    2,      // ⛔ GDD 6.3 — no mid-climb vaulting at level 1
+
+  // ---- Carrier (GDD 6.1, 6.2) ---------------------------------------------
+  // ⛔ CARRIER_SIZE and CARRIER_GLYPH_SIZE are LANE widths and nothing else.
+  // entityPoints() (14-render-entities.js) scales a poly's `l` by size/2 and
+  // its `d` by C.ENEMY_DEPTH_SCALE alone — a silhouette's DEPTH extent is not
+  // a function of its size. So these two numbers set how wide the hull is and
+  // how wide the glyph inside it is, and the two polys' own `d` values set how
+  // deep each one looks. Raising CARRIER_GLYPH_SIZE past CARRIER_SIZE would
+  // put the glyph outside the hull across the lanes while leaving it inside on
+  // depth, which reads as a rendering bug rather than as a bigger glyph.
+  CARRIER_SIZE:         0.80,   // lane widths spanned by the hull
+  CARRIER_GLYPH_SIZE:   0.34,   // lane widths spanned by the cargo glyph
+  CARRIER_CLIMB:        0.11,   // depth/s, throat -> rim ~9 s. GDD 6.1's "slow"
 
   // ---- Spawner / well lifecycle (GDD 2, 6.3, 12) --------------------------
   // ⛔ SPAWN_INTERVAL is what state.spawn.timer counts UP toward, and
@@ -710,6 +723,49 @@ function laneHop(well, lane, delta, dir) {
 function laneAtWall(well, lane) {
   if (well.closed) return false;
   return lane <= 0 || lane >= well.lanes - 1;
+}
+
+// ⛔ THE SPLIT HELPER (GDD 6.2, 3.5). Where a Carrier's two children go: one
+// lane either side of the parent, as a pair of LEGAL, DISTINCT lanes.
+//
+// It lives here, beside laneHop, because the thing that makes it non-trivial
+// is GDD 3.5 and nothing about cargo: `laneNormalize` CLAMPS on an open well,
+// so the naive `[lane - 1, lane + 1]` puts BOTH children of a lane-0 Carrier
+// in lanes 0 and 1 — two silhouettes stacked in one lane, on the six wells
+// where the player has the least room to dodge, at the exact moment they are
+// being asked to read a split. That is GDD 1.1 P2 failing, and it fails on the
+// six open wells only, which is how it survives a closed-well playtest.
+//
+//   closed  lane ± 1, wrapped. There is no wall, so nothing else to do.
+//   open    lane ± 1, then the PAIR is shifted inward — never squashed —
+//           until both ends are inside [0, lanes-1]. The gap between the two
+//           children is therefore always exactly two lanes, at the wall as
+//           much as in the middle: a parent at lane 0 of the 13-lane Vee
+//           yields children at lanes 0 and 2, so one child still occupies the
+//           lane the parent died in and the trap stays honest at the wall.
+//
+// ⛔ Shifting, not clamping, is the whole point, and it is the same distinction
+// laneHop draws between a mirror-fold and a clamp. A caller that "simplifies"
+// this to laneNormalize(lane ± 1) reintroduces the stack.
+//
+// `lane` may be fractional — the debug bench spawns in the Skimmer's
+// continuous lane — and the arithmetic below carries that through unchanged.
+function splitLanes(well, lane) {
+  if (well.closed) {
+    return [laneWrap(well, lane - 1), laneWrap(well, lane + 1)];
+  }
+
+  const max = well.lanes - 1;
+  let a = lane - 1;
+  let b = lane + 1;
+
+  if (a < 0) { b -= a; a = 0; }               // shift the pair up off the wall
+  if (b > max) { a -= (b - max); b = max; }   // and down off the other one
+
+  // Only reachable on a well with fewer than three lanes, which no shipped
+  // well is. The pair collapses rather than reading off the end of the strip.
+  if (a < 0) a = 0;
+  return [a, b];
 }
 
 // ---- Projection -----------------------------------------------------------
@@ -1933,6 +1989,136 @@ class Vaulter extends Enemy {
   }
 }
 
+// ---------------------------------------------------------------------------
+// ⛔ THE CARGO TABLE (GDD 6.2) — a cargo name -> what a Carrier of it splits
+// into.
+// ---------------------------------------------------------------------------
+//
+// ⛔ TWO NAMESPACES THAT HAPPEN TO COINCIDE, WHICH IS WHY THIS LOOKS LIKE AN
+// IDENTITY MAP AND IS NOT. The KEY is a cargo name: what the Carrier is
+// carrying, what its glyph draws (CARGO_GLYPHS, 14-render-entities.js), and
+// what GDD 6.2's variant table calls the row. The VALUE's `kind` is an
+// ENEMY_KINDS key (08-spawner.js): what actually gets spawned. They read the
+// same for every row GDD 6.2 lists, and they are not the same thing — the
+// spawner's table is where a string becomes a class, and this one is where a
+// cargo becomes a string.
+//
+// ⛔ THE SPLIT IS TABLE-DRIVEN AND STAYS THAT WAY. There is no branch on cargo
+// anywhere — not in onShot, not in splitLanes, not in the draw path. GDD 6.2
+// has three rows and only this one is buildable: the Drifter (L18) and the
+// Surger (L23) cannot be cargo before they are enemies, and they are CS005's.
+// Adding a row is: an entry here, an ENEMY_KINDS row for the carrier variant,
+// and a glyph in CARGO_GLYPHS — the same three-file shape every enemy already
+// has (behaviour, spawn string, silhouette). Nothing else.
+//
+// ⛔ GDD 6.2's "adjacent" (Vaulter cargo) and "flanking" (Surger cargo) are THE
+// SAME GEOMETRY. The distinction that section draws is between the correct
+// RESPONSES — move away versus hold still — which comes from what the cargo
+// does after it lands, not from where it lands. splitLanes() serves all three
+// rows; a second placement rule invented to justify the second word would be a
+// difference the player cannot see.
+const CARGO = {
+  vaulter: { kind: "vaulter" },
+};
+
+// ---------------------------------------------------------------------------
+// The Carrier (GDD 6.1, 6.2) — hollow diamond plus a cargo glyph, first at L3,
+// 100 points. Slow, ONE LANE, never hops. Kills by contact at the rim; any
+// shot kills it and it SPLITS into two of its cargo.
+// ---------------------------------------------------------------------------
+//
+// ⛔ IT DOES NOT TOUCH laneHop, laneDelta OR laneNormalize, AND THAT IS THE
+// POINT. `lane` is written exactly once, by the constructor, and is the lane it
+// was spawned into for its whole life — GDD 6.1's "one lane, never hops" is an
+// absence of code, not a flag, and CS004 P5's soak asserts the strong form
+// (exact lane equality every tick) rather than a range or a speed bound.
+class Carrier extends Enemy {
+  // `cargo` is a CARGO key, handed in by the ENEMY_KINDS factory — the kind
+  // string carries the variant, so the class does not need a branch.
+  constructor(lane, depth, cargo) {
+    super(lane, depth);
+
+    // GDD 4.5 item 1, the same expression the Vaulter uses. ⛔ Not a second
+    // constant: the band is measured DOWN from the rim, so retuning
+    // C.RIM_CONTACT_DEPTH moves every rim-contact enemy together.
+    this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
+
+    this.cargo = cargo;
+  }
+
+  // ⛔ Monotonic, and it STOPS at the rim rather than passing it — the same
+  // rule the Vaulter's climb carries and for the same reason: depth > 1 is not
+  // a legal position, and every downstream comparison (killDepth, the
+  // readability zone, the respawn push) would be reading a number no other
+  // system can produce.
+  //
+  // `well` and `state` are unused: a Carrier has no topology and no AI. The
+  // signature is the contract's (GDD 6.5), not this enemy's.
+  update(dt, well, state) {
+    if (this.depth < 1) {
+      this.depth += C.CARRIER_CLIMB * dt;
+      if (this.depth > 1) this.depth = 1;
+    }
+  }
+
+  draw(ctx, well) {
+    drawCarrier(ctx, well, this.lane, this.depth, this.cargo);
+  }
+
+  // Any shot kills it and the shot is spent (GDD 6.1) — and then it splits.
+  //
+  // ⛔ BOTH CHILDREN GO THROUGH spawnEnemy(), THE ONE ENTRY POINT (GDD 6.5).
+  // Four consequences, every one of them deliberate:
+  //
+  //   1. GDD 6.3's safe-spawn rule applies. A child landing in the Skimmer's
+  //      lane above C.SAFE_SPAWN_DEPTH is LOWERED to that line, never moved
+  //      sideways — which is exactly why CS003 P2 wrote that rule as a depth
+  //      clamp: relocating a child would break the shape GDD 6.2 is teaching
+  //      the player to read, and dropping one deeper only ever gives them more
+  //      time.
+  //   2. C.ENEMY_CAP applies. A Carrier killed on a full board loses its
+  //      children, and that is correct: the cap is a READABILITY ceiling, not a
+  //      difficulty knob, and "it is only a split" is precisely the bypass the
+  //      single entry point exists to prevent.
+  //   3. ⛔ Each call spends ONE RNG DRAW for the heading (08-spawner.js), so a
+  //      split spends TWO and shifts every later draw in the run. The run has
+  //      one stream and this is deterministic — a replay of the seed splits at
+  //      the same moment and draws the same numbers afterwards. Do not "save" a
+  //      draw here for a kind that ignores `dir`; that would make the stream
+  //      depend on which cargo was in the well.
+  //   4. ⚠ SETTLED — THIS PUSHES INTO state.enemies WHILE collideShots() IS
+  //      ITERATING IT (09-collision.js). That is safe, and it is safe for three
+  //      separate decisions in two files rather than by luck:
+  //        - the collision loop is INDEX-BASED and re-reads `.length`, so the
+  //          appended children are simply part of the array;
+  //        - the `break` after onShot is UNCONDITIONAL, so this shot resolves
+  //          against at most one enemy per step and cannot walk forward into
+  //          the children it just created;
+  //        - removal is still the end-of-frame `.filter()` in Game.update() —
+  //          nothing is spliced mid-loop (GDD 6.5).
+  //      ⛔ Do not "fix" this into a deferred spawn queue, and do not make that
+  //      `break` conditional. Either change turns a correct three-part
+  //      arrangement into a bug that only shows up on a busy board.
+  //
+  // The current well is read the same way spawnEnemy() itself reads it. An
+  // enemy has no well reference — `well` is handed to update() and draw() and
+  // deliberately not to onShot(), because what a hit DOES is not a question
+  // about geometry (GDD 6.5).
+  onShot(shot) {
+    this.dead = true;
+
+    const row = CARGO[this.cargo];
+    if (!row) return true;   // unknown cargo carries nothing, exactly as an
+                             // unknown kind spawns nothing. Never a throw.
+
+    const well = WELLS[state.wellIndex];
+    const lanes = splitLanes(well, this.lane);
+    spawnEnemy(row.kind, lanes[0], this.depth);
+    spawnEnemy(row.kind, lanes[1], this.depth);
+    return true;
+  }
+}
+
 // ==========================================================================
 // 08-spawner.js
 // ==========================================================================
@@ -1962,6 +2148,13 @@ class Vaulter extends Enemy {
 // caller and handed in, so an enemy that has no use for one simply ignores it.
 const ENEMY_KINDS = {
   vaulter: (lane, depth, dir) => new Vaulter(lane, depth, dir),
+  // ⛔ ONE ROW PER CARRIER VARIANT, not one row for "a Carrier". The cargo is
+  // half of what the entity IS (GDD 6.2 — reading the glyph is the skill), so
+  // it belongs in the string, exactly as the class it becomes belongs in this
+  // table. CS005's two rows are carrierDrifter and carrierSurger, alongside
+  // their CARGO entries (07-enemies.js). `dir` is ignored: a Carrier never
+  // hops, and the draw for it is still spent (see spawnEnemy below).
+  carrierVaulter: (lane, depth) => new Carrier(lane, depth, "vaulter"),
 };
 
 // How many enemies may be alive at once. ⛔ The MIN of the two, and they are
@@ -2183,6 +2376,26 @@ function laneHit(well, a, b) {
 // keeps CS004's Thorn (chip, consume) and an armoured entity (no damage, do not
 // consume) out of here as special cases.
 //
+// ⚠ SETTLED — AN ENEMY MAY PUSH INTO state.enemies FROM INSIDE onShot, WHILE
+// THIS LOOP IS ITERATING IT. CS004's Carrier does exactly that: a shot kills it
+// and it splits into two children through spawnEnemy() (07-enemies.js), which
+// appends to the array `j` is walking. That is safe, and it is safe because of
+// three separate decisions rather than by luck:
+//
+//   1. the inner loop is INDEX-BASED and re-reads `.length` every iteration, so
+//      an appended child is simply part of the array — nothing is invalidated,
+//      no iterator is live across the push;
+//   2. the `break` below is UNCONDITIONAL, so the shot that caused the split
+//      stops here and cannot walk forward into the children it just created;
+//   3. removal is still Game.update()'s end-of-frame `.filter()` — the dead
+//      parent is skipped by `e.dead` for the rest of this step and removed
+//      afterwards. Nothing is spliced mid-loop (GDD 6.5).
+//
+// ⛔ Do not "fix" this into a deferred spawn queue: a queue would put the
+// children on the board one step late, at a depth they never occupied, and buy
+// nothing. Do not make the `break` conditional either — that is item 2, and it
+// is load-bearing for this as well as for the chip-away economy above.
+//
 // ⛔ NO TUNNELING CHECK IS NEEDED, and here is the arithmetic so a future
 // session does not add one: a shot crosses C.SHOT_TIME (0.52 s) of depth in
 // one step of C.FIXED_DT, i.e. 1/0.52/60 ≈ 0.032 depth units, and the hit band
@@ -2356,6 +2569,17 @@ function updatePurge(state) {
 
   state.purgeUses++;
 
+  // ⚠ SETTLED — THE PURGE KILLS, IT DOES NOT ASK. Both branches below set
+  // `dead` directly and NEITHER calls onShot(). That is why a Purge on a well
+  // of CS004 Carriers leaves it empty instead of doubling it: splitting lives
+  // in Carrier.onShot (07-enemies.js), and the Purge never goes there.
+  //
+  // ⛔ Do not route this through onShot "for consistency". The two are not the
+  // same question — a shot asks the enemy what a hit does (GDD 6.5), and the
+  // Purge is GDD 4.3's panic button, which is a statement rather than a
+  // question. A panic button that doubles the enemy count is not a panic
+  // button. This works by OMISSION, which is exactly the kind of thing that
+  // gets "unified" by a later session, so it is written down here.
   if (state.purgeUses === 1) {
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
@@ -2557,7 +2781,8 @@ function isLaneLit(s) {
 // 14-render-entities.js — entity draw code, kept apart from 06-shots.js so the
 // glow/particle primitives here can move into kit-fx wholesale later (CLAUDE.md
 // "Modules built here, destined for the kit"). CS002 P3 added the shot streak;
-// CS003 P1 adds the shared entity projection helper and the Vaulter.
+// CS003 P1 adds the shared entity projection helper and the Vaulter; CS004 P2
+// adds the Carrier's hull and its cargo glyphs.
 //
 // ⛔ drawPoly + glowStroke only (GDD 10.2). No fill, no sprite, no texture.
 //
@@ -2700,6 +2925,85 @@ const VAULTER_POLY = [
 function drawVaulter(ctx, well, lane, depth) {
   drawPoly(ctx, entityPoints(well, lane, depth, VAULTER_POLY, C.VAULTER_SIZE), true);
   glowStroke(ctx, C.VAULTER_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
+// The Carrier's silhouette (GDD 6.1, 6.2, 18) — a hollow diamond hull with a
+// cargo glyph inside it.
+// ---------------------------------------------------------------------------
+//
+// ⛔ THE TWO SHAPES READ AS ONE ENTITY AND ARE TWO POLYS. entityPoints()
+// memoizes a scratch array PER POLY ARRAY (see its header), so a second poly
+// costs one more projection loop and zero allocation. Drawing the glyph as
+// extra points on the hull's own path would join them with a stroke and turn
+// two shapes into one scribble.
+//
+// ⛔ GDD 18 item 3: ours, not Atari's. GDD 6.1 names the silhouette — a hollow
+// diamond — and a rhombus outline is generic geometry, so the divergence has to
+// live somewhere else, and it does: the PROPORTION (this one is deep rather
+// than long, which is what makes it read as a container beside the Vaulter's
+// wide shallow X), the glyph, and GDD 10.1's depth-varying line weight and
+// glow. If a future pass wants more separation, add it here — do not reach for
+// a name or a colour from the game this is an homage to.
+//
+// Shape DATA, the same class of thing as WELLS' rim polygons. The lane extent
+// is scaled by C.CARRIER_SIZE; the depth extent is NOT (entityPoints scales `d`
+// by C.ENEMY_DEPTH_SCALE alone), so the ±0.85 below is what makes the hull
+// deeper than the Vaulter's ±0.55 at the same distance.
+const CARRIER_POLY = [
+  { l:  0.00, d: -0.85 },   // far tip, toward the throat
+  { l:  1.00, d:  0.00 },
+  { l:  0.00, d:  0.85 },   // near tip, toward the rim
+  { l: -1.00, d:  0.00 },
+];
+
+// ⛔ ONE GLYPH PER CARGO, keyed by the CARGO name (07-enemies.js). GDD 6.2 says
+// reading the glyph fast is the skill that separates competent from good, so
+// the design rule for a new row is legibility at THROAT depth, not detail at
+// the rim: two or three points, one unmistakable gesture, and no feature that
+// survives only at full size. CS005's rows are drifter and surger.
+//
+// The Vaulter's is a chevron aimed at the player — an OPEN path, so it never
+// reads as a second closed outline nested in the hull, and angled rather than
+// flat so it cannot be mistaken for a piece of the diamond it sits in. Its
+// extents are ~42% of the hull's on both axes (0.34 / 0.80 across the lanes,
+// 0.36 / 0.85 on depth), which is what keeps it visibly INSIDE the hull at
+// every depth but one: at the rim, entityPoints clamps every poly so its
+// outermost point lands exactly ON the rim, so the chevron's apex and the
+// hull's near tip meet there. That is inherent to the clamp, it happens to
+// both, and it is the depth at which the Carrier is about to kill you rather
+// than the depth at which you are reading its cargo.
+const CARGO_GLYPHS = {
+  vaulter: [
+    { l: -1.00, d: -0.36 },
+    { l:  0.00, d:  0.36 },
+    { l:  1.00, d: -0.36 },
+  ],
+};
+
+// ⛔ drawPoly + glowStroke, no fill (GDD 10.2), and FULL ALPHA AT EVERY DEPTH
+// for the same reason the Vaulter has it: GDD 10.3 governs what may be drawn
+// OVER the throat zone, and the enemy is the approaching thing that rule
+// protects.
+//
+// ⚠ The glyph is stroked in C.CARRIER_COLOR, the hull's own colour, rather than
+// in the cargo's. The palette note in 00-config.js is why: hue alone cannot
+// separate eight simultaneous things, so silhouette carries the read and the
+// palette's job is narrower. A cargo-coloured glyph is a real option for the
+// first art pass — it is one lookup — but it is an art decision and it is not
+// this phase's to make.
+function drawCarrier(ctx, well, lane, depth, cargo) {
+  drawPoly(ctx, entityPoints(well, lane, depth, CARRIER_POLY, C.CARRIER_SIZE), true);
+  glowStroke(ctx, C.CARRIER_COLOR, laneLineWidth(depth), 1);
+
+  // An unknown cargo draws the hull and nothing else, matching the way an
+  // unknown kind spawns nothing and an unknown cargo carries nothing. A
+  // Carrier with no glyph is visibly wrong; a thrown exception is a black
+  // screen.
+  const glyph = CARGO_GLYPHS[cargo];
+  if (!glyph) return;
+  drawPoly(ctx, entityPoints(well, lane, depth, glyph, C.CARRIER_GLYPH_SIZE), false);
+  glowStroke(ctx, C.CARRIER_COLOR, laneLineWidth(depth), 1);
 }
 
 // ==========================================================================
@@ -2971,9 +3275,16 @@ const Game = (function () {
   // ⛔ A kind that is not in ENEMY_KINDS yet is a NO-OP, not a throw:
   // spawnEnemy() returns null for an unknown kind, so P2 through P4 light
   // these up by adding a row to that table and touching nothing here.
+  //
+  // ⛔ THESE ARE ENEMY_KINDS STRINGS, NOT ROSTER NAMES, and the Carrier is where
+  // the two stop coinciding: GDD 6.2 gives it three variants and 08-spawner.js
+  // carries one row per variant, so the bench key that shows "a Carrier" has to
+  // name one of them. It names the only one CS004 builds. CS005's two rows do
+  // not get their own keys — the bench has five and the roster has six, and
+  // pressing 2 to see the hull and a glyph is what this is for.
   const DEBUG_SPAWN_ACTIONS = {
     spawnVaulter: "vaulter",
-    spawnCarrier: "carrier",
+    spawnCarrier: "carrierVaulter",
     spawnWeaver:  "weaver",
     spawnThorn:   "thorn",
   };
@@ -2982,7 +3293,7 @@ const Game = (function () {
   // introduced. `spawnRow` exists for exactly one job: putting the whole
   // palette on screen at once, so the six ⚠ provisional colours can be judged
   // against each other and against the band in a single look.
-  const DEBUG_ROW_KINDS = ["vaulter", "carrier", "weaver", "thorn", "drifter", "surger"];
+  const DEBUG_ROW_KINDS = ["vaulter", "carrierVaulter", "weaver", "thorn", "drifter", "surger"];
 
   // One of every Classic kind, consecutive lanes, staggered depths.
   //

@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS004 (P1 of 5 done) · Wells: 16/16 · Enemies: 1/6 Classic · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS004 (P2 of 5 done) · Wells: 16/16 · Enemies: 2/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS004
 
@@ -24,11 +24,37 @@ list** — the spawn-lane sequence is byte-identical to the pre-change build.
 **Mutation-checked:** removing the anchored skip, narrowing the clamp to a rim
 band, and an unconditional `rngPick` each turn the suite red.
 
+- **P2 — the Carrier, the split, and the cargo table.** ✅ `class Carrier`,
+  `CARGO`, `splitLanes()`, the `carrierVaulter` kind, the hull and the cargo
+  glyph, and `scratchpad/test-cs004-p2.js` (91 assertions).
+
+The Carrier climbs one lane at `C.CARRIER_CLIMB` 0.11 and stops at the rim;
+`killDepth` is `1 - C.RIM_CONTACT_DEPTH`, the Vaulter's expression. ⛔ It touches
+no lane helper at all, so "never hops" is an absence of code and the test
+asserts **exact** lane equality over 3,000 ticks on all sixteen wells.
+
+⛔ `splitLanes(well, lane)` lives in `03-wells.js` beside `laneHop`, because what
+makes it hard is GDD §3.5 and nothing about cargo: on an open well the pair is
+**shifted inward**, never clamped, so the gap stays two lanes at the wall — a
+lane-0 parent on the Vee yields 0 and 2, and one child still occupies the lane
+the parent died in. One helper serves all three §6.2 rows.
+
+⛔ Both children go through `spawnEnemy()`, so the split inherits the safe-spawn
+lowering, `C.ENEMY_CAP` (a split with one slot free adds exactly one child), and
+two RNG draws. The push happens inside `collideShots()`'s own loop; the ⚠ SETTLED
+reasoning is at the call site in `07-enemies.js` and in `09-collision.js`, along
+with the ⚠ note that the Purge kills without calling `onShot()`.
+
+**Mutation-checked, all three red:** a split that pushes straight into
+`state.enemies` (8 assertions), a `splitLanes` that is a bare
+`laneNormalize(lane ± 1)` (3), and a conditional `break` in `collideShots` (3
+here plus 2 in `test-cs003-p3.js`).
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes: 15 test files, zero skips.
+- `node scratchpad/run-all.js` passes: 16 test files, zero skips.
 - CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer. Full
   narrative in `log/CS001.md`.
 - CS002 closed 2026-08-30 — the loop, the Skimmer, shots, and all four input
@@ -70,7 +96,7 @@ band, and an unconditional `rngPick` each turn the suite red.
   palette. They were chosen **as one set** against the constraint recorded in
   `C`: an enemy colour must read against all seven band colours (§3.6), because
   the well cycles and the enemies do not. ⛔ **The set cannot actually be judged
-  until P4**, because `spawnRow` currently puts one silhouette on screen.
+  until P4**, because `spawnRow` currently puts two silhouettes on screen.
 - **`drawWell()`'s `laneState` parameter is still unwired.** Lane occupancy
   lighting (GDD §3.7) belongs with the dim band, in CS006. Note
   `PLANNED-FEATURES-CS004.md` finding 6: the Surger's telegraph is an entity
@@ -120,6 +146,35 @@ band, and an unconditional `rngPick` each turn the suite red.
 - **GDD §6.1's "The other five are CS004's" was stale from the split.** Rewritten
   to name which three are CS004's and which two are CS005's.
 
+## Findings from P2 (hazards the phase prompt did not name)
+
+- ⛔ **The bench key `2` was one string short of working, and P1's "touching
+  nothing here" was wrong about it.** `ENEMY_KINDS` needs one row per Carrier
+  VARIANT — the cargo is half of what the entity is — so the kind is
+  `carrierVaulter`, not `carrier`, and the bench's `DEBUG_SPAWN_ACTIONS` and
+  `DEBUG_ROW_KINDS` both named `"carrier"`. Both are updated. That also made
+  `test-cs004-p1.js`'s "`2`/`3`/`4` are no-ops" assertion false, so it now covers
+  `3` and `4` only, with a ⚠ note saying why; **P3 and P4 will each do the same
+  to their own digit.** The bench has five keys and the roster has six — CS005's
+  two cargo rows do not get keys of their own.
+- **`test-registry.js`'s `enemies` count went 1 → 2 here, not 1 → 4 in P5.**
+  `test-cs003-p5.js` compares `Object.keys(ENEMY_KINDS).length` against it, so
+  the suite goes red the moment a kind lands. P3 and P4 raise it again; ⛔ P5's
+  instruction is therefore **confirm it is 4 and make the check smarter**, not
+  raise it — by then `ENEMY_KINDS` holds more rows than the roster has entries.
+- **The `splitLanes` prose in `PLANNED-FEATURES-CS004.md` and the P2 prompt has a
+  slip, and the concrete example is the one that shipped.** "The pair still
+  straddles a lane, and the lane it straddles is the parent's" cannot be true at
+  a wall: children at 0 and 2 straddle lane **1**. What is actually true there,
+  and what keeps the trap honest, is that **one child occupies the parent's own
+  lane**. The named outcome (0 and 2) is unambiguous and is what the code does.
+- **At the rim the cargo glyph's apex touches the hull's near tip, and that is
+  `entityPoints()`, not the shape.** It clamps every poly so the poly's
+  outermost point lands exactly ON the rim, so two polys drawn at the same depth
+  meet there however differently they are proportioned. It happens only in the
+  clamp band, it is documented at the shape data, and ⛔ fixing it would mean
+  changing `entityPoints`, which finding 4 puts out of scope.
+
 ## Open questions (blocking)
 
 - None.
@@ -140,16 +195,20 @@ band, and an unconditional `rngPick` each turn the suite red.
   board and the craft that died on it. `r` restarts. CS007 owns the screen, the
   submission and the real restart flow, and the `restart` debug action should be
   folded into it rather than left as a second way in.
-- `scratchpad/test-registry.js`'s `enemies` count is 1. CS004 P2–P4 raise it to
-  4 as the Carrier, Weaver and Thorn land; that count lives there and in no
-  other file. The Weaver's bolt is not a §6.1 roster row and is not counted.
+- `scratchpad/test-registry.js`'s `enemies` count is 2 (P2 raised it for the
+  Carrier). P3 and P4 raise it to 4 as the Weaver and Thorn land; that count
+  lives there and in no other file. The Weaver's bolt is not a §6.1 roster row
+  and is not counted.
 
 ## Next up
 
-- CS004 P2 — the Carrier, `splitLanes()` and the `CARGO` table. ⛔ It is the
-  first non-spawner caller of `spawnEnemy()` and it mutates `state.enemies`
-  from inside the collision pass's own loop; `PLANNED-FEATURES-CS004.md`
-  finding 3 lists the four qualifications that make that safe.
+- CS004 P3 — the Weaver and its bolt. ⛔ The bolt is the roster's first
+  non-consuming `onShot`, which is the one thing the unconditional `break` in
+  `collideShots()` actually distinguishes — P2's mutation check had to stage a
+  bare `Enemy` to probe it, and P3 gets a real entity for the job.
+- ⛔ P3 and P4 each light up their own debug digit and must narrow
+  `test-cs004-p1.js`'s no-op loop the way P2 did, and raise
+  `test-registry.js`'s `enemies` count.
 - ⛔ P4 is where P1's `anchored` fix is proved through the real death path: a
   Thorn at `depth 0.9` still measures `0.9` after a death and respawn.
 
@@ -171,6 +230,15 @@ band, and an unconditional `rngPick` each turn the suite red.
 - Is `HIT_DEPTH_TOL` 0.05 generous enough that a shot fired at a climbing
   Vaulter connects when it looks like it should? The band is ~3x the distance a
   shot covers in one step, so misses should read as aim, never as luck.
+- **Is the cargo glyph readable at throat depth?** §6.2 says reading it fast is
+  the skill that separates competent from good, so the deep end is the test, not
+  the rim. Press `2` and watch one climb the whole way.
+- ⚠ **Should the glyph be stroked in the CARGO's colour rather than the hull's?**
+  It ships in `CARRIER_COLOR` because §3.6's palette note says silhouette carries
+  the read; a cargo-coloured glyph is one lookup away and is an art call, not a
+  phase's.
+- **Does `CARRIER_CLIMB` 0.11 — nine seconds throat to rim — read as §6.2's
+  "shoot deep; you have time", or just as slow?**
 - ⚠ **The palette, once P4 lands.** Press `0` on a busy well: do six enemy
   colours stay separable from each other and from the cyan band, and does the
   Thorn read as scenery rather than as a creature?

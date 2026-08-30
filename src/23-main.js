@@ -224,9 +224,16 @@ const Game = (function () {
   // ⛔ A kind that is not in ENEMY_KINDS yet is a NO-OP, not a throw:
   // spawnEnemy() returns null for an unknown kind, so P2 through P4 light
   // these up by adding a row to that table and touching nothing here.
+  //
+  // ⛔ THESE ARE ENEMY_KINDS STRINGS, NOT ROSTER NAMES, and the Carrier is where
+  // the two stop coinciding: GDD 6.2 gives it three variants and 08-spawner.js
+  // carries one row per variant, so the bench key that shows "a Carrier" has to
+  // name one of them. It names the only one CS004 builds. CS005's two rows do
+  // not get their own keys — the bench has five and the roster has six, and
+  // pressing 2 to see the hull and a glyph is what this is for.
   const DEBUG_SPAWN_ACTIONS = {
     spawnVaulter: "vaulter",
-    spawnCarrier: "carrier",
+    spawnCarrier: "carrierVaulter",
     spawnWeaver:  "weaver",
     spawnThorn:   "thorn",
   };
@@ -235,7 +242,7 @@ const Game = (function () {
   // introduced. `spawnRow` exists for exactly one job: putting the whole
   // palette on screen at once, so the six ⚠ provisional colours can be judged
   // against each other and against the band in a single look.
-  const DEBUG_ROW_KINDS = ["vaulter", "carrier", "weaver", "thorn", "drifter", "surger"];
+  const DEBUG_ROW_KINDS = ["vaulter", "carrierVaulter", "weaver", "thorn", "drifter", "surger"];
 
   // One of every Classic kind, consecutive lanes, staggered depths.
   //

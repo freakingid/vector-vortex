@@ -102,7 +102,7 @@ const C = {
   //
   // VAULTER_COLOR is the seventh member of this set; it sits with the Vaulter's
   // other tunables below, where CS003 P1 put it.
-  CARRIER_COLOR:        "#FFB84A",  // ⚠ warm amber; the hull, GDD 6.1
+  CARRIER_COLOR:        "#FFB84A",  // ⚠ warm amber; the hull AND its cargo glyph
   WEAVER_COLOR:         "#B6FF4A",  // ⚠ acid green
   WEAVER_BOLT_COLOR:    "#E8FF9A",  // ⚠ a paler relative of its parent
   THORN_COLOR:          "#A98CFF",  // ⚠ cool and inert — it is not a creature
@@ -117,6 +117,19 @@ const C = {
   VAULT_HOP_TIME:       0.28,   // s to cross one lane; hittable in both meanwhile
   VAULT_RIM_INTERVAL:   0.55,   // s between rim hunt hops
   VAULT_FIRST_LEVEL:    2,      // ⛔ GDD 6.3 — no mid-climb vaulting at level 1
+
+  // ---- Carrier (GDD 6.1, 6.2) ---------------------------------------------
+  // ⛔ CARRIER_SIZE and CARRIER_GLYPH_SIZE are LANE widths and nothing else.
+  // entityPoints() (14-render-entities.js) scales a poly's `l` by size/2 and
+  // its `d` by C.ENEMY_DEPTH_SCALE alone — a silhouette's DEPTH extent is not
+  // a function of its size. So these two numbers set how wide the hull is and
+  // how wide the glyph inside it is, and the two polys' own `d` values set how
+  // deep each one looks. Raising CARRIER_GLYPH_SIZE past CARRIER_SIZE would
+  // put the glyph outside the hull across the lanes while leaving it inside on
+  // depth, which reads as a rendering bug rather than as a bigger glyph.
+  CARRIER_SIZE:         0.80,   // lane widths spanned by the hull
+  CARRIER_GLYPH_SIZE:   0.34,   // lane widths spanned by the cargo glyph
+  CARRIER_CLIMB:        0.11,   // depth/s, throat -> rim ~9 s. GDD 6.1's "slow"
 
   // ---- Spawner / well lifecycle (GDD 2, 6.3, 12) --------------------------
   // ⛔ SPAWN_INTERVAL is what state.spawn.timer counts UP toward, and

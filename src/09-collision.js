@@ -48,6 +48,26 @@ function laneHit(well, a, b) {
 // keeps CS004's Thorn (chip, consume) and an armoured entity (no damage, do not
 // consume) out of here as special cases.
 //
+// ⚠ SETTLED — AN ENEMY MAY PUSH INTO state.enemies FROM INSIDE onShot, WHILE
+// THIS LOOP IS ITERATING IT. CS004's Carrier does exactly that: a shot kills it
+// and it splits into two children through spawnEnemy() (07-enemies.js), which
+// appends to the array `j` is walking. That is safe, and it is safe because of
+// three separate decisions rather than by luck:
+//
+//   1. the inner loop is INDEX-BASED and re-reads `.length` every iteration, so
+//      an appended child is simply part of the array — nothing is invalidated,
+//      no iterator is live across the push;
+//   2. the `break` below is UNCONDITIONAL, so the shot that caused the split
+//      stops here and cannot walk forward into the children it just created;
+//   3. removal is still Game.update()'s end-of-frame `.filter()` — the dead
+//      parent is skipped by `e.dead` for the rest of this step and removed
+//      afterwards. Nothing is spliced mid-loop (GDD 6.5).
+//
+// ⛔ Do not "fix" this into a deferred spawn queue: a queue would put the
+// children on the board one step late, at a depth they never occupied, and buy
+// nothing. Do not make the `break` conditional either — that is item 2, and it
+// is load-bearing for this as well as for the chip-away economy above.
+//
 // ⛔ NO TUNNELING CHECK IS NEEDED, and here is the arithmetic so a future
 // session does not add one: a shot crosses C.SHOT_TIME (0.52 s) of depth in
 // one step of C.FIXED_DT, i.e. 1/0.52/60 ≈ 0.032 depth units, and the hit band
@@ -221,6 +241,17 @@ function updatePurge(state) {
 
   state.purgeUses++;
 
+  // ⚠ SETTLED — THE PURGE KILLS, IT DOES NOT ASK. Both branches below set
+  // `dead` directly and NEITHER calls onShot(). That is why a Purge on a well
+  // of CS004 Carriers leaves it empty instead of doubling it: splitting lives
+  // in Carrier.onShot (07-enemies.js), and the Purge never goes there.
+  //
+  // ⛔ Do not route this through onShot "for consistency". The two are not the
+  // same question — a shot asks the enemy what a hit does (GDD 6.5), and the
+  // Purge is GDD 4.3's panic button, which is a statement rather than a
+  // question. A panic button that doubles the enemy count is not a panic
+  // button. This works by OMISSION, which is exactly the kind of thing that
+  // gets "unified" by a later session, so it is written down here.
   if (state.purgeUses === 1) {
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];

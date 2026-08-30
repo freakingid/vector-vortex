@@ -159,12 +159,18 @@ H.close(X.laneDelta(X.WELLS[state.wellIndex], state.enemies[0].lane, state.skimm
         "in the Skimmer's lane");
 H.assert(state.enemies[0].depth < 0.01, "at the throat");
 
-// The three unbuilt kinds are NO-OPS, not throws: spawnEnemy() returns null for
-// a kind ENEMY_KINDS does not list, so P2..P4 light these up by adding a row.
+// An unbuilt kind is a NO-OP, not a throw: spawnEnemy() returns null for a kind
+// ENEMY_KINDS does not list, so P2..P4 light these up by adding a row.
+//
+// ⚠ "2" WAS IN THIS LIST AND IS NOT ANY MORE. CS004 P2 landed the Carrier and
+// wired spawnCarrier to the carrierVaulter kind, which is the phase that key
+// was waiting for; leaving it here would assert that P2 had not shipped. The
+// case that "2" spawns exactly one Carrier belongs to test-cs004-p2.js, which
+// owns it. P3 and P4 do the same to their own digits.
 quietWell();
-for (const d of ["2", "3", "4"]) { G.input.keyDown(d); G.update(DT); G.input.keyUp(d); }
+for (const d of ["3", "4"]) { G.input.keyDown(d); G.update(DT); G.input.keyUp(d); }
 H.eq(state.enemies.length, 0,
-     "⛔ spawnCarrier / spawnWeaver / spawnThorn are no-ops while their kinds are unbuilt");
+     "⛔ spawnWeaver / spawnThorn are no-ops while their kinds are unbuilt");
 
 // ⛔ THROUGH spawnEnemy(), which is what makes the cap apply to the bench too.
 // A bench that pushed straight into state.enemies walks past C.ENEMY_CAP, and
