@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS004 (P2 of 5 done) · Wells: 16/16 · Enemies: 2/6 Classic · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS004 (P3 of 5 done) · Wells: 16/16 · Enemies: 3/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS004
 
@@ -49,6 +49,34 @@ with the ⚠ note that the Purge kills without calling `onShot()`.
 `state.enemies` (8 assertions), a `splitLanes` that is a bare
 `laneNormalize(lane ± 1)` (3), and a conditional `break` in `collideShots` (3
 here plus 2 in `test-cs003-p3.js`).
+
+- **P3 — the Weaver, its bolt, and GDD §4.5 item 4.** ✅ `class Weaver`,
+  `class WeaverBolt`, the `weaver` and `weaverBolt` kinds, the open spiral and
+  the dart, and `scratchpad/test-cs004-p3.js` (99 assertions).
+
+The cycle is a phase string and one up-counting timer: climb at
+`C.WEAVER_CLIMB` to `C.WEAVER_APEX` 0.55, hold `C.WEAVER_APEX_HOLD`, retreat at
+the faster `C.WEAVER_RETREAT`, repeat. ⛔ `fired` is a per-CYCLE latch, not a
+cooldown — the bolt goes out on the FIRST step of the hold, so the player reads
+it while its parent is still at the apex. A Weaver that arrived ABOVE the apex
+turns around from where it is rather than teleporting down to the line.
+
+⛔ The Weaver's `killDepth` is the roster's first `null`: its body never kills at
+any depth, the rim included, and the test proves it through the real
+`collideSkimmer`. `blocksClear` stays `true`. The bolt is the mirror —
+`killDepth = 1 - C.RIM_CONTACT_DEPTH` (GDD §4.5 item 4, live, with no new
+collision code), `blocksClear = false`, `purgeable = true`, ⚠ `onShot` returns
+`false` so it is not shootable, and it dies at `depth 1` the step AFTER arriving
+so the rim step is still lethal.
+
+⛔ `Weaver.fire()` goes through `spawnEnemy()` — the second non-spawner caller —
+so the bolt inherits `C.ENEMY_CAP`, the safe-spawn lowering and one RNG draw.
+The `layThorn()` hook is an empty one-liner naming P4.
+
+**Mutation-checked, all six red:** a rim-band `killDepth` on the Weaver, a
+consuming bolt `onShot`, a fire without the latch (21 bolts a cycle), a
+`blocksClear` left true, a `fire()` that pushes straight into `state.enemies`,
+and a Weaver drawn as a closed path.
 
 ## Working / verified
 
@@ -175,6 +203,31 @@ here plus 2 in `test-cs003-p3.js`).
   clamp band, it is documented at the shape data, and ⛔ fixing it would mean
   changing `entityPoints`, which finding 4 puts out of scope.
 
+## Findings from P3 (hazards the phase prompt did not name)
+
+- ⛔ **`ENEMY_KINDS` stopped matching the roster count at P3, not at P5.**
+  `test-cs003-p5.js` compared `Object.keys(ENEMY_KINDS).length` against
+  `test-registry.js`'s `enemies`, and the bolt is a kind with no GDD §6.1 roster
+  row — so that equality went red the moment the Weaver landed. STATUS predicted
+  this for P5 ("confirm it is 4 and make the check smarter"); it arrived a phase
+  early. Fixed by **splitting the number in two, in the one file allowed to name
+  a global count**: `enemies` (3) counts roster rows and `enemyKinds` (4) counts
+  `ENEMY_KINDS` rows, and `test-cs003-p5.js` now compares against the latter.
+  ⛔ **CS005 raises both, and by different amounts** — the Drifter and the Surger
+  are two roster rows but four kinds, because `carrierDrifter` and
+  `carrierSurger` come with them.
+- **The bolt's death step is an ORDERING decision, not a clamp.** `Game.update()`
+  runs the entity pass, then collision, and `collideSkimmer()` skips anything
+  already `dead` — so killing the bolt on the step its depth reaches 1 would make
+  the rim step silently non-lethal. It dies on the step AFTER. The lethal band
+  starts nine steps earlier at `killDepth`, so this is belt and braces; it is
+  written that way so the belt does not depend on the braces.
+- **`Weaver.fire()` reads the GLOBAL `state`, the same way `Carrier.onShot()`
+  does**, because that is how `spawnEnemy()` finds the current well. Any test
+  that drives a Weaver's cycle on a well the state is not pointing at puts its
+  bolts somewhere else; `test-cs004-p3.js`'s all-sixteen-wells lane soak calls
+  `useWell(wi)` per well for exactly this reason, and the trap is in its header.
+
 ## Open questions (blocking)
 
 - None.
@@ -195,22 +248,25 @@ here plus 2 in `test-cs003-p3.js`).
   board and the craft that died on it. `r` restarts. CS007 owns the screen, the
   submission and the real restart flow, and the `restart` debug action should be
   folded into it rather than left as a second way in.
-- `scratchpad/test-registry.js`'s `enemies` count is 2 (P2 raised it for the
-  Carrier). P3 and P4 raise it to 4 as the Weaver and Thorn land; that count
-  lives there and in no other file. The Weaver's bolt is not a §6.1 roster row
-  and is not counted.
+- `scratchpad/test-registry.js` now carries TWO counts. `enemies` is 3 (P3
+  raised it for the Weaver) and counts GDD §6.1 roster rows; `enemyKinds` is 4
+  and counts `ENEMY_KINDS` rows. P4 raises both by one for the Thorn. ⛔ Both
+  live there and in no other file, and the Weaver's bolt is a kind and not a
+  roster row.
 
 ## Next up
 
-- CS004 P3 — the Weaver and its bolt. ⛔ The bolt is the roster's first
-  non-consuming `onShot`, which is the one thing the unconditional `break` in
-  `collideShots()` actually distinguishes — P2's mutation check had to stage a
-  bare `Enemy` to probe it, and P3 gets a real entity for the job.
-- ⛔ P3 and P4 each light up their own debug digit and must narrow
-  `test-cs004-p1.js`'s no-op loop the way P2 did, and raise
-  `test-registry.js`'s `enemies` count.
+- CS004 P4 — the Thorn and the chip economy, plus the Weaver's lay-and-adopt.
+  ⛔ `Weaver.layThorn(well, state)` in `src/07-enemies.js` is the empty hook P4
+  fills; it is called every step of the climb phase and nowhere else.
+- ⛔ P4 lights up debug digit `4` and must narrow `test-cs004-p1.js`'s no-op
+  loop the way P2 and P3 did — the loop is down to `["4"]` and P4 empties it, so
+  ⛔ **delete the case rather than leave a loop over nothing.**
+- ⛔ P4 raises BOTH registry counts (`enemies` 3 → 4, `enemyKinds` 4 → 5).
 - ⛔ P4 is where P1's `anchored` fix is proved through the real death path: a
   Thorn at `depth 0.9` still measures `0.9` after a death and respawn.
+- ⛔ The bolt is now the roster's real non-consuming `onShot`, so CS005's
+  armoured Drifter has a working precedent and a mutation check to copy.
 
 ## Playtest asks (open only)
 
@@ -242,3 +298,11 @@ here plus 2 in `test-cs003-p3.js`).
 - ⚠ **The palette, once P4 lands.** Press `0` on a busy well: do six enemy
   colours stay separable from each other and from the cyan band, and does the
   Thorn read as scenery rather than as a creature?
+- **Does the Weaver's cycle read as a cycle?** Press `3` and watch one for ten
+  seconds: *it comes up, it spits, it goes back down.* If the retreat reads as a
+  second approach, `C.WEAVER_RETREAT` is the knob.
+- **Is the bolt legible enough to dodge?** It is the one thing in Classic that
+  cannot be shot, so the whole answer is rotating out of the lane. ~1.4 s from
+  the apex to the rim.
+- ⚠ **Does a Weaver sitting on the rim in your lane read as safe?** Its body
+  never kills, which is correct and is going to look wrong the first time.

@@ -225,3 +225,80 @@ function drawCarrier(ctx, well, lane, depth, cargo) {
   drawPoly(ctx, entityPoints(well, lane, depth, glyph, C.CARRIER_GLYPH_SIZE), false);
   glowStroke(ctx, C.CARRIER_COLOR, laneLineWidth(depth), 1);
 }
+
+// ---------------------------------------------------------------------------
+// The Weaver's silhouette (GDD 6.1, 18) — GDD 6.1's OPEN SPIRAL.
+// ---------------------------------------------------------------------------
+//
+// ⛔ AN OPEN PATH. drawPoly's `closed` argument is false for this one, and it is
+// not a stylistic choice: a spiral that closes is a set of nested boxes, and the
+// unwinding is the whole read. This is the roster's first open silhouette.
+//
+// ⛔ IT MUST NOT READ AS A THREAT THE WAY THE VAULTER DOES, BECAUSE IT IS NOT
+// ONE. Its body never kills (07-enemies.js — killDepth is null); what the
+// player is afraid of is what it LEAVES and what it FIRES. So there are no arm
+// tips, no points aimed at the rim, and nothing that reads as a wingspan
+// blocking a lane. A coil unwinding in place is the opposite gesture: busy,
+// occupied, indifferent to you.
+//
+// ⛔ GDD 18 item 3: ours, not Atari's. The shape that game's equivalent is
+// remembered for is a rod with a wave running along it — a straight spine,
+// which this deliberately has none of.
+//
+// A rectangular coil, four turns, wound outward from the centre. `l` reaches
+// exactly ±1 at the extremes, so C.WEAVER_SIZE means what it means on every
+// other silhouette: the lane widths the shape spans. The inner turns are the
+// first thing lost at throat depth and that is correct — the outer sweep is
+// what carries the read down there.
+//
+// Shape DATA, the same class of thing as WELLS' rim polygons.
+const WEAVER_POLY = [
+  { l:  0.00, d:  0.00 },   // the eye of the coil
+  { l:  0.30, d:  0.00 },
+  { l:  0.30, d:  0.34 },
+  { l: -0.40, d:  0.34 },
+  { l: -0.40, d: -0.44 },
+  { l:  0.66, d: -0.44 },
+  { l:  0.66, d:  0.70 },
+  { l: -1.00, d:  0.70 },
+  { l: -1.00, d: -0.90 },
+  { l:  1.00, d: -0.90 },   // the loose end, trailing toward the throat
+];
+
+// ⛔ drawPoly + glowStroke, ONE OPEN path, no fill (GDD 10.2), and FULL ALPHA AT
+// EVERY DEPTH for the same reason the Vaulter and the Carrier have it: GDD 10.3
+// governs what may be drawn OVER the throat zone, and the enemy is the
+// approaching thing that rule protects.
+function drawWeaver(ctx, well, lane, depth) {
+  drawPoly(ctx, entityPoints(well, lane, depth, WEAVER_POLY, C.WEAVER_SIZE), false);
+  glowStroke(ctx, C.WEAVER_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
+// The Weaver's bolt (GDD 4.5 item 4, 18) — a small dart, aimed at the rim.
+// ---------------------------------------------------------------------------
+//
+// ⛔ IT HAS TO READ AS AIMED, because dodging it is the only answer the player
+// has (it is not shootable — 07-enemies.js). So: a tip toward the RIM, two
+// barbs swept back toward the throat, and a notched tail. Closed, small, and
+// deliberately unlike both of the other two shapes it will share a lane with —
+// the Carrier's cargo chevron is open and has no tip, and the Weaver that fired
+// this has no straight edges at all.
+//
+// The depth extent reaches d = 1, the largest in the roster, so entityPoints'
+// rim clamp holds it a fraction further off the rim than a Vaulter at the same
+// depth. That is the right way round: the tip is what the player is reading.
+const WEAVER_BOLT_POLY = [
+  { l:  0.00, d:  1.00 },   // tip, toward the rim
+  { l:  1.00, d: -0.40 },
+  { l:  0.00, d:  0.00 },   // notched tail
+  { l: -1.00, d: -0.40 },
+];
+
+// ⛔ Its own colour, a paler relative of its parent's (00-config.js), so a bolt
+// is legibly the Weaver's output rather than a second Weaver. ⚠ Both are
+// provisional, as the whole enemy palette is.
+function drawWeaverBolt(ctx, well, lane, depth) {
+  drawPoly(ctx, entityPoints(well, lane, depth, WEAVER_BOLT_POLY, C.WEAVER_BOLT_SIZE), true);
+  glowStroke(ctx, C.WEAVER_BOLT_COLOR, laneLineWidth(depth), 1);
+}

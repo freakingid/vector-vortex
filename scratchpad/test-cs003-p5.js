@@ -184,11 +184,17 @@ const G = X.Game;
 const state = X.state;
 const DT = C.FIXED_DT;
 
-// The roster, against the one file that may name a global count. CS004 raises
-// it as the five remaining Classic enemies land.
+// The kind table, against the one file that may name a global count. CS004
+// raises it as the remaining Classic enemies land.
+//
+// ⚠ COUNTS.enemyKinds, NOT COUNTS.enemies, AND CS004 P3 IS WHERE THE TWO PARTED.
+// This line counts ENEMY_KINDS rows; COUNTS.enemies counts GDD 6.1 ROSTER rows,
+// and a row is not an enemy twice over — one row per Carrier VARIANT, and the
+// Weaver's bolt is a kind with no roster entry at all. The registry carries both
+// numbers and says which is which.
 H.assert(X.ENEMY_KINDS !== null, "the spawner's kind table is in the build");
-H.eq(Object.keys(X.ENEMY_KINDS).length, COUNTS.enemies,
-     "the build ships exactly the enemies the registry counts");
+H.eq(Object.keys(X.ENEMY_KINDS).length, COUNTS.enemyKinds,
+     "the build ships exactly the kinds the registry counts");
 
 // ---------------------------------------------------------------------------
 // GDD 17 item 3 — ⛔ no lane leaves [0, lanes-1] on any open well

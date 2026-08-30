@@ -31,6 +31,15 @@ const ENEMY_KINDS = {
   // their CARGO entries (07-enemies.js). `dir` is ignored: a Carrier never
   // hops, and the draw for it is still spent (see spawnEnemy below).
   carrierVaulter: (lane, depth) => new Carrier(lane, depth, "vaulter"),
+  // `dir` is ignored by both of these too: a Weaver never hops and a bolt
+  // travels the lane it was fired in. The draw is still spent — see spawnEnemy.
+  weaver: (lane, depth) => new Weaver(lane, depth),
+  // ⛔ A ROW FOR THE PROJECTILE, because the projectile is an enemy in the one
+  // array like everything else (GDD 6.5). Weaver.fire() asks for it by name, so
+  // the bolt inherits C.ENEMY_CAP and GDD 6.3's safe-spawn rule for free —
+  // exactly as the Carrier's split does. ⚠ It is NOT a GDD 6.1 roster row, so
+  // it is not counted among the enemies in scratchpad/test-registry.js.
+  weaverBolt: (lane, depth) => new WeaverBolt(lane, depth),
 };
 
 // How many enemies may be alive at once. ⛔ The MIN of the two, and they are

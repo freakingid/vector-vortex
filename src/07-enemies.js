@@ -401,3 +401,227 @@ class Carrier extends Enemy {
     return true;
   }
 }
+
+// ---------------------------------------------------------------------------
+// The Weaver (GDD 6.1, 4.5) — open spiral, first at L5, 50 points. Climbs
+// partway laying a Thorn, retreats; fires down-lane. ONE LANE, never hops.
+// Killed by any shot or the Purge; ⛔ ITS BODY NEVER KILLS.
+// ---------------------------------------------------------------------------
+//
+// ⛔ killDepth = null, AND IT IS THE FIELD'S FIRST null IN THE ROSTER. GDD 4.5
+// item 4 is "a Weaver's PROJECTILE", not a Weaver, so contact is harmless at
+// every depth INCLUDING the rim — a Weaver sitting on top of the Skimmer is a
+// nuisance and not a death. That is what the base class's null case was written
+// for (GDD 6.5), and it is why the collision pass needs no branch for this
+// enemy: it already skips a null killDepth.
+//
+// ⛔ blocksClear STAYS true. A Weaver you never shoot is an enemy you never
+// answered — a well that cleared around one would let a player wait out the
+// only Classic enemy that cannot hurt them directly, which is the opposite of
+// the pressure GDD 2's loop is built on.
+//
+// ⛔ IT TOUCHES NO LANE HELPER, the same absence of code the Carrier's "never
+// hops" is (GDD 6.1). `lane` is written once, by the constructor.
+//
+// THE CYCLE, and it should be nameable by a player watching it — it comes up,
+// it leaves a thorn, it spits, it goes back down:
+//
+//   climb     depth rises at C.WEAVER_CLIMB toward C.WEAVER_APEX
+//   hold      C.WEAVER_APEX_HOLD seconds at the apex; ⛔ EXACTLY ONE bolt
+//   retreat   depth falls at C.WEAVER_RETREAT, which is FASTER, back to 0
+//   climb     …
+//
+// ⛔ THE PHASE IS THE STATE, AND THE TIMER COUNTS UP (GDD 16.3 — there are no
+// countdown clocks anywhere in this build). `fired` is a per-cycle latch and
+// not a cooldown: a cooldown would fire again on a long hold and "one bolt per
+// cycle" would quietly become "one bolt per C.WEAVER_APEX_HOLD".
+class Weaver extends Enemy {
+  // `dir` is ignored — a Weaver never hops. The spawner still spends its draw
+  // on one (08-spawner.js), which is what keeps the run's ONE stream aligned
+  // regardless of which kind came out of the throat.
+  constructor(lane, depth) {
+    super(lane, depth);
+
+    // ⛔ Explicit, not inherited-and-forgotten. The base already defaults to
+    // null, and writing it here is what makes the ONE enemy that means it
+    // visibly mean it rather than looking like an override somebody missed.
+    this.killDepth = null;
+
+    // "climb" | "hold" | "retreat". ⛔ The phase is the whole state machine —
+    // there is no second flag saying which way depth is moving, because two
+    // fields that must agree are a bug waiting for a phase to be added.
+    this.phase = "climb";
+    this.holdTimer = 0;   // counts UP toward C.WEAVER_APEX_HOLD
+    this.fired = false;   // ⛔ per-CYCLE latch, cleared on entering the hold
+  }
+
+  // ⛔ P4'S HOOK, AND IT IS DELIBERATELY EMPTY. GDD 6.1's "climbs partway
+  // LAYING A THORN" is the other half of this enemy and CS004 P4 owns it: the
+  // Thorn class, the chip economy, and this Weaver's lay-and-adopt (a live
+  // Thorn in its lane is adopted rather than joined by a second one — two
+  // overlapping Thorns are two hit-point pools behind one silhouette). ⛔ Do
+  // not write a Thorn here because the cycle mentions one.
+  layThorn(well, state) {}
+
+  update(dt, well, state) {
+    if (this.phase === "climb") {
+      // ⛔ Monotonic on the way up and it STOPS at the apex. The guard is
+      // `depth < APEX` rather than an unconditional clamp so a Weaver that
+      // ARRIVED above the apex — the debug row stages one as deep as
+      // C.SAFE_SPAWN_DEPTH, and CS006's heat curve will move the apex under
+      // live entities — turns around from where it is instead of teleporting
+      // down to the line. Depth never rises above where it started in that
+      // case, so [0, 1] holds either way.
+      if (this.depth < C.WEAVER_APEX) {
+        this.depth += C.WEAVER_CLIMB * dt;
+        if (this.depth > C.WEAVER_APEX) this.depth = C.WEAVER_APEX;
+      }
+
+      this.layThorn(well, state);
+
+      if (this.depth >= C.WEAVER_APEX) {
+        this.phase = "hold";
+        this.holdTimer = 0;
+        this.fired = false;
+      }
+      return;
+    }
+
+    if (this.phase === "hold") {
+      // ⛔ THE FIRST STEP OF THE HOLD, ONCE. Firing on arrival rather than on
+      // departure is what gives the player the whole hold to read a bolt that
+      // is already travelling while its parent is still visibly at the apex —
+      // GDD 1.1 P2, legible before lethal. The latch is what makes it one bolt
+      // and not one per step of the hold.
+      if (!this.fired) {
+        this.fired = true;
+        this.fire();
+      }
+      this.holdTimer += dt;
+      if (this.holdTimer >= C.WEAVER_APEX_HOLD) this.phase = "retreat";
+      return;
+    }
+
+    // retreat — faster than the climb, and it stops at the throat rather than
+    // passing it. Depth < 0 is no more legal than depth > 1.
+    this.depth -= C.WEAVER_RETREAT * dt;
+    if (this.depth <= 0) {
+      this.depth = 0;
+      this.phase = "climb";
+    }
+  }
+
+  // ⛔ THROUGH spawnEnemy(), THE ONE ENTRY POINT (GDD 6.5) — the second
+  // non-spawner caller in the build, after the Carrier's split, and it inherits
+  // the same three things for free:
+  //
+  //   1. C.ENEMY_CAP. A bolt refused on a full board is simply not fired, and
+  //      the cycle moves on — the latch is set either way, so a blocked shot
+  //      is a lost beat and never a bolt held over into the next cycle.
+  //   2. ⛔ GDD 6.3's safe-spawn rule, which is reachable here: a Weaver
+  //      staged above C.SAFE_SPAWN_DEPTH in the Skimmer's lane fires a bolt
+  //      that is LOWERED to that line rather than starting on top of the
+  //      craft. Lowering only ever gives the player more time.
+  //   3. One RNG draw from the run's ONE stream, spent on a `dir` a bolt has
+  //      no use for. ⛔ Deliberate: a kind that skipped the draw would make the
+  //      stream depend on what was in the well, and GDD 17.1's replay
+  //      guarantee is exactly that dependency not existing.
+  //
+  // The current well is read the way spawnEnemy() itself reads it; `well` is
+  // handed to update() and this is called from inside it.
+  fire() {
+    spawnEnemy("weaverBolt", this.lane, this.depth);
+  }
+
+  draw(ctx, well) {
+    drawWeaver(ctx, well, this.lane, this.depth);
+  }
+
+  // Any shot kills it and the shot is spent (GDD 6.1) — 50 points, when CS007
+  // builds addScore(). It leaves no bolt behind: what is already in the air
+  // stays in the air, and nothing new is fired.
+  onShot(shot) {
+    this.dead = true;
+    return true;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The Weaver's bolt (GDD 4.5 item 4) — the projectile, and GDD 4.5's FOURTH
+// DEATH CONDITION, live, with no new collision code.
+// ---------------------------------------------------------------------------
+//
+// ⛔ IT IS CALLED WeaverBolt AND NOT Shot. `Shot` (06-shots.js) is the PLAYER'S
+// and travels the other way — rim to throat, on a clock, killed by the throat.
+// Confusing the two inside the collision pass is precisely the mistake that is
+// invisible in review: both are lane-locked, both have a `depth`, and the two
+// arrays they live in are tested against each other every step.
+//
+// ⛔ IT IS AN ENEMY, IN state.enemies, LIKE EVERYTHING ELSE (GDD 6.5's one
+// array). The flags below are what make it behave like a projectile; a second
+// array for "hostile projectiles" would double all six wiring points to save
+// three field writes.
+//
+//   killDepth    the rim band — ⛔ `1 - C.RIM_CONTACT_DEPTH`, the same
+//                expression the Vaulter and the Carrier use, so retuning the
+//                band moves every rim-contact entity together.
+//   blocksClear  ⛔ false. A bolt in flight must not hold a cleared well open:
+//                the Weaver that fired it is already dead in that scenario, and
+//                a well that waited for its last projectile would end on a
+//                pause the player cannot shorten (they cannot shoot it).
+//   purgeable    true. The panic button saves you from it, which is what a
+//                panic button is for (GDD 4.3).
+//   anchored     false, inherited. Its depth is a POSITION.
+class WeaverBolt extends Enemy {
+  constructor(lane, depth) {
+    super(lane, depth);
+    this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
+    this.blocksClear = false;
+  }
+
+  // ⛔ IT DIES AT depth 1 WHETHER OR NOT IT HIT ANYTHING, so bolts cannot
+  // accumulate: a Weaver left alone fires one per cycle forever, and without
+  // this the board fills with spent ordnance and C.ENEMY_CAP starves the
+  // spawner.
+  //
+  // ⛔ THE DEATH IS THE STEP AFTER THE ARRIVAL, NOT THE ARRIVAL ITSELF, and the
+  // ordering is why: Game.update() runs the entity pass, then the collision
+  // pass, and collideSkimmer() skips anything already `dead`. Killing on the
+  // step depth reaches 1 would make the rim step non-lethal. The bolt is lethal
+  // from `killDepth` (0.95) upward — about nine steps at C.WEAVER_BOLT_SPEED —
+  // so this is belt and braces rather than the only guard, and it is written
+  // this way so the belt does not depend on the braces.
+  //
+  // `well` and `state` are unused: a bolt has no topology and no AI. The
+  // signature is the contract's (GDD 6.5), not this entity's.
+  update(dt, well, state) {
+    if (this.depth >= 1) {
+      this.dead = true;
+      return;
+    }
+    this.depth += C.WEAVER_BOLT_SPEED * dt;
+    if (this.depth > 1) this.depth = 1;
+  }
+
+  draw(ctx, well) {
+    drawWeaverBolt(ctx, well, this.lane, this.depth);
+  }
+
+  // ⚠ SETTLED — THE BOLT IS NOT SHOOTABLE. Returning false means the shot is
+  // NOT consumed and flies on to whatever is behind (GDD 6.5). Two reasons,
+  // and the second is the one that matters: a shootable bolt is a free score
+  // piñata, and it removes the lesson, which is that a Weaver's OUTPUT is
+  // dodged rather than answered. Rotating out of the lane is the answer; there
+  // is no second one.
+  //
+  // ⚠ A DECLINED SHOT STILL COSTS ITS RESOLUTION FOR THE FEW STEPS OF OVERLAP,
+  // because collideShots()'s `break` is UNCONDITIONAL (09-collision.js) — one
+  // shot resolves against at most one enemy per step, consumed or not. So a
+  // bolt briefly shields whatever is behind it. That is the same mechanism
+  // CS005's armoured Drifter depends on, it is ~3 steps against eight shots in
+  // flight and a 0.055 s cooldown, and it is NOT a bug. Do not make that break
+  // conditional to "fix" it.
+  onShot(shot) {
+    return false;
+  }
+}

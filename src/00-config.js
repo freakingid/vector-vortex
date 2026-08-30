@@ -131,6 +131,29 @@ const C = {
   CARRIER_GLYPH_SIZE:   0.34,   // lane widths spanned by the cargo glyph
   CARRIER_CLIMB:        0.11,   // depth/s, throat -> rim ~9 s. GDD 6.1's "slow"
 
+  // ---- Weaver and its bolt (GDD 6.1, 4.5) ---------------------------------
+  // The cycle, and it is meant to be nameable by a player watching it: it comes
+  // up, it leaves a Thorn, it spits, it goes back down. WEAVER_RETREAT is
+  // deliberately FASTER than WEAVER_CLIMB so leaving reads as a beat rather
+  // than as a second approach.
+  //
+  // ⚠ WEAVER_APEX IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS006. GDD 8's one
+  // clock (game.level) is what will decide how far up a Weaver comes, so this
+  // number is the level-1 base and not the shape of the rule. Nothing reads it
+  // but the Weaver's own cycle, which is what makes that swap a one-line change.
+  //
+  // ⛔ WEAVER_SIZE and WEAVER_BOLT_SIZE are LANE widths, the same as
+  // CARRIER_SIZE above: entityPoints() scales a poly's `l` by size/2 and its
+  // `d` by C.ENEMY_DEPTH_SCALE alone, so a silhouette's DEPTH extent is not a
+  // function of its size.
+  WEAVER_SIZE:          0.62,   // lane widths spanned by the spiral
+  WEAVER_CLIMB:         0.22,   // depth/s on the way up
+  WEAVER_RETREAT:       0.34,   // depth/s down — leaving is faster than arriving
+  WEAVER_APEX:          0.55,   // ⚠ depth it climbs to before turning. CS006 makes this heat-derived
+  WEAVER_APEX_HOLD:     0.35,   // s held at the apex, which is when it fires
+  WEAVER_BOLT_SPEED:    0.32,   // depth/s toward the rim. ~1.4 s from apex to rim
+  WEAVER_BOLT_SIZE:     0.30,   // lane widths spanned by the dart
+
   // ---- Spawner / well lifecycle (GDD 2, 6.3, 12) --------------------------
   // ⛔ SPAWN_INTERVAL is what state.spawn.timer counts UP toward, and
   // SPAWN_QUOTA is what state.spawn.remaining starts at — the quota is spent

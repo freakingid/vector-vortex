@@ -12,7 +12,15 @@ const COUNTS = {
   wells: 16,        // GDD 3.4 — the sixteen well shapes
   openWells: 6,     // of those, open topology
   tracks: 0,        // GDD 11.7 — raise as tracks land
-  enemies: 2,       // GDD 6.1 — raise as enemies land. CS004 P2: the Carrier
+  enemies: 3,       // GDD 6.1 — raise as enemies land. CS004 P3: the Weaver
+  // ⛔ NOT THE SAME NUMBER AS `enemies`, AND FROM CS004 P3 ON IT IS LARGER.
+  // `enemies` counts GDD 6.1's ROSTER ROWS; this counts ENEMY_KINDS rows
+  // (08-spawner.js), and the two stopped coinciding twice over:
+  //   - one row per CARRIER VARIANT, so GDD 6.2's three cargoes are three rows
+  //     behind one roster entry (CS005 adds carrierDrifter and carrierSurger);
+  //   - the Weaver's BOLT is a kind and is not an enemy on the roster.
+  // Keeping them as two numbers is what lets a phase say which one it moved.
+  enemyKinds: 4,    // vaulter, carrierVaulter, weaver, weaverBolt
 };
 
 // ⛔ THE state FIELD INVENTORY (02-state.js). An exhaustive list is a global
