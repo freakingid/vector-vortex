@@ -100,14 +100,57 @@ function collideSkimmer(state, well) {
   }
 }
 
-// ⛔ THE ONE PLACE THE PLAYER DIES. Today it sets the flag and nothing else;
-// CS003 P4 fills in the life, the hit-stop, the respawn and the game-over stop
-// HERE, so there is exactly one thing to fill in rather than a death path per
-// death condition (GDD 4.5 lists five, and CS004 adds two of them).
+// ⛔ THE ONE PLACE THE PLAYER DIES (GDD 4.4, 4.5). Every one of the five death
+// conditions ends here, which is why the invulnerability guard, the life, the
+// freeze and the game-over stop are written once rather than per condition.
+//
+// ⛔ WHAT IS NOT HERE, AND WHY. The respawn is not: Game.update() does not run
+// during hit-stop, so a timer started on this line would not advance for the
+// whole 1.2 s. The respawn is the first LIVE step after the freeze — the step
+// that sees `skimmer.dead` — and it lives in respawnSkimmer() (23-main.js).
+// GDD 4.4's rim push goes with it, for the same reason: pushing here would
+// teleport the killing enemy away during the freeze the player is staring at,
+// and the freeze exists to show them what happened.
+//
+// ⛔ No fragmentation and no score. Both are CS006's — the fragmentation is a
+// kit-fx primitive, and addScore() is the one scoring entry point. Death in
+// CS003 reads as hit-stop plus a respawn blink.
 function killSkimmer(state) {
   const sk = state.skimmer;
   if (!sk || sk.dead) return;
+
+  // ⛔ AN INVULNERABLE SKIMMER CANNOT DIE, and the guard is HERE rather than in
+  // the collision pass so the four death conditions CS004 and CS005 add get it
+  // for free. It can still fire and still move: invulnerability suspends dying,
+  // not playing. state.invulnTime counts UP and is armed to zero by the
+  // respawn (02-state.js), so "expired" is the at-or-past-threshold case.
+  if (state.invulnTime < C.RESPAWN_INVULN) return;
+
   sk.dead = true;
+  state.lives -= 1;
+
+  // ⛔ THE BUTTON IS RE-LATCHED BY DEATH. Devices are still drained during
+  // hit-stop (23-main.js — a freeze must not dump a second of banked mouse
+  // motion into the first live step), so a Purge held across the freeze arrives
+  // at the step after it looking like a fresh press. Forcing the latch true
+  // makes that step read as "still held": the button needs a genuine release
+  // before it can spend another charge. updatePurge() writes the latch as
+  // `held` every step rather than only clearing it on release, which is what
+  // lets this forced value behave correctly on the way out.
+  state.purgeLatched = true;
+
+  // ⛔ THE STOP, not a screen (GDD 4.4). CS006 owns the game-over UI, the score
+  // submission and the restart flow; all this changeset does is stop stepping
+  // the gameplay systems, in Game.update(). The freeze below still runs — the
+  // last death of a run reads exactly like the others.
+  if (state.lives <= 0) {
+    state.lives = 0;
+    state.screen = "gameover";
+  }
+
+  // ⛔ Simulation time freezes; rendering does not. Game.hitStop() is the one
+  // freeze mechanism in the build (23-main.js) and the longest request wins.
+  Game.hitStop(C.HIT_STOP_DEATH);
 }
 
 // ---------------------------------------------------------------------------

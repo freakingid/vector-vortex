@@ -136,6 +136,16 @@ for (const well of openWells) {
 
   for (let i = 0; i < SOAK_TICKS; i++) {
     adversarial(G.input, Math.random());
+    // ⛔ FIXTURE, not a weakened assertion. This is a MOVEMENT soak, and since
+    // CS003 P2 the well it runs in has enemies in it. CS003 P4 gave contact a
+    // consequence: three deaths reach the game-over stop, after which
+    // Game.update() returns early and the craft stops moving — the soak would
+    // then spend most of its ticks frozen and could not reach SNAP_IDLE_MS.
+    // Holding the respawn window open makes the craft unkillable, which
+    // restores exactly the conditions this soak was written for and gives every
+    // assertion below its full SOAK_TICKS. Nothing here asserts anything about
+    // death; test-cs003-p4.js owns that.
+    X.state.invulnTime = 0;
     G.update(DT);
     const sk = X.state.skimmer;
     if (!isFinite(sk.lane)) notFinite = true;

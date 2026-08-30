@@ -8,8 +8,8 @@
 // A field added "because CS003 will want it" is a field CS003 cannot see the
 // reasoning for, and it reads as shipped truth to a session that finds it.
 // CS002 landed the first eight; CS003 P1 added `seed` and `rng`, P2 added
-// `enemies`, `spawn` and `clearHold`, and P3 adds `purgeUses` and
-// `purgeLatched`.
+// `enemies`, `spawn` and `clearHold`, P3 added `purgeUses` and `purgeLatched`,
+// and P4 adds `lives` and `invulnTime`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -57,7 +57,29 @@ function newState() {
     input: { rotate: 0, fire: false, purge: false, jump: false },
 
     // The player's craft (05-skimmer.js, CS002 P2). Null until P2 builds it.
+    // ⛔ A DEAD ONE IS STILL HERE. killSkimmer() (09-collision.js) sets its
+    // `dead` flag and freezes the loop; the craft stays on screen through the
+    // freeze so the player can see what killed them, and respawnSkimmer()
+    // (23-main.js) replaces it on the first live step afterwards.
     skimmer: null,
+
+    // ⛔ GDD 4.4 — the reserve, spent by killSkimmer() and by nothing else.
+    // Zero is the game-over stop (screen = "gameover"), not a screen; CS006
+    // owns the UI, the submission and the restart flow. The extra-life awards
+    // at C.EXTRA_LIFE_FIRST / _EVERY and the C.LIVES_MAX ceiling belong to
+    // addScore() in CS006 and are deliberately unread this changeset.
+    lives: C.START_LIVES,
+
+    // ⛔ Counts UP toward RESPAWN_INVULN and HOLDS there (GDD 16.3 — no
+    // countdown timers anywhere in the build), and STARTS AT THE THRESHOLD,
+    // already expired, exactly as shotCooldown and the Skimmer's squashTime
+    // do: a fresh run must not be born invulnerable. respawnSkimmer() is the
+    // one place it is armed, by writing zero.
+    //
+    // ⛔ It lives on `state` and not on the Skimmer because it OUTLIVES the
+    // craft it protects — the timer is armed at the moment a brand new craft
+    // is minted, and a field on the old one would go with it.
+    invulnTime: C.RESPAWN_INVULN,
 
     // Player shots in flight (06-shots.js, CS002 P3). ⛔ Entities are removed
     // by an end-of-frame .filter(), never spliced mid-loop (GDD 6.5).

@@ -65,6 +65,10 @@ const C = {
   EXTRA_LIFE_EVERY:     40000,
   RESPAWN_INVULN:       1.5,    // s
   RESPAWN_PUSH_DEPTH:   0.55,   // ⛔ enemies at rim pushed here on respawn
+  // The respawn blink, in full on/off cycles per second. ⛔ Visual only — the
+  // invulnerability itself is state.invulnTime against RESPAWN_INVULN, and the
+  // blink is how the player is told it is still running (GDD 1.1 P2).
+  INVULN_BLINK_HZ:      6,      // on/off cycles per second while invulnerable
 
   // ---- Dive (GDD 5) -------------------------------------------------------
   DIVE_TIME:            2.6,    // s, Classic

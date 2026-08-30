@@ -1,11 +1,12 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS003 (P3 of 5 done) · Wells: 16/16 · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS003 (P4 of 5 done) · Wells: 16/16 · Tracks: 0/5
 
 ## Phase ledger — CS003
 
 - **P1 — the RNG, the entity contract, the Vaulter.** Done 2026-08-30.
 - **P2 — the spawner and the well lifecycle.** Done 2026-08-30.
 - **P3 — collision and the Purge.** Done 2026-08-30.
+- **P4 — death, lives, respawn.** Done 2026-08-30.
 
 `01-rng.js`: `mulberry32` + `rngInt` / `rngPick`; `state.seed` and `state.rng`
 default from `C.RNG_DEFAULT_SEED`, and `startGame()` (P2) mints the run's real
@@ -75,11 +76,43 @@ and clearing it would let a player still holding the button spend the new
 charge without releasing. **(e)** a second use with no legal target is still
 spent; the charge is consumed by the press, not the result.
 
+**P4.** `killSkimmer()` is filled in and is the whole death sequence: the
+invulnerability guard, one life, `state.purgeLatched`, the `screen = "gameover"`
+stop at zero, and `Game.hitStop(C.HIT_STOP_DEATH)`. `state` gains `lives` and
+`invulnTime` (counts UP, starts AT `RESPAWN_INVULN` — already expired).
+`23-main.js` gains `spawnSkimmer()` — the ONE `new Skimmer` — and
+`respawnSkimmer()`, which fires on the first live step that sees `skimmer.dead`,
+pushes enemies down and mints the craft in the lane it died in. `update()` gains
+the game-over early return above everything, and the respawn/aging branch. `r`
+is a named debug action beside `cycleWell`, calling `startGame()`.
+
+Judgment calls: **(a)** GDD 4.4's rim push is a CLAMP over every lane, not a
+narrow band at the rim — the narrow reading leaves a Vaulter at 0.9 climbing
+into the kill band well inside the invulnerability window, which is the death
+the rule exists to prevent. **(b)** the respawn lives in `23-main.js` beside
+`enterWell()`, not next to `killSkimmer()`: P3's comment said P4 would fill it
+in "HERE", but it cannot be inside `killSkimmer` (nothing scheduled at death
+advances during the freeze), and it moves enemies. **(c)** the invulnerability
+clock is the ELSE branch of the respawn check, so the respawn step is not also
+aged and the window is exactly `RESPAWN_INVULN`, not one step short. **(d)** the
+guard is in `killSkimmer()` and not the collision pass, so CS004/CS005's four
+remaining death conditions inherit it. **(e)** `runAction("restart")` clears
+`hitStopLeft` — `startGame()` cannot reach it, and a fresh run must not inherit
+the freeze that ended the last one. **(f)** `skimmerBlinkVisible()` takes the
+TIMER, not `state`, so `05-skimmer.js` still reads no game global.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); manifest is
   checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes, 12 files, zero skips.
+- `node scratchpad/run-all.js` passes, 13 files, zero skips.
+- ⛔ P4's named invariants were mutation-checked, not merely asserted. Each of
+  these turns the suite red: an `invulnTime` born at 0, dropping the
+  invulnerability guard, dropping the rim push, making the push an assignment
+  instead of a clamp, dropping the purge re-latch, respawning at lane 0 instead
+  of the lane it died in, dropping the game-over early return, aging the invuln
+  clock on the respawn step too, a restart that inherits the old freeze, and
+  removing either the hit-stop or the `lives -= 1`.
 - ⛔ P3's named invariants were mutation-checked, not merely asserted. Each of
   these turns the suite red: a conditional `break` in the shot loop, a bare
   `(a - b)` in place of `laneDelta`, dropping the `killDepth === null` guard,
@@ -111,6 +144,13 @@ spent; the charge is consumed by the press, not the result.
   `skimmer === null`) and `test-cs003-p1.js` (`seed` defaults to
   `RNG_DEFAULT_SEED`) each gained a `G.reset()` before the block that asserts
   shipped defaults. No assertion was weakened or removed.
+- **`test-cs002-p2.js`'s movement soak now pins `invulnTime = 0`.** That soak
+  has run in a well with enemies in it since CS003 P2; P4 gave contact a
+  consequence, so three deaths reached the game-over stop and the craft stopped
+  moving for most of the remaining ticks — `sawIdle` failed on Trough,
+  Double-Vee and Fan. Holding the respawn window open makes the craft
+  unkillable, which restores the conditions the soak was written for. No
+  assertion was weakened; every one now gets its full `SOAK_TICKS`.
 - **The `state` field inventory moved to `scratchpad/test-registry.js`.**
   `test-cs002-p1.js` asserted a bare `Object.keys(state).length === 8` as a
   build-ahead guard; P1's two legitimate fields turned it into a false alarm.
@@ -147,27 +187,26 @@ spent; the charge is consumed by the press, not the result.
   with the seven stats keys, before any submission is attempted.
 - Backport `kit-input` (`src/04-input.js`, all four devices, v0.3.0) to
   coinless-kit — separate manual step, verified against that repo's own suite.
-- CS006 (death sequence) should confirm the P1 judgment call that devices are
-  still drained during hit-stop (`input.sample()` runs, `update()` doesn't).
 - `scratchpad/test-registry.js`'s `enemies` count stays at 0 until CS003 P5
   raises it to 1 — that is on P5's closing checklist, and no test reads it yet.
-- `killSkimmer()` sets `skimmer.dead` and nothing else, and nothing reads that
-  flag afterwards — a dead Skimmer still moves, fires and blocks spawns. That
-  is deliberate: P4 owns the whole death sequence and has one function to fill
-  in. Until then a contact death is only observable as the flag.
 - CLAUDE.md's code map still lists "firing, Purge" under `05-skimmer.js`; both
-  shipped elsewhere (`06-shots.js`, `09-collision.js`). Not P3's to rewrite a
-  rule doc unprompted — a correction for whoever next edits that map.
+  shipped elsewhere (`06-shots.js`, `09-collision.js`), and death/respawn is
+  split between `09-collision.js` and `23-main.js`. Not a phase's to rewrite a
+  rule doc unprompted — a correction for whoever next edits that map (P5 is
+  already scoped to touch it).
+- `state.screen === "gameover"` is a STOP with nothing on screen but the frozen
+  board and the craft that died on it. `r` restarts. CS006 owns the screen, the
+  submission and the real restart flow, and the `restart` debug action should be
+  folded into it rather than left as a second way in.
 - ⚠ `C.WELL_CLEAR_HOLD`, `state.clearHold` and the branch in `Game.update()`
   that reads them are TEMPORARY and are CS005's to delete when the Dive lands.
 
 ## Next up
 
-- CS003 P4 — death, lives, respawn. The prompt is in
-  `IMPLEMENTATION-PHASES-CS003.md`. It fills in `killSkimmer()`
-  (`09-collision.js`) and must set `state.purgeLatched` on death — devices are
-  still drained during hit-stop, so a Purge held through a death otherwise
-  arrives at the first live step looking like a fresh press.
+- CS003 P5 — the invariant soak, the docs, and the close. The prompt is in
+  `IMPLEMENTATION-PHASES-CS003.md`. ⛔ Its closing checklist includes raising
+  `enemies` to 1 in `scratchpad/test-registry.js`, correcting GDD §6.5's "five
+  places" to six, and moving both CS003 planning docs into `archive/`.
 
 ## Playtest asks (open only)
 
@@ -175,7 +214,14 @@ spent; the charge is consumed by the press, not the result.
   throat depth, and is `VAULTER_SIZE` 0.70 enough silhouette to see it coming?
 - Does `SPAWN_INTERVAL` 1.60 with `ENEMY_CONCURRENT` 3 hit GDD §12's promise —
   a passive player dead within four seconds, an active one with a kill? Both
-  halves are observable now, though a "death" is still only the flag (P4).
+  halves are fully observable now — a death costs a life and freezes the board.
+- Does the death sequence read? 1.2 s of hit-stop with no fragmentation and no
+  sound is a long time to look at a frozen board — CS006 adds both, but the
+  freeze LENGTH is settled now and worth judging bare.
+- Is `RESPAWN_PUSH_DEPTH` 0.55 far enough? The clamp plus `RESPAWN_INVULN` 1.5 s
+  is meant to guarantee a Vaulter cannot climb back into contact before the
+  blink stops. It is provable at `VAULT_CLIMB` 0.18; it stops being provable the
+  moment CS005's heat curve raises the climb rate.
 - Is `HIT_DEPTH_TOL` 0.05 generous enough that a shot fired at a climbing
   Vaulter connects when it looks like it should? The band is ~3x the distance a
   shot covers in one step, so misses should read as aim, never as luck.

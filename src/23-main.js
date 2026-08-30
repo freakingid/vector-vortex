@@ -23,14 +23,26 @@
 // it is the only file allowed to know both sides.
 
 // ---------------------------------------------------------------------------
-// THE WELL LIFECYCLE (GDD 2, 3.4, 4.3). Three functions, one path.
+// THE WELL LIFECYCLE (GDD 2, 3.4, 4.3, 4.4). Five functions, one path.
 // ---------------------------------------------------------------------------
 //
 // ⛔ EVERY ENTRY INTO A WELL GOES THROUGH enterWell(). A new run, the next
-// level, the debug cycler, and (CS006) a restart all land here. In CS002 the
+// level, the debug cycler, and the restart action all land here. In CS002 the
 // debug cycler simply swapped a backdrop, which was harmless because nothing
 // but the Skimmer existed; with enemies alive, cycling a 16-lane well to an
 // 11-lane one strands craft on lanes the new well does not have.
+//
+// ⛔ AND EVERY SKIMMER IS MINTED BY spawnSkimmer(). Well entry and respawn are
+// two callers of one line, not two lines that happen to agree today.
+
+// ⛔ THE ONE PLACE A Skimmer IS CONSTRUCTED (GDD 4.1, 4.4). It deliberately
+// does NOT touch state.invulnTime: enterWell() mints a craft that is fully
+// vulnerable — a fresh run is never born invulnerable (02-state.js) — and only
+// respawnSkimmer() arms the window.
+function spawnSkimmer(well, lane) {
+  state.skimmer = new Skimmer(well, lane);
+  return state.skimmer;
+}
 
 // Arm the current well: nothing in flight, a fresh Purge charge, a fresh
 // spawner, and a Skimmer that belongs to THIS well's lane count.
@@ -59,9 +71,51 @@ function enterWell() {
 
   // A craft for this well. ⛔ Minted rather than carried over: lane counts
   // differ between wells, so the outgoing craft's lane may not exist here.
-  // Lives and respawn are CS003 P4's; this is the only place a Skimmer is
-  // created today.
-  state.skimmer = new Skimmer(well);
+  // ⛔ state.lives is NOT touched — the reserve belongs to the run, not to the
+  // well, and re-arming it here would make every level a fresh set of three.
+  // startGame() is what restores it, out of newState().
+  spawnSkimmer(well, 0);
+}
+
+// ---------------------------------------------------------------------------
+// THE RESPAWN (GDD 4.4). ⛔ THE FIRST LIVE STEP AFTER THE FREEZE.
+// ---------------------------------------------------------------------------
+//
+// ⛔ NOT A TIMER STARTED AT DEATH. update() does not run during hit-stop, so
+// anything killSkimmer() scheduled would sit unadvanced for the whole 1.2 s.
+// The trigger is the state itself: the step that finds `skimmer.dead` IS the
+// respawn step. That also makes the sequence independent of how long the
+// freeze was, and correct for a headless caller that drives update() directly
+// and never freezes at all.
+//
+// ⛔ AND THE RIM PUSH HAPPENS HERE, NOT AT DEATH. Pushing at death teleports
+// the killing enemy away during the freeze the player is staring at, and the
+// freeze is there to show them what happened.
+function respawnSkimmer(state, well) {
+  // Read before the craft is replaced: GDD 4.4 respawns in the lane it died
+  // in, not at the well's default lane.
+  const lane = state.skimmer.lane;
+
+  // ⛔ GDD 4.4: "enemies at the rim are pushed to C.RESPAWN_PUSH_DEPTH on
+  // respawn so the player is never killed on re-entry". Written as a CLAMP —
+  // everything above the push depth comes down to it, in every lane — and not
+  // as a narrow band around the rim. The narrow reading leaves a Vaulter at
+  // 0.9 climbing into the kill band well inside the invulnerability window,
+  // which is the exact death the rule exists to prevent; 0.55 is chosen so the
+  // climb back up outlasts C.RESPAWN_INVULN. A clamp is also monotonic — it
+  // can never move an entity TOWARD the rim.
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (e.depth > C.RESPAWN_PUSH_DEPTH) e.depth = C.RESPAWN_PUSH_DEPTH;
+  }
+
+  spawnSkimmer(well, lane);
+
+  // ⛔ THE ONE PLACE THE INVULNERABILITY WINDOW IS ARMED. Zero, counting up
+  // toward C.RESPAWN_INVULN (GDD 16.3). state.purgeLatched is deliberately NOT
+  // cleared — killSkimmer() set it so a button held across the freeze needs a
+  // real release before it spends another charge (09-collision.js).
+  state.invulnTime = 0;
 }
 
 // The next level. ⛔ GDD 3.4's shapeIndex — the well is derived from the level
@@ -98,9 +152,10 @@ const Game = (function () {
   let running = false;
   let rafHandle = 0;
 
-  // Hit-stop: simulation time is frozen, rendering is not (GDD 10). Nothing
-  // triggers it in CS002 — the hook exists so the death sequence (CS006) has
-  // one place to call, rather than growing a second freeze mechanism later.
+  // Hit-stop: simulation time is frozen, rendering is not (GDD 10). ⛔ THE ONE
+  // FREEZE MECHANISM IN THE BUILD. killSkimmer() (09-collision.js) is its only
+  // caller today, for C.HIT_STOP_DEATH; anything else that wants to freeze the
+  // simulation calls hitStop() rather than growing a second one.
   let hitStopLeft = 0;
 
   // ⛔ Counter-based, never wall-clock — frame-budget gates in the suite read
@@ -126,7 +181,7 @@ const Game = (function () {
     inputMirror:      C.INPUT_MIRROR,
     worldW:           C.WORLD_W,
     worldH:           C.WORLD_H,
-    actionKeys:       { cycleWell: ["w"] },
+    actionKeys:       { cycleWell: ["w"], restart: ["r"] },
     onAction:         runAction,
   });
 
@@ -144,6 +199,23 @@ const Game = (function () {
       // enemies on lanes the new well may not have.
       enterWell();
     }
+    if (name === "restart") {
+      // The game-over stop, undone (GDD 4.4). ⛔ THROUGH THE SAME NAMED-ACTION
+      // PATH as cycleWell, and for a sharper reason: a keydown listener of its
+      // own would be a second input path (GDD 9.5), and this action has to work
+      // on a screen where update() returns early and during a freeze where it
+      // does not run at all — precisely the cases a listener gets wrong. Named
+      // actions are dispatched from input.sample(), which runs in both.
+      //
+      // CS006 owns the real restart flow; this is the debug key that makes the
+      // stop observable and recoverable while there is no game-over screen.
+      startGame();
+      // ⛔ The player reaches for restart DURING the death freeze more often
+      // than after it. A fresh run must not inherit the remainder of the freeze
+      // that ended the previous one — startGame() cannot clear it (hitStopLeft
+      // is private to the loop), so it is cleared here, at the one call site.
+      hitStopLeft = 0;
+    }
   }
 
   function nowMs() {
@@ -155,17 +227,44 @@ const Game = (function () {
 
   // ⛔ Never touches the canvas. Runs headless, always.
   function update(dt) {
+    // ⛔ ABOVE THE STOP, DELIBERATELY. This is the one input path (GDD 9.5) and
+    // it is also where named actions are dispatched, so the `restart` key still
+    // reaches runAction() on a screen where everything below returns early.
     input.sample(dt, state.input);
+
+    // ⛔ THE GAME-OVER STOP (GDD 4.4). Lives at zero and the gameplay systems
+    // stop stepping: no simulation clock, no entity pass, no spawner, no
+    // collision, no level advance. This is a STOP, not a screen — CS006 owns
+    // the game-over UI, the score submission and the restart flow, and the
+    // build deliberately has nothing to show here yet. draw() is unaffected, so
+    // the frozen board and the craft that died on it stay on screen.
+    if (state.screen === "gameover") return;
+
     state.time += dt;
 
     // reset() writes 02-state.js's shipped defaults, which put `skimmer` back
     // to null — no well has been entered. The first step after one enters the
     // current well, rather than minting a lone craft beside a well that was
     // never armed. ⛔ Still the one path (enterWell); boot goes through
-    // startGame(). Respawn after a death is CS003 P4's, and is not this.
+    // startGame().
     if (!state.skimmer) enterWell();
 
     const well = WELLS[state.wellIndex];
+
+    // ⛔ THE DEATH AFTERMATH, BEFORE ANYTHING MOVES. Reaching this line with a
+    // dead craft means the freeze killSkimmer() started has ended (or a
+    // headless caller never froze at all), so THIS is the first live step and
+    // THIS is where the respawn and GDD 4.4's rim push happen — never on a
+    // timer started at death, which would not have advanced.
+    //
+    // ⛔ The invulnerability clock is the ELSE branch, so the respawn step
+    // itself is not also aged: state.invulnTime is then exactly the simulation
+    // time elapsed since the respawn, and the window is exactly
+    // C.RESPAWN_INVULN long rather than one step short of it. It counts UP and
+    // HOLDS at the threshold (GDD 16.3).
+    if (state.skimmer.dead) respawnSkimmer(state, well);
+    else if (state.invulnTime < C.RESPAWN_INVULN) state.invulnTime += dt;
+
     state.skimmer.update(dt, well, state.input);
     updateShots(state, well, dt);
 
@@ -216,7 +315,14 @@ const Game = (function () {
     // frozen branch of a hit-stop that began on frame one.
     for (let i = 0; i < state.enemies.length; i++) state.enemies[i].draw(ctx, well);
     for (let i = 0; i < state.shots.length; i++) state.shots[i].draw(ctx, well);
-    if (state.skimmer) state.skimmer.draw(ctx, well);
+    // ⛔ The respawn blink is a DRAW-TIME decision and nothing else (GDD 4.4).
+    // The craft is fully simulated on the frames it is not painted; skipping
+    // its update instead would be a control dropout, which is pillar P1's one
+    // unforgivable failure. A dead craft still draws — the freeze exists to
+    // show the player what happened to it.
+    if (state.skimmer && skimmerBlinkVisible(state.invulnTime)) {
+      state.skimmer.draw(ctx, well);
+    }
   }
 
   // ---- the frame -----------------------------------------------------------

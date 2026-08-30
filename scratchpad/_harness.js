@@ -124,6 +124,8 @@ function buildGame(opts = {}) {
     // collision and the Purge (09-collision.js, CS003 P3)
     "updateCollisions", "collideShots", "collideSkimmer", "killSkimmer",
     "updatePurge", "purgeTarget",
+    // death, lives and respawn (05/23, CS003 P4)
+    "spawnSkimmer", "respawnSkimmer", "skimmerBlinkVisible",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +

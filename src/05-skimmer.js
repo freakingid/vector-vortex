@@ -19,10 +19,15 @@
 // wrap at the seam; open wells CLAMP at two walls, and hitting one triggers a
 // WALL_SQUASH_MS squash that is ⛔ VISUAL ONLY and never writes `lane`.
 //
-// ⛔ Entity contract (GDD 6.5): class, update, draw, dead. Nothing sets `dead`
-// yet — death is CS006's. update/draw take their well and input explicitly
-// rather than reaching for the game object, the same shape 13-render-well.js
-// uses; C is the only global this module reads.
+// ⛔ Entity contract (GDD 6.5): class, update, draw, dead. `dead` is set by
+// killSkimmer() (09-collision.js) and by nothing else — that is the ONE death
+// route, and CS003 P4 built the sequence hanging off it: a life spent, a
+// C.HIT_STOP_DEATH freeze, and a respawn on the first live step afterwards
+// (respawnSkimmer, 23-main.js). ⛔ A dead craft is NOT removed the way a shot
+// or an enemy is: it stays in state.skimmer through the freeze, because the
+// freeze exists so the player can see what killed them. update/draw take their
+// well and input explicitly rather than reaching for the game object, the same
+// shape 13-render-well.js uses; C is the only global this module reads.
 
 // The silhouette, in LOCAL SPACE, per GDD 10.2 ("new entities define
 // local-space point arrays and reuse drawPoly/glowStroke"). This is shape
@@ -75,10 +80,30 @@ function skimmerPoints(well, lane, squash) {
   return _skimPts;
 }
 
+// Is the craft drawn on this frame? ⛔ VISUAL ONLY, and read by draw code
+// alone — the invulnerability itself is state.invulnTime against
+// C.RESPAWN_INVULN (02-state.js), and nothing here decides whether the player
+// can die. GDD 1.1 P2: the blink is how a player is told the window is still
+// open, so it must stop the instant the window closes and not a cycle later.
+//
+// ⛔ Takes the TIMER, not `state`. The timer lives on the game object because
+// it outlives the craft it protects, and this module reads no game global — a
+// number crossing the boundary is what keeps that true (CLAUDE.md, kit-fx).
+//
+// A square wave at C.INVULN_BLINK_HZ full cycles per second, ON for the first
+// half of each cycle, so the respawn step itself draws rather than starting on
+// an invisible frame.
+function skimmerBlinkVisible(invulnTime) {
+  if (!(invulnTime < C.RESPAWN_INVULN)) return true;   // not invulnerable: solid
+  return Math.floor(invulnTime * C.INVULN_BLINK_HZ * 2) % 2 === 0;
+}
+
 class Skimmer {
-  // `lane` is the starting lane centre. CS006 owns where a run actually
-  // begins and where a respawn lands; 0 is a legal lane on all sixteen wells
-  // and nothing depends on it this changeset.
+  // `lane` is the starting lane centre. enterWell() mints at 0 — a legal lane
+  // on all sixteen wells — and a respawn mints at the lane the previous craft
+  // died in (GDD 4.4). Both go through spawnSkimmer() (23-main.js); ⛔ nothing
+  // else in the build calls this constructor, so a field added to a fresh
+  // craft is added in exactly one place.
   constructor(well, lane) {
     this.lane = laneNormalize(well, lane || 0);
 

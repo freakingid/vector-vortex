@@ -217,9 +217,10 @@ H.assert(harmless.killDepth === null, "the fixture still has a null killDepth");
 H.assert(state.skimmer.dead === false,
          "an enemy with killDepth === null never kills, even at the rim");
 
-// P3 owns only the flag. ⛔ Lives, respawn and the game-over stop are P4's.
-H.assert(!("lives" in state), "no lives field yet — P4's");
-H.assert(!("invulnTime" in state), "no invulnTime field yet — P4's");
+// P3 owns only the flag. Lives, respawn and the game-over stop landed in P4 and
+// are asserted in test-cs003-p4.js — the two build-ahead guards that stood here
+// were satisfied by the phase they were guarding for, so they moved rather than
+// being weakened. Nothing in this file reads state.lives or state.invulnTime.
 
 // ---------------------------------------------------------------------------
 // The Purge (GDD 4.3)

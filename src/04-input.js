@@ -45,9 +45,9 @@ const INPUT_VERSION = "0.3.0";
 // keymap is this module's own default and a host replaces it wholesale through
 // options.keys. Values are DOM `key` names, lowercased.
 //
-// "w" is deliberately unbound here: the game binds it as a named debug action
-// (see options.actionKeys), and a key doing two jobs is a bug waiting for a
-// player who rebinds.
+// "w" and "r" are deliberately unbound here: the game binds them as named debug
+// actions (see options.actionKeys), and a key doing two jobs is a bug waiting
+// for a player who rebinds.
 const INPUT_KEYS_DEFAULT = {
   left:  ["arrowleft", "a"],
   right: ["arrowright", "d"],
