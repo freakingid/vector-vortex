@@ -115,6 +115,9 @@ function buildGame(opts = {}) {
     "Skimmer", "SKIMMER_POLY", "skimmerPoints",
     // shots (06-shots.js, 14-render-entities.js, CS002 P3)
     "Shot", "updateShots", "drawShot",
+    // the RNG, the entity contract and the Vaulter (01/07/14, CS003 P1)
+    "mulberry32", "rngInt", "rngPick", "invPerspective",
+    "Enemy", "Vaulter", "entityPoints", "VAULTER_POLY", "drawVaulter",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +

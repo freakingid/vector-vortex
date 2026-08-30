@@ -15,6 +15,25 @@ const COUNTS = {
   enemies: 0,       // GDD 6.1 — raise as enemies land
 };
 
+// ⛔ THE state FIELD INVENTORY (02-state.js). An exhaustive list is a global
+// count, so it lives here rather than in the phase test that happens to check
+// it — test-cs002-p1.js asserted a bare 8 until CS003 P1 legitimately added two
+// fields and turned a build-ahead guard into a false alarm.
+//
+// A changeset adds its fields under its own key, in the phase that lands them.
+// The guard is the SUM: a field in state with no entry here is a field built
+// ahead of the changeset that can explain it (02-state.js's own header rule).
+const STATE_FIELDS = {
+  CS002: ["screen", "wellIndex", "level", "time", "input", "skimmer", "shots", "shotCooldown"],
+  CS003: ["seed", "rng"],
+};
+
+function stateFields() {
+  const out = [];
+  for (const k of Object.keys(STATE_FIELDS)) out.push(...STATE_FIELDS[k]);
+  return out;
+}
+
 function hasKnob(X, name, spec, A) {
   const out = { ok: true, failures: [] };
   const has = name in X.C;
@@ -26,7 +45,7 @@ function hasKnob(X, name, spec, A) {
   return A ? undefined : out;
 }
 
-module.exports = { COUNTS, hasKnob };
+module.exports = { COUNTS, STATE_FIELDS, stateFields, hasKnob };
 
 if (require.main === module) {
   const H = require("./_harness.js");

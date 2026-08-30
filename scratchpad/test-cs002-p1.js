@@ -21,7 +21,7 @@ const { execFileSync } = require("child_process");
 
 const H = require("./_harness.js");
 const { installSeed } = require("./_seeded-random.js");
-const { hasKnob } = require("./test-registry.js");
+const { hasKnob, stateFields } = require("./test-registry.js");
 
 const ROOT = path.join(__dirname, "..");
 const SEED = 20260830;
@@ -122,8 +122,14 @@ hasKnob(X, "POINTER_LOCK_OFFER", { def: true }, H);
 // tracks CS002's total field ownership, not a P1-only snapshot.
 const OWNED = ["screen", "wellIndex", "level", "time", "input", "skimmer", "shots", "shotCooldown"];
 for (const f of OWNED) H.assert(f in X.state, `state.${f} exists`);
-H.eq(Object.keys(X.state).length, OWNED.length,
-  "state carries exactly the fields CS002 owns and no field built ahead");
+// ⛔ The exhaustive "nothing built ahead" check is a GLOBAL INVENTORY, so the
+// list lives in test-registry.js (CLAUDE.md, Test rules). CS003 P1 moved it
+// there when it added state.seed and state.rng; this still fails loudly on a
+// field that no changeset has claimed.
+const INVENTORY = stateFields();
+for (const f of OWNED) H.assert(INVENTORY.includes(f), `the registry's inventory claims state.${f}`);
+H.eq(Object.keys(X.state).length, INVENTORY.length,
+  "state carries exactly the registry's inventory and no field built ahead");
 H.assert(Array.isArray(X.state.shots), "state.shots is an array");
 H.eq(X.state.skimmer, null, "state.skimmer is null until CS002 P2 builds it");
 

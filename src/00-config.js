@@ -26,6 +26,14 @@ const C = {
   DT_CLAMP_MAX:         0.25,   // s — the largest frame dt ever admitted
   MAX_CATCHUP_STEPS:    5,      // ⛔ hard bound on steps in one frame
 
+  // ---- RNG (GDD 16.1, 17.1) -----------------------------------------------
+  // ⛔ The one seeded stream's fallback seed. 02-state.js's newState() builds
+  // state.rng from it so the headless suite always has a stream to drive;
+  // startGame() (CS003 P2) overwrites state.seed with the run's real seed and
+  // rebuilds the stream from that. The VALUE is arbitrary — what matters is
+  // that it is fixed, so a reset() replays identically.
+  RNG_DEFAULT_SEED:     1,
+
   // ---- Well geometry (GDD 3) ----------------------------------------------
   PERSPECTIVE_EXP:      0.55,   // depth -> screen easing. Lower = more rush.
   THROAT_SCALE:         0.055,  // rim polygon scaled toward centroid = throat
@@ -67,6 +75,27 @@ const C = {
   SAFE_SPAWN_DEPTH:     0.75,   // never spawn above this in the player's lane
   SURGE_TELEGRAPH:      0.45,   // s of visible fuse before discharge
   ENEMY_CAP:            16,     // ⛔ READABILITY constraint, not difficulty.
+  // ⛔ An entity's drawn depth half-extent, as a fraction of its OWN
+  // perspective position — NOT a constant depth offset. perspective() is
+  // depth^0.55, so a constant offset spans ~13% of the well at the throat and
+  // ~3% at the rim, and an enemy drawn that way SHRINKS as it comes at you.
+  // 14-render-entities.js's entityPoints() is the one reader.
+  ENEMY_DEPTH_SCALE:    0.10,
+
+  // ---- Vaulter (GDD 6.1, 6.3) ---------------------------------------------
+  VAULTER_SIZE:         0.70,   // lane widths spanned by the silhouette
+  VAULTER_COLOR:        "#FF4A4A",  // ⚠ placeholder — same standing as SKIMMER_COLOR
+  VAULT_CLIMB:          0.18,   // depth/s, throat -> rim ~5.5 s. Level-1 base.
+  VAULT_INTERVAL:       2.20,   // s between mid-climb hops
+  VAULT_HOP_TIME:       0.28,   // s to cross one lane; hittable in both meanwhile
+  VAULT_RIM_INTERVAL:   0.55,   // s between rim hunt hops
+  VAULT_FIRST_LEVEL:    2,      // ⛔ GDD 6.3 — no mid-climb vaulting at level 1
+
+  // ---- Collision (GDD 4.5) ------------------------------------------------
+  // The band below the rim in which an enemy's contact kills (GDD 4.5 item 1).
+  // Read as `killDepth = 1 - RIM_CONTACT_DEPTH` by every enemy that kills by
+  // reaching the rim. CS003 P3's HIT_LANE_TOL / HIT_DEPTH_TOL join it here.
+  RIM_CONTACT_DEPTH:    0.05,
 
   // ---- Difficulty (GDD 8) — one clock: game.level -------------------------
   HEAT_BASE:            0.00,

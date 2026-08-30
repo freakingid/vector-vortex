@@ -199,6 +199,24 @@ function perspective(depth) {
   return Math.pow(depth < 0 ? 0 : (depth > 1 ? 1 : depth), C.PERSPECTIVE_EXP);
 }
 
+// The inverse of perspective(): the depth whose eased position is `p`.
+//
+// ⛔ This is how an entity gets a drawn extent that behaves. screenPos lerps
+// LINEARLY in perspective space, so a fixed step in `p` is a fixed step in
+// SCREEN distance — which means a silhouette sized in depth units is the wrong
+// size everywhere except where it was tuned. Size the silhouette in perspective
+// space (where the eye lives), come back through here, and hand screenPos a
+// depth. 14-render-entities.js's entityPoints() is the reader.
+//
+// Exact inverse on [0,1]: perspective(invPerspective(p)) === p to float
+// precision. Clamped at both ends, so a shape reaching past the rim lands ON
+// the rim rather than producing a depth > 1 that perspective() would clamp
+// anyway — the clamp lives here so the depth handed onward is always legal.
+function invPerspective(p) {
+  const q = p < 0 ? 0 : (p > 1 ? 1 : p);
+  return Math.pow(q, 1 / C.PERSPECTIVE_EXP);
+}
+
 // Walk a polygon in LANE units and write the result into `out`.
 // Lane L sits at vertex parameter L + 0.5 — see the header note.
 function polyAt(poly, well, lane, out) {

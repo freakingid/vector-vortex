@@ -7,7 +7,7 @@
 // ⛔ A field lands here when the changeset that USES it lands, never before.
 // A field added "because CS003 will want it" is a field CS003 cannot see the
 // reasoning for, and it reads as shipped truth to a session that finds it.
-// CS002 owns exactly the seven below.
+// CS002 landed the first seven; CS003 P1 adds `seed` and `rng`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -15,6 +15,19 @@
 
 function newState() {
   return {
+    // ⛔ THE RUN'S SEED AND ITS ONE STREAM (GDD 16.1, 17.1; 01-rng.js).
+    // Both are shipped defaults here so the headless suite and a reset() always
+    // have a stream to draw from. startGame() (CS003 P2) is what mints a real
+    // seed for a run; it writes `seed` FIRST and rebuilds `rng` from it, and it
+    // never regenerates `rng` from anything else — `seed` staying readable
+    // afterwards is what makes a run replayable.
+    //
+    // ⛔ `rng` is a live closure over its own counter, not a value: copying
+    // `state` copies the reference, so two "copies" of state share one stream.
+    // Nothing copies state today; a save/replay feature would store `seed`.
+    seed: C.RNG_DEFAULT_SEED,
+    rng: mulberry32(C.RNG_DEFAULT_SEED),
+
     // Screen / state machine (GDD 2). CS002 has one screen and no menus; the
     // enum this becomes is CS006's to define, so the value is a plain string
     // rather than a constant nothing else reads yet.
