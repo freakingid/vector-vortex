@@ -2766,6 +2766,9 @@ function respawnSkimmer(state, well) {
   // in, not at the well's default lane.
   const lane = state.skimmer.lane;
 
+  // ⚠ SETTLED — Paul, 2026-08-30. This reads broader than GDD 4.4's wording and
+  // is meant to. Do not narrow it to a rim band in the session you notice it.
+  //
   // ⛔ GDD 4.4: "enemies at the rim are pushed to C.RESPAWN_PUSH_DEPTH on
   // respawn so the player is never killed on re-entry". Written as a CLAMP —
   // everything above the push depth comes down to it, in every lane — and not

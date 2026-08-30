@@ -86,10 +86,13 @@ pushes enemies down and mints the craft in the lane it died in. `update()` gains
 the game-over early return above everything, and the respawn/aging branch. `r`
 is a named debug action beside `cycleWell`, calling `startGame()`.
 
-Judgment calls: **(a)** GDD 4.4's rim push is a CLAMP over every lane, not a
-narrow band at the rim — the narrow reading leaves a Vaulter at 0.9 climbing
-into the kill band well inside the invulnerability window, which is the death
-the rule exists to prevent. **(b)** the respawn lives in `23-main.js` beside
+Judgment calls: **(a)** ⚠ **SETTLED — Paul, 2026-08-30.** GDD 4.4's rim push is
+a CLAMP over every lane, not a narrow band at the rim — the narrow reading
+leaves a Vaulter at 0.9 climbing into the kill band well inside the
+invulnerability window, which is the death the rule exists to prevent. It is
+deliberately more generous than §4.4's wording alone requires; do not narrow it
+back. P5 writes this into §4.4's "Shipped, CS003" paragraph as settled, not as
+an inference. **(b)** the respawn lives in `23-main.js` beside
 `enterWell()`, not next to `killSkimmer()`: P3's comment said P4 would fill it
 in "HERE", but it cannot be inside `killSkimmer` (nothing scheduled at death
 advances during the freeze), and it moves enemies. **(c)** the invulnerability
