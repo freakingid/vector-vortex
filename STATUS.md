@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS002 · Phase: P2 done · Wells: 16/16 · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS002 · Phase: P3 done · Wells: 16/16 · Tracks: 0/5
 
 ## Phase ledger — CS002
 
@@ -9,6 +9,25 @@ Version: 0.0.1 · Changeset: CS002 · Phase: P2 done · Wells: 16/16 · Tracks: 
 
 - **P2 — the Skimmer** · done 2026-08-30 · `src/05-skimmer.js`, `src/00-config.js`,
   `src/23-main.js`, `VECTOR-VORTEX-GDD.md` §4.1, `scratchpad/test-cs002-p2.js`.
+
+- **P3 — firing and shots** · done 2026-08-30 · `src/06-shots.js`,
+  `src/14-render-entities.js`, `src/00-config.js`, `src/02-state.js`,
+  `src/23-main.js`, `VECTOR-VORTEX-GDD.md` §4.2, `scratchpad/test-cs002-p3.js`.
+  A shot's lane is captured once, at fire time, from `Math.round(skimmer.lane)`
+  through `laneNormalize` — the same target `Skimmer.snap()` uses — and never
+  changes afterwards. `state.shotCooldown` counts UP toward `SHOT_COOLDOWN` and
+  starts already at the threshold (ready), the same pattern `squashTime` opens
+  on. `updateShots(state, well, dt)` ages/spawns/retires shots and runs the
+  end-of-frame `.filter()`; new cap enforcement is a plain length check before
+  pushing, not a preallocated object pool — every other entity in the build
+  (Skimmer, and the enemies to come) follows the same class+filter shape, so
+  this stays consistent with that rather than introducing a second lifecycle
+  pattern for one entity type. Draw lives in `14-render-entities.js` per the
+  phase prompt, split from `06-shots.js`'s simulation: a short rim-ward streak,
+  `SHOT_LEN` deep, drawn through `drawPoly`+`glowStroke`, fading linearly from
+  opaque to nothing as its leading edge crosses `READABILITY_DEPTH` down to the
+  throat (§10.3). No collision pass and no Thorn chipping — out of scope this
+  phase, explicitly.
 
 P2 built the player's craft. `lane` is a continuous float and the simulation
 never rounds it: closed wells wrap, open wells clamp, and every lane
@@ -30,8 +49,9 @@ local-space point array through `drawPoly` + `glowStroke`, projected by
 sprite. `Game.update()` mints it lazily in one place, so `reset()`, boot and a
 well change all take the same path.
 
-P1 built the one mutable game object (seven fields, exactly the ones CS002
-owns), the fixed-timestep loop, and mouse + keyboard input. The loop clamps
+P1 built the one mutable game object (the fields CS002 owns — eight now that
+P3 added `shotCooldown` alongside P1's `shots`), the fixed-timestep loop, and
+mouse + keyboard input. The loop clamps
 `dt` at `DT_CLAMP_MAX`, runs at most `MAX_CATCHUP_STEPS` steps per frame, and
 ⛔ **discards** the surplus past the cap rather than banking it — banked debt
 is the spiral of death. `Game.update(dt)` and `Game.draw()` are separate and
@@ -55,7 +75,21 @@ input path.
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); manifest is
   checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes, 7 files, zero skips.
+- `node scratchpad/run-all.js` passes, 8 files, zero skips.
+- CS002 P3 verified, 37 assertions: held fire for 10,000 ticks never puts more
+  than `SHOT_MAX` shots in flight; a 4,000-tick held-fire soak proves no two
+  shots are created less than `SHOT_COOLDOWN` apart, by the simulation clock;
+  a shot fired from a fractional lane locks to `Math.round()` of it, and 200
+  ticks of adversarial rotation afterward never move it; a shot driven to
+  depth 0 retires on its own next `update()`, and the same is true end-to-end
+  through the real loop — the array drops it the very next `Game.update()`;
+  no NaN in `drawShot`'s projected points on any well, lane or depth; and the
+  built file's `06-shots.js` and `14-render-entities.js` slices contain no
+  fill, rect, image, pattern, shadow or arc call, with the latter drawing
+  through `drawPoly`/`glowStroke`. Known gap: the readability fade's actual
+  alpha value is exercised for "throws nothing" only — the stub `ctx` does not
+  capture `globalAlpha` in a form this suite asserts on, so the fade-to-zero
+  claim rests on reading `shotAlpha()`, not a test oracle.
 - CS002 P2 verified, 99 assertions: seven wrap cases on the 16-lane Ring
   including both directions over the seam and multi-lap deltas; a 5,000-tick
   soak of adversarial input (±88-lane mouse deltas, key holds, quiet stretches)
@@ -169,15 +203,18 @@ input path.
 
 ## Next up
 
-- CS002 P3 — firing and shots (`src/06-shots.js` + the shot draw in
-  `src/14-render-entities.js`). See `IMPLEMENTATION-PHASES-CS002.md`.
-- P3 hangs its update off the marked line in `Game.update()` in `23-main.js`,
-  directly below the Skimmer's. ⛔ A shot's lane is captured at fire time from
-  the **nearest lane centre** — `Math.round(state.skimmer.lane)` through
-  `laneNormalize`, exactly as `Skimmer.snap()` picks its target — not from the
-  continuous position, and never changes afterwards.
+- CS002 P4 — touch, gamepad, `feel-lab` · the closing phase for CS002. See
+  `IMPLEMENTATION-PHASES-CS002.md`. Extends `src/04-input.js` with the
+  remaining two device paths (still no game global read), builds
+  `tools/feel-lab.html`, runs the on-hardware pass across all four devices,
+  then closes the changeset: move the ledger to `log/CS002.md`, reset
+  `STATUS.md`, archive the two CS002 planning docs.
 - The Skimmer exposes `lane`, `snapping`, `squashAmount()` and `dead`. Nothing
   sets `dead`; death is CS006's.
+- Shots exist now (`state.shots`, `X.Shot`, `updateShots`) but there is still
+  no collision pass — a Thorn or an enemy cannot yet be hit. That is explicitly
+  out of scope through P4 and lands with whichever later changeset owns
+  collision (GDD §9, `09-collision.js`).
 
 ## Playtest asks (open only)
 

@@ -222,6 +222,8 @@ The open-well clamp fires a `WALL_SQUASH_MS` squash that compresses the craft al
 
 Shots are lane-locked and never change lanes. A shot meeting a Thorn stops and chips `THORN_CHIP` from it. Because a stopped shot frees its slot immediately, camping a thorned lane produces a rapid chip-away effect. ⚠ **SETTLED:** that is emergent, it is in the original, and it is not a bug to smooth out.
 
+**Shipped, CS002 P3.** A shot's lane is captured once, at fire time, from the *nearest lane centre* to the Skimmer's continuous position — the same rounding `Skimmer.snap()` targets — and never changes afterwards; rotating the Skimmer after firing leaves every shot in flight exactly where it was. Depth runs rim (1) to throat (0) over `SHOT_TIME`; a shot reaching 0 retires and frees its array slot the same step. `SHOT_LEN` (0.06 depth units) is the length of the drawn streak, faded per the readability contract (§10.3) rather than clipped outright: opaque at and above `READABILITY_DEPTH`, fading linearly to nothing at the throat. There is no collision pass yet — Thorn chipping above is not yet wired and lands with §6/§9's collision phase.
+
 ### 4.3 The Purge
 
 One charge per well; recharges on entry, never accumulates.

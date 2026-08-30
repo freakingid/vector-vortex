@@ -88,7 +88,8 @@ const Game = (function () {
     // path instead of three that have to agree. CS006 owns start and respawn.
     if (!state.skimmer) state.skimmer = new Skimmer(well);
     state.skimmer.update(dt, well, state.input);
-    // CS002 P3 hangs the shots here, CS003 the enemies.
+    updateShots(state, well, dt);
+    // CS003 hangs the enemies here.
   }
 
   // ---- presentation --------------------------------------------------------
@@ -98,9 +99,11 @@ const Game = (function () {
     ctx.clearRect(0, 0, C.WORLD_W, C.WORLD_H);
     const well = WELLS[state.wellIndex];
     drawWell(ctx, well, state.level, null, 0);
-    // Z-order: the well is the backdrop, the Skimmer rides on top of it. The
-    // guard is for a draw that lands before the first update — boot, and the
+    // Z-order: the well is the backdrop, shots travel over it, and the
+    // Skimmer — always at depth 1, the rim — rides on top of everything. The
+    // guards are for a draw that lands before the first update — boot, and the
     // frozen branch of a hit-stop that began on frame one.
+    for (let i = 0; i < state.shots.length; i++) state.shots[i].draw(ctx, well);
     if (state.skimmer) state.skimmer.draw(ctx, well);
   }
 

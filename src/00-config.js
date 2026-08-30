@@ -48,6 +48,7 @@ const C = {
   SHOT_MAX:             8,      // ⛔ hard cap on shots in flight
   SHOT_TIME:            0.52,   // s, rim -> throat
   SHOT_COOLDOWN:        0.055,  // s between shots
+  SHOT_LEN:             0.06,   // depth units, the trailing streak's length
   THORN_CHIP:           0.08,   // fraction of lane length removed per hit
   PURGE_SAVED_BONUS:    500,
   START_LIVES:          3,

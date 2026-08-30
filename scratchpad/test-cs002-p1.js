@@ -118,7 +118,9 @@ hasKnob(X, "MAX_CATCHUP_STEPS", { def: 5 }, H);
 hasKnob(X, "POINTER_LOCK_OFFER", { def: true }, H);
 
 // ---- the one mutable game object -------------------------------------------
-const OWNED = ["screen", "wellIndex", "level", "time", "input", "skimmer", "shots"];
+// ⛔ P3 added `shotCooldown` alongside `shots` when it built firing — this list
+// tracks CS002's total field ownership, not a P1-only snapshot.
+const OWNED = ["screen", "wellIndex", "level", "time", "input", "skimmer", "shots", "shotCooldown"];
 for (const f of OWNED) H.assert(f in X.state, `state.${f} exists`);
 H.eq(Object.keys(X.state).length, OWNED.length,
   "state carries exactly the fields CS002 owns and no field built ahead");

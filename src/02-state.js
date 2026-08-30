@@ -47,6 +47,13 @@ function newState() {
     // Player shots in flight (06-shots.js, CS002 P3). ⛔ Entities are removed
     // by an end-of-frame .filter(), never spliced mid-loop (GDD 6.5).
     shots: [],
+
+    // ⛔ Counts UP toward SHOT_COOLDOWN (GDD 16.3 — no countdown timers) and is
+    // held at the threshold once past it. Starts AT the threshold — already
+    // "expired" — so the first shot of a run does not wait out a cooldown that
+    // never actually elapsed, the same reasoning 05-skimmer.js's squashTime
+    // opens on.
+    shotCooldown: C.SHOT_COOLDOWN,
   };
 }
 

@@ -113,6 +113,8 @@ function buildGame(opts = {}) {
     "newState", "createInput", "INPUT_KEYS_DEFAULT", "Game",
     // the Skimmer (05-skimmer.js, CS002 P2)
     "Skimmer", "SKIMMER_POLY", "skimmerPoints",
+    // shots (06-shots.js, 14-render-entities.js, CS002 P3)
+    "Shot", "updateShots", "drawShot",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +
