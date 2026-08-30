@@ -1,9 +1,10 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS003 (P1 of 5 done) · Wells: 16/16 · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS003 (P2 of 5 done) · Wells: 16/16 · Tracks: 0/5
 
 ## Phase ledger — CS003
 
 - **P1 — the RNG, the entity contract, the Vaulter.** Done 2026-08-30.
+- **P2 — the spawner and the well lifecycle.** Done 2026-08-30.
 
 `01-rng.js`: `mulberry32` + `rngInt` / `rngPick`; `state.seed` and `state.rng`
 default from `C.RNG_DEFAULT_SEED`, and `startGame()` (P2) mints the run's real
@@ -23,11 +24,35 @@ rim-hunting Vaulter into a different shape. **(c)** the hop timer runs during a
 hop, so hop *starts* are one `VAULT_INTERVAL` apart; reaching the rim resets it,
 so arrival never lunges.
 
+**P2.** `08-spawner.js`: `spawnEnemy(kind, lane, depth)` is the ONE way an
+enemy enters `state.enemies` — it owns GDD §6.3's safe-spawn rule (a spawn in
+the Skimmer's lane is LOWERED to `SAFE_SPAWN_DEPTH`, never relocated sideways,
+so CS004's Carrier splits keep the shape they teach) and the `ENEMY_CAP`
+ceiling. `updateSpawner` counts UP to `SPAWN_INTERVAL` and HOLDS there when the
+board is full, so a freed slot refills the same step. `wellCleared` is the two
+conditions, quota AND no `blocksClear` survivor. `23-main.js`: `enterWell()` /
+`nextWell()` / `startGame(seed)`, the enemy pass + end-of-frame filter, the
+⚠ temporary `WELL_CLEAR_HOLD` branch, and enemies in the z-order between the
+well and the shots. Boot now calls `startGame()`; the debug cycler routes
+through `enterWell()`.
+
+Judgment calls: **(a)** `enterWell()` mints a fresh Skimmer at lane 0 — well
+lane counts differ, so carrying the craft over is not free, and lives/respawn
+are P4's. **(b)** "near the throat" for the lane redraw reuses
+`C.READABILITY_DEPTH` rather than adding a knob for the same band. **(c)** the
+spawn heading draw happens inside `spawnEnemy`, one draw per spawn, so the
+stream stays aligned however a caller got there. **(d)** `update()` calls
+`enterWell()` when it finds no Skimmer, which is what keeps `reset()` a pure
+shipped-defaults write and still gives the suite a live well on its first step.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); manifest is
   checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes, 10 files, zero skips.
+- `node scratchpad/run-all.js` passes, 11 files, zero skips.
+- ⛔ P2's three named invariants were mutation-checked: removing the
+  safe-spawn clamp, dropping the quota half of the clear condition, and
+  resetting the spawn timer on a blocked beat each turn the suite red.
 - ⛔ Both of P1's named invariants were mutation-checked, not just asserted: a
   Vaulter that keeps its own heading fails 18 assertions across the six open
   wells, and a constant-depth silhouette fails the two shrink-with-distance
@@ -44,6 +69,12 @@ so arrival never lunges.
 
 ## Known issues
 
+- **Two prior-phase test fixtures now reset before reading defaults.** Boot
+  calls `startGame()`, so the live `state` at load is a run in progress with a
+  time-derived seed. `test-cs002-p1.js` (the field inventory and
+  `skimmer === null`) and `test-cs003-p1.js` (`seed` defaults to
+  `RNG_DEFAULT_SEED`) each gained a `G.reset()` before the block that asserts
+  shipped defaults. No assertion was weakened or removed.
 - **The `state` field inventory moved to `scratchpad/test-registry.js`.**
   `test-cs002-p1.js` asserted a bare `Object.keys(state).length === 8` as a
   build-ahead guard; P1's two legitimate fields turned it into a false alarm.
@@ -86,15 +117,21 @@ so arrival never lunges.
   raises it to 1 — that is on P5's closing checklist, and no test reads it yet.
 - The Skimmer exposes `dead`; nothing sets it yet. Shots exist with no
   collision pass. Both are CS003 P3/P4's.
+- `state.purgeReady` is armed by `enterWell()` and nothing spends it — P3 owns
+  the Purge's effect, including GDD §4.3's weak second use, which may want a
+  count rather than the boolean P2 landed.
+- ⚠ `C.WELL_CLEAR_HOLD`, `state.clearHold` and the branch in `Game.update()`
+  that reads them are TEMPORARY and are CS005's to delete when the Dive lands.
 
 ## Next up
 
-- CS003 P2 — the spawner and the well lifecycle (`08-spawner.js`,
-  `startGame()` / `nextWell()` / `enterWell()`, the well-clear condition). The
-  prompt is in `IMPLEMENTATION-PHASES-CS003.md`.
+- CS003 P3 — the collision pass and the Purge. The prompt is in
+  `IMPLEMENTATION-PHASES-CS003.md`.
 
 ## Playtest asks (open only)
 
-- Once P2 spawns them: does the Vaulter's flattened X read as a *threat* at
+- The Vaulter is now on screen: does the flattened X read as a *threat* at
   throat depth, and is `VAULTER_SIZE` 0.70 enough silhouette to see it coming?
-  It has never been on screen — P1 verified its geometry headless only.
+- Does `SPAWN_INTERVAL` 1.60 with `ENEMY_CONCURRENT` 3 hit GDD §12's promise —
+  a passive player dead within four seconds, an active one with a kill? Nothing
+  can be shot yet (P3), so only the death half is observable this phase.

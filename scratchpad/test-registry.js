@@ -25,7 +25,7 @@ const COUNTS = {
 // ahead of the changeset that can explain it (02-state.js's own header rule).
 const STATE_FIELDS = {
   CS002: ["screen", "wellIndex", "level", "time", "input", "skimmer", "shots", "shotCooldown"],
-  CS003: ["seed", "rng"],
+  CS003: ["seed", "rng", "enemies", "spawn", "purgeReady", "clearHold"],
 };
 
 function stateFields() {

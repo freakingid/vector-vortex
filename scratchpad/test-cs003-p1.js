@@ -99,9 +99,12 @@ H.assert(typeof X.drawVaulter === "function", "drawVaulter is in the build");
   H.eq(X.rngPick(r, []), undefined, "rngPick of an empty array is undefined");
 
   // state carries the run's seed and its stream, and a reset restores both.
+  // ⛔ Read AFTER a reset: since CS003 P2, boot calls startGame(), which mints
+  // a time-derived seed — the live state at load is a started run, not the
+  // shipped default shape.
+  G.reset();
   H.eq(X.state.seed, C.RNG_DEFAULT_SEED, "state.seed defaults to C.RNG_DEFAULT_SEED");
   H.assert(typeof X.state.rng === "function", "state.rng is a live stream");
-  G.reset();
   const first = X.state.rng();
   H.eq(first, X.mulberry32(C.RNG_DEFAULT_SEED)(), "reset() restores the default stream from tick zero");
 

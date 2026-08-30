@@ -118,6 +118,9 @@ hasKnob(X, "MAX_CATCHUP_STEPS", { def: 5 }, H);
 hasKnob(X, "POINTER_LOCK_OFFER", { def: true }, H);
 
 // ---- the one mutable game object -------------------------------------------
+// ⛔ Against the SHIPPED DEFAULTS, so reset() first: since CS003 P2 boot calls
+// startGame(), and the live state at load is a run in progress.
+G.reset();
 // ⛔ P3 added `shotCooldown` alongside `shots` when it built firing — this list
 // tracks CS002's total field ownership, not a P1-only snapshot.
 const OWNED = ["screen", "wellIndex", "level", "time", "input", "skimmer", "shots", "shotCooldown"];

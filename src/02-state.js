@@ -7,7 +7,8 @@
 // ⛔ A field lands here when the changeset that USES it lands, never before.
 // A field added "because CS003 will want it" is a field CS003 cannot see the
 // reasoning for, and it reads as shipped truth to a session that finds it.
-// CS002 landed the first seven; CS003 P1 adds `seed` and `rng`.
+// CS002 landed the first eight; CS003 P1 added `seed` and `rng`, and P2 adds
+// `enemies`, `spawn`, `purgeReady` and `clearHold`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -33,10 +34,10 @@ function newState() {
     // rather than a constant nothing else reads yet.
     screen: "play",
 
-    // Which of the sixteen wells (03-wells.js) is being drawn. CS002 has no
-    // level progression, so this is set by the debug cycle action and nothing
-    // else. GDD 3.4's shapeIndex = (level-1) mod 16 mapping arrives with the
-    // Dive (CS004) and takes ownership of this field then.
+    // Which of the sixteen wells (03-wells.js) is being drawn. ⛔ GDD 3.4's
+    // shapeIndex = (level-1) mod WELLS.length mapping is owned by nextWell()
+    // (23-main.js, CS003 P2); the debug cycle action is the only other writer,
+    // and it goes through enterWell() like every other well entry.
     wellIndex: 0,
 
     // ⛔ THE ONE CLOCK (GDD 8, CLAUDE.md Config). All difficulty scaling derives
@@ -67,6 +68,31 @@ function newState() {
     // never actually elapsed, the same reasoning 05-skimmer.js's squashTime
     // opens on.
     shotCooldown: C.SHOT_COOLDOWN,
+
+    // ⛔ ONE ARRAY FOR EVERY ENEMY (07-enemies.js, CS003 P2). Thorns, Carriers
+    // and Drifters all land here; the contract's flags decide behaviour, not a
+    // second array. Removal is an end-of-frame .filter(), never a splice.
+    enemies: [],
+
+    // The spawner's two numbers (08-spawner.js). ⛔ `timer` counts UP toward
+    // C.SPAWN_INTERVAL and HOLDS there when a spawn is blocked, so a slot that
+    // frees is used immediately rather than after a fresh interval (GDD 16.3 —
+    // no countdown anywhere in the build). `remaining` is a COUNT of enemies
+    // the well still owes, not a clock, so it is spent downward. Both are
+    // re-armed by enterWell(); nothing else writes them.
+    spawn: { timer: 0, remaining: C.SPAWN_QUOTA },
+
+    // GDD 4.3: one Purge charge per well, recharged on entry, never
+    // accumulated. True means the charge is unspent — the strong first use.
+    // ⛔ enterWell() is the ONLY thing that sets it back to true. CS003 P3
+    // builds the effect and is what will set it false.
+    purgeReady: true,
+
+    // ⚠ TEMPORARY (C.WELL_CLEAR_HOLD). Counts UP while the well is clear and
+    // resets whenever it is not, so a kill that lands during the hold cannot
+    // leave a half-spent pause behind. CS005's Dive replaces this field, the
+    // constant, and the branch in Game.update() that reads it.
+    clearHold: 0,
   };
 }
 

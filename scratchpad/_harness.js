@@ -118,6 +118,9 @@ function buildGame(opts = {}) {
     // the RNG, the entity contract and the Vaulter (01/07/14, CS003 P1)
     "mulberry32", "rngInt", "rngPick", "invPerspective",
     "Enemy", "Vaulter", "entityPoints", "VAULTER_POLY", "drawVaulter",
+    // the spawner and the well lifecycle (08/23, CS003 P2)
+    "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit",
+    "enterWell", "nextWell", "startGame",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +

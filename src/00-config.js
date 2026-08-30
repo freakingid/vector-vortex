@@ -91,6 +91,33 @@ const C = {
   VAULT_RIM_INTERVAL:   0.55,   // s between rim hunt hops
   VAULT_FIRST_LEVEL:    2,      // ⛔ GDD 6.3 — no mid-climb vaulting at level 1
 
+  // ---- Spawner / well lifecycle (GDD 2, 6.3, 12) --------------------------
+  // ⛔ SPAWN_INTERVAL is what state.spawn.timer counts UP toward, and
+  // SPAWN_QUOTA is what state.spawn.remaining starts at — the quota is spent
+  // downward because it is a COUNT of things, not a clock (GDD 16.3 governs
+  // timers). A well is clear when the quota is spent AND nothing that blocks
+  // the clear is left alive; "no enemies alive" alone is true one tick after
+  // startGame() and in every gap between spawns.
+  //
+  // ENEMY_CONCURRENT is the difficulty knob — how many are on screen at once,
+  // and CS005's heat curve is what will raise it. ⛔ It is read as
+  // min(ENEMY_CONCURRENT, ENEMY_CAP): ENEMY_CAP above is a READABILITY ceiling
+  // and never a difficulty knob, so the two are not interchangeable and the
+  // cap is not the thing to raise when a level should feel busier.
+  //
+  // SPAWN_LANE_TRIES bounds the deterministic redraws 08-spawner.js spends
+  // looking for a lane that is not already occupied near the throat. Bounded
+  // because the draws come from the run's ONE stream: an unbounded retry loop
+  // would spend a different number of draws depending on the board and
+  // desynchronize every later draw in the run.
+  SPAWN_INTERVAL:       1.60,   // s between spawns. ⛔ counted UP toward.
+  SPAWN_QUOTA:          10,     // enemies released per well
+  ENEMY_CONCURRENT:     3,      // ⛔ alive at once — the difficulty knob
+  SPAWN_LANE_TRIES:     4,      // deterministic lane redraws before settling
+  // ⚠ TEMPORARY — the pause between the last kill and the next well. CS005's
+  // Dive (GDD 5) replaces it entirely and this constant goes with it.
+  WELL_CLEAR_HOLD:      1.00,   // s held on a cleared well before nextWell()
+
   // ---- Collision (GDD 4.5) ------------------------------------------------
   // The band below the rim in which an enemy's contact kills (GDD 4.5 item 1).
   // Read as `killDepth = 1 - RIM_CONTACT_DEPTH` by every enemy that kills by

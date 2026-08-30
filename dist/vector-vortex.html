@@ -140,6 +140,33 @@ const C = {
   VAULT_RIM_INTERVAL:   0.55,   // s between rim hunt hops
   VAULT_FIRST_LEVEL:    2,      // ⛔ GDD 6.3 — no mid-climb vaulting at level 1
 
+  // ---- Spawner / well lifecycle (GDD 2, 6.3, 12) --------------------------
+  // ⛔ SPAWN_INTERVAL is what state.spawn.timer counts UP toward, and
+  // SPAWN_QUOTA is what state.spawn.remaining starts at — the quota is spent
+  // downward because it is a COUNT of things, not a clock (GDD 16.3 governs
+  // timers). A well is clear when the quota is spent AND nothing that blocks
+  // the clear is left alive; "no enemies alive" alone is true one tick after
+  // startGame() and in every gap between spawns.
+  //
+  // ENEMY_CONCURRENT is the difficulty knob — how many are on screen at once,
+  // and CS005's heat curve is what will raise it. ⛔ It is read as
+  // min(ENEMY_CONCURRENT, ENEMY_CAP): ENEMY_CAP above is a READABILITY ceiling
+  // and never a difficulty knob, so the two are not interchangeable and the
+  // cap is not the thing to raise when a level should feel busier.
+  //
+  // SPAWN_LANE_TRIES bounds the deterministic redraws 08-spawner.js spends
+  // looking for a lane that is not already occupied near the throat. Bounded
+  // because the draws come from the run's ONE stream: an unbounded retry loop
+  // would spend a different number of draws depending on the board and
+  // desynchronize every later draw in the run.
+  SPAWN_INTERVAL:       1.60,   // s between spawns. ⛔ counted UP toward.
+  SPAWN_QUOTA:          10,     // enemies released per well
+  ENEMY_CONCURRENT:     3,      // ⛔ alive at once — the difficulty knob
+  SPAWN_LANE_TRIES:     4,      // deterministic lane redraws before settling
+  // ⚠ TEMPORARY — the pause between the last kill and the next well. CS005's
+  // Dive (GDD 5) replaces it entirely and this constant goes with it.
+  WELL_CLEAR_HOLD:      1.00,   // s held on a cleared well before nextWell()
+
   // ---- Collision (GDD 4.5) ------------------------------------------------
   // The band below the rim in which an enemy's contact kills (GDD 4.5 item 1).
   // Read as `killDepth = 1 - RIM_CONTACT_DEPTH` by every enemy that kills by
@@ -318,7 +345,8 @@ function rngPick(rng, arr) {
 // ⛔ A field lands here when the changeset that USES it lands, never before.
 // A field added "because CS003 will want it" is a field CS003 cannot see the
 // reasoning for, and it reads as shipped truth to a session that finds it.
-// CS002 landed the first seven; CS003 P1 adds `seed` and `rng`.
+// CS002 landed the first eight; CS003 P1 added `seed` and `rng`, and P2 adds
+// `enemies`, `spawn`, `purgeReady` and `clearHold`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -344,10 +372,10 @@ function newState() {
     // rather than a constant nothing else reads yet.
     screen: "play",
 
-    // Which of the sixteen wells (03-wells.js) is being drawn. CS002 has no
-    // level progression, so this is set by the debug cycle action and nothing
-    // else. GDD 3.4's shapeIndex = (level-1) mod 16 mapping arrives with the
-    // Dive (CS004) and takes ownership of this field then.
+    // Which of the sixteen wells (03-wells.js) is being drawn. ⛔ GDD 3.4's
+    // shapeIndex = (level-1) mod WELLS.length mapping is owned by nextWell()
+    // (23-main.js, CS003 P2); the debug cycle action is the only other writer,
+    // and it goes through enterWell() like every other well entry.
     wellIndex: 0,
 
     // ⛔ THE ONE CLOCK (GDD 8, CLAUDE.md Config). All difficulty scaling derives
@@ -378,6 +406,31 @@ function newState() {
     // never actually elapsed, the same reasoning 05-skimmer.js's squashTime
     // opens on.
     shotCooldown: C.SHOT_COOLDOWN,
+
+    // ⛔ ONE ARRAY FOR EVERY ENEMY (07-enemies.js, CS003 P2). Thorns, Carriers
+    // and Drifters all land here; the contract's flags decide behaviour, not a
+    // second array. Removal is an end-of-frame .filter(), never a splice.
+    enemies: [],
+
+    // The spawner's two numbers (08-spawner.js). ⛔ `timer` counts UP toward
+    // C.SPAWN_INTERVAL and HOLDS there when a spawn is blocked, so a slot that
+    // frees is used immediately rather than after a fresh interval (GDD 16.3 —
+    // no countdown anywhere in the build). `remaining` is a COUNT of enemies
+    // the well still owes, not a clock, so it is spent downward. Both are
+    // re-armed by enterWell(); nothing else writes them.
+    spawn: { timer: 0, remaining: C.SPAWN_QUOTA },
+
+    // GDD 4.3: one Purge charge per well, recharged on entry, never
+    // accumulated. True means the charge is unspent — the strong first use.
+    // ⛔ enterWell() is the ONLY thing that sets it back to true. CS003 P3
+    // builds the effect and is what will set it false.
+    purgeReady: true,
+
+    // ⚠ TEMPORARY (C.WELL_CLEAR_HOLD). Counts UP while the well is clear and
+    // resets whenever it is not, so a kill that lands during the hold cannot
+    // leave a half-spent pause behind. CS005's Dive replaces this field, the
+    // constant, and the branch in Game.update() that reads it.
+    clearHold: 0,
   };
 }
 
@@ -1754,7 +1807,179 @@ class Vaulter extends Enemy {
 // ==========================================================================
 // 08-spawner.js
 // ==========================================================================
-// 08-spawner.js — placeholder. See VECTOR-VORTEX-GDD.md for the section that owns this.
+// 08-spawner.js — what releases enemies into a well, and what decides the well
+// is finished (GDD 2, 6.3, 6.5, 12, 16.3).
+//
+// ⛔ ONE ENTRY POINT: spawnEnemy(kind, lane, depth). Every enemy that enters
+// state.enemies comes through it — the interval spawner below, and CS004's
+// Carrier split, which is not a spawn the player can predict but is still an
+// enemy appearing in a lane. That is the whole reason this is a function
+// rather than three call sites doing `state.enemies.push(new Vaulter(...))`:
+// GDD 6.3's safe-spawn rule and C.ENEMY_CAP are enforced in ONE place, so a
+// later enemy inherits them instead of re-implementing them (and forgetting).
+//
+// ⛔ EVERY DRAW COMES FROM state.rng (01-rng.js). Nothing here reaches for the
+// platform generator — GDD 17.1's replay guarantee is the reason, and the
+// suite scans the built file for it.
+//
+// ⛔ The two numbers live in state.spawn (02-state.js): `timer` counts UP
+// toward C.SPAWN_INTERVAL, `remaining` is a count spent downward. Neither is a
+// countdown clock (GDD 16.3).
+
+// The kind table. ⛔ A spawn names a kind as a STRING and this table is the one
+// place a string becomes a class — CS004's Carrier split asks for "vaulter" by
+// name and gets whatever this row says, so the roster grows here and nowhere
+// else. `dir` is the initial heading, drawn from the run's stream by the
+// caller and handed in, so an enemy that has no use for one simply ignores it.
+const ENEMY_KINDS = {
+  vaulter: (lane, depth, dir) => new Vaulter(lane, depth, dir),
+};
+
+// How many enemies may be alive at once. ⛔ The MIN of the two, and they are
+// not the same kind of number: C.ENEMY_CONCURRENT is the difficulty knob
+// (CS005's heat curve raises it), C.ENEMY_CAP is a readability ceiling that is
+// never raised for difficulty. Reading only one of them is how a retune of the
+// knob quietly walks past the ceiling.
+function spawnLimit() {
+  return Math.min(C.ENEMY_CONCURRENT, C.ENEMY_CAP);
+}
+
+// Is `lane` the Skimmer's lane? ⛔ laneDelta, never (a - b): on a Ring, lane 15
+// and lane 0 are neighbours (03-wells.js).
+//
+// The Skimmer's lane is CONTINUOUS — a player parked between two centres is
+// half in each — so "its lane" is anything within one lane of it rather than
+// Math.round()'s single answer. The wider reading is the safe direction to be
+// wrong in: it declines a spawn the player might have been under, and the cost
+// of declining is one lane redrawn.
+function inSkimmerLane(well, lane, skimmer) {
+  if (!skimmer || skimmer.dead) return false;
+  return Math.abs(laneDelta(well, lane, skimmer.lane)) < 1;
+}
+
+// ⛔ THE ONLY WAY AN ENEMY ENTERS THE WELL. Returns the enemy, or null if the
+// spawn was refused. Refusals are not errors — a caller that cares checks the
+// return, and the interval spawner below spends no quota on one.
+//
+// It owns two rules:
+//
+//   ⛔ GDD 6.3 — never spawn in the Skimmer's lane above C.SAFE_SPAWN_DEPTH.
+//      Enforced by LOWERING the depth to the safe line rather than by moving
+//      the lane or refusing: a Carrier split has to put its two children
+//      somewhere specific (GDD 6.2's "adjacent" / "flanking"), and relocating
+//      them sideways would break the shape the player is being taught to read.
+//      Dropping one deeper only ever gives the player more time.
+//
+//   ⛔ C.ENEMY_CAP — the readability ceiling, refused outright. It is not a
+//      difficulty knob and this is the one place it is enforced.
+function spawnEnemy(kind, lane, depth) {
+  const make = ENEMY_KINDS[kind];
+  if (!make) return null;
+  if (state.enemies.length >= C.ENEMY_CAP) return null;
+
+  const well = WELLS[state.wellIndex];
+  const l = laneNormalize(well, lane);
+  let d = depth || 0;
+  if (d < 0) d = 0;
+  if (d > 1) d = 1;
+  if (d > C.SAFE_SPAWN_DEPTH && inSkimmerLane(well, l, state.skimmer)) {
+    d = C.SAFE_SPAWN_DEPTH;
+  }
+
+  // ⛔ The heading comes from the run's ONE stream, so a replay of the seed
+  // produces the same well. Drawn here rather than in the caller so every
+  // spawn spends exactly one draw on it and the stream stays aligned.
+  const dir = state.rng() < 0.5 ? -1 : 1;
+  const e = make(l, d, dir);
+  state.enemies.push(e);
+  return e;
+}
+
+// A lane for the next interval spawn. Draws from state.rng and redraws up to
+// C.SPAWN_LANE_TRIES times to avoid stacking a new enemy on one that is still
+// in the throat zone — two silhouettes at the same lane and nearly the same
+// depth read as one, which is GDD 1.1 P2 ("legible before lethal") failing at
+// the moment the player has the most time to react.
+//
+// ⛔ BOUNDED, and it settles for the last draw rather than looping until it is
+// happy. An unbounded search spends a board-dependent number of draws, and the
+// run's stream is shared: the next spawn, and everything else that draws,
+// would shift depending on what happened to be on screen.
+//
+// C.READABILITY_DEPTH is "the throat zone" as the build already defines it
+// (GDD 10.3) — the band where nothing opaque is drawn because nothing down
+// there can be read. Reusing it is deliberate; a second constant for the same
+// band would be two numbers to keep in step.
+function pickSpawnLane(state, well) {
+  let lane = rngInt(state.rng, well.lanes);
+  for (let i = 1; i < C.SPAWN_LANE_TRIES && laneCrowded(state, well, lane); i++) {
+    lane = rngInt(state.rng, well.lanes);
+  }
+  return lane;
+}
+
+// Is something already sitting in this lane, down in the throat zone?
+function laneCrowded(state, well, lane) {
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (e.dead) continue;
+    if (e.depth > C.READABILITY_DEPTH) continue;
+    if (Math.abs(laneDelta(well, lane, e.lane)) < 1) return true;
+  }
+  return false;
+}
+
+// Re-arm for a fresh well. ⛔ enterWell() (23-main.js) is the only caller —
+// resetting the spawner without also clearing state.enemies leaves the
+// previous well's craft in a well that may have fewer lanes.
+function resetSpawner(state) {
+  state.spawn.timer = 0;
+  state.spawn.remaining = C.SPAWN_QUOTA;
+}
+
+// One simulation step of the spawner. Called from Game.update() AFTER the
+// enemy pass and its filter, so the alive count it reads is this step's truth
+// and not last step's plus whatever died a moment ago.
+//
+// ⛔ The timer HOLDS at the interval instead of growing past it. A spawn
+// blocked by the concurrency limit therefore fires the instant a slot frees,
+// which is what keeps the pressure constant; a timer that reset on a blocked
+// beat would make a busy well quieter exactly when it should not be, and one
+// that grew without bound would dump the backlog all at once.
+function updateSpawner(state, well, dt) {
+  const sp = state.spawn;
+  if (sp.remaining <= 0) return;
+
+  if (sp.timer < C.SPAWN_INTERVAL) sp.timer += dt;
+  if (sp.timer < C.SPAWN_INTERVAL) return;
+  if (state.enemies.length >= spawnLimit()) return;
+
+  // Depth 0 is the throat — the far aperture, the only place a well releases
+  // an enemy from. GDD 3.2's convention, not a magic number.
+  const lane = pickSpawnLane(state, well);
+  const e = spawnEnemy("vaulter", lane, 0);
+  if (!e) return;              // refused (the cap): the quota is not spent
+
+  sp.timer = 0;
+  sp.remaining--;
+}
+
+// ⛔ TWO CONDITIONS, NOT ONE (GDD 2). The quota must be spent AND nothing that
+// blocks the clear may be left alive. "The array is empty" alone is true one
+// tick after startGame() and in every gap between spawns, and a well that
+// cleared itself before releasing anything is the bug this exists to prevent.
+//
+// `blocksClear` is read off the entity, never a class name: CS004's Thorn is
+// the first false, and that is exactly why a Thorn is still standing in the
+// lane during the Dive (GDD 5) rather than being an oversight here.
+function wellCleared(state) {
+  if (state.spawn.remaining > 0) return false;
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (!e.dead && e.blocksClear) return false;
+  }
+  return true;
+}
 
 // ==========================================================================
 // 09-collision.js
@@ -2148,6 +2373,66 @@ function drawVaulter(ctx, well, lane, depth) {
 // 04-input.js. This file is what hands that module its tunables out of C, and
 // it is the only file allowed to know both sides.
 
+// ---------------------------------------------------------------------------
+// THE WELL LIFECYCLE (GDD 2, 3.4, 4.3). Three functions, one path.
+// ---------------------------------------------------------------------------
+//
+// ⛔ EVERY ENTRY INTO A WELL GOES THROUGH enterWell(). A new run, the next
+// level, the debug cycler, and (CS006) a restart all land here. In CS002 the
+// debug cycler simply swapped a backdrop, which was harmless because nothing
+// but the Skimmer existed; with enemies alive, cycling a 16-lane well to an
+// 11-lane one strands craft on lanes the new well does not have.
+
+// Arm the current well: nothing in flight, a fresh Purge charge, a fresh
+// spawner, and a Skimmer that belongs to THIS well's lane count.
+function enterWell() {
+  const well = WELLS[state.wellIndex];
+
+  // ⛔ Cleared, not filtered. Both arrays belong to the well being left, and
+  // an enemy's lane is only meaningful against the well it was spawned into.
+  state.enemies = [];
+  state.shots = [];
+  // Starts AT the threshold — already expired — so the first shot in a well
+  // never waits out a cooldown that did not elapse (06-shots.js's rule).
+  state.shotCooldown = C.SHOT_COOLDOWN;
+
+  // GDD 4.3: one charge per well, recharged on entry, never accumulated.
+  state.purgeReady = true;
+
+  resetSpawner(state);
+  state.clearHold = 0;
+
+  // A craft for this well. ⛔ Minted rather than carried over: lane counts
+  // differ between wells, so the outgoing craft's lane may not exist here.
+  // Lives and respawn are CS003 P4's; this is the only place a Skimmer is
+  // created today.
+  state.skimmer = new Skimmer(well);
+}
+
+// The next level. ⛔ GDD 3.4's shapeIndex — the well is derived from the level
+// clock and is never advanced independently, so there is exactly one clock
+// (CLAUDE.md, Config) and level 17 is the Ring again.
+function nextWell() {
+  state.level += 1;
+  state.wellIndex = (state.level - 1) % WELLS.length;
+  enterWell();
+}
+
+// Begin a run. `seed` is optional: a run without one takes a time-derived seed
+// and RECORDS it in state.seed, which is what makes any run replayable after
+// the fact (GDD 17.1) — the stream is only ever built from state.seed, never
+// from a second source.
+//
+// ⛔ Run state is reset from newState(), 02-state.js's one field list, so a
+// field added there is reset here without this function being touched.
+function startGame(seed) {
+  Object.assign(state, newState());
+  state.seed = (seed === undefined || seed === null) ? (Date.now() >>> 0) : (seed >>> 0);
+  state.rng = mulberry32(state.seed);
+  state.wellIndex = (state.level - 1) % WELLS.length;
+  enterWell();
+}
+
 const Game = (function () {
 
   let canvas = null;
@@ -2200,6 +2485,9 @@ const Game = (function () {
   function runAction(name) {
     if (name === "cycleWell") {
       state.wellIndex = (state.wellIndex + 1) % WELLS.length;
+      // ⛔ Through the one path. A raw index swap leaves the previous well's
+      // enemies on lanes the new well may not have.
+      enterWell();
     }
   }
 
@@ -2215,16 +2503,34 @@ const Game = (function () {
     input.sample(dt, state.input);
     state.time += dt;
 
+    // reset() writes 02-state.js's shipped defaults, which put `skimmer` back
+    // to null — no well has been entered. The first step after one enters the
+    // current well, rather than minting a lone craft beside a well that was
+    // never armed. ⛔ Still the one path (enterWell); boot goes through
+    // startGame(). Respawn after a death is CS003 P4's, and is not this.
+    if (!state.skimmer) enterWell();
+
     const well = WELLS[state.wellIndex];
-    // Lazily minted, in ONE place. reset() writes 02-state.js's shipped
-    // defaults, which put `skimmer` back to null, and 02-state.js is
-    // concatenated above 05-skimmer.js so newState() cannot mint one itself.
-    // Doing it here means reset(), boot and a well change all take the same
-    // path instead of three that have to agree. CS006 owns start and respawn.
-    if (!state.skimmer) state.skimmer = new Skimmer(well);
     state.skimmer.update(dt, well, state.input);
     updateShots(state, well, dt);
-    // CS003 hangs the enemies here.
+
+    // ⛔ The enemy pass, then the end-of-frame filter — never a splice
+    // mid-loop (GDD 6.5). The spawner runs AFTER the filter so the alive count
+    // it reads is this step's, not last step's plus the dead.
+    for (let i = 0; i < state.enemies.length; i++) state.enemies[i].update(dt, well, state);
+    state.enemies = state.enemies.filter(e => !e.dead);
+    updateSpawner(state, well, dt);
+
+    // ⚠ TEMPORARY (C.WELL_CLEAR_HOLD) — the beat between the last kill and the
+    // next well. CS005's Dive (GDD 5) replaces this whole branch. The hold
+    // counts UP and resets the moment the well stops being clear, so a spawn
+    // or a survivor cannot leave a half-spent pause behind.
+    if (wellCleared(state)) {
+      state.clearHold += dt;
+      if (state.clearHold >= C.WELL_CLEAR_HOLD) nextWell();
+    } else {
+      state.clearHold = 0;
+    }
   }
 
   // ---- presentation --------------------------------------------------------
@@ -2234,10 +2540,13 @@ const Game = (function () {
     ctx.clearRect(0, 0, C.WORLD_W, C.WORLD_H);
     const well = WELLS[state.wellIndex];
     drawWell(ctx, well, state.level, null, 0);
-    // Z-order: the well is the backdrop, shots travel over it, and the
-    // Skimmer — always at depth 1, the rim — rides on top of everything. The
+    // Z-order: the well is the backdrop, enemies climb over it, shots travel
+    // over them, and the Skimmer — always at depth 1, the rim — rides on top
+    // of everything. Shots above enemies so a shot is never lost behind the
+    // thing it is about to hit (GDD 1.1 P2). The
     // guards are for a draw that lands before the first update — boot, and the
     // frozen branch of a hit-stop that began on frame one.
+    for (let i = 0; i < state.enemies.length; i++) state.enemies[i].draw(ctx, well);
     for (let i = 0; i < state.shots.length; i++) state.shots[i].draw(ctx, well);
     if (state.skimmer) state.skimmer.draw(ctx, well);
   }
@@ -2346,6 +2655,10 @@ const Game = (function () {
 // throwing for lack of a real canvas.
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   Game.init();
+  // ⛔ The run begins here, not lazily inside update(). No argument, so the
+  // seed is time-derived and recorded in state.seed. CS006's title screen is
+  // what will eventually own this call.
+  startGame();
   Game.start();
 }
 

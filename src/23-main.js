@@ -22,6 +22,66 @@
 // 04-input.js. This file is what hands that module its tunables out of C, and
 // it is the only file allowed to know both sides.
 
+// ---------------------------------------------------------------------------
+// THE WELL LIFECYCLE (GDD 2, 3.4, 4.3). Three functions, one path.
+// ---------------------------------------------------------------------------
+//
+// ⛔ EVERY ENTRY INTO A WELL GOES THROUGH enterWell(). A new run, the next
+// level, the debug cycler, and (CS006) a restart all land here. In CS002 the
+// debug cycler simply swapped a backdrop, which was harmless because nothing
+// but the Skimmer existed; with enemies alive, cycling a 16-lane well to an
+// 11-lane one strands craft on lanes the new well does not have.
+
+// Arm the current well: nothing in flight, a fresh Purge charge, a fresh
+// spawner, and a Skimmer that belongs to THIS well's lane count.
+function enterWell() {
+  const well = WELLS[state.wellIndex];
+
+  // ⛔ Cleared, not filtered. Both arrays belong to the well being left, and
+  // an enemy's lane is only meaningful against the well it was spawned into.
+  state.enemies = [];
+  state.shots = [];
+  // Starts AT the threshold — already expired — so the first shot in a well
+  // never waits out a cooldown that did not elapse (06-shots.js's rule).
+  state.shotCooldown = C.SHOT_COOLDOWN;
+
+  // GDD 4.3: one charge per well, recharged on entry, never accumulated.
+  state.purgeReady = true;
+
+  resetSpawner(state);
+  state.clearHold = 0;
+
+  // A craft for this well. ⛔ Minted rather than carried over: lane counts
+  // differ between wells, so the outgoing craft's lane may not exist here.
+  // Lives and respawn are CS003 P4's; this is the only place a Skimmer is
+  // created today.
+  state.skimmer = new Skimmer(well);
+}
+
+// The next level. ⛔ GDD 3.4's shapeIndex — the well is derived from the level
+// clock and is never advanced independently, so there is exactly one clock
+// (CLAUDE.md, Config) and level 17 is the Ring again.
+function nextWell() {
+  state.level += 1;
+  state.wellIndex = (state.level - 1) % WELLS.length;
+  enterWell();
+}
+
+// Begin a run. `seed` is optional: a run without one takes a time-derived seed
+// and RECORDS it in state.seed, which is what makes any run replayable after
+// the fact (GDD 17.1) — the stream is only ever built from state.seed, never
+// from a second source.
+//
+// ⛔ Run state is reset from newState(), 02-state.js's one field list, so a
+// field added there is reset here without this function being touched.
+function startGame(seed) {
+  Object.assign(state, newState());
+  state.seed = (seed === undefined || seed === null) ? (Date.now() >>> 0) : (seed >>> 0);
+  state.rng = mulberry32(state.seed);
+  state.wellIndex = (state.level - 1) % WELLS.length;
+  enterWell();
+}
+
 const Game = (function () {
 
   let canvas = null;
@@ -74,6 +134,9 @@ const Game = (function () {
   function runAction(name) {
     if (name === "cycleWell") {
       state.wellIndex = (state.wellIndex + 1) % WELLS.length;
+      // ⛔ Through the one path. A raw index swap leaves the previous well's
+      // enemies on lanes the new well may not have.
+      enterWell();
     }
   }
 
@@ -89,16 +152,34 @@ const Game = (function () {
     input.sample(dt, state.input);
     state.time += dt;
 
+    // reset() writes 02-state.js's shipped defaults, which put `skimmer` back
+    // to null — no well has been entered. The first step after one enters the
+    // current well, rather than minting a lone craft beside a well that was
+    // never armed. ⛔ Still the one path (enterWell); boot goes through
+    // startGame(). Respawn after a death is CS003 P4's, and is not this.
+    if (!state.skimmer) enterWell();
+
     const well = WELLS[state.wellIndex];
-    // Lazily minted, in ONE place. reset() writes 02-state.js's shipped
-    // defaults, which put `skimmer` back to null, and 02-state.js is
-    // concatenated above 05-skimmer.js so newState() cannot mint one itself.
-    // Doing it here means reset(), boot and a well change all take the same
-    // path instead of three that have to agree. CS006 owns start and respawn.
-    if (!state.skimmer) state.skimmer = new Skimmer(well);
     state.skimmer.update(dt, well, state.input);
     updateShots(state, well, dt);
-    // CS003 hangs the enemies here.
+
+    // ⛔ The enemy pass, then the end-of-frame filter — never a splice
+    // mid-loop (GDD 6.5). The spawner runs AFTER the filter so the alive count
+    // it reads is this step's, not last step's plus the dead.
+    for (let i = 0; i < state.enemies.length; i++) state.enemies[i].update(dt, well, state);
+    state.enemies = state.enemies.filter(e => !e.dead);
+    updateSpawner(state, well, dt);
+
+    // ⚠ TEMPORARY (C.WELL_CLEAR_HOLD) — the beat between the last kill and the
+    // next well. CS005's Dive (GDD 5) replaces this whole branch. The hold
+    // counts UP and resets the moment the well stops being clear, so a spawn
+    // or a survivor cannot leave a half-spent pause behind.
+    if (wellCleared(state)) {
+      state.clearHold += dt;
+      if (state.clearHold >= C.WELL_CLEAR_HOLD) nextWell();
+    } else {
+      state.clearHold = 0;
+    }
   }
 
   // ---- presentation --------------------------------------------------------
@@ -108,10 +189,13 @@ const Game = (function () {
     ctx.clearRect(0, 0, C.WORLD_W, C.WORLD_H);
     const well = WELLS[state.wellIndex];
     drawWell(ctx, well, state.level, null, 0);
-    // Z-order: the well is the backdrop, shots travel over it, and the
-    // Skimmer — always at depth 1, the rim — rides on top of everything. The
+    // Z-order: the well is the backdrop, enemies climb over it, shots travel
+    // over them, and the Skimmer — always at depth 1, the rim — rides on top
+    // of everything. Shots above enemies so a shot is never lost behind the
+    // thing it is about to hit (GDD 1.1 P2). The
     // guards are for a draw that lands before the first update — boot, and the
     // frozen branch of a hit-stop that began on frame one.
+    for (let i = 0; i < state.enemies.length; i++) state.enemies[i].draw(ctx, well);
     for (let i = 0; i < state.shots.length; i++) state.shots[i].draw(ctx, well);
     if (state.skimmer) state.skimmer.draw(ctx, well);
   }
@@ -220,5 +304,9 @@ const Game = (function () {
 // throwing for lack of a real canvas.
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   Game.init();
+  // ⛔ The run begins here, not lazily inside update(). No argument, so the
+  // seed is time-derived and recorded in state.seed. CS006's title screen is
+  // what will eventually own this call.
+  startGame();
   Game.start();
 }
