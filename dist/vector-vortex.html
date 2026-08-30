@@ -34,7 +34,7 @@
      Contract: EXTERNAL-FILES.md rule 1. -->
 <script type="module">
   try {
-    const m = await import("./lib/kit-leaderboard.js");
+    const m = await import("./lib/kit-leaderboard/kit-leaderboard.js");
     window.KitLeaderboard = m;
   } catch (e) {
     /* absence is the normal fallback path — the game plays with no leaderboard */
@@ -173,7 +173,35 @@ const C = {
 // ==========================================================================
 // 03-wells.js
 // ==========================================================================
-// 03-wells.js — placeholder. See VECTOR-VORTEX-GDD.md for the section that owns this.
+// 03-wells.js — the sixteen well definitions (GDD 3.3, 3.4). DATA ONLY.
+//
+// Each well: { id, name, closed, lanes, rim: [{x,y}...], throatScale }. `rim`
+// is in a normalized space centred on the origin, coordinates within [-1, 1].
+// A closed well's rim is a loop: rim.length === lanes (lane i runs from
+// rim[i] to rim[(i+1) % lanes]). An open well's rim is a strip:
+// rim.length === lanes + 1 (lane i runs from rim[i] to rim[i+1], no wrap).
+//
+// No projection, no rendering, nothing that moves — that is P2/P3. This file
+// only has to be correct data.
+
+const WELLS = [
+  { id: 1, name: "Ring", closed: true, lanes: 16, rim: [{ x: 0, y: -1 }, { x: 0.3827, y: -0.9239 }, { x: 0.7071, y: -0.7071 }, { x: 0.9239, y: -0.3827 }, { x: 1, y: 0 }, { x: 0.9239, y: 0.3827 }, { x: 0.7071, y: 0.7071 }, { x: 0.3827, y: 0.9239 }, { x: 0, y: 1 }, { x: -0.3827, y: 0.9239 }, { x: -0.7071, y: 0.7071 }, { x: -0.9239, y: 0.3827 }, { x: -1, y: 0 }, { x: -0.9239, y: -0.3827 }, { x: -0.7071, y: -0.7071 }, { x: -0.3827, y: -0.9239 }], throatScale: C.THROAT_SCALE },
+  { id: 2, name: "Box", closed: true, lanes: 16, rim: [{ x: -1, y: -1 }, { x: -0.5, y: -1 }, { x: 0, y: -1 }, { x: 0.5, y: -1 }, { x: 1, y: -1 }, { x: 1, y: -0.5 }, { x: 1, y: 0 }, { x: 1, y: 0.5 }, { x: 1, y: 1 }, { x: 0.5, y: 1 }, { x: 0, y: 1 }, { x: -0.5, y: 1 }, { x: -1, y: 1 }, { x: -1, y: 0.5 }, { x: -1, y: 0 }, { x: -1, y: -0.5 }], throatScale: C.THROAT_SCALE },
+  { id: 3, name: "Cross", closed: true, lanes: 16, rim: [{ x: -0.35, y: -1 }, { x: 0, y: -1 }, { x: 0.35, y: -1 }, { x: 0.35, y: -0.35 }, { x: 1, y: -0.35 }, { x: 1, y: 0 }, { x: 1, y: 0.35 }, { x: 0.35, y: 0.35 }, { x: 0.35, y: 1 }, { x: 0, y: 1 }, { x: -0.35, y: 1 }, { x: -0.35, y: 0.35 }, { x: -1, y: 0.35 }, { x: -1, y: 0 }, { x: -1, y: -0.35 }, { x: -0.35, y: -0.35 }], throatScale: C.THROAT_SCALE },
+  { id: 4, name: "Bowtie", closed: true, lanes: 14, rim: [{ x: -0.5103, y: 0.6123 }, { x: -0.8184, y: 0.4621 }, { x: -1, y: 0.1714 }, { x: -1, y: -0.1714 }, { x: -0.8184, y: -0.4621 }, { x: -0.5103, y: -0.6123 }, { x: 0, y: -0.0878 }, { x: 0.5103, y: -0.6123 }, { x: 0.8184, y: -0.4621 }, { x: 1, y: -0.1714 }, { x: 1, y: 0.1714 }, { x: 0.8184, y: 0.4621 }, { x: 0.5103, y: 0.6123 }, { x: 0, y: 0.0878 }], throatScale: C.THROAT_SCALE },
+  { id: 5, name: "Pinwheel", closed: true, lanes: 16, rim: [{ x: 0, y: -1 }, { x: 0.3277, y: -0.7912 }, { x: 0.4954, y: -0.4954 }, { x: 0.7676, y: -0.3179 }, { x: 0.9978, y: 0 }, { x: 0.8147, y: 0.3374 }, { x: 0.4984, y: 0.4984 }, { x: 0.3084, y: 0.7445 }, { x: 0, y: 0.9913 }, { x: -0.3468, y: 0.8373 }, { x: -0.5045, y: 0.5045 }, { x: -0.7226, y: 0.2993 }, { x: -0.9807, y: 0 }, { x: -0.8583, y: -0.3555 }, { x: -0.5134, y: -0.5134 }, { x: -0.291, y: -0.7025 }], throatScale: C.THROAT_SCALE },
+  { id: 6, name: "Delta", closed: true, lanes: 15, rim: [{ x: 0, y: -1 }, { x: 0.1732, y: -0.7 }, { x: 0.3464, y: -0.4 }, { x: 0.5196, y: -0.1 }, { x: 0.6928, y: 0.2 }, { x: 0.866, y: 0.5 }, { x: 0.5196, y: 0.5 }, { x: 0.1732, y: 0.5 }, { x: -0.1732, y: 0.5 }, { x: -0.5196, y: 0.5 }, { x: -0.866, y: 0.5 }, { x: -0.6928, y: 0.2 }, { x: -0.5196, y: -0.1 }, { x: -0.3464, y: -0.4 }, { x: -0.1732, y: -0.7 }], throatScale: C.THROAT_SCALE },
+  { id: 7, name: "Clover", closed: true, lanes: 16, rim: [{ x: 0, y: -1 }, { x: 0.3491, y: -0.8427 }, { x: 0.495, y: -0.495 }, { x: 0.8427, y: -0.3491 }, { x: 1, y: 0 }, { x: 0.8427, y: 0.3491 }, { x: 0.495, y: 0.495 }, { x: 0.3491, y: 0.8427 }, { x: 0, y: 1 }, { x: -0.3491, y: 0.8427 }, { x: -0.495, y: 0.495 }, { x: -0.8427, y: 0.3491 }, { x: -1, y: 0 }, { x: -0.8427, y: -0.3491 }, { x: -0.495, y: -0.495 }, { x: -0.3491, y: -0.8427 }], throatScale: C.THROAT_SCALE },
+  { id: 8, name: "Vee", closed: false, lanes: 13, rim: [{ x: -1, y: -0.6 }, { x: -0.8571, y: -0.3714 }, { x: -0.7143, y: -0.1429 }, { x: -0.5714, y: 0.0857 }, { x: -0.4286, y: 0.3143 }, { x: -0.2857, y: 0.5429 }, { x: -0.1429, y: 0.7714 }, { x: 0, y: 1 }, { x: 0.1667, y: 0.7333 }, { x: 0.3333, y: 0.4667 }, { x: 0.5, y: 0.2 }, { x: 0.6667, y: -0.0667 }, { x: 0.8333, y: -0.3333 }, { x: 1, y: -0.6 }], throatScale: C.THROAT_SCALE },
+  { id: 9, name: "Stair", closed: false, lanes: 12, rim: [{ x: -1, y: -0.7 }, { x: -0.8333, y: -0.7 }, { x: -0.6667, y: -0.7 }, { x: -0.5, y: -0.35 }, { x: -0.3333, y: -0.35 }, { x: -0.1667, y: -0.35 }, { x: 0, y: 0 }, { x: 0.1667, y: 0 }, { x: 0.3333, y: 0 }, { x: 0.5, y: 0.35 }, { x: 0.6667, y: 0.35 }, { x: 0.8333, y: 0.35 }, { x: 1, y: 0.7 }], throatScale: C.THROAT_SCALE },
+  { id: 10, name: "Trough", closed: false, lanes: 14, rim: [{ x: -1, y: 1 }, { x: -1, y: 0.4667 }, { x: -1, y: -0.0667 }, { x: -1, y: -0.6 }, { x: -0.75, y: -0.6 }, { x: -0.5, y: -0.6 }, { x: -0.25, y: -0.6 }, { x: 0, y: -0.6 }, { x: 0.25, y: -0.6 }, { x: 0.5, y: -0.6 }, { x: 0.75, y: -0.6 }, { x: 1, y: -0.6 }, { x: 1, y: -0.0667 }, { x: 1, y: 0.4667 }, { x: 1, y: 1 }], throatScale: C.THROAT_SCALE },
+  { id: 11, name: "Flat", closed: false, lanes: 12, rim: [{ x: -1, y: 0.3 }, { x: -0.8333, y: 0.3 }, { x: -0.6667, y: 0.3 }, { x: -0.5, y: 0.3 }, { x: -0.3333, y: 0.3 }, { x: -0.1667, y: 0.3 }, { x: 0, y: 0.3 }, { x: 0.1667, y: 0.3 }, { x: 0.3333, y: 0.3 }, { x: 0.5, y: 0.3 }, { x: 0.6667, y: 0.3 }, { x: 0.8333, y: 0.3 }, { x: 1, y: 0.3 }], throatScale: C.THROAT_SCALE },
+  { id: 12, name: "Heart", closed: true, lanes: 16, rim: [{ x: 0, y: -0.2941 }, { x: 0.0527, y: -0.4535 }, { x: 0.3328, y: -0.6827 }, { x: 0.7422, y: -0.6093 }, { x: 0.9412, y: -0.2353 }, { x: 0.7422, y: 0.1934 }, { x: 0.3328, y: 0.5651 }, { x: 0.0527, y: 0.8694 }, { x: 0, y: 1 }, { x: -0.0527, y: 0.8694 }, { x: -0.3328, y: 0.5651 }, { x: -0.7422, y: 0.1934 }, { x: -0.9412, y: -0.2353 }, { x: -0.7422, y: -0.6093 }, { x: -0.3328, y: -0.6827 }, { x: -0.0527, y: -0.4535 }], throatScale: C.THROAT_SCALE },
+  { id: 13, name: "Star", closed: true, lanes: 16, rim: [{ x: 0, y: -1 }, { x: 0.1913, y: -0.4619 }, { x: 0.7071, y: -0.7071 }, { x: 0.4619, y: -0.1913 }, { x: 1, y: 0 }, { x: 0.4619, y: 0.1913 }, { x: 0.7071, y: 0.7071 }, { x: 0.1913, y: 0.4619 }, { x: 0, y: 1 }, { x: -0.1913, y: 0.4619 }, { x: -0.7071, y: 0.7071 }, { x: -0.4619, y: 0.1913 }, { x: -1, y: 0 }, { x: -0.4619, y: -0.1913 }, { x: -0.7071, y: -0.7071 }, { x: -0.1913, y: -0.4619 }], throatScale: C.THROAT_SCALE },
+  { id: 14, name: "Double-Vee", closed: false, lanes: 14, rim: [{ x: -1, y: 1 }, { x: -0.875, y: 0.575 }, { x: -0.75, y: 0.15 }, { x: -0.625, y: -0.275 }, { x: -0.5, y: -0.7 }, { x: -0.3333, y: -0.2667 }, { x: -0.1667, y: 0.1667 }, { x: 0, y: 0.6 }, { x: 0.1667, y: 0.1667 }, { x: 0.3333, y: -0.2667 }, { x: 0.5, y: -0.7 }, { x: 0.625, y: -0.275 }, { x: 0.75, y: 0.15 }, { x: 0.875, y: 0.575 }, { x: 1, y: 1 }], throatScale: C.THROAT_SCALE },
+  { id: 15, name: "Fan", closed: false, lanes: 11, rim: [{ x: -0.9728, y: -0.2607 }, { x: -0.884, y: -0.4826 }, { x: -0.7453, y: -0.6775 }, { x: -0.5645, y: -0.834 }, { x: -0.352, y: -0.9436 }, { x: -0.1195, y: -1 }, { x: 0.1195, y: -1 }, { x: 0.352, y: -0.9436 }, { x: 0.5645, y: -0.834 }, { x: 0.7453, y: -0.6775 }, { x: 0.884, y: -0.4826 }, { x: 0.9728, y: -0.2607 }], throatScale: C.THROAT_SCALE },
+  { id: 16, name: "Twist", closed: true, lanes: 16, rim: [{ x: 0, y: 0 }, { x: 0.3827, y: 0.3536 }, { x: 0.7071, y: 0.5 }, { x: 0.9239, y: 0.3536 }, { x: 1, y: 0 }, { x: 0.9239, y: -0.3536 }, { x: 0.7071, y: -0.5 }, { x: 0.3827, y: -0.3536 }, { x: 0, y: 0 }, { x: -0.3827, y: 0.3536 }, { x: -0.7071, y: 0.5 }, { x: -0.9239, y: 0.3536 }, { x: -1, y: 0 }, { x: -0.9239, y: -0.3536 }, { x: -0.7071, y: -0.5 }, { x: -0.3827, y: -0.3536 }], throatScale: C.THROAT_SCALE },
+];
 
 // ==========================================================================
 // 04-input.js

@@ -100,7 +100,7 @@ function buildGame(opts = {}) {
   // Trailing expression returns the globals a test wants to poke. Extend the
   // list as systems land; an undefined name here is a ReferenceError, which is
   // the correct loud failure.
-  const tail = `\n;return { C, state: (typeof state !== "undefined" ? state : null) };`;
+  const tail = `\n;return { C, state: (typeof state !== "undefined" ? state : null), WELLS: (typeof WELLS !== "undefined" ? WELLS : null) };`;
   const fn = new Function("window", "document", "navigator", "performance",
                           "localStorage", "requestAnimationFrame", "AudioContext",
                           script + tail);

@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS001 · Phase: P0 · Wells: 0/16 · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS001 · Phase: P1 · Wells: 16/16 · Tracks: 0/5
 
 ## Phase ledger — CS001
 
@@ -7,6 +7,18 @@ Version: 0.0.1 · Changeset: CS001 · Phase: P0 · Wells: 0/16 · Tracks: 0/5
   `src/00-config.js` (C, grouped, populated from GDD defaults), 23 module
   placeholders, `scratchpad/` harness + runner + registry, smoke test. Build and
   suite green: 24 modules, 2 test files passing.
+
+- P1 — Well definitions. `src/03-wells.js`: sixteen wells as data, per GDD
+  §3.3/§3.4 — `{ id, name, closed, lanes, rim, throatScale }`, rim vertices in
+  a normalized `[-1,1]` space centred on the origin. Closed wells: rim length
+  equals lane count (loop). Open wells: rim length is lane count + 1 (strip).
+  The six open wells (Vee, Stair, Trough, Flat, Double-Vee, Fan) match GDD
+  §3.4 exactly. `scratchpad/test-cs001-p1.js` added, asserting count, per-well
+  vertex/lane agreement, the open-well set, and no NaN/out-of-range
+  coordinates. `_harness.js`'s `buildGame()` tail now also returns `WELLS`.
+  `test-registry.js`'s `COUNTS.wells`/`COUNTS.openWells` already held 16/6
+  from P0 — no change needed there. No projection, renderer, or movement — that
+  is P2/P3. Build and suite green: 24 modules, 3 test files passing.
 
 ## Working / verified
 
@@ -37,7 +49,8 @@ Version: 0.0.1 · Changeset: CS001 · Phase: P0 · Wells: 0/16 · Tracks: 0/5
 
 ## Next up
 
-- CS001 P1 — well geometry: the 16 definitions + the depth model + `well-lab`.
+- CS001 P2 — the depth model: `screenPos`, perspective easing, throat
+  derivation, and the wrap/clamp lane-hopping helpers open wells need.
 
 ## Playtest asks (open only)
 
