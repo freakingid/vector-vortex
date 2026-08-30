@@ -16,6 +16,16 @@ const C = {
   WORLD_W:              1280,
   WORLD_H:              720,
 
+  // ---- Loop / timestep (GDD 16.1) -----------------------------------------
+  // ⛔ Fixed-timestep accumulator. FIXED_DT is the ONLY dt the simulation ever
+  // sees; the frame's wall-clock dt only decides how many steps run. DT_CLAMP_MAX
+  // is what stops a tab-switch stall from becoming a physics event, and
+  // MAX_CATCHUP_STEPS is what stops the debt from being repaid forever (the
+  // spiral of death) — past the cap the surplus is discarded, not banked.
+  FIXED_DT:             1 / 60, // s per simulation step. GDD 17 drives tests here.
+  DT_CLAMP_MAX:         0.25,   // s — the largest frame dt ever admitted
+  MAX_CATCHUP_STEPS:    5,      // ⛔ hard bound on steps in one frame
+
   // ---- Well geometry (GDD 3) ----------------------------------------------
   PERSPECTIVE_EXP:      0.55,   // depth -> screen easing. Lower = more rush.
   THROAT_SCALE:         0.055,  // rim polygon scaled toward centroid = throat
@@ -61,6 +71,7 @@ const C = {
 
   // ---- Controls (GDD 9) ---------------------------------------------------
   MOUSE_SENS:           0.022,  // lane-units per px. ⛔ no acceleration curve.
+  POINTER_LOCK_OFFER:   true,   // ⛔ OFFERED on click, never forced. GDD 9.1.
   KEY_TAP_MS:           130,    // release inside this = exactly one lane
   KEY_SPEED_MIN:        4.0,    // lane-units/sec at hold start
   KEY_SPEED_MAX:        14.0,   // lane-units/sec at full ramp

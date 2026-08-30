@@ -109,6 +109,8 @@ function buildGame(opts = {}) {
     "laneWrap", "laneClamp", "laneNormalize", "laneDelta", "laneHop", "laneAtWall",
     // the well renderer (13-render-well.js, CS001 P3)
     "drawPoly", "glowStroke", "laneLineWidth", "wellBandColor", "wellBaseAlpha", "drawWell",
+    // state, input and the loop (02/04/23, CS002 P1)
+    "newState", "createInput", "INPUT_KEYS_DEFAULT", "Game",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +
