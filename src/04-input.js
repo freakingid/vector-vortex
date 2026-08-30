@@ -39,7 +39,7 @@
 // lets a headless test replay a recorded event list with no DOM at all, which
 // is what makes the determinism guarantee (GDD 17.1) testable.
 
-const INPUT_VERSION = "0.2.0";
+const INPUT_VERSION = "0.3.0";
 
 // Default bindings, matched case-insensitively. These are NOT tunables — a
 // keymap is this module's own default and a host replaces it wholesale through
@@ -59,6 +59,16 @@ const INPUT_KEYS_DEFAULT = {
 function inputNormKey(k) {
   return String(k).toLowerCase();
 }
+
+// Default gamepad button map, standard Gamepad layout indices. NOT a tunable
+// for the same reason INPUT_KEYS_DEFAULT isn't — this is the module's own
+// default and a host replaces it wholesale through options.gamepadButtons.
+//   0 = A, 4/5 = Left/Right Bumper, 6/7 = Left/Right Trigger.
+const GAMEPAD_BUTTONS_DEFAULT = {
+  fire:  [0],
+  jump:  [4, 6],
+  purge: [5, 7],
+};
 
 // ⛔ Numeric tunables are REQUIRED, never defaulted. A default here would be a
 // second tuning surface competing with the host's config object, and the point
@@ -147,6 +157,10 @@ function createInput(options) {
   bindSynthetic("gamepadleft", "left");
   bindSynthetic("gamepadright", "right");
 
+  // fire/purge/jump button map — host-overridable wholesale, same pattern as
+  // `keys` above.
+  const gamepadButtons = opts.gamepadButtons || GAMEPAD_BUTTONS_DEFAULT;
+
   const pressed = new Set();   // normalized key names currently down
   const buttons = new Set();   // non-key sources holding a button: "fire", ...
   const queued  = [];          // named actions triggered since the last sample
@@ -173,6 +187,9 @@ function createInput(options) {
   let gamepadWin = null;         // set by attach(); polled once per sample()
   let gamepadAxisX = 0;
   let gpDpadLeftDown = false, gpDpadRightDown = false;
+  // Tracked separately from `buttons` (mouse/touch) — a polled level-state
+  // source must not blindly clear a name another device is still holding.
+  const gamepadHeld = { fire: false, purge: false, jump: false };
 
   const out = { rotate: 0, fire: false, purge: false, jump: false };
 
@@ -276,6 +293,7 @@ function createInput(options) {
       gamepadAxisX = 0;
       if (gpDpadLeftDown)  { keyUp("gamepadleft");  gpDpadLeftDown = false; }
       if (gpDpadRightDown) { keyUp("gamepadright"); gpDpadRightDown = false; }
+      gamepadHeld.fire = false; gamepadHeld.purge = false; gamepadHeld.jump = false;
       return;
     }
     const ax = gp.axes && typeof gp.axes[0] === "number" && isFinite(gp.axes[0]) ? gp.axes[0] : 0;
@@ -289,6 +307,18 @@ function createInput(options) {
     const right = !!(gp.buttons && gp.buttons[15] && gp.buttons[15].pressed);
     if (left !== gpDpadLeftDown)   { if (left) keyDown("gamepadleft"); else keyUp("gamepadleft"); gpDpadLeftDown = left; }
     if (right !== gpDpadRightDown) { if (right) keyDown("gamepadright"); else keyUp("gamepadright"); gpDpadRightDown = right; }
+
+    // fire/purge/jump — level state, recomputed every poll. Any bound button
+    // held is enough; this is OR across a button LIST, not an edge.
+    for (const name of Object.keys(gamepadHeld)) {
+      const list = gamepadButtons[name] || [];
+      let held = false;
+      for (let i = 0; i < list.length; i++) {
+        const b = gp.buttons && gp.buttons[list[i]];
+        if (b && b.pressed) { held = true; break; }
+      }
+      gamepadHeld[name] = held;
+    }
   }
 
   // Proportional past the deadzone, scaled by gamepadSens (GDD 9.4). Returns
@@ -306,7 +336,7 @@ function createInput(options) {
   }
 
   function actionHeld(name) {
-    return anyKeyHeld(name) || buttons.has(name);
+    return anyKeyHeld(name) || buttons.has(name) || gamepadHeld[name] === true;
   }
 
   // GDD 9.2 — a tap is EXACTLY one lane, in total. The ramp below has already
@@ -394,6 +424,7 @@ function createInput(options) {
     gamepadAxisX = 0;
     gpDpadLeftDown = false;
     gpDpadRightDown = false;
+    gamepadHeld.fire = false; gamepadHeld.purge = false; gamepadHeld.jump = false;
     out.rotate = 0; out.fire = false; out.purge = false; out.jump = false;
   }
 

@@ -175,6 +175,43 @@ const DPAD_LEFT = [14], DPAD_RIGHT = [15], DPAD_NONE = [];
   H.eq(gp.sample(C.FIXED_DT).rotate, 0, "a disconnected pad stops contributing rotation");
 }
 
+// ---- gamepad buttons: A fires, LB/LT jump, RB/RT purge (default map) -------
+{
+  const gp = makeInput();
+  gp.pollGamepads(fakeWin(0, [0]));   // A
+  H.eq(gp.sample(C.FIXED_DT).fire, true, "button 0 (A) fires by default");
+  gp.pollGamepads(fakeWin(0, []));
+  H.eq(gp.sample(C.FIXED_DT).fire, false, "releasing A stops fire");
+
+  for (const idx of [4, 6]) {
+    gp.pollGamepads(fakeWin(0, [idx]));
+    H.eq(gp.sample(C.FIXED_DT).jump, true, `button ${idx} jumps by default`);
+    gp.pollGamepads(fakeWin(0, []));
+  }
+  for (const idx of [5, 7]) {
+    gp.pollGamepads(fakeWin(0, [idx]));
+    H.eq(gp.sample(C.FIXED_DT).purge, true, `button ${idx} purges by default`);
+    gp.pollGamepads(fakeWin(0, []));
+  }
+
+  // A disconnect clears gamepad-held buttons without touching another
+  // device's own state — this is the reason gamepad buttons are tracked
+  // separately from the shared mouse/touch `buttons` set.
+  const mouse = makeInput();
+  mouse.setButton("fire", true);
+  mouse.pollGamepads(fakeWin(0, [0]));
+  H.eq(mouse.sample(C.FIXED_DT).fire, true, "mouse fire and gamepad A both hold fire");
+  mouse.pollGamepads({ navigator: { getGamepads: () => [null] } });
+  H.eq(mouse.sample(C.FIXED_DT).fire, true, "a gamepad disconnect does not clear the mouse's own held fire");
+
+  // gamepadButtons is host-overridable wholesale, same pattern as `keys`.
+  const remapped = makeInput({ gamepadButtons: { fire: [3], jump: [], purge: [] } });
+  remapped.pollGamepads(fakeWin(0, [0]));
+  H.eq(remapped.sample(C.FIXED_DT).fire, false, "the default A binding is gone once gamepadButtons is overridden");
+  remapped.pollGamepads(fakeWin(0, [3]));
+  H.eq(remapped.sample(C.FIXED_DT).fire, true, "the overridden binding (button 3) fires instead");
+}
+
 // ---- the D-pad reaches the SAME tap/hold path the keyboard uses ------------
 // Proof of "one code path, not two that agree today": a D-pad tap produces
 // EXACTLY one lane, the identical guarantee test-cs002-p1.js proves for

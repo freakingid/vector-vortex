@@ -2,7 +2,7 @@
 
 **Module:** `src/04-input.js`
 **Vendored from:** *originated here (Vector Vortex), destined for coinless-kit as `kit-input`*
-**Current version:** `0.2.0`
+**Current version:** `0.3.0`
 **Depends on:** nothing
 
 ---
@@ -44,6 +44,7 @@ read it as "one unit of its discrete axis".
 | `gamepadSens` | yes | Lane units/sec at full stick deflection past the deadzone. |
 | `inputMirror` | yes (boolean) | Moves the Purge/Jump touch buttons to the left edge, for left-handed play. |
 | `worldW` / `worldH` | yes | World-space size the touch buttons and rotation zone live in — the same fixed space every entity uses, not the window's pixel size. |
+| `gamepadButtons` | no | `{ fire: [idx,...], jump: [idx,...], purge: [idx,...] }` override, wholesale, same pattern as `keys`. Default: `fire:[0]` (A), `jump:[4,6]` (LB/LT), `purge:[5,7]` (RB/RT). |
 | `pointerLockOffer` | no (default `true`) | Offer Pointer Lock on click. Never forced; refusal is a normal path. |
 | `keys` | no | Binding override, shape of `INPUT_KEYS_DEFAULT`. Matched case-insensitively. |
 | `actionKeys` | no | `{ actionName: ["key", …] }` — host-named actions (debug keys, screen toggles). |
@@ -173,3 +174,21 @@ this in P1.
 **Backport status.** `not yet` — this is the natural point to backport (all
 four devices now exist), but that is a separate, manual step per `CLAUDE.md`,
 done once this changeset is verified on real hardware.
+
+### 2026-08-30 — gamepad fire/purge/jump buttons (`VERSION` 0.2.0 → 0.3.0)
+
+**What changed.** `gamepadButtons` option (default `fire:[0]`, `jump:[4,6]`,
+`purge:[5,7]` — A, LB/LT, RB/RT), polled the same way the stick and D-pad are.
+Held state is tracked in its own `gamepadHeld` object rather than the shared
+`buttons` Set mouse/touch use — a polled level-state source must not blindly
+clear a name another device is still holding, which a naive `setButton()` call
+on every poll would do the moment the pad disconnects mid-mouse-hold.
+
+**Why.** GDD §9.4 specifies only the stick and D-pad; Paul's call, after the
+on-hardware pass, was to add the three action buttons with this default map
+and keep it host-configurable for a future settings screen.
+
+**Game-agnostic?** Yes — `fire`/`jump`/`purge` are still opaque struct-field
+names, exactly as before.
+
+**Backport status.** `not yet` — same reasoning as above.
