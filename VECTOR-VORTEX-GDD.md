@@ -195,6 +195,22 @@ Levels 65–80 render at 18% alpha; lanes light when occupied, when a shot trave
 
 The Skimmer renders at its continuous position and fires down the nearest lane centre. Snap assist keeps visual and mechanical in agreement.
 
+**Shipped, CS002 P2.** Snap stops once it is within `SNAP_EPSILON` of the centre and leaves the craft there — it never rounds `lane`, which is what keeps the float continuous. Its step is capped at the remaining distance, so it cannot overshoot into an oscillation and cannot pull past the clamp at either end of an open well. Across the seam of a closed well it takes the short way, via `laneDelta`.
+
+The open-well clamp fires a `WALL_SQUASH_MS` squash that compresses the craft along the rim and stretches it down the well. ⛔ **The squash is visual only — it never writes `lane`.** A closed well has a seam, not a wall, and never squashes.
+
+| Property | Constant | Value |
+|---|---|---|
+| Width at the rim | `SKIMMER_WIDTH` | 0.9 lane widths |
+| Snap idle before engaging | `SNAP_IDLE_MS` | 90 ms |
+| Snap pull | `SNAP_STRENGTH` | 6.0 lane-units/s |
+| Snap settle threshold | `SNAP_EPSILON` | 0.01 lane |
+| Wall squash duration | `WALL_SQUASH_MS` | 40 ms |
+| Wall squash depth | `SKIMMER_SQUASH` | 0.35 of width |
+| Craft colour | `SKIMMER_COLOR` | `#FFFFFF` ⚠ |
+
+⚠ **`SKIMMER_COLOR` was not specified anywhere in this document.** CS002 P2 shipped white — the craft has to be the most legible thing on screen (§1.1 P2), and white is distinct from every band colour except the 97–99 White band. It is one constant to change. Confirm or replace it.
+
 ### 4.2 Firing
 
 | Property | Constant | Value |

@@ -1,11 +1,34 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS002 · Phase: P1 done · Wells: 16/16 · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS002 · Phase: P2 done · Wells: 16/16 · Tracks: 0/5
 
 ## Phase ledger — CS002
 
 - **P1 — the loop and the input struct** · done 2026-08-30 · `src/02-state.js`,
   `src/23-main.js`, `src/04-input.js` (+ `src/04-input.NOTES.md`),
   `scratchpad/test-cs002-p1.js`.
+
+- **P2 — the Skimmer** · done 2026-08-30 · `src/05-skimmer.js`, `src/00-config.js`,
+  `src/23-main.js`, `VECTOR-VORTEX-GDD.md` §4.1, `scratchpad/test-cs002-p2.js`.
+
+P2 built the player's craft. `lane` is a continuous float and the simulation
+never rounds it: closed wells wrap, open wells clamp, and every lane
+arithmetic goes through CS001's `laneNormalize` / `laneDelta` — no two lane
+floats are subtracted by hand. Snap assist engages after `SNAP_IDLE_MS` of
+quiet, pulls at `SNAP_STRENGTH` toward the nearest lane centre, and stops
+inside `SNAP_EPSILON`. ⛔ It is dead while `input.rotate !== 0`; `snapping` is
+the flag the suite reads to prove it. The two traps are handled where they
+live: the seam target comes back through `laneNormalize` and the direction
+through `laneDelta` (short way), and the snap step is capped at the remaining
+distance, which is simultaneously what stops overshoot oscillation and what
+stops a pull past an open well's clamp.
+
+The `WALL_SQUASH_MS` squash is a count-UP timer (GDD 16.3) that ages *before*
+movement each step, so the impact step renders at full squash rather than
+losing 42% of it to `dt`. ⛔ It never writes `lane`. The craft draws as one
+local-space point array through `drawPoly` + `glowStroke`, projected by
+`screenPos` into a preallocated scratch — no per-frame allocation, no fill, no
+sprite. `Game.update()` mints it lazily in one place, so `reset()`, boot and a
+well change all take the same path.
 
 P1 built the one mutable game object (seven fields, exactly the ones CS002
 owns), the fixed-timestep loop, and mouse + keyboard input. The loop clamps
@@ -32,7 +55,24 @@ input path.
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); manifest is
   checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes, 6 files, zero skips.
+- `node scratchpad/run-all.js` passes, 7 files, zero skips.
+- CS002 P2 verified, 99 assertions: seven wrap cases on the 16-lane Ring
+  including both directions over the seam and multi-lap deltas; a 5,000-tick
+  soak of adversarial input (±88-lane mouse deltas, key holds, quiet stretches)
+  on each of the six open wells never puts `lane` outside `[0, lanes-1]` or
+  makes it non-finite, and each soak provably reaches a wall and idles past
+  `SNAP_IDLE_MS`; `snapping` is false on every tick of every soak where
+  `rotate !== 0`, and a focused case catches snap mid-pull and proves rotation
+  then moves the craft by exactly `input.rotate`; snap settles inside
+  `SNAP_EPSILON` and then does not move again; a craft already inside
+  `SNAP_EPSILON` is left off the integer rather than rounded onto it; snap
+  across the seam never enters the far side of the well and never steps
+  backwards; snap from either end of an open well settles on the end lane
+  without leaving `[0, lanes-1]`; the squash peaks at 1 on impact, refreshes
+  while held, decays to 0, and leaves `lane` bit-identical throughout; no NaN
+  in the craft's projected points on any well at any lane or squash; and the
+  built file's `05-skimmer.js` slice uses `drawPoly`/`glowStroke` and contains
+  no fill, rect, image, pattern, shadow or arc call.
 - CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer. Full
   narrative in `log/CS001.md`.
 - CS002 P1 verified: identical state hash over 10,000 ticks of one recorded
@@ -78,6 +118,39 @@ input path.
   a `C.KEY_BINDINGS` object that `23-main.js` forwards through the same options
   object — no change to the module.
 
+- **P2 hazard, and it belongs to the WELL DATA, not the Skimmer — the Flat
+  well is geometrically degenerate.** Well 11's rim is a straight horizontal
+  segment, so its centroid lies *on* that segment and `wellThroat` scales the
+  rim onto itself: rim and throat are collinear and the whole well projects to
+  a single horizontal line with zero vertical extent. Every other well has real
+  depth. Nothing in CS002 caused it and nothing in CS002 is wrong because of
+  it, but the Flat well is unplayable as shipped and it is now visible, because
+  P2 is the first phase that draws something standing in a well. ⛔ Do not
+  "fix" it by special-casing the Skimmer. It is the same neighbourhood as the
+  `throatOffset` issue above — an offset throat is exactly what would give a
+  straight rim its depth — and both are one design call for Paul. Reading
+  ahead: CS004 owns well progression and would be the natural place to land it.
+
+- **P2 judgment call — `SKIMMER_COLOR` is `#FFFFFF`, and the GDD never said.**
+  §10 specifies the well's band palette and nothing about the craft, but the
+  Skimmer cannot be drawn without a colour. White was chosen because the craft
+  must be the most legible thing on screen (§1.1 pillar P2) and it is distinct
+  from every band colour except White at levels 97–99, which is past any
+  realistic ceiling. Recorded in GDD §4.1 with a ⚠. One constant to change.
+
+- **P2 judgment call — two constants were added beyond the phase's list.**
+  `SKIMMER_SQUASH` (0.35, peak fraction of width lost) and `SKIMMER_COLOR`.
+  The squash had a duration in `C` but no amplitude, and both are tunables, so
+  ⛔ "every tunable lives in `C`" put them there rather than inline. The
+  silhouette itself is a local-space point array in `05-skimmer.js`, per GDD
+  §10.2 — shape DATA, the same class of thing as `WELLS`' rim polygons.
+
+- **P2 note — `laneWrap` perturbs an already-legal float by up to one ulp on
+  first contact** (3.4 → 3.3999999999999986) and is a fixed point thereafter,
+  so it does not drift over a session. It does mean a test must compare against
+  the craft's own `lane`, never the number handed to the constructor.
+  `test-cs002-p2.js` says so where it matters.
+
 ## Open questions (blocking)
 
 - None.
@@ -96,12 +169,15 @@ input path.
 
 ## Next up
 
-- CS002 P2 — the Skimmer (`src/05-skimmer.js`): continuous `lane` float, wrap
-  on closed wells and clamp on open ones, the wall squash, snap assist, drawn
-  through `drawPoly`/`glowStroke`. See `IMPLEMENTATION-PHASES-CS002.md`.
-- P2 hangs its update off the marked line in `Game.update()` in `23-main.js`,
-  and reads `state.input.rotate` as a **lane delta for the step**, not a
-  velocity — it is already scaled by `dt` where that matters.
+- CS002 P3 — firing and shots (`src/06-shots.js` + the shot draw in
+  `src/14-render-entities.js`). See `IMPLEMENTATION-PHASES-CS002.md`.
+- P3 hangs its update off the marked line in `Game.update()` in `23-main.js`,
+  directly below the Skimmer's. ⛔ A shot's lane is captured at fire time from
+  the **nearest lane centre** — `Math.round(state.skimmer.lane)` through
+  `laneNormalize`, exactly as `Skimmer.snap()` picks its target — not from the
+  continuous position, and never changes afterwards.
+- The Skimmer exposes `lane`, `snapping`, `squashAmount()` and `dead`. Nothing
+  sets `dead`; death is CS006's.
 
 ## Playtest asks (open only)
 

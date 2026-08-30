@@ -38,9 +38,13 @@ const C = {
   WELL_RADIUS:          300,
 
   // ---- Skimmer (GDD 4) ----------------------------------------------------
+  SKIMMER_WIDTH:        0.9,    // lane widths spanned at the rim
+  SKIMMER_COLOR:        "#FFFFFF",  // ⚠ not specified by the GDD — see STATUS
   SNAP_IDLE_MS:         90,     // idle time before snap assist engages
   SNAP_STRENGTH:        6.0,    // lane-units/sec pull toward lane centre
+  SNAP_EPSILON:         0.01,   // lane units; inside this snap is settled, and stops
   WALL_SQUASH_MS:       40,     // open-well end bounce, visual only
+  SKIMMER_SQUASH:       0.35,   // peak fraction of width lost at full squash
   SHOT_MAX:             8,      // ⛔ hard cap on shots in flight
   SHOT_TIME:            0.52,   // s, rim -> throat
   SHOT_COOLDOWN:        0.055,  // s between shots

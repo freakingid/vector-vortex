@@ -79,7 +79,16 @@ const Game = (function () {
   function update(dt) {
     input.sample(dt, state.input);
     state.time += dt;
-    // CS002 P2 hangs the Skimmer here, P3 the shots, CS003 the enemies.
+
+    const well = WELLS[state.wellIndex];
+    // Lazily minted, in ONE place. reset() writes 02-state.js's shipped
+    // defaults, which put `skimmer` back to null, and 02-state.js is
+    // concatenated above 05-skimmer.js so newState() cannot mint one itself.
+    // Doing it here means reset(), boot and a well change all take the same
+    // path instead of three that have to agree. CS006 owns start and respawn.
+    if (!state.skimmer) state.skimmer = new Skimmer(well);
+    state.skimmer.update(dt, well, state.input);
+    // CS002 P3 hangs the shots here, CS003 the enemies.
   }
 
   // ---- presentation --------------------------------------------------------
@@ -87,7 +96,12 @@ const Game = (function () {
   function draw() {
     if (!ctx) return;
     ctx.clearRect(0, 0, C.WORLD_W, C.WORLD_H);
-    drawWell(ctx, WELLS[state.wellIndex], state.level, null, 0);
+    const well = WELLS[state.wellIndex];
+    drawWell(ctx, well, state.level, null, 0);
+    // Z-order: the well is the backdrop, the Skimmer rides on top of it. The
+    // guard is for a draw that lands before the first update — boot, and the
+    // frozen branch of a hit-stop that began on frame one.
+    if (state.skimmer) state.skimmer.draw(ctx, well);
   }
 
   // ---- the frame -----------------------------------------------------------

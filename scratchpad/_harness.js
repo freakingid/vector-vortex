@@ -111,6 +111,8 @@ function buildGame(opts = {}) {
     "drawPoly", "glowStroke", "laneLineWidth", "wellBandColor", "wellBaseAlpha", "drawWell",
     // state, input and the loop (02/04/23, CS002 P1)
     "newState", "createInput", "INPUT_KEYS_DEFAULT", "Game",
+    // the Skimmer (05-skimmer.js, CS002 P2)
+    "Skimmer", "SKIMMER_POLY", "skimmerPoints",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +
