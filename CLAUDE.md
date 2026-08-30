@@ -458,6 +458,10 @@ game logic it needs; drift here can only produce a bad *preview*, never a bad
   curve.
 - **`tools/glow-lab.html`** — line weight, glow falloff, and the readability
   contract measured against a busy frame.
+- **`tools/feel-lab.html`** — measures, not demonstrates: traverse-and-stop
+  time, overshoot, and settle time across a range of `MOUSE_SENS`,
+  `KEY_TAP_MS`, `KEY_RAMP`, and `GAMEPAD_SENS`. Reachable over LAN via
+  `npm run serve` (`tools/serve-lan.js`), for the on-hardware phone pass.
 
 ---
 

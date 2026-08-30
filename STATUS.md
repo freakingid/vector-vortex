@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS002 · Phase: P3 done · Wells: 16/16 · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS002 · Phase: P4 BLOCKED (code done, on-hardware pass pending) · Wells: 16/16 · Tracks: 0/5
 
 ## Phase ledger — CS002
 
@@ -28,6 +28,35 @@ Version: 0.0.1 · Changeset: CS002 · Phase: P3 done · Wells: 16/16 · Tracks: 
   opaque to nothing as its leading edge crosses `READABILITY_DEPTH` down to the
   throat (§10.3). No collision pass and no Thorn chipping — out of scope this
   phase, explicitly.
+
+- **P4 — touch, gamepad, feel-lab · closing phase** · CODE DONE, HARDWARE PASS
+  BLOCKED 2026-08-30 · `src/04-input.js` (+ `.NOTES.md`), `src/00-config.js`,
+  `src/23-main.js`, `tools/feel-lab.html`, `tools/serve-lan.js`, `package.json`,
+  `CLAUDE.md`, `scratchpad/test-cs002-p4.js`.
+  Touch is a relative drag (world-space coordinates, converted from client
+  pixels only in `attach()`), gated to the bottom `TOUCH_ZONE_FRAC`; Purge/Jump
+  are circular buttons at radius `TOUCH_BUTTON_R`, mirrored under
+  `INPUT_MIRROR`; `TOUCH_AUTOFIRE` holds `fire` for as long as a drag is
+  active — no separate fire button. Gamepad: the left stick is a held analog
+  position (its own accumulator, gated by `GAMEPAD_DEADZONE`, scaled by
+  `GAMEPAD_SENS`), polled once per `sample()` via `pollGamepads(win)` since the
+  Gamepad API has no motion events; the D-pad (buttons 14/15) is wired as two
+  synthetic bound keys (`bindSynthetic`) so it rides the identical
+  `keyDown`/`keyUp`/`advanceAxis`/`releaseAxis` state machine the keyboard
+  uses — proven bit-for-bit in the test, not just output-matched. Nine new
+  required options; `inputRequireBool` is the boolean sibling of the existing
+  `inputRequireNum` guard. `tools/feel-lab.html` duplicates the response
+  curves plus CS002 P2's snap assist (held fixed; not what this phase sweeps)
+  and reports time-to-target/overshoot/settle-time across `MOUSE_SENS`,
+  `KEY_TAP_MS`, `KEY_RAMP`, `GAMEPAD_SENS`; `tools/serve-lan.js` (`npm run
+  serve`) makes it and `dist/` reachable from a phone. ⛔ **The phase's
+  on-hardware pass — the actual point of a closing phase — has NOT run.** I
+  have no physical mouse, keyboard, gamepad, or phone to test with; that
+  verification is Paul's to do. See "Open questions (blocking)" below. The
+  changeset is therefore NOT closed: `STATUS.md` is not reset, the ledger has
+  not moved to `log/CS002.md`, and the two CS002 planning docs are still in
+  the repo root, not `archive/`. `node scratchpad/run-all.js` is green with
+  zero skips (9 files) — that covers everything sub-hardware.
 
 P2 built the player's craft. `lane` is a continuous float and the simulation
 never rounds it: closed wells wrap, open wells clamp, and every lane
@@ -185,9 +214,42 @@ input path.
   the craft's own `lane`, never the number handed to the constructor.
   `test-cs002-p2.js` says so where it matters.
 
+- **P4 judgment call — gamepad has no `fire`/`purge`/`jump` button mapping.**
+  GDD §9.4 specifies only the left stick and the D-pad; it names no button for
+  any of the three actions, and neither does the P4 phase prompt. Rather than
+  invent one silently (CLAUDE.md: "do not invent design; do not quietly pick a
+  reading"), a connected gamepad can rotate and D-pad-tap/hold but cannot fire.
+  This does not block the phase's stated acceptance criterion — GDD §9's
+  requirement is "traverse a third of the well and stop on the intended lane,"
+  which does not require firing — but it means gamepad is not fully playable
+  yet. Paul's call: which buttons (a likely default is button 0 for fire, one
+  bumper for purge, another face button for jump), or defer full gamepad play
+  to a later changeset.
+
+- **P4 note — `pollGamepads()` is polled, not event-driven, and only
+  gamepad 0 is read.** The Gamepad API has no motion events; `sample()` polls
+  once per simulation step through whatever `window` `attach()` was given.
+  Multiple connected pads are unsupported by design — GDD doesn't describe
+  local multiplayer or a pad-selection UI, so reading only index 0 is the
+  narrowest reading rather than a guess at unspecified scope.
+
 ## Open questions (blocking)
 
-- None.
+- **CS002 P4's on-hardware pass has not run.** GDD §9's acceptance criterion —
+  "a player must be able to traverse a third of the well and stop on their
+  intended lane, on every supported device" — is verified in this changeset
+  only synthetically, by `tools/feel-lab.html`'s duplicated response-curve
+  model and by `scratchpad/test-cs002-p4.js`'s unit assertions on the real
+  `04-input.js` code. Neither substitutes for playing it: I have no physical
+  mouse, keyboard, gamepad, or phone to test with, and `IMPLEMENTATION-PHASES-
+  CS002.md` P4 is explicit that `file://` on a phone does not count as a test
+  either. **Paul needs to run the four-device pass himself** (`npm run serve`
+  serves `tools/feel-lab.html` and `dist/vector-vortex.html` over LAN for the
+  phone leg) and report back pass/fail plus the traverse-and-stop feel for
+  each device, so the changeset's closing steps — moving the ledger to
+  `log/CS002.md`, resetting this file, archiving the two CS002 planning docs —
+  can happen with real numbers rather than placeholders. Until then CS002
+  stays open and P4 stays unclosed.
 
 ## Carried tasks (not blocking CS002)
 
@@ -203,12 +265,12 @@ input path.
 
 ## Next up
 
-- CS002 P4 — touch, gamepad, `feel-lab` · the closing phase for CS002. See
-  `IMPLEMENTATION-PHASES-CS002.md`. Extends `src/04-input.js` with the
-  remaining two device paths (still no game global read), builds
-  `tools/feel-lab.html`, runs the on-hardware pass across all four devices,
-  then closes the changeset: move the ledger to `log/CS002.md`, reset
-  `STATUS.md`, archive the two CS002 planning docs.
+- **Paul runs CS002 P4's on-hardware pass** (see "Open questions (blocking)")
+  — the only thing left before CS002 closes. Once it's done, whoever closes
+  the changeset: record the constants and the four devices' traverse-and-stop
+  numbers in `log/CS002.md`, move the CS002 phase ledger there, reset
+  `STATUS.md` for CS003, and move `PLANNED-FEATURES-CS002.md` +
+  `IMPLEMENTATION-PHASES-CS002.md` into `archive/`.
 - The Skimmer exposes `lane`, `snapping`, `squashAmount()` and `dead`. Nothing
   sets `dead`; death is CS006's.
 - Shots exist now (`state.shots`, `X.Shot`, `updateShots`) but there is still

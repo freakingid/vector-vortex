@@ -84,6 +84,10 @@ const C = {
   TOUCH_SENS:           0.030,
   TOUCH_ZONE_FRAC:      0.40,   // bottom fraction of screen = rotation zone
   TOUCH_AUTOFIRE:       true,   // ⛔ coupled to the Jump button. GDD 9.3/14.2.
+  TOUCH_BUTTON_R:       56,     // px radius, Purge (top-right) and Jump (bottom-right)
+  INPUT_MIRROR:         false,  // mirrors touch button corners for left-handed play
+  GAMEPAD_DEADZONE:     0.15,   // stick units; below this, zero
+  GAMEPAD_SENS:         12.0,   // lane-units/sec at full stick deflection
 
   // ---- Audio (GDD 11) -----------------------------------------------------
   MUSIC_LOOKAHEAD:      0.20,   // s. ⛔ per-frame; never setTimeout/setInterval.

@@ -141,6 +141,9 @@ try { X.createInput({}); } catch (e) { threw = true; }
 H.assert(threw, "createInput refuses to default a tunable — C stays the one tuning surface");
 H.assert(typeof X.createInput({
   mouseSens: 1, keyTapMs: 100, keySpeedMin: 1, keySpeedMax: 2, keyRamp: 0.1,
+  touchSens: 1, touchZoneFrac: 0.4, touchAutofire: true, touchButtonR: 56,
+  gamepadDeadzone: 0.15, gamepadSens: 12, inputMirror: false,
+  worldW: 1280, worldH: 720,
 }).sample === "function", "createInput wires up from options alone");
 
 // ---------------------------------------------------------------------------
@@ -341,6 +344,10 @@ const wired = X.createInput({
   mouseSens: C.MOUSE_SENS, keyTapMs: C.KEY_TAP_MS,
   keySpeedMin: C.KEY_SPEED_MIN, keySpeedMax: C.KEY_SPEED_MAX, keyRamp: C.KEY_RAMP,
   pointerLockOffer: C.POINTER_LOCK_OFFER,
+  touchSens: C.TOUCH_SENS, touchZoneFrac: C.TOUCH_ZONE_FRAC,
+  touchAutofire: C.TOUCH_AUTOFIRE, touchButtonR: C.TOUCH_BUTTON_R,
+  gamepadDeadzone: C.GAMEPAD_DEADZONE, gamepadSens: C.GAMEPAD_SENS,
+  inputMirror: C.INPUT_MIRROR, worldW: C.WORLD_W, worldH: C.WORLD_H,
 });
 H.assert(wired.attach({ window: win, document: doc, element: el }), "attach() registers listeners");
 H.assert(doc.count("keydown") === 1 && el.count("mousemove") === 1, "attach() binds keys to the document and the mouse to the element");

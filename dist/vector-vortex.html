@@ -133,6 +133,10 @@ const C = {
   TOUCH_SENS:           0.030,
   TOUCH_ZONE_FRAC:      0.40,   // bottom fraction of screen = rotation zone
   TOUCH_AUTOFIRE:       true,   // ⛔ coupled to the Jump button. GDD 9.3/14.2.
+  TOUCH_BUTTON_R:       56,     // px radius, Purge (top-right) and Jump (bottom-right)
+  INPUT_MIRROR:         false,  // mirrors touch button corners for left-handed play
+  GAMEPAD_DEADZONE:     0.15,   // stick units; below this, zero
+  GAMEPAD_SENS:         12.0,   // lane-units/sec at full stick deflection
 
   // ---- Audio (GDD 11) -----------------------------------------------------
   MUSIC_LOOKAHEAD:      0.20,   // s. ⛔ per-frame; never setTimeout/setInterval.
@@ -577,8 +581,21 @@ function screenPos(well, lane, depth, out) {
 // adding one is the single most common way to ruin this game's rim feel.
 // The mouse path is one multiply, on purpose. Keep it that way.
 //
-// CS002 P1 wires mouse and keyboard. Touch and gamepad (P4) go through the
-// SAME sink and the SAME sample() — one code path, not two that agree today.
+// CS002 P4 adds touch and gamepad. Both go through the SAME sink and the SAME
+// sample() as mouse/keyboard — one code path, not two that agree today:
+//   - Touch rotation is a relative drag, accumulated into the same mouseDx-like
+//     bucket mouse motion uses, just at a different sensitivity (TOUCH_SENS).
+//   - The D-pad is wired as two synthetic key names ("gamepadleft" /
+//     "gamepadright") fed through keyDown/keyUp, so it rides the exact
+//     tap/hold state machine the keyboard uses. There is no second axis model.
+//   - The left stick is genuinely different (a held analog position rather
+//     than a digital press), so it gets its own accumulator, scaled by
+//     GAMEPAD_SENS and gated by GAMEPAD_DEADZONE.
+// The Gamepad API has no events for stick/axis motion — it must be polled —
+// so `pollGamepads()` runs once at the top of every sample(), reading through
+// whatever `win` attach() was given. That is still "one code path": polling
+// only decides how gamepad state ENTERS the sink, same as a DOM listener does
+// for mouse/keyboard.
 //
 // Device events arrive through the small sink API below (mouseMove / keyDown /
 // keyUp / setButton). attach() is a thin DOM adapter over that sink and is the
@@ -586,7 +603,7 @@ function screenPos(well, lane, depth, out) {
 // lets a headless test replay a recorded event list with no DOM at all, which
 // is what makes the determinism guarantee (GDD 17.1) testable.
 
-const INPUT_VERSION = "0.1.0";
+const INPUT_VERSION = "0.2.0";
 
 // Default bindings, matched case-insensitively. These are NOT tunables — a
 // keymap is this module's own default and a host replaces it wholesale through
@@ -619,6 +636,16 @@ function inputRequireNum(opts, name) {
   return v;
 }
 
+// Same requirement, for the two touch tunables that are booleans rather than
+// numbers (TOUCH_AUTOFIRE, INPUT_MIRROR). Same reasoning as inputRequireNum.
+function inputRequireBool(opts, name) {
+  const v = opts[name];
+  if (typeof v !== "boolean") {
+    throw new Error("createInput: options." + name + " must be a boolean");
+  }
+  return v;
+}
+
 // Turn { action: ["key", ...] } into both directions at once: a key -> action
 // lookup for events, and an action -> keys list for "is anything held?".
 function inputBuildBindings(src) {
@@ -640,6 +667,10 @@ function inputBuildBindings(src) {
 
 //   createInput({
 //     mouseSens, keyTapMs, keySpeedMin, keySpeedMax, keyRamp,   // required
+//     touchSens, touchZoneFrac, touchAutofire, touchButtonR,    // required
+//     gamepadDeadzone, gamepadSens,                             // required
+//     worldW, worldH,       // required — world-space size touch buttons live in
+//     inputMirror,          // required — mirrors touch buttons for left-handed play
 //     pointerLockOffer,                                          // optional, default on
 //     keys,        // optional binding override, shape of INPUT_KEYS_DEFAULT
 //     actionKeys,  // optional { actionName: ["key", ...] } for named actions
@@ -656,8 +687,29 @@ function createInput(options) {
   const pointerLockOffer = opts.pointerLockOffer !== false;
   const onAction = typeof opts.onAction === "function" ? opts.onAction : null;
 
+  const touchSens      = inputRequireNum(opts, "touchSens");
+  const touchZoneFrac  = inputRequireNum(opts, "touchZoneFrac");
+  const touchButtonR   = inputRequireNum(opts, "touchButtonR");
+  const touchAutofire  = inputRequireBool(opts, "touchAutofire");
+  const gamepadDeadzone = inputRequireNum(opts, "gamepadDeadzone");
+  const gamepadSens     = inputRequireNum(opts, "gamepadSens");
+  const worldW = inputRequireNum(opts, "worldW");
+  const worldH = inputRequireNum(opts, "worldH");
+  const inputMirror = inputRequireBool(opts, "inputMirror");
+
   const bindings = inputBuildBindings(opts.keys || INPUT_KEYS_DEFAULT);
   const actions  = inputBuildBindings(opts.actionKeys || {});
+
+  // The D-pad rides the SAME tap/hold state machine the keyboard uses (GDD
+  // 9.4) — these are not a second axis model, just two more bound "keys" that
+  // happen to be pressed by pollGamepads() instead of a keydown event.
+  function bindSynthetic(key, action) {
+    bindings.byKey.set(key, action);
+    if (!bindings.byAction[action]) bindings.byAction[action] = [];
+    bindings.byAction[action].push(key);
+  }
+  bindSynthetic("gamepadleft", "left");
+  bindSynthetic("gamepadright", "right");
 
   const pressed = new Set();   // normalized key names currently down
   const buttons = new Set();   // non-key sources holding a button: "fire", ...
@@ -673,6 +725,18 @@ function createInput(options) {
   let mouseDx = 0;         // px accumulated since the last sample
   let impulse = 0;         // signed lane units owed by taps completed since then
   let lastClientX = null;  // fallback when a mousemove carries no relative delta
+
+  // Touch: a relative drag, exactly like mouse but at TOUCH_SENS (GDD 9.3).
+  // Not a virtual stick — there is no rest position, only Δx since last move.
+  const touches = new Map();   // touch id -> { kind: "drag"|"purge"|"jump", x }
+  let touchDx = 0;              // world-space px accumulated since the last sample
+  let touchDragCount = 0;       // active drag touches; > 0 drives TOUCH_AUTOFIRE
+
+  // Gamepad: the stick is a held analog position, not a discrete press, so it
+  // gets its own accumulator rather than routing through `axis` (GDD 9.4).
+  let gamepadWin = null;         // set by attach(); polled once per sample()
+  let gamepadAxisX = 0;
+  let gpDpadLeftDown = false, gpDpadRightDown = false;
 
   const out = { rotate: 0, fire: false, purge: false, jump: false };
 
@@ -717,6 +781,85 @@ function createInput(options) {
   // button in P4. Same four action names, same struct.
   function setButton(name, down) {
     if (down) buttons.add(name); else buttons.delete(name);
+  }
+
+  // Purge (top-right) and Jump (bottom-right), radius touchButtonR, mirrored
+  // to the left side when inputMirror is set (GDD 9.3).
+  function touchButtonCenters() {
+    const m = touchButtonR * 1.5;
+    if (inputMirror) return { purge: { x: m, y: m }, jump: { x: m, y: worldH - m } };
+    return { purge: { x: worldW - m, y: m }, jump: { x: worldW - m, y: worldH - m } };
+  }
+
+  function inCircle(x, y, c, r) {
+    const dx = x - c.x, dy = y - c.y;
+    return dx * dx + dy * dy <= r * r;
+  }
+
+  // touchStart/touchMove/touchEnd take WORLD-SPACE coordinates (the same
+  // 1280x720-ish space every other entity lives in) — the DOM adapter below
+  // is what converts a real touch event's client pixels into that space, so
+  // this trio stays exercisable with no DOM at all, same as the rest of the
+  // sink.
+  function touchStart(id, x, y) {
+    const c = touchButtonCenters();
+    if (inCircle(x, y, c.purge, touchButtonR)) { touches.set(id, { kind: "purge" }); buttons.add("purge"); return; }
+    if (inCircle(x, y, c.jump,  touchButtonR)) { touches.set(id, { kind: "jump" });  buttons.add("jump");  return; }
+    if (y >= worldH * (1 - touchZoneFrac)) {
+      touches.set(id, { kind: "drag", x: x });
+      touchDragCount++;
+    }
+  }
+
+  function touchMove(id, x, y) {
+    const t = touches.get(id);
+    if (!t || t.kind !== "drag") return;
+    touchDx += x - t.x;
+    t.x = x;
+  }
+
+  function touchEnd(id) {
+    const t = touches.get(id);
+    if (!t) return;
+    touches.delete(id);
+    if (t.kind === "purge") buttons.delete("purge");
+    else if (t.kind === "jump") buttons.delete("jump");
+    else touchDragCount--;
+  }
+
+  // Polled once per sample() (the Gamepad API has no motion events — a stick
+  // held over at rest produces nothing to listen for). `win` is whatever
+  // attach() was given; a headless test can call this directly with a plain
+  // `{ navigator: { getGamepads: () => [...] } }` object.
+  function pollGamepads(win) {
+    if (!win || !win.navigator || typeof win.navigator.getGamepads !== "function") return;
+    let pads;
+    try { pads = win.navigator.getGamepads(); } catch (err) { return; }
+    const gp = pads && pads[0];
+    if (!gp) {
+      gamepadAxisX = 0;
+      if (gpDpadLeftDown)  { keyUp("gamepadleft");  gpDpadLeftDown = false; }
+      if (gpDpadRightDown) { keyUp("gamepadright"); gpDpadRightDown = false; }
+      return;
+    }
+    const ax = gp.axes && typeof gp.axes[0] === "number" && isFinite(gp.axes[0]) ? gp.axes[0] : 0;
+    gamepadAxisX = ax;
+
+    // ⛔ The D-pad reaches `left`/`right` through keyDown/keyUp — the SAME
+    // tap/hold implementation the keyboard uses. This is edge detection only;
+    // the state machine that turns a press into a lane delta lives in exactly
+    // one place (advanceAxis/releaseAxis above).
+    const left  = !!(gp.buttons && gp.buttons[14] && gp.buttons[14].pressed);
+    const right = !!(gp.buttons && gp.buttons[15] && gp.buttons[15].pressed);
+    if (left !== gpDpadLeftDown)   { if (left) keyDown("gamepadleft"); else keyUp("gamepadleft"); gpDpadLeftDown = left; }
+    if (right !== gpDpadRightDown) { if (right) keyDown("gamepadright"); else keyUp("gamepadright"); gpDpadRightDown = right; }
+  }
+
+  // Proportional past the deadzone, scaled by gamepadSens (GDD 9.4). Returns
+  // a lane delta for this step, same units as the mouse/touch/tap paths.
+  function gamepadAxisDelta(x, dt) {
+    if (x <= -gamepadDeadzone || x >= gamepadDeadzone) return x * gamepadSens * dt;
+    return 0;
   }
 
   function anyKeyHeld(name) {
@@ -769,16 +912,22 @@ function createInput(options) {
   function sample(dt, target) {
     const s = target || out;
 
+    pollGamepads(gamepadWin);
+
     let rotate = mouseDx * mouseSens;   // ⛔ linear. One multiply. No curve.
     mouseDx = 0;
+    rotate += touchDx * touchSens;      // same model, different sensitivity
+    touchDx = 0;
 
     rotate -= advanceAxis(axis.left, dt);
     rotate += advanceAxis(axis.right, dt);
     rotate += impulse;
     impulse = 0;
 
+    rotate += gamepadAxisDelta(gamepadAxisX, dt);
+
     s.rotate = rotate;
-    s.fire   = actionHeld("fire");
+    s.fire   = actionHeld("fire") || (touchAutofire && touchDragCount > 0);
     s.purge  = actionHeld("purge");
     s.jump   = actionHeld("jump");
 
@@ -803,6 +952,12 @@ function createInput(options) {
     mouseDx = 0;
     impulse = 0;
     lastClientX = null;
+    touches.clear();
+    touchDx = 0;
+    touchDragCount = 0;
+    gamepadAxisX = 0;
+    gpDpadLeftDown = false;
+    gpDpadRightDown = false;
     out.rotate = 0; out.fire = false; out.purge = false; out.jump = false;
   }
 
@@ -843,12 +998,25 @@ function createInput(options) {
 
   // attach({ window, document, element }) — element is what mouse events and
   // Pointer Lock bind to (the canvas). Safe to call with any of them missing.
+  // Converts a Touch's client-space pixels into the world-space coordinates
+  // touchStart/touchMove expect, accounting for CSS letterboxing (the canvas
+  // is fixed WORLD_W x WORLD_H internally but can be scaled on screen).
+  function touchWorldPoint(el, t) {
+    const rect = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    if (!rect || !rect.width || !rect.height) return { x: t.clientX, y: t.clientY };
+    return {
+      x: (t.clientX - rect.left) / rect.width * worldW,
+      y: (t.clientY - rect.top) / rect.height * worldH,
+    };
+  }
+
   function attach(env) {
     detach();
     const e = env || {};
     const doc = e.document || null;
     const win = e.window || null;
     const el  = e.element || doc;
+    gamepadWin = win;
 
     on(doc, "keydown", function (ev) {
       if (keyDown(ev.key) && typeof ev.preventDefault === "function") ev.preventDefault();
@@ -873,18 +1041,43 @@ function createInput(options) {
     // Losing focus mid-press otherwise leaves the rim spinning forever.
     on(win || doc, "blur", function () { reset(); });
 
+    on(el, "touchstart", function (ev) {
+      const list = ev.changedTouches || [];
+      for (let i = 0; i < list.length; i++) {
+        const p = touchWorldPoint(el, list[i]);
+        touchStart(list[i].identifier, p.x, p.y);
+      }
+      if (typeof ev.preventDefault === "function") ev.preventDefault();
+    });
+    on(el, "touchmove", function (ev) {
+      const list = ev.changedTouches || [];
+      for (let i = 0; i < list.length; i++) {
+        const p = touchWorldPoint(el, list[i]);
+        touchMove(list[i].identifier, p.x, p.y);
+      }
+      if (typeof ev.preventDefault === "function") ev.preventDefault();
+    });
+    function touchEndHandler(ev) {
+      const list = ev.changedTouches || [];
+      for (let i = 0; i < list.length; i++) touchEnd(list[i].identifier);
+    }
+    on(el, "touchend", touchEndHandler);
+    on(el, "touchcancel", touchEndHandler);
+
     return detachers.length > 0;
   }
 
   function detach() {
     while (detachers.length) detachers.pop()();
     lastClientX = null;
+    gamepadWin = null;
   }
 
   return {
     VERSION: INPUT_VERSION,
     sample, reset,
     keyDown, keyUp, mouseMove, setButton,
+    touchStart, touchMove, touchEnd, pollGamepads,
     attach, detach,
     isBound: function (k) {
       const n = inputNormKey(k);
@@ -1471,6 +1664,15 @@ const Game = (function () {
     keySpeedMax:      C.KEY_SPEED_MAX,
     keyRamp:          C.KEY_RAMP,
     pointerLockOffer: C.POINTER_LOCK_OFFER,
+    touchSens:        C.TOUCH_SENS,
+    touchZoneFrac:    C.TOUCH_ZONE_FRAC,
+    touchAutofire:    C.TOUCH_AUTOFIRE,
+    touchButtonR:     C.TOUCH_BUTTON_R,
+    gamepadDeadzone:  C.GAMEPAD_DEADZONE,
+    gamepadSens:      C.GAMEPAD_SENS,
+    inputMirror:      C.INPUT_MIRROR,
+    worldW:           C.WORLD_W,
+    worldH:           C.WORLD_H,
     actionKeys:       { cycleWell: ["w"] },
     onAction:         runAction,
   });

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<!--
+  tools/feel-lab.html — design instrument, NOT shipped code (CLAUDE.md,
+  "Design instruments"). CS002 P4.
+
+  ⛔ It MEASURES rather than demonstrates (GDD pillar P1). Given a start lane
+  and a target a third of the well away, it drives a small synthetic "player"
+  policy through a duplicated slice of 04-input.js's device response curves —
+  mouse linear scaling, the keyboard/D-pad tap/hold model, and the gamepad
+  deadzone+scale model — and reports time to target, overshoot, and settle
+  time across a range of MOUSE_SENS, KEY_TAP_MS, KEY_RAMP and GAMEPAD_SENS.
+
+  Duplicates whatever slice of 04-input.js it needs. Drift here can only
+  produce a bad READING, never a bad build — this file is never concatenated
+  into dist/.
+
+  Reachable over LAN: `npm run serve` (tools/serve-lan.js), then open this
+  file's LAN URL on a phone. `file://` on a phone cannot be used as a test.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vector Vortex — feel-lab</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    background: #05060a; color: #cfe9f5;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  #wrap { max-width: 980px; margin: 0 auto; padding: 20px 24px 60px; }
+  h1 { font-size: 15px; margin: 0 0 4px; color: #3FE0FF; }
+  h2 { font-size: 12px; margin: 26px 0 8px; color: #9ad; text-transform: uppercase; letter-spacing: .06em; }
+  p.lead { font-size: 11px; color: #789; line-height: 1.6; max-width: 74ch; }
+  code { color: #9ad; }
+  .row { margin: 10px 0; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  label { font-size: 11px; }
+  input[type=number] { width: 70px; background: #10131c; color: #cfe9f5; border: 1px solid #334; padding: 4px 6px; font-family: inherit; }
+  button {
+    background: #10131c; color: #cfe9f5; border: 1px solid #334;
+    padding: 8px 16px; font-family: inherit; font-size: 12px; border-radius: 4px; cursor: pointer;
+  }
+  button:hover { border-color: #3FE0FF; }
+  table { border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 11px; }
+  th, td { border-bottom: 1px solid #223; padding: 5px 10px; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: #9ad; font-weight: normal; text-transform: uppercase; letter-spacing: .04em; font-size: 10px; }
+  tr.shipped td { color: #FFB020; }
+  tr.shipped td:first-child::after { content: " (shipped)"; color: #FFB020; font-size: 9px; }
+  tr.fail td { color: #FF5A3C; }
+  #hint { font-size: 10px; color: #567; margin-top: 30px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<h1>feel-lab</h1>
+<p class="lead">
+  Measures traverse-and-stop quality — P1's requirement is a player must be
+  able to whip a third of the way around the well and stop exactly on a lane,
+  on every device. This does not render anything; it runs a synthetic control
+  policy through each device's duplicated response curve and reports numbers
+  to read off and port into <code>src/00-config.js</code>.
+</p>
+
+<div class="row">
+  <label>Well lanes <input id="lanes" type="number" value="16" min="4" max="16" step="1"></label>
+  <label>Ticks cap <input id="maxTicks" type="number" value="300" min="30" max="1200" step="10"></label>
+  <button id="runBtn">Run all four tables</button>
+</div>
+
+<div id="out"></div>
+
+<div id="hint">
+  Settle epsilon is 0.05 lane units. "No settle" means the policy never held
+  inside epsilon for the rest of the run within the tick cap — read that as a
+  real failure at that value, not a slow success. Keyboard/D-pad overshoot is
+  expected to sit near zero: releasing a held key stops movement on the very
+  next tick (no coast), so a competent stop policy has nothing to overshoot
+  with — that is the tap/hold design working, not a gap in this instrument.
+</div>
+
+</div>
+
+<script>
+"use strict";
+
+// ---------------------------------------------------------------------------
+// Duplicated slice of 04-input.js's device response models. See file header.
+// ---------------------------------------------------------------------------
+
+const FIXED_DT = 1 / 60;
+const SETTLE_EPS = 0.05;
+
+// Duplicated from src/00-config.js (05-skimmer.js's snap assist, CS002 P2).
+// The Skimmer engages this on EVERY device once rotate === 0 for a while —
+// it is part of the real stop, not a keyboard-only crutch, and without it a
+// tap/hold player could never close the last fraction of a lane the ramp's
+// tick granularity leaves behind. This tuning surface (SNAP_*) is not what
+// P4 sweeps; it is held fixed at shipped values so the four tables below
+// measure what P4 actually touches.
+const SNAP_IDLE_S = 90 / 1000;
+const SNAP_STRENGTH = 6.0;
+const SNAP_EPSILON = 0.01;
+
+// A "competent player" model, not a human-input recorder: proportional
+// aiming for the continuous devices (mouse, gamepad), and hold-toward-target
+// for the discrete devices (keyboard, D-pad), releasing once the target is
+// reached or passed. Every device's residual error — whatever it could not
+// close on its own — is then handed to the SAME snap assist a real device
+// gets, via the shared runSim() loop below.
+const AIM_KP_PX = 30;        // px of "mouse push" per lane of visual error
+const AIM_MAX_PX = 60;       // px/tick cap — a physical wrist-speed limit
+const AIM_KP_STICK = 2.5;    // stick deflection per lane of visual error
+
+function clamp(x, lo, hi) { return x < lo ? lo : (x > hi ? hi : x); }
+
+// One tick loop, shared by all four devices: ask the device-specific policy
+// for this tick's rotate, apply it, and — exactly like 05-skimmer.js's
+// update() — run snap assist whenever a tick produces no rotation at all.
+// Every sim here starts at lane 0 and approaches a positive target, so the
+// snap math is the straight-line case of laneNormalize/laneDelta (no wrap).
+function runSim(policy, target, maxTicks) {
+  let lane = 0, idle = 0;
+  const trace = [];
+  for (let i = 0; i < maxTicks; i++) {
+    const rotate = policy(target - lane, i);
+    if (rotate !== 0) {
+      lane += rotate;
+      idle = 0;
+    } else {
+      idle += FIXED_DT;
+      if (idle >= SNAP_IDLE_S) {
+        const d = target - lane;
+        if (Math.abs(d) > SNAP_EPSILON) {
+          const step = SNAP_STRENGTH * FIXED_DT;
+          lane += Math.abs(d) <= step ? d : Math.sign(d) * step;
+        }
+      }
+    }
+    trace.push(lane);
+  }
+  return trace;
+}
+
+// ---- mouse: Δlane = round(Δx) * sens, no acceleration curve --------------
+// Pixels are quantized to the nearest integer, same as a real mouse reports —
+// this is what makes MOUSE_SENS matter here rather than cancelling out.
+function simMouse(sens, target, maxTicks) {
+  return runSim(remaining => {
+    const px = Math.round(clamp(remaining * AIM_KP_PX, -AIM_MAX_PX, AIM_MAX_PX));
+    return px * sens;
+  }, target, maxTicks);
+}
+
+// ---- gamepad: proportional past the deadzone, scaled by sens -------------
+function simGamepad(sens, deadzone, target, maxTicks) {
+  return runSim(remaining => {
+    const stick = clamp(remaining * AIM_KP_STICK, -1, 1);
+    return (stick <= -deadzone || stick >= deadzone) ? stick * sens * FIXED_DT : 0;
+  }, target, maxTicks);
+}
+
+// ---- keyboard / D-pad: tap/hold dual mode, ported from 04-input.js's -----
+// advanceAxis. Holds toward the target and releases once it is reached or
+// passed — the same "no coast on release" model the real module has, so any
+// overshoot here is exactly one tick's worth of speed at the moment of
+// crossing, not a modeling artefact. ⛔ KEY_TAP_MS has NO effect on this
+// policy: a multi-lane traversal is a hold from the first tick, and the tap
+// window only governs a single, separate lane-precise move (GDD 9.2) — that
+// null result is itself the finding for the KEY_TAP_MS table below.
+function simKeyHold(keySpeedMin, keySpeedMax, keyRamp, target, maxTicks) {
+  let held = 0, holding = true, dir = null;
+  return runSim(remaining => {
+    if (dir === null) dir = remaining >= 0 ? 1 : -1;
+    if (!holding) return 0;
+    if (dir > 0 ? remaining <= 0 : remaining >= 0) { holding = false; return 0; }
+    const f = keyRamp > 0 ? Math.min(1, held / keyRamp) : 1;
+    const step = (keySpeedMin + (keySpeedMax - keySpeedMin) * f) * FIXED_DT;
+    held += FIXED_DT;
+    return dir * step;
+  }, target, maxTicks);
+}
+
+// ---- measurement -----------------------------------------------------------
+
+// Every sim here starts at lane 0 and approaches a positive target, so
+// "past the target" is simply trace[i] - target > 0 — no direction bookkeeping
+// needed.
+function measure(trace, target) {
+  const n = trace.length;
+  let timeToTarget = null;
+  let overshoot = 0;
+  for (let i = 0; i < n; i++) {
+    const d = trace[i] - target;
+    if (timeToTarget === null && Math.abs(d) <= SETTLE_EPS) timeToTarget = i * FIXED_DT;
+    if (d > overshoot) overshoot = d;
+  }
+  // Settle time: the first tick after which the trace never again leaves
+  // epsilon. Scan back from the end.
+  let lastOutside = -1;
+  for (let i = n - 1; i >= 0; i--) {
+    if (Math.abs(trace[i] - target) > SETTLE_EPS) { lastOutside = i; break; }
+  }
+  const settleTime = lastOutside + 1 < n ? (lastOutside + 1) * FIXED_DT : null;
+  return { timeToTarget, overshoot, settleTime };
+}
+
+// ---------------------------------------------------------------------------
+// tables
+// ---------------------------------------------------------------------------
+
+const DEFAULTS = { MOUSE_SENS: 0.022, KEY_TAP_MS: 130, KEY_SPEED_MIN: 4.0, KEY_SPEED_MAX: 14.0, KEY_RAMP: 0.35, GAMEPAD_DEADZONE: 0.15, GAMEPAD_SENS: 12.0 };
+
+const SWEEPS = {
+  MOUSE_SENS:   [0.010, 0.016, 0.022, 0.030, 0.045],
+  KEY_TAP_MS:   [80, 110, 130, 160, 200],
+  KEY_RAMP:     [0.15, 0.25, 0.35, 0.50, 0.70],
+  GAMEPAD_SENS: [6, 9, 12, 16, 22],
+};
+
+function fmtMs(s) { return s === null ? "—" : (s * 1000).toFixed(0) + " ms"; }
+function fmtLane(l) { return l.toFixed(3); }
+
+function runTable(name, values, target, maxTicks) {
+  const rows = values.map(v => {
+    let trace;
+    if (name === "MOUSE_SENS") trace = simMouse(v, target, maxTicks);
+    else if (name === "GAMEPAD_SENS") trace = simGamepad(v, DEFAULTS.GAMEPAD_DEADZONE, target, maxTicks);
+    else if (name === "KEY_TAP_MS") trace = simKeyHold(DEFAULTS.KEY_SPEED_MIN, DEFAULTS.KEY_SPEED_MAX, DEFAULTS.KEY_RAMP, target, maxTicks);
+    else if (name === "KEY_RAMP") trace = simKeyHold(DEFAULTS.KEY_SPEED_MIN, DEFAULTS.KEY_SPEED_MAX, v, target, maxTicks);
+    const m = measure(trace, target);
+    return { value: v, m };
+  });
+
+  const note = name === "KEY_TAP_MS"
+    ? `<p class="lead">KEY_TAP_MS is swept for completeness, but a hold-dominant traversal never enters the tap window, so every row below is identical by construction — see the code comment on simKeyHold. It governs only the single-lane precision move GDD 9.2 defines it for.</p>`
+    : "";
+
+  let html = `<h2>${name}</h2>${note}<table><thead><tr><th>${name}</th><th>time to target</th><th>overshoot (lanes)</th><th>settle time</th></tr></thead><tbody>`;
+  for (const r of rows) {
+    const shipped = Object.is(r.value, DEFAULTS[name]);
+    const failed = r.m.settleTime === null;
+    html += `<tr class="${shipped ? "shipped" : ""}${failed ? " fail" : ""}">` +
+      `<td>${r.value}</td><td>${fmtMs(r.m.timeToTarget)}</td>` +
+      `<td>${fmtLane(r.m.overshoot)}</td><td>${r.m.settleTime === null ? "no settle" : fmtMs(r.m.settleTime)}</td></tr>`;
+  }
+  html += "</tbody></table>";
+  return html;
+}
+
+function run() {
+  const lanes = parseInt(document.getElementById("lanes").value, 10) || 16;
+  const maxTicks = parseInt(document.getElementById("maxTicks").value, 10) || 300;
+  const target = lanes / 3;   // "a target a third of the well away"
+
+  let html = `<p class="lead">Well of ${lanes} lanes, target ${target.toFixed(2)} lanes away, ${maxTicks} ticks cap (${(maxTicks * FIXED_DT).toFixed(1)} s).</p>`;
+  html += runTable("MOUSE_SENS", SWEEPS.MOUSE_SENS, target, maxTicks);
+  html += runTable("GAMEPAD_SENS", SWEEPS.GAMEPAD_SENS, target, maxTicks);
+  html += runTable("KEY_TAP_MS", SWEEPS.KEY_TAP_MS, target, maxTicks);
+  html += runTable("KEY_RAMP", SWEEPS.KEY_RAMP, target, maxTicks);
+  document.getElementById("out").innerHTML = html;
+}
+
+document.getElementById("runBtn").addEventListener("click", run);
+run();
+</script>
+</body>
+</html>
