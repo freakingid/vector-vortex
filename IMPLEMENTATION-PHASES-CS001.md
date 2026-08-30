@@ -67,3 +67,9 @@ the prompt names it.
 > needs — drift there produces a bad preview, never a bad build.
 >
 > Update `STATUS.md` and commit.
+>
+> Then close the changeset. Append the CS001 entry to `log/CS001.md`, move the
+> phase ledger out of `STATUS.md` and reset it for CS002, and move
+> `PLANNED-FEATURES-CS001.md` and `IMPLEMENTATION-PHASES-CS001.md` into
+> `archive/`. ⛔ Move, do not copy — the repo root holds only the changeset in
+> flight. `log/CS001.md` stays where it is.

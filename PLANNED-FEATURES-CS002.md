@@ -148,6 +148,8 @@ the game; they are ⌁ too.
 - [ ] `node build.js` and `node scratchpad/run-all.js` both green, zero skips.
 - [ ] `CLAUDE.md`'s design-instruments list gains `tools/feel-lab.html`.
 - [ ] `log/CS002.md` written, `STATUS.md` reset to CS003.
+- [ ] Both CS002 planning docs moved into `archive/`. ⛔ Moved, not copied —
+      the repo root holds only the changeset in flight.
 
 ## ⛔ Scope boundaries — what this changeset does NOT touch
 

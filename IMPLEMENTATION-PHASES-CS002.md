@@ -190,7 +190,13 @@ P1 and P2 carry it; P3 and P4 do not need it.
 > with zero skips. Record the constants chosen in `feel-lab`, and the
 > traverse-and-stop numbers for all four devices, in `log/CS002.md`. Move the
 > CS002 phase ledger into `log/CS002.md` and reset `STATUS.md` for CS003.
-> Commit.
+>
+> Then move `PLANNED-FEATURES-CS002.md` and `IMPLEMENTATION-PHASES-CS002.md`
+> into `archive/`. ⛔ Move, do not copy — the repo root holds only the changeset
+> in flight, which is what makes `archive/`'s never-read-by-default contract
+> worth having. `log/CS002.md` stays where it is; the log is the narrative and
+> the archive is the spent plan, and a session pulling one should not get the
+> other. Commit.
 
 ---
 
@@ -202,4 +208,5 @@ P1 and P2 carry it; P3 and P4 do not need it.
 | 2 | P1 carries three modules | `02-state.js` is a field list and `23-main.js` is a loop; `04-input.js` is the phase's real work. If P1 overruns, split the loop out as a P0 next time and renumber |
 | 3 | Each phase writes one test file, named for the phase | Matches CS001. Global counts stay in `test-registry.js`, which none of these four phases touches — CS002 adds no counted inventory |
 | 4 | P4 is the closing phase rather than a separate P5 | CS001 has no explicit closing phase; folding the close into the last phase keeps that shape while honouring `CLAUDE.md`'s STATUS-reset rule. If closing work crowds P4, split it |
+| 6 | The closing phase archives both CS002 planning docs | Root holding only the in-flight changeset is what makes `archive/`'s never-read contract useful. If the docs turn out to be referenced often after close, they belong in `log/` instead, not in root |
 | 5 | The debug well-cycler is re-homed rather than deleted | Later phases need a way to look at a shape without playing to it. If it costs anything to keep, it goes |
