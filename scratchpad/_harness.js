@@ -121,6 +121,9 @@ function buildGame(opts = {}) {
     // the spawner and the well lifecycle (08/23, CS003 P2)
     "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit",
     "enterWell", "nextWell", "startGame",
+    // collision and the Purge (09-collision.js, CS003 P3)
+    "updateCollisions", "collideShots", "collideSkimmer", "killSkimmer",
+    "updatePurge", "purgeTarget",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +

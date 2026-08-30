@@ -1,10 +1,11 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS003 (P2 of 5 done) · Wells: 16/16 · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS003 (P3 of 5 done) · Wells: 16/16 · Tracks: 0/5
 
 ## Phase ledger — CS003
 
 - **P1 — the RNG, the entity contract, the Vaulter.** Done 2026-08-30.
 - **P2 — the spawner and the well lifecycle.** Done 2026-08-30.
+- **P3 — collision and the Purge.** Done 2026-08-30.
 
 `01-rng.js`: `mulberry32` + `rngInt` / `rngPick`; `state.seed` and `state.rng`
 default from `C.RNG_DEFAULT_SEED`, and `startGame()` (P2) mints the run's real
@@ -45,11 +46,46 @@ stream stays aligned however a caller got there. **(d)** `update()` calls
 `enterWell()` when it finds no Skimmer, which is what keeps `reset()` a pure
 shipped-defaults write and still gives the suite a live well on its first step.
 
+**P3.** `09-collision.js`: the ONE collision pass — shots vs enemies then
+enemies vs the Skimmer, each front to back, called from `Game.update()` after
+the entity pass and before the filters. ⛔ 1-D throughout: `laneDelta` within
+`C.HIT_LANE_TOL` plus a `depth` overlap within `C.HIT_DEPTH_TOL`, no projected
+point anywhere. A shot resolves against at most one enemy per step — the
+`break` is unconditional, so an enemy that declines the shot stops its search
+too. `killSkimmer()` is the one death route and today sets `dead` only, so P4
+fills in one function. The Purge is here too: `state.purgeUses` counts up (1 =
+clear every `purgeable`, 2 = the rim-nearest one, 3+ = nothing), re-armed to
+zero by `enterWell()`, fired on the rising edge of the held `input.purge`
+against `state.purgeLatched`. `Game.update()` now filters BOTH arrays after the
+pass, so a consumed shot frees its `SHOT_MAX` slot the same step.
+
+Judgment calls: **(a)** the Purge consumer lives in `09-collision.js`, not
+`05-skimmer.js` — CLAUDE.md's code map assigns it to 05, but that map also
+assigns "firing" there and firing shipped in `06-shots.js` in CS002; it is a
+read-order skeleton, and the Purge is mass entity destruction over the same
+array the collision pass walks. Worth a line in CLAUDE.md's map when someone is
+next editing it. **(b)** `state.purgeReady` (P2's boolean) was REPLACED by
+`purgeUses`, not supplemented — a boolean cannot express GDD 4.3's weak second
+use, and P2's own carried task predicted this. `test-cs003-p2.js` and
+`test-registry.js` were updated; no assertion was weakened. **(c)** the Purge
+resolves BEFORE collision, so a charge spent on the step an enemy arrives in
+your lane saves you rather than firing one step late. **(d)** `enterWell()`
+deliberately does NOT clear `purgeLatched` — it is input state, not well state,
+and clearing it would let a player still holding the button spend the new
+charge without releasing. **(e)** a second use with no legal target is still
+spent; the charge is consumed by the press, not the result.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); manifest is
   checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes, 11 files, zero skips.
+- `node scratchpad/run-all.js` passes, 12 files, zero skips.
+- ⛔ P3's named invariants were mutation-checked, not merely asserted. Each of
+  these turns the suite red: a conditional `break` in the shot loop, a bare
+  `(a - b)` in place of `laneDelta`, dropping the `killDepth === null` guard,
+  a tie-break to the highest lane, a `>=` that loses array order, firing the
+  Purge on the level instead of the edge, and a first Purge that ignores
+  `purgeable`.
 - ⛔ P2's three named invariants were mutation-checked: removing the
   safe-spawn clamp, dropping the quota half of the clear condition, and
   resetting the spawn timer on a blocked beat each turn the suite red.
@@ -115,23 +151,31 @@ shipped-defaults write and still gives the suite a live well on its first step.
   still drained during hit-stop (`input.sample()` runs, `update()` doesn't).
 - `scratchpad/test-registry.js`'s `enemies` count stays at 0 until CS003 P5
   raises it to 1 — that is on P5's closing checklist, and no test reads it yet.
-- The Skimmer exposes `dead`; nothing sets it yet. Shots exist with no
-  collision pass. Both are CS003 P3/P4's.
-- `state.purgeReady` is armed by `enterWell()` and nothing spends it — P3 owns
-  the Purge's effect, including GDD §4.3's weak second use, which may want a
-  count rather than the boolean P2 landed.
+- `killSkimmer()` sets `skimmer.dead` and nothing else, and nothing reads that
+  flag afterwards — a dead Skimmer still moves, fires and blocks spawns. That
+  is deliberate: P4 owns the whole death sequence and has one function to fill
+  in. Until then a contact death is only observable as the flag.
+- CLAUDE.md's code map still lists "firing, Purge" under `05-skimmer.js`; both
+  shipped elsewhere (`06-shots.js`, `09-collision.js`). Not P3's to rewrite a
+  rule doc unprompted — a correction for whoever next edits that map.
 - ⚠ `C.WELL_CLEAR_HOLD`, `state.clearHold` and the branch in `Game.update()`
   that reads them are TEMPORARY and are CS005's to delete when the Dive lands.
 
 ## Next up
 
-- CS003 P3 — the collision pass and the Purge. The prompt is in
-  `IMPLEMENTATION-PHASES-CS003.md`.
+- CS003 P4 — death, lives, respawn. The prompt is in
+  `IMPLEMENTATION-PHASES-CS003.md`. It fills in `killSkimmer()`
+  (`09-collision.js`) and must set `state.purgeLatched` on death — devices are
+  still drained during hit-stop, so a Purge held through a death otherwise
+  arrives at the first live step looking like a fresh press.
 
 ## Playtest asks (open only)
 
 - The Vaulter is now on screen: does the flattened X read as a *threat* at
   throat depth, and is `VAULTER_SIZE` 0.70 enough silhouette to see it coming?
 - Does `SPAWN_INTERVAL` 1.60 with `ENEMY_CONCURRENT` 3 hit GDD §12's promise —
-  a passive player dead within four seconds, an active one with a kill? Nothing
-  can be shot yet (P3), so only the death half is observable this phase.
+  a passive player dead within four seconds, an active one with a kill? Both
+  halves are observable now, though a "death" is still only the flag (P4).
+- Is `HIT_DEPTH_TOL` 0.05 generous enough that a shot fired at a climbing
+  Vaulter connects when it looks like it should? The band is ~3x the distance a
+  shot covers in one step, so misses should read as aim, never as luck.

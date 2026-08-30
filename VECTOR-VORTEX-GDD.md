@@ -235,6 +235,8 @@ The weak second use converts the Purge from a spam button into a decision. HUD s
 
 Clearing a well with the Purge unspent awards `PURGE_SAVED_BONUS` (500).
 
+**Shipped, CS003 P3.** `state.purgeUses` counts **up** from zero and is the whole rule — a count, not a flag, because a boolean cannot express the weak second use. `enterWell()` is the only thing that returns it to zero, so a charge carried through four wells is still one charge. Use 1 kills every enemy whose `purgeable` flag is true and leaves the others untouched — the flag is read off the entity, never a class name, which is why "does not remove Thorns" costs no special case here. Use 2 kills exactly one: highest `depth`, then lowest lane, then array order, all three deterministic so the player can predict the victim. Use 3 and later do nothing, though the count keeps rising so a HUD can tell *spent* from *spent twice*. ⛔ `input.purge` is a **level** — all four devices write a held boolean (§9.5) — so the edge is detected in the game against `state.purgeLatched` ("held last step"); holding the button spends exactly one charge. The Purge resolves *before* the collision pass, so a charge spent on the step an enemy arrives in your lane actually saves you. No bonus is awarded yet: `PURGE_SAVED_BONUS` waits for `addScore()` in CS006, and reads `purgeUses === 0`.
+
 ### 4.4 Lives
 
 Start 3. Extra life at 20,000 then every 40,000. Reserve cap 6; awards past the cap are lost with a distinct sound, never silently swallowed. Death: 1.2 s hit-stop, fragmentation, respawn in the same lane with `RESPAWN_INVULN` 1.5 s. ⛔ **Enemies at the rim are pushed to `depth = 0.55` on respawn** so the player is never killed on re-entry.
@@ -248,6 +250,8 @@ The complete list. No chip damage, no health bar.
 3. Being in a Surger's lane when it discharges.
 4. A Weaver's projectile.
 5. A Thorn during the Dive.
+
+**Shipped, CS003 P3.** Condition 1 is live, as the one collision pass in `09-collision.js`. ⛔ **Collision is 1-D**: a lane match within `HIT_LANE_TOL` (half a lane either side, via `laneDelta` so a Ring's seam is a neighbourhood and not a fifteen-lane gap) plus an overlap on `depth`. No trigonometry, no screen coordinates, no distance in pixels — a hit test that read a projected point would pass at the rim and fail at the throat, because `perspective()` is not linear. The pass runs once per step in a fixed order (shots against enemies, then enemies against the Skimmer, each front to back), after the entity pass and before the end-of-frame filters; nothing in it splices an array. An enemy kills by contact when its `killDepth` is a number, its `depth` has reached it, and its lane matches — `killDepth === null` means contact never kills, which is the Weaver's body. Shots ask `enemy.onShot(shot)` and the *enemy* decides what a hit does; ⛔ one shot resolves against at most one enemy per step, whether or not that enemy consumed it. Death itself is one call to `killSkimmer()`, which today sets `skimmer.dead` and nothing else — lives, hit-stop, respawn and the game-over stop are CS003 P4's, in that one function.
 
 ### 4.6 Start Depth
 

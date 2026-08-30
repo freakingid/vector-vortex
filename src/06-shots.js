@@ -15,8 +15,11 @@
 // every other timer in the build; depth is derived from it, not stepped
 // directly, so retuning SHOT_TIME never touches the update loop.
 //
-// There is nothing to collide with yet (no Thorns wired, no enemies) — this
-// phase does not add a collision pass.
+// ⛔ Shots do NOT resolve their own hits. 09-collision.js owns the one collision
+// pass (CS003 P3) and runs it after this update, so a shot's depth for the step
+// is already final when it is tested. A shot the pass consumed is removed by
+// Game.update()'s end-of-frame filter, freeing its slot against C.SHOT_MAX the
+// SAME step — that is GDD 4.2's chip-away economy, ⚠ SETTLED as emergent.
 
 class Shot {
   constructor(well, lane) {

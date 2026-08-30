@@ -121,8 +121,18 @@ const C = {
   // ---- Collision (GDD 4.5) ------------------------------------------------
   // The band below the rim in which an enemy's contact kills (GDD 4.5 item 1).
   // Read as `killDepth = 1 - RIM_CONTACT_DEPTH` by every enemy that kills by
-  // reaching the rim. CS003 P3's HIT_LANE_TOL / HIT_DEPTH_TOL join it here.
+  // reaching the rim.
   RIM_CONTACT_DEPTH:    0.05,
+  // ⛔ The whole hit test, and it is 1-D (09-collision.js): a lane match within
+  // HIT_LANE_TOL plus a depth overlap within HIT_DEPTH_TOL. No pixels, ever.
+  // HIT_LANE_TOL is HALF A LANE either side, so a shot fired from a lane centre
+  // covers exactly its own lane and nothing of its neighbours' — widening it
+  // past 0.5 makes adjacent lanes bleed into each other and the well stops
+  // being a set of discrete choices, which is GDD 1.1 P1.
+  // ⛔ HIT_DEPTH_TOL must stay above (1 / SHOT_TIME) * FIXED_DT / 2 (~0.016) or
+  // a shot steps clean over an enemy between two frames. See 09-collision.js.
+  HIT_LANE_TOL:         0.50,   // lane units, either side
+  HIT_DEPTH_TOL:        0.05,   // depth units, shot <-> enemy overlap
 
   // ---- Difficulty (GDD 8) — one clock: game.level -------------------------
   HEAT_BASE:            0.00,

@@ -69,7 +69,7 @@ H.eq(state.wellIndex, 0, "level 1 opens on shape 0");
 H.eq(state.spawn.remaining, C.SPAWN_QUOTA, "the well owes a full quota");
 H.eq(state.spawn.timer, 0, "the spawn timer starts at zero");
 H.eq(alive(), 0, "no enemy is alive on entry");
-H.assert(state.purgeReady === true, "the Purge charge is armed on entry");
+H.eq(state.purgeUses, 0, "the Purge charge is armed on entry");
 H.assert(state.skimmer instanceof X.Skimmer, "startGame mints the Skimmer");
 
 X.startGame();
@@ -244,7 +244,7 @@ H.eq(state.clearHold, 0, "a survivor mid-hold resets the hold to zero");
 X.startGame(SEED);
 state.shots.push(new X.Shot(X.WELLS[state.wellIndex], 0));
 X.spawnEnemy("vaulter", 0, 0.2);
-state.purgeReady = false;
+state.purgeUses = 2;
 state.spawn.remaining = 2;
 const lvl = state.level;
 X.nextWell();
@@ -252,7 +252,7 @@ H.eq(state.level, lvl + 1, "nextWell raises the level by one");
 H.eq(state.wellIndex, (state.level - 1) % X.WELLS.length, "wellIndex is GDD 3.4's (level-1) mod shapes");
 H.eq(state.shots.length, 0, "nextWell clears shots in flight");
 H.eq(alive(), 0, "nextWell clears the enemies");
-H.assert(state.purgeReady === true, "nextWell re-arms the Purge charge");
+H.eq(state.purgeUses, 0, "nextWell re-arms the Purge charge");
 H.eq(state.spawn.remaining, C.SPAWN_QUOTA, "nextWell re-arms the spawner");
 H.eq(state.clearHold, 0, "nextWell clears the hold");
 

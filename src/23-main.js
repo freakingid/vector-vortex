@@ -45,8 +45,14 @@ function enterWell() {
   // never waits out a cooldown that did not elapse (06-shots.js's rule).
   state.shotCooldown = C.SHOT_COOLDOWN;
 
-  // GDD 4.3: one charge per well, recharged on entry, never accumulated.
-  state.purgeReady = true;
+  // GDD 4.3: one charge per well, recharged on entry, ⛔ never accumulated —
+  // the count goes back to zero rather than gaining a use.
+  //
+  // ⛔ state.purgeLatched is deliberately NOT touched. It is not well state; it
+  // is "the button was held last step", and clearing it here would let a player
+  // who is still holding the button from the previous well spend the new
+  // charge on the entry step without ever releasing (09-collision.js).
+  state.purgeUses = 0;
 
   resetSpawner(state);
   state.clearHold = 0;
@@ -163,11 +169,24 @@ const Game = (function () {
     state.skimmer.update(dt, well, state.input);
     updateShots(state, well, dt);
 
-    // ⛔ The enemy pass, then the end-of-frame filter — never a splice
-    // mid-loop (GDD 6.5). The spawner runs AFTER the filter so the alive count
-    // it reads is this step's, not last step's plus the dead.
+    // ⛔ The enemy pass, then the Purge, then the ONE collision pass, then the
+    // end-of-frame filters — never a splice mid-loop (GDD 6.5). The spawner
+    // runs AFTER the filters so the alive count it reads is this step's, not
+    // last step's plus the dead.
     for (let i = 0; i < state.enemies.length; i++) state.enemies[i].update(dt, well, state);
+
+    // ⛔ THE PURGE RESOLVES BEFORE COLLISION, and that is the whole point of a
+    // panic button (GDD 4.3): a charge spent on the step an enemy arrives in
+    // your lane actually saves you, because collision below skips what it just
+    // killed. After collision it would be a button that works one step late.
+    updatePurge(state);
+    updateCollisions(state, well);
+
+    // Both arrays, because the one pass above can kill either side. A shot the
+    // collision consumed frees its slot against C.SHOT_MAX THIS step (GDD 4.2's
+    // chip-away economy), not next.
     state.enemies = state.enemies.filter(e => !e.dead);
+    state.shots = state.shots.filter(s => !s.dead);
     updateSpawner(state, well, dt);
 
     // ⚠ TEMPORARY (C.WELL_CLEAR_HOLD) — the beat between the last kill and the

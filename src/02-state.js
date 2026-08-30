@@ -7,8 +7,9 @@
 // ⛔ A field lands here when the changeset that USES it lands, never before.
 // A field added "because CS003 will want it" is a field CS003 cannot see the
 // reasoning for, and it reads as shipped truth to a session that finds it.
-// CS002 landed the first eight; CS003 P1 added `seed` and `rng`, and P2 adds
-// `enemies`, `spawn`, `purgeReady` and `clearHold`.
+// CS002 landed the first eight; CS003 P1 added `seed` and `rng`, P2 added
+// `enemies`, `spawn` and `clearHold`, and P3 adds `purgeUses` and
+// `purgeLatched`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -83,10 +84,19 @@ function newState() {
     spawn: { timer: 0, remaining: C.SPAWN_QUOTA },
 
     // GDD 4.3: one Purge charge per well, recharged on entry, never
-    // accumulated. True means the charge is unspent — the strong first use.
-    // ⛔ enterWell() is the ONLY thing that sets it back to true. CS003 P3
-    // builds the effect and is what will set it false.
-    purgeReady: true,
+    // accumulated. ⛔ A COUNT, not a flag: use 1 clears the well, use 2 kills
+    // exactly one enemy, use 3+ does nothing, and CS006's PURGE_SAVED_BONUS
+    // asks whether this is still 0. enterWell() is the ONLY thing that puts it
+    // back to zero; 09-collision.js's updatePurge() is the only thing that
+    // raises it. (CS003 P2 landed this as the boolean `purgeReady`, which
+    // could not express the weak second use.)
+    purgeUses: 0,
+
+    // ⛔ "The purge button was held LAST step." state.input.purge is a LEVEL —
+    // all four devices write a held boolean (GDD 9.5) — so the rising edge is
+    // detected against this, and holding the button spends exactly one charge.
+    // CS003 P4 forces it true on death; 09-collision.js explains why.
+    purgeLatched: false,
 
     // ⚠ TEMPORARY (C.WELL_CLEAR_HOLD). Counts UP while the well is clear and
     // resets whenever it is not, so a kill that lands during the hold cannot
