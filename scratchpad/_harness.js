@@ -107,6 +107,8 @@ function buildGame(opts = {}) {
     "screenPos", "perspective", "wellThroat", "wellCentroid", "wellVertCount",
     "rimPoint", "throatPoint",
     "laneWrap", "laneClamp", "laneNormalize", "laneDelta", "laneHop", "laneAtWall",
+    // the well renderer (13-render-well.js, CS001 P3)
+    "drawPoly", "glowStroke", "laneLineWidth", "wellBandColor", "wellBaseAlpha", "drawWell",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +

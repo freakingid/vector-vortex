@@ -118,6 +118,29 @@ const C = {
   READABILITY_DEPTH:    0.25,   // ⛔ nothing opaque drawn below this depth
   ATTRACT_IDLE:         20,     // s before attract mode
 
+  // ---- Well rendering (GDD 3.6, 3.7, 10.2) --------------------------------
+  // Band palette. shapeIndex = (level-1) mod 16 picks the well; the BAND below
+  // picks colour from level directly. Ember carries its own alpha (GDD 3.6);
+  // everything else draws at LINE_ALPHA_RIM/THROAT below.
+  BAND_COLORS: [
+    { hi: 16, color: "#3FE0FF" },   // Cyan
+    { hi: 32, color: "#FF4FD8" },   // Magenta
+    { hi: 48, color: "#FFB020" },   // Amber
+    { hi: 64, color: "#9B6BFF" },   // Violet
+    { hi: 80, color: "#FF5A3C" },   // Ember — GDD 3.7 dim band, @ DIM_BAND_ALPHA
+    { hi: 96, color: "#4FFF7A" },   // Green
+    { hi: 99, color: "#FFFFFF" },   // White
+  ],
+  BAND_RNG_COLORS: ["#3FE0FF", "#FF4FD8", "#FFB020", "#9B6BFF", "#4FFF7A", "#FFFFFF"], // past 99, GDD 3.6
+  DIM_BAND_LO:          65,     // ⚠ SETTLED — GDD 3.7, do not tune
+  DIM_BAND_HI:          80,     // ⚠ SETTLED — GDD 3.7, do not tune
+  LANE_LIT_ALPHA:       0.9,    // occupied / shot-travel / Surger-charge lane
+  LINE_W_THROAT:        1.0,    // px, depth 0 — GDD 10.1, thinner far away
+  LINE_W_RIM:           3.0,    // px, depth 1 — thicker near the player
+  GLOW_WIDE_W:          6.0,    // px, outer glow pass width multiplier base
+  GLOW_WIDE_ALPHA:      0.20,
+  GLOW_THIN_ALPHA:      0.95,
+
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.1",
   GAME_ID:              "vector-vortex",   // must match the Worker registry
