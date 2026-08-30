@@ -1,16 +1,34 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS004 (not started) · Wells: 16/16 · Enemies: 1/6 Classic · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS004 (P1 of 5 done) · Wells: 16/16 · Enemies: 1/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS004
 
-- No phases yet. `PLANNED-FEATURES-CS004.md` and
-  `IMPLEMENTATION-PHASES-CS004.md` have not been written.
+- **P1 — the seventh contract field, the debug bench, the pointer sweep.** ✅
+  `anchored` on the `Enemy` base, the respawn skip, five named debug spawn
+  actions, `C.DEBUG_SPAWN_KINDS` + `pickSpawnKind()`, the six Classic enemy
+  colours, and the changeset renumber across the repo.
+
+`anchored` is the seventh contract field and says ⛔ **what `depth` MEANS** —
+`false` is a position, `true` is a length rooted at the throat. `respawnSkimmer()`
+skips anchored entities. ⚠ **This is not a narrowing of GDD §4.4's settled rim
+push:** the band is untouched — everything above `RESPAWN_PUSH_DEPTH` still comes
+down to it, in every lane — and the ⚠ comment was extended, not replaced, in the
+code and in GDD §4.4. Every enemy that exists today is `false` and unaffected.
+
+The bench is five named actions on the existing `actionKeys` path (`1`–`4`, `0`),
+never a second listener; the three unbuilt kinds are no-ops because
+`spawnEnemy()` returns `null` for an unknown kind. `pickSpawnKind()` reads ⚠
+`C.DEBUG_SPAWN_KINDS` (`["vaulter"]`) and ⛔ **spends no RNG draw on a one-entry
+list** — the spawn-lane sequence is byte-identical to the pre-change build.
+
+**Mutation-checked:** removing the anchored skip, narrowing the clamp to a rim
+band, and an unconditional `rngPick` each turn the suite red.
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes: 14 test files, zero skips.
+- `node scratchpad/run-all.js` passes: 15 test files, zero skips.
 - CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer. Full
   narrative in `log/CS001.md`.
 - CS002 closed 2026-08-30 — the loop, the Skimmer, shots, and all four input
@@ -26,7 +44,13 @@ Version: 0.0.1 · Changeset: CS004 (not started) · Wells: 16/16 · Enemies: 1/6
   before touching lane code:** a range check alone does not catch §3.5's bug —
   a wrapped hop on a 13-lane strip lands inside `[0, 12]`. The tell is the
   per-tick lane SPEED, and that is what the soak asserts.
-- ⛔ CS004 reads GDD §6.5 before adding an enemy. It now spells out the six
+- ⛔ **`test-cs004-p1.js` carries a GOLDEN spawn-lane sequence** recorded from
+  the build at `9ebd27b`, before `pickSpawnKind()` existed. It is the only
+  guard on the no-draw rule that works end to end: `test-cs003-p5.js`'s
+  determinism hash compares two runs of the *same* build, so a stream shift is
+  self-consistent there and invisible. Retuning the spawner legitimately
+  re-records it; a stray RNG draw does not.
+- ⛔ CS004 reads GDD §6.5 before adding an enemy. It now spells out **seven**
   contract fields, the one enemy array, the one spawn entry point, the one
   well entry and the one collision pass.
 - `tools/well-lab.html` — well polygons and the perspective curve.
@@ -37,37 +61,64 @@ Version: 0.0.1 · Changeset: CS004 (not started) · Wells: 16/16 · Enemies: 1/6
 
 - **`tools/glow-lab.html` does not exist.** `CLAUDE.md`'s design-instruments
   section lists it as the home of the line-weight and glow-falloff decisions
-  measured against a busy frame. It is also the instrument the two ⚠ colour
+  measured against a busy frame. It is also the instrument the eight ⚠ colour
   placeholders below are waiting on.
-- **`SKIMMER_COLOR` (`#FFFFFF`) and `VAULTER_COLOR` (`#FF4A4A`) are ⚠
-  placeholders**, recorded with a ⚠ in GDD §4.1, GDD §6.1 and in `C`. No enemy
-  palette is specified anywhere in the GDD. CS004 adds five more enemies and
-  will need five more colours — the palette decision should be made once,
-  deliberately, rather than five times by inference.
+- **The whole enemy palette is ⚠ provisional.** `SKIMMER_COLOR` (`#FFFFFF`),
+  `VAULTER_COLOR` (`#FF4A4A`) and the six CS004 P1 added (`CARRIER_COLOR`,
+  `WEAVER_COLOR`, `WEAVER_BOLT_COLOR`, `THORN_COLOR`, `DRIFTER_COLOR`,
+  `SURGER_COLOR`) are all inference, not design — the GDD specifies no enemy
+  palette. They were chosen **as one set** against the constraint recorded in
+  `C`: an enemy colour must read against all seven band colours (§3.6), because
+  the well cycles and the enemies do not. ⛔ **The set cannot actually be judged
+  until P4**, because `spawnRow` currently puts one silhouette on screen.
 - **`drawWell()`'s `laneState` parameter is still unwired.** Lane occupancy
-  lighting (GDD §3.7 — lanes light when occupied, when a shot travels them, and
-  when a Surger charges) belongs with the dim band, in CS005.
+  lighting (GDD §3.7) belongs with the dim band, in CS006. Note
+  `PLANNED-FEATURES-CS004.md` finding 6: the Surger's telegraph is an entity
+  draw and must NOT be built on `laneState`.
 - **GDD §12's four-second promise is not delivered.** A passive player does die
   on level 1, but not reliably within four seconds — it needs spawn lanes
-  weighted toward the player's lane. That is onboarding tuning and is CS013's.
-  ⚠ `ROADMAP.md`'s assumption #6 reads the same behaviour as a CS005 spawner
-  tuning question; the two docs disagree about who owns it, and whoever gets
-  there first should settle it rather than assume.
-- **`_harness.js` exists twice** — the repo root holds a tracked, stale copy of
-  `scratchpad/_harness.js` (older, exports only `C` and `state`). Nothing loads
-  it today; a test that reaches one directory too far gets a silently smaller
-  surface. Delete or de-duplicate.
+  weighted toward the player's lane. Settled: that is onboarding and it is
+  **CS014's**. (The earlier ⚠ note that `STATUS.md` and `ROADMAP.md` disagreed
+  is resolved; the renumbered `ROADMAP.md` says the same thing.)
 - **A rim Vaulter hunts the Skimmer's *continuous* lane**, so a player parked
   between two lane centres has it hopping back and forth across them. Lethal
   either way (contact tolerance is half a lane), and GDD §6.1 says only
-  "direction from `laneDelta`". Flagged for CS005's tuning pass in case the
+  "direction from `laneDelta`". Flagged for CS006's tuning pass in case the
   jitter reads as indecision rather than menace.
 - **GDD §3.3's `throatOffset` is undefined** — no well uses it and the GDD never
   says what it offsets. `wellThroat` defaults it to zero. Design call for Paul.
 - **The Flat well (11) is geometrically degenerate**: its rim is a straight
   line, so it renders with zero depth. Same underlying question as
-  `throatOffset` (an offset throat is what would fix it). Natural landing spot
-  is CS004 (well progression, per `ROADMAP.md`).
+  `throatOffset` (an offset throat is what would fix it). It has no owner —
+  `ROADMAP.md` never put well progression in CS004, and well progression is
+  CS006 — so it is a design call for Paul before CS006 rather than a task.
+
+## Findings from P1 (hazards the phase prompt did not name)
+
+- ⛔ **The +1 renumber is wider than the `CS005` pointers, and stopping at them
+  would have made the repo worse.** Everything from CS005 on shifted, so **front
+  of house moved CS006 → CS007**, **onboarding CS013 → CS014** and **ship
+  CS014 → CS015**. Sweeping only the `CS005` strings would have left `CS006`
+  meaning *two different changesets inside one file*: `23-main.js` would say
+  both "the introduction schedule and the heat clock are CS006's" and, three
+  functions later, "CS006 owns the real restart flow". P1 swept the lot —
+  **22 front-of-house mentions** across `src/02-state.js`,
+  `src/09-collision.js`, `src/23-main.js`, `VECTOR-VORTEX-GDD.md` and the CS003
+  P3/P4 test files, plus **2 ship mentions** (`VECTOR-VORTEX-GDD.md` §21 #6 and
+  `DECISIONS.md`, both the Mimic's probation verdict). ⚠ If a future session
+  finds another, the rule is the same: read it, decide what it *meant*, and add
+  one.
+- **Seventeen `CS005` sites, not twelve.** The inventory in
+  `PLANNED-FEATURES-CS004.md` missed three in `scratchpad/test-cs003-p2.js`
+  (the `SPAWN_MIN` heat-floor comment, its assertion string, and the
+  `WELL_CLEAR_HOLD` note) and counted `src/09-collision.js` outside the total.
+  All seventeen are swept.
+- **The duplicate root `_harness.js` was already gone.** Paul removed it in
+  `7817d33`, after CS003 P5. P1 verified its absence and the green suite rather
+  than deleting it; the stale `STATUS.md` entry is what remained, and it is
+  gone now.
+- **GDD §6.1's "The other five are CS004's" was stale from the split.** Rewritten
+  to name which three are CS004's and which two are CS005's.
 
 ## Open questions (blocking)
 
@@ -80,24 +131,27 @@ Version: 0.0.1 · Changeset: CS004 (not started) · Wells: 16/16 · Enemies: 1/6
 - Backport `kit-input` (`src/04-input.js`, all four devices, v0.3.0) to
   coinless-kit — a separate manual step, verified against that repo's own suite.
 - ⚠ `C.WELL_CLEAR_HOLD`, `state.clearHold` and the branch in `Game.update()`
-  that reads them are TEMPORARY and are CS005's to delete when the Dive lands.
+  that reads them are TEMPORARY and are CS006's to delete when the Dive lands.
+- ⚠ `C.DEBUG_SPAWN_KINDS`, `pickSpawnKind()` (`08-spawner.js`) and the five
+  debug spawn actions in `23-main.js` are TEMPORARY. GDD §8.1's introduction
+  schedule replaces all of them, and that is CS006's. ⛔ The list is a bench,
+  never a difficulty knob — do not tune the game by editing it.
 - `state.screen === "gameover"` is a STOP with nothing on screen but the frozen
-  board and the craft that died on it. `r` restarts. CS006 owns the screen, the
+  board and the craft that died on it. `r` restarts. CS007 owns the screen, the
   submission and the real restart flow, and the `restart` debug action should be
   folded into it rather than left as a second way in.
-- `scratchpad/test-registry.js`'s `enemies` count is 1. CS004 raises it as the
-  rest of the Classic roster lands; that count lives there and in no other file.
+- `scratchpad/test-registry.js`'s `enemies` count is 1. CS004 P2–P4 raise it to
+  4 as the Carrier, Weaver and Thorn land; that count lives there and in no
+  other file. The Weaver's bolt is not a §6.1 roster row and is not counted.
 
 ## Next up
 
-- CS004 — the rest of the Classic roster: Carrier and its three variants,
-  Weaver, Thorn, Drifter, Surger (GDD §6.1–6.3). Not yet specced;
-  `PLANNED-FEATURES-CS004.md` comes first.
-- ⛔ Before writing that spec: GDD §6.5's "Shipped, CS003" paragraph is the
-  contract every one of the five inherits, and each of them decides
-  `purgeable`, `blocksClear` and `killDepth` explicitly. The Thorn is the
-  roster's first `false` on the first two and the first entity whose `onShot`
-  chips rather than kills.
+- CS004 P2 — the Carrier, `splitLanes()` and the `CARGO` table. ⛔ It is the
+  first non-spawner caller of `spawnEnemy()` and it mutates `state.enemies`
+  from inside the collision pass's own loop; `PLANNED-FEATURES-CS004.md`
+  finding 3 lists the four qualifications that make that safe.
+- ⛔ P4 is where P1's `anchored` fix is proved through the real death path: a
+  Thorn at `depth 0.9` still measures `0.9` after a death and respawn.
 
 ## Playtest asks (open only)
 
@@ -107,12 +161,16 @@ Version: 0.0.1 · Changeset: CS004 (not started) · Wells: 16/16 · Enemies: 1/6
   that feels fair? Both halves are fully observable now — a death costs a life
   and freezes the board.
 - Does the death sequence read? 1.2 s of hit-stop with no fragmentation and no
-  sound is a long time to look at a frozen board — CS006 adds both, but the
-  freeze LENGTH is settled now and worth judging bare.
+  sound is a long time to look at a frozen board — CS007 adds the fragmentation
+  and CS008 the sound, but the freeze LENGTH is settled now and worth judging
+  bare.
 - Is `RESPAWN_PUSH_DEPTH` 0.55 far enough? The clamp plus `RESPAWN_INVULN` 1.5 s
   is meant to guarantee a Vaulter cannot climb back into contact before the
   blink stops. It is provable at `VAULT_CLIMB` 0.18; it stops being provable the
-  moment CS005's heat curve raises the climb rate.
+  moment CS006's heat curve raises the climb rate.
 - Is `HIT_DEPTH_TOL` 0.05 generous enough that a shot fired at a climbing
   Vaulter connects when it looks like it should? The band is ~3x the distance a
   shot covers in one step, so misses should read as aim, never as luck.
+- ⚠ **The palette, once P4 lands.** Press `0` on a busy well: do six enemy
+  colours stay separable from each other and from the cyan band, and does the
+  Thorn read as scenery rather than as a creature?

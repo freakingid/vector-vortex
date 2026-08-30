@@ -28,7 +28,7 @@ const ENEMY_KINDS = {
 
 // How many enemies may be alive at once. ⛔ The MIN of the two, and they are
 // not the same kind of number: C.ENEMY_CONCURRENT is the difficulty knob
-// (CS005's heat curve raises it), C.ENEMY_CAP is a readability ceiling that is
+// (CS006's heat curve raises it), C.ENEMY_CAP is a readability ceiling that is
 // never raised for difficulty. Reading only one of them is how a retune of the
 // knob quietly walks past the ceiling.
 function spawnLimit() {
@@ -84,6 +84,26 @@ function spawnEnemy(kind, lane, depth) {
   const e = make(l, d, dir);
   state.enemies.push(e);
   return e;
+}
+
+// ⚠ TEMPORARY, with C.DEBUG_SPAWN_KINDS (00-config.js). Which kind the
+// interval spawner releases next. GDD 8.1's introduction schedule is what
+// decides this for real — at which point the constant and this function both
+// go, and nothing else has to change, because updateSpawner() below asks a
+// function rather than naming a kind.
+//
+// ⛔ A ONE-ENTRY LIST SPENDS NO DRAW, AND THAT IS NOT AN OPTIMISATION.
+// rngPick() on a single-element array still advances the run's ONE stream
+// (01-rng.js), and the stream is shared: one extra draw per spawn moves every
+// spawn lane in every run, including the 10,000-tick replay GDD 17 item 1
+// hashes. The game shipped without this function, so the no-choice case has to
+// spend exactly what the old `spawnEnemy("vaulter", ...)` literal did — which
+// is nothing. There is no genuine choice to make, so no randomness is spent
+// making it.
+function pickSpawnKind(state) {
+  const kinds = C.DEBUG_SPAWN_KINDS;
+  if (kinds.length < 2) return kinds[0];
+  return rngPick(state.rng, kinds);
 }
 
 // A lane for the next interval spawn. Draws from state.rng and redraws up to
@@ -148,7 +168,7 @@ function updateSpawner(state, well, dt) {
   // Depth 0 is the throat — the far aperture, the only place a well releases
   // an enemy from. GDD 3.2's convention, not a magic number.
   const lane = pickSpawnLane(state, well);
-  const e = spawnEnemy("vaulter", lane, 0);
+  const e = spawnEnemy(pickSpawnKind(state), lane, 0);
   if (!e) return;              // refused (the cap): the quota is not spent
 
   sp.timer = 0;

@@ -53,6 +53,26 @@ class Enemy {
     // conditions and null covers the other two, which is why this is a field
     // and not a per-enemy method.
     this.killDepth = null;
+
+    // ⛔ WHAT `depth` MEANS ON THIS ENTITY — not whether it moves.
+    //
+    //   false  `depth` is a POSITION: where the entity is in its lane.
+    //   true   `depth` is a LENGTH: the tip of an extent rooted at the throat.
+    //
+    // A stationary enemy whose `depth` is still a position is `false` — the
+    // flag is about the QUANTITY, not the motion. Anything that ever reads
+    // `depth` as a length sets it true. CS004's Thorn is the roster's only
+    // one: its `depth` is the tip of the segment it has grown, which is also
+    // what lets the collision pass hit-test it with the same one line it uses
+    // on everything else.
+    //
+    // ⛔ THE ONE READER IS respawnSkimmer() (23-main.js). GDD 4.4's rim push
+    // clamps depth down to C.RESPAWN_PUSH_DEPTH, which is right for a position
+    // and silently wrong for a length: it would shorten every Thorn past 0.55
+    // on every player death — a free chip nobody earned, in the one place
+    // nobody would look. ⚠ This does NOT narrow that clamp's band (SETTLED,
+    // GDD 4.4); it says which entities the clamp is meaningful for.
+    this.anchored = false;
   }
 
   // Movement and AI. dt is C.FIXED_DT; `well` is the current well (topology

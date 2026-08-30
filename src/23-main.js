@@ -107,8 +107,18 @@ function respawnSkimmer(state, well) {
   // which is the exact death the rule exists to prevent; 0.55 is chosen so the
   // climb back up outlasts C.RESPAWN_INVULN. A clamp is also monotonic — it
   // can never move an entity TOWARD the rim.
+  //
+  // ⚠ SETTLED, second half — Paul, CS004 P1. The clamp applies to entities
+  // whose `depth` is a POSITION, which is every enemy in the roster but one.
+  // ⛔ An `anchored` entity's `depth` is a LENGTH — the tip of an extent rooted
+  // at the throat (07-enemies.js) — and clamping a length is not a push, it is
+  // a free chip: every player death would permanently shorten every Thorn past
+  // 0.55, silently, in the one place nobody would look. The band above is
+  // UNCHANGED and is not narrowed by this; the skip is about WHICH ENTITIES
+  // the clamp means anything for, not about how far down it reaches.
   for (let i = 0; i < state.enemies.length; i++) {
     const e = state.enemies[i];
+    if (e.anchored) continue;
     if (e.depth > C.RESPAWN_PUSH_DEPTH) e.depth = C.RESPAWN_PUSH_DEPTH;
   }
 
@@ -184,9 +194,66 @@ const Game = (function () {
     inputMirror:      C.INPUT_MIRROR,
     worldW:           C.WORLD_W,
     worldH:           C.WORLD_H,
-    actionKeys:       { cycleWell: ["w"], restart: ["r"] },
+    // ⛔ NAMED ACTIONS, NEVER A SECOND LISTENER (GDD 9.5). See runAction().
+    //
+    // ⛔ DIGITS, and that is not a style choice. "r" takes a time-derived seed
+    // and "w" cycles the well out from under the level clock, so
+    // test-cs003-p5.js's recorded input list deliberately presses neither; a
+    // new binding that collided with either would move the determinism hash
+    // and the failure would read as a physics bug. The digits collide with
+    // nothing in INPUT_KEYS_DEFAULT either (04-input.js).
+    actionKeys:       {
+      cycleWell:    ["w"],
+      restart:      ["r"],
+      spawnVaulter: ["1"],
+      spawnCarrier: ["2"],
+      spawnWeaver:  ["3"],
+      spawnThorn:   ["4"],
+      spawnRow:     ["0"],
+    },
     onAction:         runAction,
   });
+
+  // ⚠ TEMPORARY — THE DEBUG BENCH, with C.DEBUG_SPAWN_KINDS (00-config.js).
+  //
+  // GDD 8.1 introduces the Carrier at L3 and the Weaver and Thorn at L5, but
+  // the introduction schedule and the heat clock are CS006's, so nothing new
+  // spawns on its own yet. These five keys are how the roster is judged on
+  // hardware before that exists. GDD 8.1's schedule is what deletes them.
+  //
+  // ⛔ A kind that is not in ENEMY_KINDS yet is a NO-OP, not a throw:
+  // spawnEnemy() returns null for an unknown kind, so P2 through P4 light
+  // these up by adding a row to that table and touching nothing here.
+  const DEBUG_SPAWN_ACTIONS = {
+    spawnVaulter: "vaulter",
+    spawnCarrier: "carrier",
+    spawnWeaver:  "weaver",
+    spawnThorn:   "thorn",
+  };
+
+  // The Classic roster in GDD 6.1's order, which is also the order they are
+  // introduced. `spawnRow` exists for exactly one job: putting the whole
+  // palette on screen at once, so the six ⚠ provisional colours can be judged
+  // against each other and against the band in a single look.
+  const DEBUG_ROW_KINDS = ["vaulter", "carrier", "weaver", "thorn", "drifter", "surger"];
+
+  // One of every Classic kind, consecutive lanes, staggered depths.
+  //
+  // ⛔ Through spawnEnemy(), like everything else, so the row inherits the cap
+  // and GDD 6.3's safe-spawn rule rather than re-implementing them. The
+  // stagger spreads the row from the throat up to C.SAFE_SPAWN_DEPTH — the
+  // deepest a spawn is ever allowed to arrive in the player's lane — so the
+  // row is legible end to end and never lands on top of the craft. Lanes are
+  // laneNormalize()'d inside spawnEnemy, so on an open well a row started near
+  // a wall stacks against it; rotate and press it again.
+  function spawnRow() {
+    if (!state.skimmer) return;
+    const base = Math.round(state.skimmer.lane);
+    const n = DEBUG_ROW_KINDS.length;
+    for (let i = 0; i < n; i++) {
+      spawnEnemy(DEBUG_ROW_KINDS[i], base + i, (i / n) * C.SAFE_SPAWN_DEPTH);
+    }
+  }
 
   // Named debug actions, delivered by the input module in simulation order.
   //
@@ -210,7 +277,7 @@ const Game = (function () {
       // does not run at all — precisely the cases a listener gets wrong. Named
       // actions are dispatched from input.sample(), which runs in both.
       //
-      // CS006 owns the real restart flow; this is the debug key that makes the
+      // CS007 owns the real restart flow; this is the debug key that makes the
       // stop observable and recoverable while there is no game-over screen.
       startGame();
       // ⛔ The player reaches for restart DURING the death freeze more often
@@ -219,6 +286,15 @@ const Game = (function () {
       // is private to the loop), so it is cleared here, at the one call site.
       hitStopLeft = 0;
     }
+
+    // ⚠ TEMPORARY — the debug bench. ⛔ Through spawnEnemy(), the one entry
+    // point (GDD 6.5): the bench inherits the safe-spawn rule and C.ENEMY_CAP
+    // exactly as the interval spawner does, and a bench that pushed straight
+    // into state.enemies would be the second way in that the one entry point
+    // exists to prevent.
+    const kind = DEBUG_SPAWN_ACTIONS[name];
+    if (kind !== undefined && state.skimmer) spawnEnemy(kind, state.skimmer.lane, 0);
+    if (name === "spawnRow") spawnRow();
   }
 
   function nowMs() {
@@ -237,7 +313,7 @@ const Game = (function () {
 
     // ⛔ THE GAME-OVER STOP (GDD 4.4). Lives at zero and the gameplay systems
     // stop stepping: no simulation clock, no entity pass, no spawner, no
-    // collision, no level advance. This is a STOP, not a screen — CS006 owns
+    // collision, no level advance. This is a STOP, not a screen — CS007 owns
     // the game-over UI, the score submission and the restart flow, and the
     // build deliberately has nothing to show here yet. draw() is unaffected, so
     // the frozen board and the craft that died on it stay on screen.
@@ -292,7 +368,7 @@ const Game = (function () {
     updateSpawner(state, well, dt);
 
     // ⚠ TEMPORARY (C.WELL_CLEAR_HOLD) — the beat between the last kill and the
-    // next well. CS005's Dive (GDD 5) replaces this whole branch. The hold
+    // next well. CS006's Dive (GDD 5) replaces this whole branch. The hold
     // counts UP and resets the moment the well stops being clear, so a spawn
     // or a survivor cannot leave a half-spent pause behind.
     if (wellCleared(state)) {
@@ -433,7 +509,7 @@ const Game = (function () {
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   Game.init();
   // ⛔ The run begins here, not lazily inside update(). No argument, so the
-  // seed is time-derived and recorded in state.seed. CS006's title screen is
+  // seed is time-derived and recorded in state.seed. CS007's title screen is
   // what will eventually own this call.
   startGame();
   Game.start();

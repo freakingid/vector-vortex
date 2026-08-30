@@ -49,8 +49,8 @@ hasKnob(X, "SPAWN_QUOTA", { def: 10 }, H);
 hasKnob(X, "ENEMY_CONCURRENT", { def: 3 }, H);
 hasKnob(X, "SPAWN_LANE_TRIES", { def: 4 }, H);
 hasKnob(X, "WELL_CLEAR_HOLD", { def: 1.00 }, H);
-// ⛔ SPAWN_MIN is a floor on a HEAT-derived interval, and heat is CS005's.
-H.assert(!("SPAWN_MIN" in C), "C carries no SPAWN_MIN — the heat floor is CS005's");
+// ⛔ SPAWN_MIN is a floor on a HEAT-derived interval, and heat is CS006's.
+H.assert(!("SPAWN_MIN" in C), "C carries no SPAWN_MIN — the heat floor is CS006's");
 
 H.assert(typeof X.spawnEnemy === "function", "spawnEnemy is in the build");
 H.assert(typeof X.startGame === "function", "startGame is in the build");
@@ -215,7 +215,7 @@ survivor.dead = true;
 H.assert(X.wellCleared(state) === true, "quota spent and nothing blocking: clear");
 
 // ---------------------------------------------------------------------------
-// the hold, then nextWell (⚠ temporary — CS005's Dive replaces it)
+// the hold, then nextWell (⚠ temporary — CS006's Dive replaces it)
 // ---------------------------------------------------------------------------
 
 X.startGame(SEED);

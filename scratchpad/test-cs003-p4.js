@@ -4,7 +4,7 @@
 // Asserts what P4 owns: the life, the freeze, the respawn on the first live
 // step after it, GDD 4.4's rim push, the invulnerability window, the purge
 // re-latch, and the stop. It makes no claim about scoring, the game-over
-// screen, particles or the HUD — all CS006's.
+// screen, particles or the HUD — all CS007's.
 //
 // ⛔ FIVE TRAPS IN THE FIXTURES.
 //  1. The freeze only exists in Game.frame(). A case driven by Game.update()
@@ -111,10 +111,10 @@ H.assert(typeof X.spawnSkimmer === "function", "spawnSkimmer is in the build");
 H.assert(typeof X.skimmerBlinkVisible === "function", "skimmerBlinkVisible is in the build");
 
 // ⛔ Still no scoring this changeset: the extra life at C.EXTRA_LIFE_FIRST and
-// the C.LIVES_MAX ceiling are addScore()'s in CS006, and this phase must not
+// the C.LIVES_MAX ceiling are addScore()'s in CS007, and this phase must not
 // have grown a second route to them.
 H.assert(typeof X.addScore === "undefined" || X.addScore === null,
-         "no addScore exists yet — scoring is CS006's");
+         "no addScore exists yet — scoring is CS007's");
 H.assert(!("score" in state), "state carries no score field this changeset");
 
 // ---------------------------------------------------------------------------
@@ -510,6 +510,6 @@ H.assert(sawGameOver, "a passive run reaches the stop unaided");
 H.eq(maxLives, C.START_LIVES,
      "⛔ nothing awards an extra life this changeset — EXTRA_LIFE_* stays unread");
 H.eq(minLives, 0, "and the reserve is spent down to exactly zero, never past it");
-H.assert(state.skimmer !== null, "the craft object survives the stop for CS006 to draw");
+H.assert(state.skimmer !== null, "the craft object survives the stop for CS007 to draw");
 
 H.report();

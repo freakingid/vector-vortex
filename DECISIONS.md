@@ -78,7 +78,7 @@ a destination adds a privacy surface and buys no tuning benefit.
 
 **GDD §21 #6 — the Mimic gets built.** ~100 lines against a shot path that
 already exists. The probation verdict in §14.6 needs a playtest, not an
-argument. ⚠ It stays flagged: cut it in CS014 without ceremony if reflected
+argument. ⚠ It stays flagged: cut it in CS015 without ceremony if reflected
 shots read as cheap.
 
 **GDD §21 #7 — three tracks at launch:** `title`, `pulse`, `drive`. `deep` and

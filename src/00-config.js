@@ -86,6 +86,29 @@ const C = {
   // 14-render-entities.js's entityPoints() is the one reader.
   ENEMY_DEPTH_SCALE:    0.10,
 
+  // ---- Enemy palette (GDD 6.1, 3.6) ---------------------------------------
+  // ⚠ ALL PROVISIONAL, the same standing as SKIMMER_COLOR and VAULTER_COLOR:
+  // the GDD specifies no enemy palette, and the first art pass owns every one
+  // of these. They are here as ONE SET, chosen together in CS004 P1, because a
+  // palette picked four now and two later is a palette with a clash in it.
+  //
+  // ⛔ THE CONSTRAINT THEY WERE CHOSEN AGAINST: an enemy colour has to read
+  // against ALL SEVEN band colours (BAND_COLORS below, GDD 3.6), because the
+  // well cycles and the enemy palette does not. Hue alone cannot separate
+  // eight simultaneous things — silhouette and line weight carry the load, and
+  // the palette's job is narrower than "look different": stay out of the two
+  // bands players actually reach, cyan (levels 1-16) and magenta (17-32), and
+  // keep the Thorn visibly NOT A CREATURE.
+  //
+  // VAULTER_COLOR is the seventh member of this set; it sits with the Vaulter's
+  // other tunables below, where CS003 P1 put it.
+  CARRIER_COLOR:        "#FFB84A",  // ⚠ warm amber; the hull, GDD 6.1
+  WEAVER_COLOR:         "#B6FF4A",  // ⚠ acid green
+  WEAVER_BOLT_COLOR:    "#E8FF9A",  // ⚠ a paler relative of its parent
+  THORN_COLOR:          "#A98CFF",  // ⚠ cool and inert — it is not a creature
+  DRIFTER_COLOR:        "#FF5AC8",  // ⚠ unread until CS005, deliberately
+  SURGER_COLOR:         "#9AF0FF",  // ⚠ unread until CS005, deliberately
+
   // ---- Vaulter (GDD 6.1, 6.3) ---------------------------------------------
   VAULTER_SIZE:         0.70,   // lane widths spanned by the silhouette
   VAULTER_COLOR:        "#FF4A4A",  // ⚠ placeholder — same standing as SKIMMER_COLOR
@@ -104,7 +127,7 @@ const C = {
   // startGame() and in every gap between spawns.
   //
   // ENEMY_CONCURRENT is the difficulty knob — how many are on screen at once,
-  // and CS005's heat curve is what will raise it. ⛔ It is read as
+  // and CS006's heat curve is what will raise it. ⛔ It is read as
   // min(ENEMY_CONCURRENT, ENEMY_CAP): ENEMY_CAP above is a READABILITY ceiling
   // and never a difficulty knob, so the two are not interchangeable and the
   // cap is not the thing to raise when a level should feel busier.
@@ -118,9 +141,21 @@ const C = {
   SPAWN_QUOTA:          10,     // enemies released per well
   ENEMY_CONCURRENT:     3,      // ⛔ alive at once — the difficulty knob
   SPAWN_LANE_TRIES:     4,      // deterministic lane redraws before settling
-  // ⚠ TEMPORARY — the pause between the last kill and the next well. CS005's
+  // ⚠ TEMPORARY — the pause between the last kill and the next well. CS006's
   // Dive (GDD 5) replaces it entirely and this constant goes with it.
   WELL_CLEAR_HOLD:      1.00,   // s held on a cleared well before nextWell()
+
+  // ⚠ TEMPORARY, the same standing as WELL_CLEAR_HOLD above. What the interval
+  // spawner picks a kind from (pickSpawnKind, 08-spawner.js). It ships as one
+  // entry, so the game plays exactly as it did before this list existed;
+  // editing it to ["vaulter", "carrier", "weaver"] gives a mixed well with no
+  // code change, which is the whole point while GDD 8.1's introduction
+  // schedule does not exist yet. ⛔ That schedule DELETES this constant and its
+  // reader — it is a bench, not a difficulty knob, and never both.
+  //
+  // ⛔ NEVER EMPTY, and ⛔ A ONE-ENTRY LIST SPENDS NO RNG DRAW. See
+  // pickSpawnKind() for why the second one is load-bearing.
+  DEBUG_SPAWN_KINDS:    ["vaulter"],
 
   // ---- Collision (GDD 4.5) ------------------------------------------------
   // The band below the rim in which an enemy's contact kills (GDD 4.5 item 1).

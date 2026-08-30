@@ -126,6 +126,9 @@ function buildGame(opts = {}) {
     "updatePurge", "purgeTarget",
     // death, lives and respawn (05/23, CS003 P4)
     "spawnSkimmer", "respawnSkimmer", "skimmerBlinkVisible",
+    // the interval spawner's kind source (08, CS004 P1) — ⚠ TEMPORARY, it goes
+    // with C.DEBUG_SPAWN_KINDS when GDD 8.1's introduction schedule lands
+    "pickSpawnKind",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +
