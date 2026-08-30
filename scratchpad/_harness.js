@@ -98,9 +98,19 @@ function buildGame(opts = {}) {
   const env = stubEnv();
 
   // Trailing expression returns the globals a test wants to poke. Extend the
-  // list as systems land; an undefined name here is a ReferenceError, which is
-  // the correct loud failure.
-  const tail = `\n;return { C, state: (typeof state !== "undefined" ? state : null), WELLS: (typeof WELLS !== "undefined" ? WELLS : null) };`;
+  // list as systems land. ⛔ Named explicitly, never harvested from the scope:
+  // a name listed here that the build does not define comes back null, which a
+  // test asserts on loudly, rather than silently shrinking the surface.
+  const EXPORTS = [
+    "C", "state", "WELLS",
+    // the depth model (03-wells.js, CS001 P2)
+    "screenPos", "perspective", "wellThroat", "wellCentroid", "wellVertCount",
+    "rimPoint", "throatPoint",
+    "laneWrap", "laneClamp", "laneNormalize", "laneDelta", "laneHop", "laneAtWall",
+  ];
+  const tail = "\n;return {" +
+    EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +
+    "};";
   const fn = new Function("window", "document", "navigator", "performance",
                           "localStorage", "requestAnimationFrame", "AudioContext",
                           script + tail);

@@ -10,10 +10,22 @@
 
 const C = {
 
+  // ---- World / view (GDD 16.1) --------------------------------------------
+  // ⛔ Fixed internal resolution. Game math NEVER reads window size; the canvas
+  // is letterboxed by CSS. These must match src/shell.html's canvas attributes.
+  WORLD_W:              1280,
+  WORLD_H:              720,
+
   // ---- Well geometry (GDD 3) ----------------------------------------------
   PERSPECTIVE_EXP:      0.55,   // depth -> screen easing. Lower = more rush.
   THROAT_SCALE:         0.055,  // rim polygon scaled toward centroid = throat
   DIM_BAND_ALPHA:       0.18,   // levels 65-80. NOT 0 — see GDD 3.7.
+  // Where the normalized [-1,1] rim space lands on the fixed world. WELL_CY
+  // sits above centre: the well leans into the upper screen so the HUD and the
+  // near rim have room. WELL_RADIUS is the half-extent one rim unit maps to.
+  WELL_CX:              640,
+  WELL_CY:              330,
+  WELL_RADIUS:          300,
 
   // ---- Skimmer (GDD 4) ----------------------------------------------------
   SNAP_IDLE_MS:         90,     // idle time before snap assist engages
