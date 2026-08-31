@@ -287,3 +287,120 @@ repos, than in a chat working from a summary of them.
 it can see the code — the failure mode this trades for. `CLAUDE.md`'s "stop and
 surface it" rule now applies to planning sessions as well as build phases, and
 this entry is the reason.
+
+---
+
+## 2026-08-31 — CS007's three difficulty calls, answered
+
+**Answered in the CS007 planning session, against measured options, after
+`PLANNED-FEATURES-CS007.md` was committed at `578c21b`.** The measured option
+tables are left in that document — they are the reasoning behind these answers,
+not a menu still open.
+
+### H1 — the respawn guarantee under heat: **a hard cap, not a derived push**
+
+⛔ **`C.CLIMB_MULT_MAX` is 1.40 and `C.RESPAWN_PUSH_DEPTH` stays 0.55.** A
+Vaulter's terminal throat→rim becomes **3.97 s** against 5.56 s at level 1, and
+the guarantee holds with a margin of **+0.087 s** (1.587 s against
+`RESPAWN_INVULN` 1.5).
+
+⛔ **No `respawnPush()`, no `C.RESPAWN_PUSH_MARGIN`, no derived-push code
+anywhere.** Measured: at a ceiling of 1.40 the derived push evaluates to exactly
+0.55 at every level, so it would be dead code from the day it shipped. `H1`'s own
+recommendation was the derived push; it is declined because the ceiling it was
+protecting is not being raised.
+
+⛔ **`C.CLIMB_MAX_BASE` 0.18 ships anyway**, because the §17 property has to name
+the fastest contact-killer, and naming it `VAULT_CLIMB` inside a respawn assertion
+is how a future entity faster than a Vaulter escapes the guarantee silently.
+⚠ It is **not** `WEAVER_BOLT_SPEED`'s 0.32: the bolt reaches `killDepth` at
+1.250 s, inside the window, and is safe by **self-termination** at 1.406 s + one
+step rather than by the arithmetic. That is also why heat does not scale it.
+
+**What would change it.** Playtest evidence that levels 40–99 do not escalate
+enough on speed. Raising the cap past **1.4815** breaks the guarantee outright and
+is the point at which the derived push has to come back — with a second ceiling of
+its own near **2.4**, below which the push lands enemies under
+`C.READABILITY_DEPTH` and stops being legible.
+
+### H3 — the mapping shape and the five clamps: **Form A, endpoint 99, "Mid"**
+
+⛔ **Form A — endpoint interpolation**, one shared endpoint:
+`v(level) = base + (clamp - base) * min(heat(level) / heat(C.HEAT_FULL_LEVEL), 1)`,
+with `C.HEAT_FULL_LEVEL` **99**. The base already ships and the clamp is the
+number being chosen, so **the clamps ARE the curve** and no row needs a rate
+constant of its own. Form B (a per-row rate `k`) was the alternative and adds five
+difficulty numbers for expressiveness nothing has yet asked for.
+
+| Constant | Value |
+|---|---|
+| `C.HEAT_FULL_LEVEL` | 99 |
+| `C.SPAWN_INTERVAL_MIN` | 0.70 |
+| `C.ENEMY_CONCURRENT_MAX` | 8 |
+| `C.CLIMB_MULT_MAX` | 1.40 |
+| `C.VAULT_INTERVAL_MIN` | 1.00 |
+| `C.VAULT_RIM_INTERVAL_MIN` | 0.35 |
+| `C.SURGE_INTERVAL_MIN` | 1.40 |
+| `C.WEAVER_APEX_MAX` | 0.75 |
+
+⛔ **All seven heat-derived rows are clamped, which is what makes
+`C.HEAT_HOLD_LEVEL` unnecessary** — heat past a row's saturation changes nothing,
+so a hold is inert and GDD §17 item 7 (`heat(n+1) > heat(n)` over 1..200) stays
+literally true on the shipped formula. `src/02-state.js`'s note anticipating that
+constant is superseded; the rule that a hold, if ever needed, lives in the
+**caller** is not.
+
+**Three measured consequences, recorded because they are counter-intuitive:**
+
+1. **The Surger gets faster to the rim, not slower.** The floor alone would
+   lengthen its approach — its climb pauses during telegraph and discharge — but
+   at floor 1.40 with climb ×1.40 the climb more than compensates: throat→rim goes
+   8.59 s → 7.31 s while lethal duty rises 9.0 % → 14.0 %.
+2. **The rim hunt interval never goes inert.** It ends at 0.350, above the
+   `VAULT_HOP_TIME` 0.28 line at which the hop rate saturates, so the knob is live
+   at every level. ⚠ H3's stated reason for that clamp — *"or hops overlap"* — is
+   **wrong**: `Vaulter.update()` gates on `if (this.hopping) … return`, so hops
+   cannot overlap. The real consequence of approaching 0.28 is a rim Vaulter that
+   never pauses, which is a §1.1 P2 legibility question.
+3. **The Weaver's bolt keeps a real warning.** At the 0.75 apex ceiling the flight
+   is 0.781 s, still 1.7× `SURGE_TELEGRAPH`'s 0.45 s — the build's own "fair
+   difficulty is a visible fuse" benchmark. Apex **is** the Thorn's length, so one
+   number also sets 10 shots to clear, 0.25 of lane left, and a dive struck at
+   0.91 s of 2.6.
+
+⛔ **`DIFFICULTY-NOTES.md` is corrected IN PLACE, not rewritten** — its curve
+already matches `00-config.js` and `heat(1) = 0`; it survives in shape and fails
+in detail. ⛔ `SPAWN_MIN`, a constant that never existed, becomes
+`SPAWN_INTERVAL_MIN`.
+
+**What would change it.** GDD §8.2's tuning targets missed in a real playtest —
+first-time 4–6, competent 15–20, strong 30–40. `C.HEAT_FULL_LEVEL` is the single
+knob that moves the whole curve's saturation without touching a clamp.
+
+### C3 — Carrier cargo weights: **emergent from the schedule, no weight table**
+
+⛔ **The kind pick stays a uniform `rngPick` over the eligible set.** The three
+Carrier variants are three separate `ENEMY_KINDS` rows and three separate
+introduction-schedule entries, so GDD §8's *"cargo weights shift toward
+Drifter/Surger"* is delivered by arithmetic alone: 100 % Vaulter cargo at L3–17,
+50/50 at L18–22, 33/33/33 from L23. Zero code, zero constants, and the ⛔ "one
+draw when there is a choice, none when there is not" rule stays true without a
+second mechanism.
+
+⛔ **The schedule's definition and GDD §6.2 must both SAY the absence of a weight
+table is a decision**, or a future session reads it as an oversight and adds one.
+
+**What would change it.** A playtest where the cargo mix reads as arbitrary rather
+than as escalating. Option B — a weight table in `C` interpolated by heat — still
+costs exactly one RNG draw, so it remains available without disturbing the count
+guard.
+
+### ⚠ And this answer re-scoped the plan
+
+`IMPLEMENTATION-PHASES-CS007.md` carried **six** phases when it was committed; H1's
+answer removed `respawnPush()`, `RESPAWN_PUSH_MARGIN` and the monotonicity
+argument — the whole of the phase written to build them. What remained was one
+constant that has to land with the other clamps anyway and one property test, and
+a phase whose entire content is a test that a previous phase's constant satisfies
+an inequality is that phase's acceptance criterion, not a phase. ⛔ **Five phases,
+and P2 proves the guarantee before it wires a single accessor.**

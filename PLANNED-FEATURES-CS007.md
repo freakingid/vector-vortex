@@ -17,19 +17,26 @@ probes live outside the repo and this session wrote no code into `src/`,
 
 ---
 
-## ⛔ 0. THE THREE CALLS THAT ARE PAUL'S, AND THIS DOCUMENT DOES NOT ANSWER THEM
+## ⛔ 0. THE THREE CALLS THAT WERE PAUL'S — ✅ ALL ANSWERED 2026-08-31
 
 `CLAUDE.md` session rule 3 binds a planning session: being able to read the code
-is not authority to decide what the game does. Two of these are named in
-`STATUS.md`; the third is one this session found. **Options are measured below;
-none is chosen.** ⛔ **CS007's spec is not finishable until all three are
-answered.** P1 does not depend on any of them and can be built today.
+is not authority to decide what the game does. This session surfaced three calls
+with their options measured and answered none of them; **Paul answered all three
+on 2026-08-31**, in this session, after the measurements below were in front of
+him. `DECISIONS.md` carries the entry.
 
-| | The call | Blocks |
+| | The call | ✅ Answer |
 |---|---|---|
-| **H1** | How the respawn guarantee survives heat — derived push, or a hard `CLIMB_MULT_MAX` | P3 |
-| **H3** | The five floor/ceiling values, **and the shape of the heat→value mapping** | P2 |
-| **C3** | Carrier cargo weights: emergent from the schedule, or an explicit weight table | P4 |
+| **H1** | How the respawn guarantee survives heat | **A hard `C.CLIMB_MULT_MAX` of 1.40; `RESPAWN_PUSH_DEPTH` stays 0.55.** ⛔ No derived push, no `respawnPush()`, no `RESPAWN_PUSH_MARGIN` |
+| **H3** | The five floor/ceiling values, and the mapping shape | **Form A endpoint interpolation, `HEAT_FULL_LEVEL` 99, "Mid" package** — §5.1 |
+| **C3** | Carrier cargo weights | **Emergent from the introduction schedule. No weight table, no new constants** |
+
+⛔ **The measured option tables below are LEFT IN PLACE.** They are the reasoning
+behind the answers, not a menu still open; a build phase reads the answer and the
+tables tell it what the answer was chosen against.
+
+⛔ **H1's answer removed the only production code P3 was to write, so the plan is
+now FIVE phases, not six** — see `IMPLEMENTATION-PHASES-CS007.md`.
 
 ⛔ **H2 is not a call — it is a constraint this document carries throughout, and
 this session verified it empirically.** See §2.4.
@@ -107,7 +114,7 @@ the schedule's reach, and inside the split's reach.
 |---|---|
 | **the threats split (P1)** | Replaying `test-cs005-p5.js`'s `hashRun` fixture (MIXED, `ENEMY_CONCURRENT` 3, seed 20260830, 10,000 ticks): **1,082 ticks** where the spawner is blocked and `threats < 3`, **first at tick 3,380**. Max board 5, max standing Thorns 3. |
 | **heat (P2)** | Running `test-cs005-p5.js` under the per-level `C` emulation: in-process hash **3605983985** against the clean child's **2063617640**. |
-| **the schedule (P4)** | The soak's `C.DEBUG_SPAWN_KINDS = MIXED` fixture is deleted with the constant and must be replaced by a level (§4.4); any replacement changes the run. |
+| **the schedule (P3)** | The soak's `C.DEBUG_SPAWN_KINDS = MIXED` fixture is deleted with the constant and must be replaced by a level (§4.4); any replacement changes the run. |
 
 ⛔ **CS007 therefore re-records `P1_DETERMINISM_HASH` three times — once per
 moving phase — and `GOLDEN_LANES` once.** That is deliberate, and it is
@@ -207,7 +214,7 @@ were **green** under the heat emulation.
 `nextWell()` maps `wellIndex = (level - 1) % 16`, so level 8 → `WELLS[7]` =
 **Vee, `closed: false`, 13 lanes** — GDD §3.4's *"First open well; teaches the
 corner."* That row of §8.1 is documentation of shipped behaviour, not a code
-change. ⛔ Nothing in P4 touches well selection.
+change. ⛔ Nothing in P3 touches well selection.
 
 ### 1.6 ⛔ MEASURED — `vector-vortex` is ALREADY registered in the Worker's leaderboard registry.
 
@@ -221,9 +228,9 @@ level_reached · mode · start_depth · wells_cleared · purges_spent · max_com
 ```
 
 ⚠ Registered **in that repo**; whether the deployed Worker carries it is not
-measurable from here. Not CS007's scope — it is CS011's — but P5's telemetry
+measurable from here. Not CS007's scope — it is CS011's — but P4's telemetry
 columns should be a **superset** of those seven so the two instruments agree.
-P6 corrects the carried task's wording.
+P5 corrects the carried task's wording.
 
 ---
 
@@ -260,14 +267,14 @@ clamp enforceable in one place and testable as a property.
 
 | Derived value | Accessor | Base (shipped) | Clamp — ⛔ **H3, Paul's** |
 |---|---|---|---|
-| Spawn interval | `spawnInterval()` | `SPAWN_INTERVAL` 1.60 | floor `SPAWN_INTERVAL_MIN` |
-| Concurrent enemies | `enemyConcurrent()` | `ENEMY_CONCURRENT` 3 | ⛔ ceiling `ENEMY_CAP` 16 — **already the rule**, no new constant |
-| Enemy climb rate | `climbMult()` | ×1 on every entity climb | ceiling `CLIMB_MULT_MAX` — **H1** |
-| Vault interval | `vaultInterval()` | `VAULT_INTERVAL` 2.20 | floor `VAULT_INTERVAL_MIN` |
-| Rim hunt interval | `vaultRimInterval()` | `VAULT_RIM_INTERVAL` 0.55 | floor `VAULT_RIM_INTERVAL_MIN` |
-| Surge frequency | `surgeInterval()` | `SURGE_INTERVAL` 2.60 | floor `SURGE_INTERVAL_MIN` |
-| Weaver thorn length **= apex** | `weaverApex()` | `WEAVER_APEX` 0.55 | ceiling `WEAVER_APEX_MAX` |
-| Carrier cargo weights | — | — | **C3, Paul's** — §5.3 |
+| Spawn interval | `spawnInterval()` | `SPAWN_INTERVAL` 1.60 | floor `SPAWN_INTERVAL_MIN` ✅ **0.70** |
+| Concurrent enemies | `enemyConcurrent()` | `ENEMY_CONCURRENT` 3 | ceiling ✅ **`ENEMY_CONCURRENT_MAX` 8**, itself under ⛔ `ENEMY_CAP` 16 |
+| Enemy climb rate | `climbMult()` | ×1 on every entity climb | ceiling `CLIMB_MULT_MAX` ✅ **1.40** |
+| Vault interval | `vaultInterval()` | `VAULT_INTERVAL` 2.20 | floor `VAULT_INTERVAL_MIN` ✅ **1.00** |
+| Rim hunt interval | `vaultRimInterval()` | `VAULT_RIM_INTERVAL` 0.55 | floor `VAULT_RIM_INTERVAL_MIN` ✅ **0.35** |
+| Surge frequency | `surgeInterval()` | `SURGE_INTERVAL` 2.60 | floor `SURGE_INTERVAL_MIN` ✅ **1.40** |
+| Weaver thorn length **= apex** | `weaverApex()` | `WEAVER_APEX` 0.55 | ceiling `WEAVER_APEX_MAX` ✅ **0.75** |
+| Carrier cargo weights | — | — | ✅ **none — emergent from the schedule** (C3) |
 
 ⛔ **`climbMult()` is ONE multiplier applied to every entity's climb rate** —
 `VAULT_CLIMB`, `CARRIER_CLIMB`, `WEAVER_CLIMB`, `DRIFT_CLIMB`, `SURGE_CLIMB`.
@@ -294,10 +301,9 @@ own saturation level, so heat past that point has **no effect on any value in th
 build**. A hold is then inert by construction, and GDD §17 item 7 stays green on
 the shipped formula with no clamping inside `heat()` at all.
 
-⚠ **The condition is "every row clamped".** If Paul's H3 answer leaves a row
-without a clamp, `C.HEAT_HOLD_LEVEL` comes back for that row and the item-7
-assertion becomes the thing that catches it. **P2 asserts the property, not the
-constant.**
+⚠ **The condition is "every row clamped".** ✅ **H3's answer clamps all seven
+rows**, so the condition is met and no hold ships. **P2 asserts the property, not
+the constant.**
 
 ### 2.4 ⛔ H2 — the constraint this document carries, now measured
 
@@ -428,16 +434,35 @@ form, for `CLIMB_MULT_MAX` 1.40:
 | 1.4815 | 0.267 | 3.75 s | 1.500 s | ⛔ **0.000 — breach** |
 | 2.00 | 0.360 | **2.78 s** | 1.111 s | ⛔ −0.389 |
 
-### 3.4 ⛔ The call, stated plainly
+### 3.4 ✅ ANSWERED — a hard `C.CLIMB_MULT_MAX` of **1.40**, and `RESPAWN_PUSH_DEPTH` stays 0.55
 
-**How fast is a Vaulter allowed to get at the top of the curve?** Base is 5.56 s
-throat→rim. A cap of 1.40 buys 3.97 s and keeps the shipped 0.55 push with 0.087 s
-to spare — and makes the derived push dead code. A cap of 2.0 buys 2.78 s and
-*requires* the derived push (0.41 at `MARGIN` 1.00). It is a difficulty question,
-not an engineering one.
+**Paul, 2026-08-31.** A Vaulter's terminal throat→rim is **3.97 s** against 5.56 s
+at level 1, and the shipped 0.55 push holds with **+0.087 s** of margin.
 
-⛔ **What does NOT depend on the answer, and so is specified now:** GDD §17 item 7's
-assertion becomes a **property over levels 1..200** either way —
+⛔ **NOTHING IS BUILT FOR THE DERIVED PUSH.** No `respawnPush()`, no
+`C.RESPAWN_PUSH_MARGIN`, no `C.CLIMB_MAX_BASE` derivation. **MEASURED: at a
+ceiling of 1.40 the derived push evaluates to exactly 0.55 at every level, so it
+would be dead code from the day it shipped.** A build phase that finds this
+section's Option-1 sketch and builds it is building a decision that was not made.
+
+⛔ **`C.CLIMB_MAX_BASE` still ships as a named constant** — 0.18, `VAULT_CLIMB`'s
+value — because the §17 property below has to name the fastest contact-killer,
+and naming it `VAULT_CLIMB` inside a respawn assertion is how a future entity
+faster than a Vaulter escapes the guarantee silently.
+
+**MEASURED — the whole roster at ×1.40, time from the 0.55 push to `killDepth`:**
+
+| Constant | ×1.40 | push→kill | verdict |
+|---|---|---|---|
+| `VAULT_CLIMB` | 0.2520 | 1.587 s | ⛔ **binds — margin +0.087 s** |
+| `SURGE_CLIMB` | 0.2100 | 1.905 s | +0.405 s |
+| `DRIFT_CLIMB` | 0.1820 | 2.198 s | +0.698 s |
+| `CARRIER_CLIMB` | 0.1540 | 2.597 s | +1.097 s |
+| `WEAVER_CLIMB` | 0.3080 | — | `killDepth = null`, never contact-kills |
+| `WEAVER_BOLT_SPEED` | ⛔ **0.32, unscaled** | 1.250 s | dies at depth 1 at 1.406 s + one step — inside the window |
+
+⛔ **GDD §17 item 7's assertion is a property over levels 1..200 regardless**, and
+it is what catches a future retune that walks past 1.4815 —
 
 ```
 for level in 1..200:
@@ -446,15 +471,13 @@ for level in 1..200:
     and every derived value of §2.2 is inside its clamp
 ```
 
-Under Option 2, `respawnPush(level)` is the constant. The test is identical, so
-**P3's test can be written before the call is answered.**
+`respawnPush(level)` is the constant 0.55 throughout. ⛔ **And the property must
+be driven through the real `respawnSkimmer()` as well as evaluated as
+arithmetic** — a property over constants is not a proof that the code reads them.
 
-⚠ **PREDICTED — P3 moves no baseline.** Under Option 2 the push is unchanged, so
-by construction. Under Option 1: **MEASURED**, with the interp-to-`heat(27)` form
-and `CLIMB_MULT_MAX` 1.40, `climbMult(15) = 1.314`, below the 1.347 at which the
-push first moves at `MARGIN` 1.10 — and level 15 is the deepest any closed soak
-reaches (§1.4). ⛔ **P3 must verify this rather than assume it**, because a
-different H1 answer breaks it, and the prompt says so.
+✅ **The guarantee therefore moves no baseline: `RESPAWN_PUSH_DEPTH` is
+unchanged, so nothing about a respawn changes at any level.** That is what
+collapsed the old P3 into P2.
 
 ---
 
@@ -504,7 +527,7 @@ tested stalls**: across four seeds × two drivers × 18,000 ticks, the level nev
 leaves 1 and the longest stretch with no level and no quota movement is
 **16,336–17,806 ticks** — 4.5 to 5 minutes of a well that cannot finish.
 
-⛔ **This is why P1 lands before P4.** Shipping the schedule first would put a
+⛔ **This is why P1 lands before P3.** Shipping the schedule first would put a
 five-minute stall into the middle of the changeset.
 
 ### 4.3 GDD §8.1's introduction schedule — what ships
@@ -553,7 +576,7 @@ address. `PLAYTEST.md` is written around them, the six enemy colours are still �
 provisional and `0` is the only way to see them together. They ship until CS016
 decides whether debug keys ship at all.
 
-### 4.4 ⛔ The seven closed files P4 must repair, IN PLACE
+### 4.4 ⛔ The seven closed files P3 must repair, IN PLACE
 
 `CLAUDE.md`, Test rules: *"When a later changeset REPLACES behaviour a closed
 phase's test asserts, it rewrites those assertions IN PLACE to the replacement
@@ -584,7 +607,7 @@ state.wellIndex = (N - 1) % X.WELLS.length;
 X.enterWell();
 ```
 
-⚠ **Two files need something else, and P4 must decide which — this is engineering,
+⚠ **Two files need something else, and P3 must decide which — this is engineering,
 not design, and the options are named so the phase executes rather than invents.**
 `test-cs005-p2.js` and `test-cs005-p3.js` each want a **single-kind** well
 (Drifters only, Surgers only) to prove *"the interval spawner releases these when
@@ -637,22 +660,25 @@ a dive spends 0
 
 ⛔ **Under the schedule this becomes a function of the eligible-set size, and it
 is checkable at every level**: `+0` at levels 1–2, `+1` from level 3. That is
-strictly more than it could say before, and it is what lets P2's and P4's
+strictly more than it could say before, and it is what lets P2's and P3's
 re-records be *checked* rather than merely recorded.
 
 ---
 
 ## 5. WHAT EACH OPEN CALL NEEDS, WITH THE OPTIONS MEASURED
 
-### 5.1 ⛔ H3 — the five values, AND the shape of the mapping
+### 5.1 ✅ H3 — ANSWERED: Form A, `HEAT_FULL_LEVEL` 99, the "Mid" package
 
 `DIFFICULTY-NOTES.md`'s curve matches `00-config.js` exactly and `heat(1) = 0`;
 that half is right and is kept. Four rows need a clamp they do not have, and two
 of its rows are one knob.
 
-#### The mapping form — this is part of the call, because the clamp values mean different things under each
+#### ✅ The mapping form — Form A, with `C.HEAT_FULL_LEVEL` 99
 
-**Form A — endpoint interpolation (recommended).**
+**Paul, 2026-08-31.** The clamp values are stated as level-99 endpoints, which is
+Form A by construction.
+
+**Form A — endpoint interpolation. ✅ CHOSEN.**
 ```js
 v(level) = base + (clamp - base) * min(heat(level) / C.HEAT_FULL, 1)
 ```
@@ -670,18 +696,63 @@ at it, `climbMult(27)` = 1.204 and `climbMult(50)` = 1.268 for a
 
 **Form B — per-row rate.** `max(base / (1 + k·heat), floor)`, one `k` per row.
 More expressive; five more difficulty numbers; each row saturates at a different
-level, so §2.3's argument has to be checked per row.
+level, so §2.3's argument has to be checked per row. ⛔ **Not chosen.**
+
+#### ✅ THE SHIPPED CURVE — every derived value, at every level that matters
+
+**MEASURED** from the answers, `HEAT_FULL_LEVEL` 99 → `heat(99)` = 2.96000,
+`t(L) = min(heat(L)/2.96, 1)`, `v(L) = base + (clamp - base)·t(L)`:
+
+| L | t | spawn iv | concur | climbMult | vault iv | rim iv | surge iv | apex | Vaulter throat→rim |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 0.000 | 1.600 | 3 | 1.0000 | 2.200 | 0.550 | 2.600 | 0.550 | 5.56 s |
+| 5 | 0.191 | 1.428 | 3 | 1.0766 | 1.970 | 0.512 | 2.370 | 0.588 | 5.16 s |
+| 9 | 0.303 | 1.327 | 4 | 1.1211 | 1.837 | 0.489 | 2.237 | 0.611 | 4.96 s |
+| 13 | 0.373 | 1.264 | 4 | 1.1493 | 1.752 | 0.475 | 2.152 | 0.625 | 4.83 s |
+| 23 | 0.478 | 1.170 | 5 | 1.1911 | 1.627 | 0.454 | 2.027 | 0.646 | 4.66 s |
+| 27 | 0.509 | 1.142 | 5 | 1.2036 | 1.589 | 0.448 | 1.989 | 0.652 | 4.62 s |
+| 40 | 0.601 | 1.059 | 6 | 1.2403 | 1.479 | 0.430 | 1.879 | 0.670 | 4.48 s |
+| 50 | 0.669 | 0.998 | 6 | 1.2675 | 1.397 | 0.416 | 1.797 | 0.684 | 4.38 s |
+| 70 | 0.804 | 0.876 | 7 | 1.3216 | 1.235 | 0.389 | 1.635 | 0.711 | 4.20 s |
+| 99+ | 1.000 | **0.700** | **8** | **1.4000** | **1.000** | **0.350** | **1.400** | **0.750** | **3.97 s** |
+
+⛔ **The concurrency ladder, measured** — `enemyConcurrent()` floors a continuous
+value, so it steps, and a player can name each step:
+
+```
+3 at levels 1-5   ·   4 from 6   ·   5 from 16   ·   6 from 40   ·   7 from 70   ·   8 at 99
+```
+
+⚠ **Concurrency is still 3 at level 5, which is exactly where the Weaver arrives**
+— so P1's threats split is doing its work at the tightest budget the run ever has.
+⛔ `C.ENEMY_CAP` 16 is never approached and is not touched.
+
+**MEASURED — three consequences worth knowing before a build phase meets them:**
+
+1. ⛔ **The Surger gets FASTER to the rim, not slower.** §5.1's warning was that a
+   falling `SURGE_INTERVAL` lengthens the approach because the climb pauses during
+   telegraph and discharge. At the chosen pair — floor 1.40 with climb ×1.40 — the
+   climb more than compensates: throat→rim goes **8.59 s → 7.63 s (L27) → 7.31 s
+   (L99)** while lethal duty rises 9.0 % → 14.0 %. The break-even multiplier at a
+   1.40 floor is ×1.164 and the shipped ceiling is 1.40.
+2. ⛔ **The rim hunt interval never goes inert.** It ends at 0.350, above the
+   `VAULT_HOP_TIME` 0.28 saturation line, so the knob is live at every level. At
+   L99 a rim Vaulter is hopping ~79 % of ticks and still visibly pauses.
+3. ⛔ **The Weaver's bolt keeps a real warning.** At the 0.75 apex ceiling the
+   flight is **0.781 s**, still 1.7× `SURGE_TELEGRAPH`'s 0.45 s — the build's own
+   "fair difficulty is a visible fuse" benchmark. The Thorn costs 10 shots, leaves
+   0.25 of the lane, and a dive is struck at 0.91 s of 2.6.
 
 #### The five values
 
 | Row | Constant to land | ⛔ MEASURED consequence of the choice |
 |---|---|---|
-| **Spawn interval** | `C.SPAWN_INTERVAL_MIN` (H3 names it; ⚠ **not** `SPAWN_MIN` — see §6) | ⚠ **Almost inert on its own.** At `ENEMY_CONCURRENT` 3, dropping the interval 1.60 → 0.35 moved spawns in 60 s from **19 to 20** and blocked ticks from 1,016 to 2,088. Choose it **with** the concurrency curve, not against it. |
-| **Concurrent** | none — ⛔ `ENEMY_CAP` 16 is already the ceiling | ⛔ **This is the knob that actually changes a well.** At interval 1.60, concurrency 3 → 8 took blocked ticks 1,016 → 21 and cleared two levels instead of one. Mean live enemies never exceeded **3.85** even at concurrency 16 with a firing player, so `ENEMY_CAP` 16 is nowhere near binding. |
-| **Climb** | `C.CLIMB_MULT_MAX` | ⛔ **H1** — §3. |
-| **Vault intervals** | `C.VAULT_INTERVAL_MIN`, `C.VAULT_RIM_INTERVAL_MIN` | ⛔ **H3's stated reason is wrong, and the real one is better** — see below. |
-| **Surge frequency** | `C.SURGE_INTERVAL_MIN` | ⛔ **A falling interval makes the Surger SLOWER** — see below. |
-| **Weaver apex = thorn length** | `C.WEAVER_APEX_MAX` | ⛔ **One number sets four things** — see below. |
+| **Spawn interval** | ✅ `C.SPAWN_INTERVAL_MIN` **0.70** (⚠ **not** `SPAWN_MIN`, which never existed) | ⚠ **Almost inert on its own.** At `ENEMY_CONCURRENT` 3, dropping the interval 1.60 → 0.35 moved spawns in 60 s from **19 to 20** and blocked ticks from 1,016 to 2,088. Choose it **with** the concurrency curve, not against it. |
+| **Concurrent** | ✅ `C.ENEMY_CONCURRENT_MAX` **8**, under ⛔ `ENEMY_CAP` 16 | ⛔ **This is the knob that actually changes a well.** At interval 1.60, concurrency 3 → 8 took blocked ticks 1,016 → 21 and cleared two levels instead of one. Mean live enemies never exceeded **3.85** even at concurrency 16 with a firing player, so `ENEMY_CAP` 16 is nowhere near binding. |
+| **Climb** | ✅ `C.CLIMB_MULT_MAX` **1.40** | ⛔ **H1** — §3.4. |
+| **Vault intervals** | ✅ `C.VAULT_INTERVAL_MIN` **1.00**, `C.VAULT_RIM_INTERVAL_MIN` **0.35** | ⛔ **H3's stated reason is wrong, and the real one is better** — see below. |
+| **Surge frequency** | ✅ `C.SURGE_INTERVAL_MIN` **1.40** | ⛔ **A falling interval makes the Surger SLOWER** — see below. |
+| **Weaver apex = thorn length** | ✅ `C.WEAVER_APEX_MAX` **0.75** | ⛔ **One number sets four things** — see below. |
 
 #### ⛔ MEASURED — a `VAULT_RIM_INTERVAL` floor below `VAULT_HOP_TIME` does not overlap hops. It saturates.
 
@@ -762,13 +833,16 @@ unconditional clamp. ⛔ **No change is needed there; do not "tidy" it.**
 
 #### And the document itself
 
-The last half of the call: is `DIFFICULTY-NOTES.md` **corrected in place** or
-**rewritten against what CS007 actually ships**? ⚠ It is the one document in the
-repo never exercised, and P6 owns whichever answer.
+✅ **`DIFFICULTY-NOTES.md` is CORRECTED IN PLACE.** Recommended and taken —
+H3's own finding is that the document *"survives in shape and fails in detail"*,
+its curve matches `00-config.js` exactly and `heat(1) = 0`. Four rows gain the
+clamp they lack, the two rows that are one knob say so, and ⛔ `SPAWN_MIN` — a
+constant that never existed — is corrected to `SPAWN_INTERVAL_MIN`. ⚠ It is the
+one document in the repo never exercised; the closing phase is what exercises it.
 
 ### 5.2 ⛔ H1 — see §3
 
-### 5.3 ⛔ C3 — Carrier cargo weights (the third call, found this session)
+### 5.3 ✅ C3 — ANSWERED: emergent from the schedule, no weight table
 
 GDD §8 and `DIFFICULTY-NOTES.md` both carry a row: *"Carrier cargo weights shift
 toward Drifter/Surger."* GDD §6.2 says explicitly: ⚠ *"Still **not a weighted
@@ -789,11 +863,15 @@ arithmetic alone. **MEASURED** from the eligible sets in §4.3:
 one-draw rule trivially true.
 
 **Option B — an explicit weight table in `C` that heat interpolates.** Still
-exactly one draw (cumulative weights), but five to seven more difficulty numbers
-and a second thing that decides the mix.
+exactly one draw, but five to seven more difficulty numbers and a second thing
+that decides the mix. ⛔ **Not chosen.**
 
-⛔ **The call is whether Option A satisfies §8's row, or whether the shift wants
-to be steerable.** A one-word answer finishes P4's spec.
+✅ **Paul, 2026-08-31: Option A.** The schedule delivers GDD §8's row literally,
+at zero cost, and the kind pick stays a uniform `rngPick` over the eligible set —
+⛔ which is what keeps "one draw when there is a choice, none when there is not"
+true without a second mechanism. ⛔ **The schedule's definition and GDD §6.2 must
+both SAY there is no weight table**, so a future session does not read the missing
+one as an oversight.
 
 ---
 
@@ -875,14 +953,14 @@ edits two things together; a column added in CS008 invalidates every CS007 log.
 simulation clock — never from `draw()`** (`CLAUDE.md`, Math and lifecycle;
 `RATIONALE.md#draw-path-rng`). A sample taken on the frame clock would make a
 capture-on run diverge from a capture-off one, which is GDD §17.1's replay
-guarantee failing in the one system built to observe it. ⛔ **P5 asserts that the
+guarantee failing in the one system built to observe it. ⛔ **P4 asserts that the
 determinism hash is identical with capture ON and OFF.**
 
 ---
 
 ## 7. ⛔ ACCEPTANCE CRITERIA
 
-P6 answers each of these with a verdict, one by one, in `log/CS007.md`. Not "all
+P5 answers each of these with a verdict, one by one, in `log/CS007.md`. Not "all
 green" — the list.
 
 **The clock**
@@ -894,7 +972,11 @@ green" — the list.
 4. `C.HEAT_BASE`, `HEAT_RISE`, `HEAT_KNEE`, `HEAT_LINEAR` are unchanged.
 
 **The guarantee**
-5. The §3.4 property holds over levels 1..200 on the shipped constants.
+5. The §3.4 property holds over levels 1..200 on the shipped constants, and is
+   ⛔ **driven through the real `respawnSkimmer()`** at a high level as well as
+   evaluated as arithmetic.
+5a. ⛔ `RESPAWN_PUSH_DEPTH` is **0.55, unchanged**, and no `respawnPush()`,
+   `RESPAWN_PUSH_MARGIN` or derived-push code exists anywhere in the build.
 6. `SURGE_DISCHARGE < RESPAWN_INVULN` — ⛔ `test-cs005-p3.js` green **and
    unedited**.
 7. ⛔ `VAULT_HOP_TIME`, `DRIFT_CROSS_TIME` and `DRIFT_RIDE_TIME` are unchanged and
@@ -944,9 +1026,9 @@ green" — the list.
 - ⛔ **No Dive visual.** `STATUS.md` calls it the largest gap in the build between
   what is simulated and what is seen; no changeset owns it and CS007 is not it.
 - ⛔ **No enemy is added, no `ENEMY_KINDS` row is added.** `test-registry.js`'s
-  `enemies: 6` and `enemyKinds: 9` are unchanged, and P6 confirms it.
+  `enemies: 6` and `enemyKinds: 9` are unchanged, and P5 confirms it.
 - ⛔ **No spawn-lane weighting toward the player's lane.** GDD §12's four-second
-  promise is onboarding and is CS015's (`ROADMAP.md` assumption #6). ⚠ If P4 finds
+  promise is onboarding and is CS015's (`ROADMAP.md` assumption #6). ⚠ If P3 finds
   it falls out of the schedule for free, **note it, do not take it.**
 - ⛔ **`src/07-enemies.js` is not split.** That is CS012's, measured and recorded
   in `ROADMAP.md`.
@@ -959,11 +1041,12 @@ green" — the list.
 | Risk | Mitigation |
 |---|---|
 | ⛔ **Three re-records of one constant is three chances to launder a stray draw** | §4.5's count guard needs no baseline and is checked at every level; §1.1's level-1 prefix invariant; `test-cs006-p2.js`'s three geometry goldens must not move |
-| P4 is the biggest phase — seven closed files plus `_harness.js` | The edit inventory is measured (§4.4) and the replacement fixture is specified, so the phase executes rather than invents. P4 is **high** effort |
-| A curve Paul picks may push the golden's window into level 3 | ⚠ **MEASURED**: every curve tried ended the window at level 2. ⛔ P4 re-runs the golden and asserts it still ends at level 2 — if it reaches 3, P4 owns a second `GOLDEN_LANES` re-record with its own cause |
-| The soaks get much harder at level 5 / level 23 and start failing on time | ⚠ **MEASURED**: under heat, only *non-vacuity* assertions moved (§1.4). P4 must re-check the run caps (`RUN_CAP` 30,000 ticks) after the fixture change |
-| H1's derived push engages inside a soak's level range and moves a hash | ⚠ **MEASURED** inert to level 15 on one candidate curve; ⛔ P3 verifies rather than assumes |
+| P3 is the biggest phase — seven closed files plus `_harness.js` | The edit inventory is measured (§4.4) and the replacement fixture is specified, so the phase executes rather than invents. P3 is **high** effort |
+| A curve Paul picks may push the golden's window into level 3 | ⚠ **MEASURED**: every curve tried ended the window at level 2. ⛔ **MEASURED on the shipped curve: it ends at level 2** (spawn interval 1.600 at L1, 1.428 at L2). P3 re-runs it and confirms; if it ever reaches 3, that is a second `GOLDEN_LANES` re-record with its own cause |
+| The soaks get much harder at level 5 / level 23 and start failing on time | ⚠ **MEASURED**: under heat, only *non-vacuity* assertions moved (§1.4). P3 must re-check the run caps (`RUN_CAP` 30,000 ticks) after the fixture change |
+| ~~H1's derived push engages inside a soak's level range~~ | ✅ **Gone.** H1's answer keeps `RESPAWN_PUSH_DEPTH` at 0.55, so a respawn is unchanged at every level and the guarantee moves no baseline |
 | Telemetry sampling perturbs the simulation | ⛔ Acceptance criterion 18: hash identical with capture ON and OFF |
+| ⛔ **A build phase reads §3.2's derived-push sketch and builds it** | §3.4 marks it ⛔ not chosen and says why it would be dead code. The sketch is kept because it is what 1.40 was chosen against |
 
 ---
 
@@ -971,9 +1054,9 @@ green" — the list.
 
 | # | Assumption | What would change it |
 |---|---|---|
-| 1 | **Six phases**, seamed as `IMPLEMENTATION-PHASES-CS007.md` argues | A phase that overruns a session means the seam was wrong; P5 (telemetry) is the one with slack |
-| 2 | ⛔ **P1 lands before P4** | Nothing. §4.2 measured a five-minute stall on every seed the moment Weavers are eligible |
+| 1 | **Five phases**, seamed as `IMPLEMENTATION-PHASES-CS007.md` argues. ⚠ **Six until H1 was answered** — the answer removed the only production code the old P3 was to write | A phase that overruns a session means the seam was wrong; P4 (telemetry) is the one with slack |
+| 2 | ⛔ **P1 lands before P3 (the schedule)** | Nothing. §4.2 measured a five-minute stall on every seed the moment Weavers are eligible |
 | 3 | ⛔ **P1 needs none of the three open calls** and can be built today | Nothing — it builds a decision already in `DECISIONS.md` |
-| 4 | The heat→value mapping is Form A (endpoint interpolation), pending H3 | Paul picking Form B; the accessors and the clamps are unchanged either way, only their interiors |
+| 4 | ✅ The heat→value mapping is Form A, `HEAT_FULL_LEVEL` 99 — **answered, not assumed** | Playtest evidence that the curve saturates too late or too early; the accessors do not change, only `HEAT_FULL_LEVEL` |
 | 5 | Telemetry lands after heat, not before | `ROADMAP.md` assumption #3: the columns want the derived values to exist, and `TELEMETRY_FIELDS` and `push()` must be edited together |
 | 6 | The soaks' `ENEMY_CONCURRENT = ENEMY_CAP` fixture is **kept**, its comment corrected | Evidence that the busy board is now redundant — which is a playtest answer, not an argument |

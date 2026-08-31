@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.3 · Changeset: CS007 (not started) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.3 · Changeset: CS007 (planned, not started) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS007
 
@@ -203,76 +203,109 @@ One line per phase here; reasoning goes to `log/CS007.md`. Nothing yet.
 
 ## Next up — CS007, the run escalates
 
-**The heat clock, GDD §8.1's introduction schedule, the spawner-stall call, and
-telemetry as the tuning instrument.** ⚠ One clock: `game.level` (`CLAUDE.md`,
-Config; `DIFFICULTY-NOTES.md`). Every heat-derived value comes off it. No
-parallel clocks.
+**The heat clock, GDD §8.1's introduction schedule, the spawner-stall split, and
+telemetry as the tuning instrument.** ⚠ One clock: `game.level`. Every
+heat-derived value comes off it. No parallel clocks.
 
-⛔ **CS007's spec is written from `archive/PLANNED-FEATURES-CS006.md`'s
-"⛔ Handover to CS007" section** (H1–H6). It is not restated here and it is not
-optional reading — it is six findings CS006 made and deliberately did not act
-on:
+⛔ **THE SPEC IS WRITTEN AND FINISHED. Read `PLANNED-FEATURES-CS007.md` and
+`IMPLEMENTATION-PHASES-CS007.md`; the CS006 handover section they were written
+from is spent.** Planned 2026-08-31 against `1d64329`; every claim in both
+documents is marked MEASURED or PREDICTED.
 
-| | |
+✅ **ALL THREE DESIGN CALLS ARE ANSWERED — Paul, 2026-08-31.** Full entry with the
+reasoning and the "what would change it" for each in `DECISIONS.md`; the measured
+option tables stay in `PLANNED-FEATURES-CS007.md` §3 and §5.
+
+| | ✅ Answer |
 |---|---|
-| **H1** | ⛔ Heat breaks the respawn guarantee. The fix is a **derived push**, not a clamp on the multiplier, and §17's assertion becomes a property over levels 1..200. ⛔ **PAUL'S CALL, OPEN — see below** |
-| **H2** | `SURGE_DISCHARGE < RESPAWN_INVULN` survives if heat is disciplined: ⛔ **heat scales intervals, climb rates and the Weaver's apex — never a crossing or hop duration.** That discipline is what protects three closed soaks' derived lane bounds for free |
-| **H3** | `DIFFICULTY-NOTES.md` survives in shape and fails in detail — four rows are missing a clamp, and two of its rows are one knob. ⛔ **PAUL'S CALL, OPEN — see below** |
-| **H4** | ✅ **ANSWERED 2026-08-31 — threats, not entities** (see Known issues). CS007 builds it; it is no longer a call to make |
-| **H5** | ⛔ The debug **keys** survive the constant and stop being TEMPORARY |
-| **H6** | The golden's guard role — ✅ **done at CS006 P5**, in `test-cs006-p5.js` |
+| **H1** | A hard `C.CLIMB_MULT_MAX` of **1.40**; `RESPAWN_PUSH_DEPTH` stays **0.55**. ⛔ **No derived push, no `respawnPush()`, no `RESPAWN_PUSH_MARGIN`** — at 1.40 it would evaluate to 0.55 at every level and ship as dead code |
+| **H3** | **Form A** endpoint interpolation, `C.HEAT_FULL_LEVEL` **99**, the "Mid" clamp package (below). `DIFFICULTY-NOTES.md` is corrected **in place** |
+| **C3** | Carrier cargo weights are **emergent from the introduction schedule**. ⛔ No weight table, no new constants, and the schedule and GDD §6.2 must both say that is a decision |
 
-⛔ **CS007 owns exactly one baseline re-record and it is `GOLDEN_LANES`**, moved
-by the introduction schedule changing the draw count per spawn. Re-record it
-once, with the cause named, and check it against `test-cs006-p5.js`'s
-draws-per-spawn count rather than against the old sequence alone.
+### ⛔ The shipped curve
 
-### ⛔ TWO DESIGN CALLS THE PLANNING SESSION MUST SURFACE, NOT ANSWER
+```js
+v(level) = base + (clamp - base) * min(heat(level) / heat(C.HEAT_FULL_LEVEL), 1)
+```
 
-`CLAUDE.md` session rule 3 binds a planning session as well as a build phase:
-being able to read the code is not authority to decide what the game does. These
-two are Paul's, they are open as of 2026-08-31, and ⛔ **CS007's spec is not
-finished until both are answered.** Neither blocks *starting* the planning
-session — measure the options, present them, stop.
+| Constant | Value | | Constant | Value |
+|---|---|---|---|---|
+| `HEAT_FULL_LEVEL` | 99 | | `VAULT_INTERVAL_MIN` | 1.00 |
+| `SPAWN_INTERVAL_MIN` | 0.70 | | `VAULT_RIM_INTERVAL_MIN` | 0.35 |
+| `ENEMY_CONCURRENT_MAX` | 8 | | `SURGE_INTERVAL_MIN` | 1.40 |
+| `CLIMB_MULT_MAX` | 1.40 | | `WEAVER_APEX_MAX` | 0.75 |
+| `CLIMB_MAX_BASE` | 0.18 | | `RESPAWN_PUSH_DEPTH` | **0.55, unchanged** |
 
-**1. ⛔ H1 — how the respawn guarantee survives heat.** `RESPAWN_PUSH_DEPTH` 0.55
-is chosen so a pushed enemy cannot climb back into contact before
-`RESPAWN_INVULN` expires: `(1 - 0.05 - 0.55) / 0.18 = 2.22 s > 1.5 s` at
-`VAULT_CLIMB`. The margin is 0.72 s and a climb multiplier of **1.48×** spends
-it. The binding entity is the Vaulter.
+⛔ **The concurrency ladder steps, and a player is meant to be able to name each
+step:** 3 at levels 1–5 · 4 from 6 · 5 from 16 · 6 from 40 · 7 from 70 · 8 at 99.
+⚠ Still 3 at level 5, which is where the Weaver arrives — the stall split does its
+work at the tightest budget the run ever has. ⛔ `C.ENEMY_CAP` 16 is never
+approached and is not touched.
 
-- **H1's recommendation** is a **derived push** — `respawnPush()` computes the
-  push from the guarantee rather than clamping the multiplier, so the guarantee
-  is the spec and the number falls out of it. Monotone-safe, inert until level
-  ~90 at `CLIMB_MULT_MAX` 1.40, and §17 item 7's assertion becomes a property
-  over levels 1..200 rather than a constant pair.
-- **The alternative** is a hard `CLIMB_MULT_MAX` low enough that 0.55 always
-  holds — simpler, one constant, and it caps how fast the game can ever get.
-- ⛔ **The call is which of those two the game wants**, and it is a difficulty
-  question, not an engineering one. Measure both curves before presenting them.
+⛔ **All seven heat-derived rows are clamped, so `C.HEAT_HOLD_LEVEL` is NOT
+built.** `src/02-state.js`'s note anticipating it is superseded; the rule that a
+hold, if one is ever needed, belongs in the **caller** is not.
 
-**2. ⛔ H3 — `DIFFICULTY-NOTES.md`'s four missing clamps, and one that does not
-exist.** The document's curve matches `00-config.js`'s four constants exactly and
-`heat(1) = 0`, so that half is right and is kept. Four rows need a clamp they do
-not have:
+### ⛔ Five phases, and P1 is unblocked today
 
-| Row | Doc says | Needs |
+| Phase | Builds | Effort |
 |---|---|---|
-| Spawn interval | floor `SPAWN_MIN` | ⚠ **that constant does not exist** — H3 proposes naming it `SPAWN_INTERVAL_MIN` |
-| Enemy climb speed | — | ⛔ `CLIMB_MULT_MAX` — this is H1 |
-| Vault interval | — | a floor, and ⛔ `VAULT_RIM_INTERVAL` must stay ≥ `VAULT_HOP_TIME` or hops overlap |
-| Surge frequency | — | a floor; interval → 0 is a permanently live lane |
-| Weaver thorn length | lane length | ⛔ an apex ceiling **below** the rim — GDD §6.1 says a Weaver climbs *partway* |
+| P1 | The spawner-stall split — the budget counts THREATS | medium |
+| P2 | The heat clock, every derived value, and the respawn guarantee | **high** |
+| P3 | GDD §8.1's introduction schedule | **high** |
+| P4 | Telemetry — the tuning instrument | medium |
+| P5 | The soak, the docs, the close | **high** |
 
-⛔ **And two of its rows are one knob.** `Weaver.layThorn()` writes the Thorn's
-tip to the Weaver's own depth, so *thorn length IS apex*. `WEAVER_APEX` carries a
-⚠ note promising a heat-derived value and the doc asks for a second, separate
-one. There is only one. **The call is the five floor/ceiling VALUES**, which are
-difficulty numbers, plus whether `DIFFICULTY-NOTES.md` is corrected in place or
-rewritten against what CS007 actually ships.
+⛔ **P1 lands before P3, measured:** on a level-5 eligible set at
+`C.ENEMY_CONCURRENT` 3 every seed tested stalls — four seeds × two drivers ×
+18,000 ticks, the level never leaves 1, longest stretch with no progress
+16,336–17,806 ticks. Blocked spawner beats go 7,027 → 30,579 the moment a Weaver
+becomes eligible and **94.6 % of them are beats the split releases.**
 
-⛔ **H2 is not a call — it is a constraint the spec must carry.** Heat scales
-intervals, climb rates and the Weaver's apex, and ⛔ **never a crossing or hop
-duration**. `VAULT_HOP_TIME`, `DRIFT_CROSS_TIME` and `DRIFT_RIDE_TIME` are
-untouched by the clock. That discipline is what keeps three closed soaks' derived
-lane bounds valid without re-deriving them through a multiplier.
+⚠ **The plan was SIX phases when first committed (`578c21b`).** H1's answer
+removed the only production code the old P3 was to write, so it collapsed into
+P2 — which now proves the guarantee **before** it wires a single accessor.
+
+### ⛔ FOUR BASELINE RE-RECORDS, NOT ONE — this corrects what this file used to say
+
+`test-cs006-p2.js`'s `P1_DETERMINISM_HASH` is a **cross-file** baseline: it runs
+the closed `test-cs005-p5.js` in a child process, and that soak reaches level 15
+on a six-kind board. **Measured: three separate CS007 changes move it.**
+
+| Phase | Baseline | ⛔ Cause — exactly one each |
+|---|---|---|
+| P1 | `P1_DETERMINISM_HASH` | the release budget counts threats — 1,082 diverging ticks in that soak's own fixture, first at tick 3,380 |
+| P2 | `GOLDEN_LANES` | heat lowers the level-2 spawn interval (1.600 → 1.428), so another spawn fits the window |
+| P2 | `P1_DETERMINISM_HASH` | heat |
+| P3 | `P1_DETERMINISM_HASH` | the soak's kind fixture becomes a level |
+
+⛔ **`GOLDEN_LANES`'s first ten entries — `10,10,12,0,8,14,12,12,8,14` — must NOT
+move.** They are the level-1 spawns and `heat(1)` is 0. A re-record that moves them
+is heat leaking into level 1, or a draw spent at level 1: a bug, not a baseline.
+
+⛔ **And the cause is NOT the introduction schedule, which this file and
+`ROADMAP.md` both used to predict.** Measured: the golden's 3,000-tick window
+never leaves level 2 (2,065 ticks at L1, 935 at L2, every spawn a Vaulter), and
+GDD §8.1's eligible set is one entry at both levels, so the kind pick spends
+nothing. P5 corrects `ROADMAP.md`.
+
+### ⚠ Other measured corrections the planning session found
+
+- ⛔ **GDD §8.1's "8 | First open well" is already delivered.** Level 8 →
+  `WELLS[7]` = Vee, `closed: false`. It is a row the schedule documents, not one it
+  implements, and CS007 does not touch well selection.
+- ⛔ **`vector-vortex` is ALREADY registered** in `coinless-kit`'s
+  `services/leaderboard/src/registry.js` (`79206f3`) with all seven `statsFields`.
+  The carried task below is stale in its wording; what remains is confirming the
+  **deployed** Worker carries it, and that is CS011's.
+- ⚠ **`test-cs003-p2.js` asserts `!("SPAWN_MIN" in C)`** and stays green, because
+  the constant is named `SPAWN_INTERVAL_MIN`. `SPAWN_MIN` never existed and
+  `DIFFICULTY-NOTES.md` names it; P5 corrects the document.
+- ⛔ **The introduction schedule reaches SIX closed test files plus `_harness.js`**,
+  and all three closing soaks go red **loudly** on their own non-vacuity
+  assertions (26, 33 and 7 failures) rather than silently passing over a
+  Vaulter-only board. The full edit inventory and the replacement fixture shape are
+  in `PLANNED-FEATURES-CS007.md` §4.4.
+- ⛔ **Heat alone leaves 25 of 29 test files green; 18 never leave level 1.** Not
+  one lane bound, lattice assertion or contract assertion moved — H2's discipline
+  (heat never scales a hop or cross duration), measured rather than argued.
