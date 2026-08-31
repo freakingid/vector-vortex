@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.2 · Changeset: CS006 (P1 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.2 · Changeset: CS006 (P2 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS006
 
@@ -43,11 +43,47 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   unchanged. Paul's call, asked and answered. ⛔ **CS006 P4 breaks the same
   assertion again** (`null` → `lit`) and is what legitimately retires it.
 
+- **P2 — `throatOffset` defined, the two degenerate wells, and the legibility
+  gate.** Swept all sixteen wells for the shortest lane-**centre** spoke before
+  touching anything and confirmed the planned numbers: Flat 23.6 px, Stair
+  30.4 px, then a gap to Twist 73.9 and Double-Vee 76.5, everything else ≥ 85.
+  GDD §3.3 now carries the field's definition — ⛔ a translation of the throat
+  polygon in normalized rim space applied **after** the centroid scale, DATA,
+  never written at runtime because `wellThroat()` memoizes — and
+  `src/03-wells.js`'s header carries it at the field. The Flat gets
+  `{x: 0, y: -0.50}` (min spoke 23.6 → **151.8 px**, ratio 1.98), the Stair
+  `{x: 0, y: -0.35}` (30.4 → **79.6 px**, ratio 4.84). Both are the computed
+  candidates, unmoved by the audition, and both land inside the max/min family
+  the other fourteen occupy (widest shipped: Double-Vee 4.25). ⛔
+  `C.MIN_LANE_SPOKE_PX` 60 lands as a **gate, not a tunable**, and GDD §17
+  item 2 grew the walk. ⛔ **The 10,000-tick hash at seed 20260830 is unmoved**
+  (1743051713), asserted against a constant recorded at `8e0fb7c` rather than
+  claimed in a comment; `screenPos` moved on exactly the two offset wells and
+  every lane-space helper on none. `test-cs006-p2.js`: 380 assertions. Suite
+  green at 26 files, zero skips.
+
+  ⚠ **A SECOND CLOSED TEST WAS EDITED, AND THIS PHASE'S PROMPT ⛔ SAID NONE MAY
+  BE — PAUL'S CALL TO CONFIRM.** `test-cs001-p2.js` derives the throat as
+  `centroid + (rim − centroid) × throatScale` with **no offset term**: exact on
+  all sixteen wells until this phase gave two of them a nonzero offset, and
+  unsatisfiable afterwards by *any* implementation of the field the same prompt
+  ⛔ requires. The two instructions cannot both hold, and the only way to keep
+  the file untouched was to land no offsets, which is the phase. Added
+  `+ offX`/`+ offY` and nothing else — same sixteen wells, same 1e-12, same
+  message, no narrowing. ⛔ **`PLANNED-FEATURES-CS006.md` assumption #15 already
+  covers this** ("a closed phase's test is rewritten in place when a later
+  changeset replaces the behaviour it asserts"); it was written for P3's four
+  edits and P2 hit it first. The stronger offset-aware form of the same claim,
+  decomposed into *translate* and *does not rescale*, is now also in
+  `test-cs006-p2.js` for all sixteen wells, so no coverage rests on the edit.
+  Full record, because `STATUS.md` resets at the close: `DECISIONS.md`,
+  2026-08-30.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes: 24 test files, zero skips, ~7 s.
+- `node scratchpad/run-all.js` passes: 26 test files, zero skips, ~9 s.
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -87,7 +123,15 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   runs of the *same* build, so a stream shift is self-consistent there and
   invisible. Retuning the spawner legitimately re-records it; a stray RNG draw
   does not.
-- `tools/well-lab.html` — well polygons and the perspective curve.
+- `tools/well-lab.html` — well polygons, the perspective curve, and (CS006 P2)
+  live `throatOffset.x`/`.y` sliders plus a **Legibility** readout: shortest
+  lane-**centre** spoke and its lane, max/min ratio, PASS/FAIL against
+  `C.MIN_LANE_SPOKE_PX`, and the shortest lane drawn green or red on the canvas
+  so the eye can find it. ⛔ It measures the lane CENTRE, which is not any line
+  it draws — the renderer draws vertex spokes, and on the Stair the shortest of
+  each is a different lane. ⚠ Its duplicated slice was checked against the build
+  headlessly and agrees to 1e-13 px on all sixteen wells; ⛔ **the visual
+  audition has not happened** — the ask is in `PLAYTEST.md`.
 - `tools/feel-lab.html` — traverse-and-stop measurement across the four device
   sensitivity/timing constants. Reachable over LAN via `npm run serve`.
 
@@ -158,11 +202,6 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   between two lane centres has it hopping back and forth across them. Lethal
   either way, and GDD §6.1 says only "direction from `laneDelta`". Flagged for
   CS007's tuning pass in case the jitter reads as indecision rather than menace.
-- **GDD §3.3's `throatOffset` is undefined** — no well uses it and the GDD never
-  says what it offsets. `wellThroat` defaults it to zero. Design call for Paul.
-- **The Flat well (11) is geometrically degenerate**: its rim is a straight
-  line, so it renders with zero depth. Same underlying question as
-  `throatOffset`. Design call for Paul before CS006.
 - ⚠ **A run that STARTS past level 99 gets the modulo well and a `bandRoll` of
   0.** `startGame()` still does `wellIndex = (level - 1) % WELLS.length` and
   `newState()` ships `bandRoll: 0`, so GDD §3.6's roll only ever happens on a
@@ -176,7 +215,7 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   still unwired", but ⛔ **pin only the argument the claim is about** — a regex
   over the whole call turns every future edit to that line into a red with a
   misleading message.
-- ⛔ **Playtest asks live in `PLAYTEST.md`**, twenty-eight of them, four marked
+- ⛔ **Playtest asks live in `PLAYTEST.md`**, twenty-nine of them, five marked
   ⛔. Not session context — pull it up at the machine with a build in front of
   you, never during a build phase.
 
@@ -212,14 +251,17 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   `enemyKinds` is 9** (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo.
 
-## Next up — CS006 P2
+## Next up — CS006 P3
 
-**`throatOffset`, the two degenerate wells, and the legibility gate.** No entity
-and no simulation change: geometry and data only. GDD §3.2–§3.4, §10.1.
+**The Dive — the phase, the strike, the death loop guard.** GDD §5, §4.5 item 5.
+⛔ It deletes `C.WELL_CLEAR_HOLD` and `state.clearHold`, and it edits four closed
+test files under a rule `CLAUDE.md` gains in the same phase — see
+`PLANNED-FEATURES-CS006.md` assumption #15, which P2 already had to invoke once.
 
 ⛔ CS006's scope was split at P0 and it is four systems, not five: past-99 well
 progression and the colour-band roll (**P1, done**), `throatOffset` and the two
-degenerate wells (Flat and Stair), the Dive, and `laneState` with the dim band —
+degenerate wells (Flat and Stair, **P2, done**), the Dive, and `laneState` with
+the dim band —
 GDD §3.3, §3.6–3.7, §5, §4.5 item 5. `PLANNED-FEATURES-CS006.md` and
 `IMPLEMENTATION-PHASES-CS006.md` are written and are the authority on the phase
 order.

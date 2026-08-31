@@ -120,3 +120,34 @@ Drifter back to `0` re-introduces a death from the throat on the spawn step.
 
 **What would change it.** A `collideSkimmer()` that took the Skimmer's position
 as a term. Nothing else.
+
+---
+
+## 2026-08-30 — CS006 P2 edited a closed test its own prompt ⛔ forbade editing
+
+**The question.** CS006 P2's prompt carries two instructions that cannot both
+hold once the phase does its job: ⛔ *give the Flat and the Stair a
+`throatOffset`, defined as the translation `wellThroat()` already applies*, and
+⛔ *every closed test file must still be green and none may be edited*.
+`test-cs001-p2.js` derives the throat as
+`centroid + (rim − centroid) × throatScale`, with **no offset term**. That line
+was exact on all sixteen wells for as long as no well carried an offset, and it
+is unsatisfiable by *any* implementation of the field the moment one does. The
+only way to leave the file untouched was to ship no offsets, which is the phase.
+
+**The call: extend the assertion by the offset term, and nothing else.** Added
+`+ offX` / `+ offY`, read defensively off `well.throatOffset`. Same sixteen
+wells, same `1e-12`, same message, no narrowing of the claim and no case
+dropped — this is not the `test-cs005-p3.js` situation, where a closed test had
+over-pinned a line and the fix was to pin less. `PLANNED-FEATURES-CS006.md`
+assumption #15 already licenses it in general terms ("a closed phase's test is
+rewritten in place when a later changeset replaces the behaviour it asserts");
+it was written for P3's four edits, and P2 hit it first.
+
+**Why it needed an entry rather than a `STATUS.md` line.** The prompt's ⛔ was
+explicit and this went against it, so the record has to outlive the changeset —
+`STATUS.md` resets at the close. ⛔ **Paul's to confirm or reverse.**
+
+**What would change it.** A `throatOffset` semantic that was not a translation
+of the throat polygon, which would make CS001 P2's line wrong rather than
+incomplete. It is a translation, so the line was only ever incomplete.

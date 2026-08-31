@@ -93,6 +93,14 @@ const C = {
   WELL_CX:              640,
   WELL_CY:              330,
   WELL_RADIUS:          300,
+  // ⛔ A GATE, NOT A TUNABLE (GDD 17 item 2, 1.1 P2). The shortest lane-CENTRE
+  // spoke any well may have, in world px. A lane below this is a lane an enemy
+  // climbs in almost no screen distance: stationary, then lethal, with nowhere
+  // for the player to read it. A well that fails the gate is REDRAWN or given a
+  // throatOffset (03-wells.js) — the constant is never lowered to admit it.
+  // 60 separates the two wells CS006 P2 fixed (Flat 24 px, Stair 30 px) from
+  // the tightest working one (Twist 74 px), with no well inside 20 % of it.
+  MIN_LANE_SPOKE_PX:    60,
 
   // ---- Skimmer (GDD 4) ----------------------------------------------------
   SKIMMER_WIDTH:        0.9,    // lane widths spanned at the rim
@@ -716,11 +724,30 @@ const state = newState();
 // ==========================================================================
 // 03-wells.js — the sixteen well definitions (GDD 3.3, 3.4). DATA ONLY.
 //
-// Each well: { id, name, closed, lanes, rim: [{x,y}...], throatScale }. `rim`
-// is in a normalized space centred on the origin, coordinates within [-1, 1].
-// A closed well's rim is a loop: rim.length === lanes (lane i runs from
-// rim[i] to rim[(i+1) % lanes]). An open well's rim is a strip:
-// rim.length === lanes + 1 (lane i runs from rim[i] to rim[i+1], no wrap).
+// Each well: { id, name, closed, lanes, rim: [{x,y}...], throatScale,
+// throatOffset? }. `rim` is in a normalized space centred on the origin,
+// coordinates within [-1, 1]. A closed well's rim is a loop:
+// rim.length === lanes (lane i runs from rim[i] to rim[(i+1) % lanes]). An
+// open well's rim is a strip: rim.length === lanes + 1 (lane i runs from
+// rim[i] to rim[i+1], no wrap).
+//
+// ⛔ throatOffset TRANSLATES THE THROAT POLYGON IN NORMALIZED RIM SPACE,
+// APPLIED AFTER THE CENTROID SCALE (GDD 3.3). It is the escape hatch for a rim
+// whose centroid lies on or near the rim itself. Absent means {x: 0, y: 0}, so
+// a well that omits it is not a special case — fourteen of the sixteen do.
+//
+// ⛔ AN OFFSET IS DATA AND IS NEVER WRITTEN AT RUNTIME. wellThroat() memoizes
+// on well._throat under a header that already assumes the rim is IMMUTABLE at
+// runtime; an offset in the well DEFINITION is immutable and safe, but one
+// written later — a camera effect, a tool poking the live data — would be read
+// once and then cached forever, and the throat would silently keep describing
+// the old shape. If a future phase ever needs a moving throat, that is a new
+// per-frame quantity in the renderer, not a write into here.
+//
+// ⛔ AND IT MOVES NOTHING IN LANE SPACE. Entity position is (lane, depth) and
+// the projection happens at paint time, so an offset moves the VISUAL end of a
+// well and no lane, no clamp, no boundary and no hash (GDD 3.2, 3.5;
+// scratchpad/test-cs006-p2.js asserts both halves).
 //
 // The data is above; the DEPTH MODEL (GDD 3.2, 3.5) is below it. Rendering is
 // not here — that is 13-render-well.js, which consumes screenPos().
@@ -734,9 +761,9 @@ const WELLS = [
   { id: 6, name: "Delta", closed: true, lanes: 15, rim: [{ x: 0, y: -1 }, { x: 0.1732, y: -0.7 }, { x: 0.3464, y: -0.4 }, { x: 0.5196, y: -0.1 }, { x: 0.6928, y: 0.2 }, { x: 0.866, y: 0.5 }, { x: 0.5196, y: 0.5 }, { x: 0.1732, y: 0.5 }, { x: -0.1732, y: 0.5 }, { x: -0.5196, y: 0.5 }, { x: -0.866, y: 0.5 }, { x: -0.6928, y: 0.2 }, { x: -0.5196, y: -0.1 }, { x: -0.3464, y: -0.4 }, { x: -0.1732, y: -0.7 }], throatScale: C.THROAT_SCALE },
   { id: 7, name: "Clover", closed: true, lanes: 16, rim: [{ x: 0, y: -1 }, { x: 0.3491, y: -0.8427 }, { x: 0.495, y: -0.495 }, { x: 0.8427, y: -0.3491 }, { x: 1, y: 0 }, { x: 0.8427, y: 0.3491 }, { x: 0.495, y: 0.495 }, { x: 0.3491, y: 0.8427 }, { x: 0, y: 1 }, { x: -0.3491, y: 0.8427 }, { x: -0.495, y: 0.495 }, { x: -0.8427, y: 0.3491 }, { x: -1, y: 0 }, { x: -0.8427, y: -0.3491 }, { x: -0.495, y: -0.495 }, { x: -0.3491, y: -0.8427 }], throatScale: C.THROAT_SCALE },
   { id: 8, name: "Vee", closed: false, lanes: 13, rim: [{ x: -1, y: -0.6 }, { x: -0.8571, y: -0.3714 }, { x: -0.7143, y: -0.1429 }, { x: -0.5714, y: 0.0857 }, { x: -0.4286, y: 0.3143 }, { x: -0.2857, y: 0.5429 }, { x: -0.1429, y: 0.7714 }, { x: 0, y: 1 }, { x: 0.1667, y: 0.7333 }, { x: 0.3333, y: 0.4667 }, { x: 0.5, y: 0.2 }, { x: 0.6667, y: -0.0667 }, { x: 0.8333, y: -0.3333 }, { x: 1, y: -0.6 }], throatScale: C.THROAT_SCALE },
-  { id: 9, name: "Stair", closed: false, lanes: 12, rim: [{ x: -1, y: -0.7 }, { x: -0.8333, y: -0.7 }, { x: -0.6667, y: -0.7 }, { x: -0.5, y: -0.35 }, { x: -0.3333, y: -0.35 }, { x: -0.1667, y: -0.35 }, { x: 0, y: 0 }, { x: 0.1667, y: 0 }, { x: 0.3333, y: 0 }, { x: 0.5, y: 0.35 }, { x: 0.6667, y: 0.35 }, { x: 0.8333, y: 0.35 }, { x: 1, y: 0.7 }], throatScale: C.THROAT_SCALE },
+  { id: 9, name: "Stair", closed: false, lanes: 12, rim: [{ x: -1, y: -0.7 }, { x: -0.8333, y: -0.7 }, { x: -0.6667, y: -0.7 }, { x: -0.5, y: -0.35 }, { x: -0.3333, y: -0.35 }, { x: -0.1667, y: -0.35 }, { x: 0, y: 0 }, { x: 0.1667, y: 0 }, { x: 0.3333, y: 0 }, { x: 0.5, y: 0.35 }, { x: 0.6667, y: 0.35 }, { x: 0.8333, y: 0.35 }, { x: 1, y: 0.7 }], throatScale: C.THROAT_SCALE, throatOffset: { x: 0, y: -0.35 } },
   { id: 10, name: "Trough", closed: false, lanes: 14, rim: [{ x: -1, y: 1 }, { x: -1, y: 0.4667 }, { x: -1, y: -0.0667 }, { x: -1, y: -0.6 }, { x: -0.75, y: -0.6 }, { x: -0.5, y: -0.6 }, { x: -0.25, y: -0.6 }, { x: 0, y: -0.6 }, { x: 0.25, y: -0.6 }, { x: 0.5, y: -0.6 }, { x: 0.75, y: -0.6 }, { x: 1, y: -0.6 }, { x: 1, y: -0.0667 }, { x: 1, y: 0.4667 }, { x: 1, y: 1 }], throatScale: C.THROAT_SCALE },
-  { id: 11, name: "Flat", closed: false, lanes: 12, rim: [{ x: -1, y: 0.3 }, { x: -0.8333, y: 0.3 }, { x: -0.6667, y: 0.3 }, { x: -0.5, y: 0.3 }, { x: -0.3333, y: 0.3 }, { x: -0.1667, y: 0.3 }, { x: 0, y: 0.3 }, { x: 0.1667, y: 0.3 }, { x: 0.3333, y: 0.3 }, { x: 0.5, y: 0.3 }, { x: 0.6667, y: 0.3 }, { x: 0.8333, y: 0.3 }, { x: 1, y: 0.3 }], throatScale: C.THROAT_SCALE },
+  { id: 11, name: "Flat", closed: false, lanes: 12, rim: [{ x: -1, y: 0.3 }, { x: -0.8333, y: 0.3 }, { x: -0.6667, y: 0.3 }, { x: -0.5, y: 0.3 }, { x: -0.3333, y: 0.3 }, { x: -0.1667, y: 0.3 }, { x: 0, y: 0.3 }, { x: 0.1667, y: 0.3 }, { x: 0.3333, y: 0.3 }, { x: 0.5, y: 0.3 }, { x: 0.6667, y: 0.3 }, { x: 0.8333, y: 0.3 }, { x: 1, y: 0.3 }], throatScale: C.THROAT_SCALE, throatOffset: { x: 0, y: -0.50 } },
   { id: 12, name: "Heart", closed: true, lanes: 16, rim: [{ x: 0, y: -0.2941 }, { x: 0.0527, y: -0.4535 }, { x: 0.3328, y: -0.6827 }, { x: 0.7422, y: -0.6093 }, { x: 0.9412, y: -0.2353 }, { x: 0.7422, y: 0.1934 }, { x: 0.3328, y: 0.5651 }, { x: 0.0527, y: 0.8694 }, { x: 0, y: 1 }, { x: -0.0527, y: 0.8694 }, { x: -0.3328, y: 0.5651 }, { x: -0.7422, y: 0.1934 }, { x: -0.9412, y: -0.2353 }, { x: -0.7422, y: -0.6093 }, { x: -0.3328, y: -0.6827 }, { x: -0.0527, y: -0.4535 }], throatScale: C.THROAT_SCALE },
   { id: 13, name: "Star", closed: true, lanes: 16, rim: [{ x: 0, y: -1 }, { x: 0.1913, y: -0.4619 }, { x: 0.7071, y: -0.7071 }, { x: 0.4619, y: -0.1913 }, { x: 1, y: 0 }, { x: 0.4619, y: 0.1913 }, { x: 0.7071, y: 0.7071 }, { x: 0.1913, y: 0.4619 }, { x: 0, y: 1 }, { x: -0.1913, y: 0.4619 }, { x: -0.7071, y: 0.7071 }, { x: -0.4619, y: 0.1913 }, { x: -1, y: 0 }, { x: -0.4619, y: -0.1913 }, { x: -0.7071, y: -0.7071 }, { x: -0.1913, y: -0.4619 }], throatScale: C.THROAT_SCALE },
   { id: 14, name: "Double-Vee", closed: false, lanes: 14, rim: [{ x: -1, y: 1 }, { x: -0.875, y: 0.575 }, { x: -0.75, y: 0.15 }, { x: -0.625, y: -0.275 }, { x: -0.5, y: -0.7 }, { x: -0.3333, y: -0.2667 }, { x: -0.1667, y: 0.1667 }, { x: 0, y: 0.6 }, { x: 0.1667, y: 0.1667 }, { x: 0.3333, y: -0.2667 }, { x: 0.5, y: -0.7 }, { x: 0.625, y: -0.275 }, { x: 0.75, y: 0.15 }, { x: 0.875, y: 0.575 }, { x: 1, y: 1 }], throatScale: C.THROAT_SCALE },
@@ -774,9 +801,12 @@ function wellVertCount(well) {
   return well.closed ? well.lanes : well.lanes + 1;
 }
 
-// The throat polygon: the rim scaled toward its centroid by throatScale, plus
-// the optional throatOffset from GDD 3.3 (absent on every shipped well; it
-// defaults to zero, so a well that omits it is not a special case).
+// The throat polygon: the rim scaled toward its centroid by throatScale, then
+// TRANSLATED by the optional throatOffset (GDD 3.3 — the definition and the
+// ⛔ never-write-it-at-runtime rule are in this file's header). Two of the
+// sixteen wells carry one: the Flat, whose rim is a straight line so its
+// centroid lies ON the rim and every spoke was collinear, and the Stair, whose
+// centroid sits a tenth of a lane length from rim vertex 6.
 //
 // ⛔ Memoized on the well object. This is called for every entity every frame
 // once entities exist; recomputing a centroid per call is the per-frame

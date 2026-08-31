@@ -44,6 +44,14 @@ const C = {
   WELL_CX:              640,
   WELL_CY:              330,
   WELL_RADIUS:          300,
+  // ⛔ A GATE, NOT A TUNABLE (GDD 17 item 2, 1.1 P2). The shortest lane-CENTRE
+  // spoke any well may have, in world px. A lane below this is a lane an enemy
+  // climbs in almost no screen distance: stationary, then lethal, with nowhere
+  // for the player to read it. A well that fails the gate is REDRAWN or given a
+  // throatOffset (03-wells.js) — the constant is never lowered to admit it.
+  // 60 separates the two wells CS006 P2 fixed (Flat 24 px, Stair 30 px) from
+  // the tightest working one (Twist 74 px), with no well inside 20 % of it.
+  MIN_LANE_SPOKE_PX:    60,
 
   // ---- Skimmer (GDD 4) ----------------------------------------------------
   SKIMMER_WIDTH:        0.9,    // lane widths spanned at the rim

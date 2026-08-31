@@ -39,6 +39,10 @@
   button { margin-top: 4px; cursor: pointer; }
   button:hover { border-color: #3FE0FF; }
   #hint { font-size: 10px; color: #789; margin-top: 16px; line-height: 1.5; }
+  .readout { font-size: 11px; line-height: 1.6; color: #cfe9f5; }
+  .readout .pass { color: #4FFF7A; }
+  .readout .fail { color: #FF5A3C; font-weight: bold; }
+  .readout .dim { color: #789; }
   code { color: #9ad; }
 </style>
 </head>
@@ -60,6 +64,16 @@
     <input type="range" id="perspectiveExp" min="0.1" max="2" step="0.01" value="0.55"></div>
   <div class="row"><label>THROAT_SCALE <span class="val" id="throatScaleVal">0.055</span></label>
     <input type="range" id="throatScale" min="0.01" max="0.5" step="0.005" value="0.055"></div>
+  <div class="row"><label>throatOffset.x <span class="val" id="offXVal">0.00</span></label>
+    <input type="range" id="offX" min="-1" max="1" step="0.01" value="0"></div>
+  <div class="row"><label>throatOffset.y <span class="val" id="offYVal">0.00</span></label>
+    <input type="range" id="offY" min="-1" max="1" step="0.01" value="0"></div>
+  <button id="offResetBtn">Reset offset to this well's shipped value</button>
+
+  <h2>Legibility (GDD 17 item 2)</h2>
+  <div id="spokeReadout" class="readout">&nbsp;</div>
+  <div class="row" style="margin-top:8px"><label>Mark the shortest lane <span class="val" id="markVal">on</span></label>
+    <input type="checkbox" id="markToggle" checked></div>
 
   <h2>Glow</h2>
   <div class="row"><label>LINE_W_THROAT <span class="val" id="lineWThroatVal">1.0</span></label>
@@ -97,7 +111,7 @@
 // 13-render-well.js (drawPoly/glowStroke/band colour). See file header.
 // ---------------------------------------------------------------------------
 
-const WELLS = [{"id":1,"name":"Ring","closed":true,"lanes":16,"rim":[{"x":0,"y":-1},{"x":0.3827,"y":-0.9239},{"x":0.7071,"y":-0.7071},{"x":0.9239,"y":-0.3827},{"x":1,"y":0},{"x":0.9239,"y":0.3827},{"x":0.7071,"y":0.7071},{"x":0.3827,"y":0.9239},{"x":0,"y":1},{"x":-0.3827,"y":0.9239},{"x":-0.7071,"y":0.7071},{"x":-0.9239,"y":0.3827},{"x":-1,"y":0},{"x":-0.9239,"y":-0.3827},{"x":-0.7071,"y":-0.7071},{"x":-0.3827,"y":-0.9239}]},{"id":2,"name":"Box","closed":true,"lanes":16,"rim":[{"x":-1,"y":-1},{"x":-0.5,"y":-1},{"x":0,"y":-1},{"x":0.5,"y":-1},{"x":1,"y":-1},{"x":1,"y":-0.5},{"x":1,"y":0},{"x":1,"y":0.5},{"x":1,"y":1},{"x":0.5,"y":1},{"x":0,"y":1},{"x":-0.5,"y":1},{"x":-1,"y":1},{"x":-1,"y":0.5},{"x":-1,"y":0},{"x":-1,"y":-0.5}]},{"id":3,"name":"Cross","closed":true,"lanes":16,"rim":[{"x":-0.35,"y":-1},{"x":0,"y":-1},{"x":0.35,"y":-1},{"x":0.35,"y":-0.35},{"x":1,"y":-0.35},{"x":1,"y":0},{"x":1,"y":0.35},{"x":0.35,"y":0.35},{"x":0.35,"y":1},{"x":0,"y":1},{"x":-0.35,"y":1},{"x":-0.35,"y":0.35},{"x":-1,"y":0.35},{"x":-1,"y":0},{"x":-1,"y":-0.35},{"x":-0.35,"y":-0.35}]},{"id":4,"name":"Bowtie","closed":true,"lanes":14,"rim":[{"x":-0.5103,"y":0.6123},{"x":-0.8184,"y":0.4621},{"x":-1,"y":0.1714},{"x":-1,"y":-0.1714},{"x":-0.8184,"y":-0.4621},{"x":-0.5103,"y":-0.6123},{"x":0,"y":-0.0878},{"x":0.5103,"y":-0.6123},{"x":0.8184,"y":-0.4621},{"x":1,"y":-0.1714},{"x":1,"y":0.1714},{"x":0.8184,"y":0.4621},{"x":0.5103,"y":0.6123},{"x":0,"y":0.0878}]},{"id":5,"name":"Pinwheel","closed":true,"lanes":16,"rim":[{"x":0,"y":-1},{"x":0.3277,"y":-0.7912},{"x":0.4954,"y":-0.4954},{"x":0.7676,"y":-0.3179},{"x":0.9978,"y":0},{"x":0.8147,"y":0.3374},{"x":0.4984,"y":0.4984},{"x":0.3084,"y":0.7445},{"x":0,"y":0.9913},{"x":-0.3468,"y":0.8373},{"x":-0.5045,"y":0.5045},{"x":-0.7226,"y":0.2993},{"x":-0.9807,"y":0},{"x":-0.8583,"y":-0.3555},{"x":-0.5134,"y":-0.5134},{"x":-0.291,"y":-0.7025}]},{"id":6,"name":"Delta","closed":true,"lanes":15,"rim":[{"x":0,"y":-1},{"x":0.1732,"y":-0.7},{"x":0.3464,"y":-0.4},{"x":0.5196,"y":-0.1},{"x":0.6928,"y":0.2},{"x":0.866,"y":0.5},{"x":0.5196,"y":0.5},{"x":0.1732,"y":0.5},{"x":-0.1732,"y":0.5},{"x":-0.5196,"y":0.5},{"x":-0.866,"y":0.5},{"x":-0.6928,"y":0.2},{"x":-0.5196,"y":-0.1},{"x":-0.3464,"y":-0.4},{"x":-0.1732,"y":-0.7}]},{"id":7,"name":"Clover","closed":true,"lanes":16,"rim":[{"x":0,"y":-1},{"x":0.3491,"y":-0.8427},{"x":0.495,"y":-0.495},{"x":0.8427,"y":-0.3491},{"x":1,"y":0},{"x":0.8427,"y":0.3491},{"x":0.495,"y":0.495},{"x":0.3491,"y":0.8427},{"x":0,"y":1},{"x":-0.3491,"y":0.8427},{"x":-0.495,"y":0.495},{"x":-0.8427,"y":0.3491},{"x":-1,"y":0},{"x":-0.8427,"y":-0.3491},{"x":-0.495,"y":-0.495},{"x":-0.3491,"y":-0.8427}]},{"id":8,"name":"Vee","closed":false,"lanes":13,"rim":[{"x":-1,"y":-0.6},{"x":-0.8571,"y":-0.3714},{"x":-0.7143,"y":-0.1429},{"x":-0.5714,"y":0.0857},{"x":-0.4286,"y":0.3143},{"x":-0.2857,"y":0.5429},{"x":-0.1429,"y":0.7714},{"x":0,"y":1},{"x":0.1667,"y":0.7333},{"x":0.3333,"y":0.4667},{"x":0.5,"y":0.2},{"x":0.6667,"y":-0.0667},{"x":0.8333,"y":-0.3333},{"x":1,"y":-0.6}]},{"id":9,"name":"Stair","closed":false,"lanes":12,"rim":[{"x":-1,"y":-0.7},{"x":-0.8333,"y":-0.7},{"x":-0.6667,"y":-0.7},{"x":-0.5,"y":-0.35},{"x":-0.3333,"y":-0.35},{"x":-0.1667,"y":-0.35},{"x":0,"y":0},{"x":0.1667,"y":0},{"x":0.3333,"y":0},{"x":0.5,"y":0.35},{"x":0.6667,"y":0.35},{"x":0.8333,"y":0.35},{"x":1,"y":0.7}]},{"id":10,"name":"Trough","closed":false,"lanes":14,"rim":[{"x":-1,"y":1},{"x":-1,"y":0.4667},{"x":-1,"y":-0.0667},{"x":-1,"y":-0.6},{"x":-0.75,"y":-0.6},{"x":-0.5,"y":-0.6},{"x":-0.25,"y":-0.6},{"x":0,"y":-0.6},{"x":0.25,"y":-0.6},{"x":0.5,"y":-0.6},{"x":0.75,"y":-0.6},{"x":1,"y":-0.6},{"x":1,"y":-0.0667},{"x":1,"y":0.4667},{"x":1,"y":1}]},{"id":11,"name":"Flat","closed":false,"lanes":12,"rim":[{"x":-1,"y":0.3},{"x":-0.8333,"y":0.3},{"x":-0.6667,"y":0.3},{"x":-0.5,"y":0.3},{"x":-0.3333,"y":0.3},{"x":-0.1667,"y":0.3},{"x":0,"y":0.3},{"x":0.1667,"y":0.3},{"x":0.3333,"y":0.3},{"x":0.5,"y":0.3},{"x":0.6667,"y":0.3},{"x":0.8333,"y":0.3},{"x":1,"y":0.3}]},{"id":12,"name":"Heart","closed":true,"lanes":16,"rim":[{"x":0,"y":-0.2941},{"x":0.0527,"y":-0.4535},{"x":0.3328,"y":-0.6827},{"x":0.7422,"y":-0.6093},{"x":0.9412,"y":-0.2353},{"x":0.7422,"y":0.1934},{"x":0.3328,"y":0.5651},{"x":0.0527,"y":0.8694},{"x":0,"y":1},{"x":-0.0527,"y":0.8694},{"x":-0.3328,"y":0.5651},{"x":-0.7422,"y":0.1934},{"x":-0.9412,"y":-0.2353},{"x":-0.7422,"y":-0.6093},{"x":-0.3328,"y":-0.6827},{"x":-0.0527,"y":-0.4535}]},{"id":13,"name":"Star","closed":true,"lanes":16,"rim":[{"x":0,"y":-1},{"x":0.1913,"y":-0.4619},{"x":0.7071,"y":-0.7071},{"x":0.4619,"y":-0.1913},{"x":1,"y":0},{"x":0.4619,"y":0.1913},{"x":0.7071,"y":0.7071},{"x":0.1913,"y":0.4619},{"x":0,"y":1},{"x":-0.1913,"y":0.4619},{"x":-0.7071,"y":0.7071},{"x":-0.4619,"y":0.1913},{"x":-1,"y":0},{"x":-0.4619,"y":-0.1913},{"x":-0.7071,"y":-0.7071},{"x":-0.1913,"y":-0.4619}]},{"id":14,"name":"Double-Vee","closed":false,"lanes":14,"rim":[{"x":-1,"y":1},{"x":-0.875,"y":0.575},{"x":-0.75,"y":0.15},{"x":-0.625,"y":-0.275},{"x":-0.5,"y":-0.7},{"x":-0.3333,"y":-0.2667},{"x":-0.1667,"y":0.1667},{"x":0,"y":0.6},{"x":0.1667,"y":0.1667},{"x":0.3333,"y":-0.2667},{"x":0.5,"y":-0.7},{"x":0.625,"y":-0.275},{"x":0.75,"y":0.15},{"x":0.875,"y":0.575},{"x":1,"y":1}]},{"id":15,"name":"Fan","closed":false,"lanes":11,"rim":[{"x":-0.9728,"y":-0.2607},{"x":-0.884,"y":-0.4826},{"x":-0.7453,"y":-0.6775},{"x":-0.5645,"y":-0.834},{"x":-0.352,"y":-0.9436},{"x":-0.1195,"y":-1},{"x":0.1195,"y":-1},{"x":0.352,"y":-0.9436},{"x":0.5645,"y":-0.834},{"x":0.7453,"y":-0.6775},{"x":0.884,"y":-0.4826},{"x":0.9728,"y":-0.2607}]},{"id":16,"name":"Twist","closed":true,"lanes":16,"rim":[{"x":0,"y":0},{"x":0.3827,"y":0.3536},{"x":0.7071,"y":0.5},{"x":0.9239,"y":0.3536},{"x":1,"y":0},{"x":0.9239,"y":-0.3536},{"x":0.7071,"y":-0.5},{"x":0.3827,"y":-0.3536},{"x":0,"y":0},{"x":-0.3827,"y":0.3536},{"x":-0.7071,"y":0.5},{"x":-0.9239,"y":0.3536},{"x":-1,"y":0},{"x":-0.9239,"y":-0.3536},{"x":-0.7071,"y":-0.5},{"x":-0.3827,"y":-0.3536}]}];
+const WELLS = [{"id":1,"name":"Ring","closed":true,"lanes":16,"rim":[{"x":0,"y":-1},{"x":0.3827,"y":-0.9239},{"x":0.7071,"y":-0.7071},{"x":0.9239,"y":-0.3827},{"x":1,"y":0},{"x":0.9239,"y":0.3827},{"x":0.7071,"y":0.7071},{"x":0.3827,"y":0.9239},{"x":0,"y":1},{"x":-0.3827,"y":0.9239},{"x":-0.7071,"y":0.7071},{"x":-0.9239,"y":0.3827},{"x":-1,"y":0},{"x":-0.9239,"y":-0.3827},{"x":-0.7071,"y":-0.7071},{"x":-0.3827,"y":-0.9239}]},{"id":2,"name":"Box","closed":true,"lanes":16,"rim":[{"x":-1,"y":-1},{"x":-0.5,"y":-1},{"x":0,"y":-1},{"x":0.5,"y":-1},{"x":1,"y":-1},{"x":1,"y":-0.5},{"x":1,"y":0},{"x":1,"y":0.5},{"x":1,"y":1},{"x":0.5,"y":1},{"x":0,"y":1},{"x":-0.5,"y":1},{"x":-1,"y":1},{"x":-1,"y":0.5},{"x":-1,"y":0},{"x":-1,"y":-0.5}]},{"id":3,"name":"Cross","closed":true,"lanes":16,"rim":[{"x":-0.35,"y":-1},{"x":0,"y":-1},{"x":0.35,"y":-1},{"x":0.35,"y":-0.35},{"x":1,"y":-0.35},{"x":1,"y":0},{"x":1,"y":0.35},{"x":0.35,"y":0.35},{"x":0.35,"y":1},{"x":0,"y":1},{"x":-0.35,"y":1},{"x":-0.35,"y":0.35},{"x":-1,"y":0.35},{"x":-1,"y":0},{"x":-1,"y":-0.35},{"x":-0.35,"y":-0.35}]},{"id":4,"name":"Bowtie","closed":true,"lanes":14,"rim":[{"x":-0.5103,"y":0.6123},{"x":-0.8184,"y":0.4621},{"x":-1,"y":0.1714},{"x":-1,"y":-0.1714},{"x":-0.8184,"y":-0.4621},{"x":-0.5103,"y":-0.6123},{"x":0,"y":-0.0878},{"x":0.5103,"y":-0.6123},{"x":0.8184,"y":-0.4621},{"x":1,"y":-0.1714},{"x":1,"y":0.1714},{"x":0.8184,"y":0.4621},{"x":0.5103,"y":0.6123},{"x":0,"y":0.0878}]},{"id":5,"name":"Pinwheel","closed":true,"lanes":16,"rim":[{"x":0,"y":-1},{"x":0.3277,"y":-0.7912},{"x":0.4954,"y":-0.4954},{"x":0.7676,"y":-0.3179},{"x":0.9978,"y":0},{"x":0.8147,"y":0.3374},{"x":0.4984,"y":0.4984},{"x":0.3084,"y":0.7445},{"x":0,"y":0.9913},{"x":-0.3468,"y":0.8373},{"x":-0.5045,"y":0.5045},{"x":-0.7226,"y":0.2993},{"x":-0.9807,"y":0},{"x":-0.8583,"y":-0.3555},{"x":-0.5134,"y":-0.5134},{"x":-0.291,"y":-0.7025}]},{"id":6,"name":"Delta","closed":true,"lanes":15,"rim":[{"x":0,"y":-1},{"x":0.1732,"y":-0.7},{"x":0.3464,"y":-0.4},{"x":0.5196,"y":-0.1},{"x":0.6928,"y":0.2},{"x":0.866,"y":0.5},{"x":0.5196,"y":0.5},{"x":0.1732,"y":0.5},{"x":-0.1732,"y":0.5},{"x":-0.5196,"y":0.5},{"x":-0.866,"y":0.5},{"x":-0.6928,"y":0.2},{"x":-0.5196,"y":-0.1},{"x":-0.3464,"y":-0.4},{"x":-0.1732,"y":-0.7}]},{"id":7,"name":"Clover","closed":true,"lanes":16,"rim":[{"x":0,"y":-1},{"x":0.3491,"y":-0.8427},{"x":0.495,"y":-0.495},{"x":0.8427,"y":-0.3491},{"x":1,"y":0},{"x":0.8427,"y":0.3491},{"x":0.495,"y":0.495},{"x":0.3491,"y":0.8427},{"x":0,"y":1},{"x":-0.3491,"y":0.8427},{"x":-0.495,"y":0.495},{"x":-0.8427,"y":0.3491},{"x":-1,"y":0},{"x":-0.8427,"y":-0.3491},{"x":-0.495,"y":-0.495},{"x":-0.3491,"y":-0.8427}]},{"id":8,"name":"Vee","closed":false,"lanes":13,"rim":[{"x":-1,"y":-0.6},{"x":-0.8571,"y":-0.3714},{"x":-0.7143,"y":-0.1429},{"x":-0.5714,"y":0.0857},{"x":-0.4286,"y":0.3143},{"x":-0.2857,"y":0.5429},{"x":-0.1429,"y":0.7714},{"x":0,"y":1},{"x":0.1667,"y":0.7333},{"x":0.3333,"y":0.4667},{"x":0.5,"y":0.2},{"x":0.6667,"y":-0.0667},{"x":0.8333,"y":-0.3333},{"x":1,"y":-0.6}]},{"id":9,"name":"Stair","closed":false,"lanes":12,"rim":[{"x":-1,"y":-0.7},{"x":-0.8333,"y":-0.7},{"x":-0.6667,"y":-0.7},{"x":-0.5,"y":-0.35},{"x":-0.3333,"y":-0.35},{"x":-0.1667,"y":-0.35},{"x":0,"y":0},{"x":0.1667,"y":0},{"x":0.3333,"y":0},{"x":0.5,"y":0.35},{"x":0.6667,"y":0.35},{"x":0.8333,"y":0.35},{"x":1,"y":0.7}],"throatOffset":{"x":0,"y":-0.35}},{"id":10,"name":"Trough","closed":false,"lanes":14,"rim":[{"x":-1,"y":1},{"x":-1,"y":0.4667},{"x":-1,"y":-0.0667},{"x":-1,"y":-0.6},{"x":-0.75,"y":-0.6},{"x":-0.5,"y":-0.6},{"x":-0.25,"y":-0.6},{"x":0,"y":-0.6},{"x":0.25,"y":-0.6},{"x":0.5,"y":-0.6},{"x":0.75,"y":-0.6},{"x":1,"y":-0.6},{"x":1,"y":-0.0667},{"x":1,"y":0.4667},{"x":1,"y":1}]},{"id":11,"name":"Flat","closed":false,"lanes":12,"rim":[{"x":-1,"y":0.3},{"x":-0.8333,"y":0.3},{"x":-0.6667,"y":0.3},{"x":-0.5,"y":0.3},{"x":-0.3333,"y":0.3},{"x":-0.1667,"y":0.3},{"x":0,"y":0.3},{"x":0.1667,"y":0.3},{"x":0.3333,"y":0.3},{"x":0.5,"y":0.3},{"x":0.6667,"y":0.3},{"x":0.8333,"y":0.3},{"x":1,"y":0.3}],"throatOffset":{"x":0,"y":-0.5}},{"id":12,"name":"Heart","closed":true,"lanes":16,"rim":[{"x":0,"y":-0.2941},{"x":0.0527,"y":-0.4535},{"x":0.3328,"y":-0.6827},{"x":0.7422,"y":-0.6093},{"x":0.9412,"y":-0.2353},{"x":0.7422,"y":0.1934},{"x":0.3328,"y":0.5651},{"x":0.0527,"y":0.8694},{"x":0,"y":1},{"x":-0.0527,"y":0.8694},{"x":-0.3328,"y":0.5651},{"x":-0.7422,"y":0.1934},{"x":-0.9412,"y":-0.2353},{"x":-0.7422,"y":-0.6093},{"x":-0.3328,"y":-0.6827},{"x":-0.0527,"y":-0.4535}]},{"id":13,"name":"Star","closed":true,"lanes":16,"rim":[{"x":0,"y":-1},{"x":0.1913,"y":-0.4619},{"x":0.7071,"y":-0.7071},{"x":0.4619,"y":-0.1913},{"x":1,"y":0},{"x":0.4619,"y":0.1913},{"x":0.7071,"y":0.7071},{"x":0.1913,"y":0.4619},{"x":0,"y":1},{"x":-0.1913,"y":0.4619},{"x":-0.7071,"y":0.7071},{"x":-0.4619,"y":0.1913},{"x":-1,"y":0},{"x":-0.4619,"y":-0.1913},{"x":-0.7071,"y":-0.7071},{"x":-0.1913,"y":-0.4619}]},{"id":14,"name":"Double-Vee","closed":false,"lanes":14,"rim":[{"x":-1,"y":1},{"x":-0.875,"y":0.575},{"x":-0.75,"y":0.15},{"x":-0.625,"y":-0.275},{"x":-0.5,"y":-0.7},{"x":-0.3333,"y":-0.2667},{"x":-0.1667,"y":0.1667},{"x":0,"y":0.6},{"x":0.1667,"y":0.1667},{"x":0.3333,"y":-0.2667},{"x":0.5,"y":-0.7},{"x":0.625,"y":-0.275},{"x":0.75,"y":0.15},{"x":0.875,"y":0.575},{"x":1,"y":1}]},{"id":15,"name":"Fan","closed":false,"lanes":11,"rim":[{"x":-0.9728,"y":-0.2607},{"x":-0.884,"y":-0.4826},{"x":-0.7453,"y":-0.6775},{"x":-0.5645,"y":-0.834},{"x":-0.352,"y":-0.9436},{"x":-0.1195,"y":-1},{"x":0.1195,"y":-1},{"x":0.352,"y":-0.9436},{"x":0.5645,"y":-0.834},{"x":0.7453,"y":-0.6775},{"x":0.884,"y":-0.4826},{"x":0.9728,"y":-0.2607}]},{"id":16,"name":"Twist","closed":true,"lanes":16,"rim":[{"x":0,"y":0},{"x":0.3827,"y":0.3536},{"x":0.7071,"y":0.5},{"x":0.9239,"y":0.3536},{"x":1,"y":0},{"x":0.9239,"y":-0.3536},{"x":0.7071,"y":-0.5},{"x":0.3827,"y":-0.3536},{"x":0,"y":0},{"x":-0.3827,"y":0.3536},{"x":-0.7071,"y":0.5},{"x":-0.9239,"y":0.3536},{"x":-1,"y":0},{"x":-0.9239,"y":-0.3536},{"x":-0.7071,"y":-0.5},{"x":-0.3827,"y":-0.3536}]}];
 
 const knobs = {
   PERSPECTIVE_EXP: 0.55,
@@ -108,6 +122,7 @@ const knobs = {
   GLOW_WIDE_ALPHA: 0.20,
   GLOW_THIN_ALPHA: 0.95,
   DIM_BAND_ALPHA: 0.18,
+  MIN_LANE_SPOKE_PX: 60,   // GDD 17 item 2 — a GATE, not a slider. Read-only here.
 };
 
 const WORLD_W = 1280, WORLD_H = 720;
@@ -126,14 +141,58 @@ const BAND_RNG_COLORS = ["#3FE0FF", "#FF4FD8", "#FFB020", "#9B6BFF", "#4FFF7A", 
 
 function wellVertCount(well) { return well.closed ? well.lanes : well.lanes + 1; }
 
-function wellThroat(well, throatScale) {
+// throatOffset TRANSLATES the throat polygon in normalized rim space, applied
+// AFTER the centroid scale (GDD 3.3). ⛔ The build's wellThroat() MEMOIZES and
+// so may never be handed a runtime offset; this lab recomputes every frame and
+// has no cache, which is the only reason the sliders below are allowed to move
+// one. Values read off here are hand-ported into src/03-wells.js as DATA.
+function wellThroat(well, throatScale, offX, offY) {
   const n = wellVertCount(well);
   let cx = 0, cy = 0;
   for (let i = 0; i < n; i++) { cx += well.rim[i].x; cy += well.rim[i].y; }
   cx /= n; cy /= n;
+  const ox = offX === undefined ? 0 : offX;
+  const oy = offY === undefined ? 0 : offY;
   const out = new Array(n);
   for (let i = 0; i < n; i++) {
-    out[i] = { x: cx + (well.rim[i].x - cx) * throatScale, y: cy + (well.rim[i].y - cy) * throatScale };
+    out[i] = { x: cx + (well.rim[i].x - cx) * throatScale + ox,
+               y: cy + (well.rim[i].y - cy) * throatScale + oy };
+  }
+  return out;
+}
+
+// Walk a polygon in LANE units — lane L sits at vertex parameter L + 0.5, so a
+// lane CENTRE is the midpoint of two vertices. ⛔ That is the whole reason the
+// readout below measures something the spoke lines on screen do not: the
+// renderer draws VERTEX spokes, and on the Stair the shortest lane centre and
+// the shortest vertex spoke are different lanes.
+function polyAt(poly, well, lane) {
+  const n = well.lanes;
+  const t = lane + 0.5;
+  if (well.closed) {
+    let i = Math.floor(t);
+    const f = t - i;
+    i = ((i % n) + n) % n;
+    const a = poly[i], b = poly[(i + 1) % n];
+    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+  }
+  const tc = t < 0.5 ? 0.5 : (t > n - 0.5 ? n - 0.5 : t);
+  const i = Math.floor(tc), g = tc - i;
+  const a = poly[i], b = poly[i + 1];
+  return { x: a.x + (b.x - a.x) * g, y: a.y + (b.y - a.y) * g };
+}
+
+// Every lane centre's spoke, in world px: throat point to rim point.
+function laneSpokes(well, throat) {
+  const out = [];
+  for (let L = 0; L < well.lanes; L++) {
+    const r = polyAt(well.rim, well, L), t = polyAt(throat, well, L);
+    out.push({
+      lane: L,
+      px: Math.hypot(r.x - t.x, r.y - t.y) * WELL_RADIUS,
+      rim: { x: WELL_CX + r.x * WELL_RADIUS, y: WELL_CY + r.y * WELL_RADIUS },
+      throat: { x: WELL_CX + t.x * WELL_RADIUS, y: WELL_CY + t.y * WELL_RADIUS },
+    });
   }
   return out;
 }
@@ -189,11 +248,12 @@ function glowStroke(ctx, color, width, alpha) {
 
 function isLaneLit(litSet, laneIdx) { return litSet.has(laneIdx); }
 
-function drawWell(ctx, well, level, litSet, rng, dimBandOn) {
+function drawWell(ctx, well, level, litSet, rng, dimBandOn, offX, offY, mark) {
   const color = wellBandColor(level, rng);
   const baseAlpha = wellBaseAlpha(level, dimBandOn);
   const rim = projectPoly(well.rim);
-  const throat = projectPoly(wellThroat(well, knobs.THROAT_SCALE));
+  const throatN = wellThroat(well, knobs.THROAT_SCALE, offX, offY);
+  const throat = projectPoly(throatN);
   const vcount = wellVertCount(well);
 
   drawPoly(ctx, rim, well.closed);
@@ -211,6 +271,20 @@ function drawWell(ctx, well, level, litSet, rng, dimBandOn) {
     ctx.lineTo(throat[i].x, throat[i].y);
     glowStroke(ctx, color, laneLineWidth(0.5), alpha);
   }
+
+  // The measurement, drawn. The shortest LANE CENTRE spoke is the one the gate
+  // is about, and it is never one of the lines above — those are vertex spokes.
+  const spokes = laneSpokes(well, throatN);
+  if (mark && spokes.length) {
+    let worst = spokes[0];
+    for (const sp of spokes) if (sp.px < worst.px) worst = sp;
+    const ok = worst.px >= knobs.MIN_LANE_SPOKE_PX;
+    ctx.beginPath();
+    ctx.moveTo(worst.throat.x, worst.throat.y);
+    ctx.lineTo(worst.rim.x, worst.rim.y);
+    glowStroke(ctx, ok ? "#4FFF7A" : "#FF5A3C", 2.0, 1);
+  }
+  return spokes;
 }
 
 // ---------------------------------------------------------------------------
@@ -249,6 +323,41 @@ bindRange("glowWideW", "GLOW_WIDE_W", 1);
 bindRange("glowWideAlpha", "GLOW_WIDE_ALPHA", 2);
 bindRange("glowThinAlpha", "GLOW_THIN_ALPHA", 2);
 
+// throatOffset is PER WELL, so it is not a knob — it tracks the selection and
+// starts at whatever the well ships with.
+const offXEl = document.getElementById("offX"), offXVal = document.getElementById("offXVal");
+const offYEl = document.getElementById("offY"), offYVal = document.getElementById("offYVal");
+
+function shippedOffset(well) {
+  return { x: (well.throatOffset && well.throatOffset.x) || 0,
+           y: (well.throatOffset && well.throatOffset.y) || 0 };
+}
+
+function syncOffsetUI() {
+  offXVal.textContent = parseFloat(offXEl.value).toFixed(2);
+  offYVal.textContent = parseFloat(offYEl.value).toFixed(2);
+}
+
+function loadOffsetForWell() {
+  const o = shippedOffset(WELLS[wellIndex]);
+  offXEl.value = o.x;
+  offYEl.value = o.y;
+  syncOffsetUI();
+}
+
+offXEl.addEventListener("input", () => { syncOffsetUI(); render(); });
+offYEl.addEventListener("input", () => { syncOffsetUI(); render(); });
+document.getElementById("offResetBtn").addEventListener("click", () => { loadOffsetForWell(); render(); });
+
+const markToggle = document.getElementById("markToggle");
+const markVal = document.getElementById("markVal");
+markToggle.addEventListener("change", () => {
+  markVal.textContent = markToggle.checked ? "on" : "off";
+  render();
+});
+
+const spokeReadout = document.getElementById("spokeReadout");
+
 const levelEl = document.getElementById("level");
 const levelVal = document.getElementById("levelVal");
 levelEl.addEventListener("input", () => { levelVal.textContent = levelEl.value; render(); });
@@ -264,11 +373,16 @@ const litCountEl = document.getElementById("litCount");
 const litCountVal = document.getElementById("litCountVal");
 litCountEl.addEventListener("input", () => { litCountVal.textContent = litCountEl.value; render(); });
 
-wellSelect.addEventListener("change", () => { wellIndex = parseInt(wellSelect.value, 10); render(); });
+wellSelect.addEventListener("change", () => {
+  wellIndex = parseInt(wellSelect.value, 10);
+  loadOffsetForWell();
+  render();
+});
 
 document.getElementById("cycleBtn").addEventListener("click", () => {
   wellIndex = (wellIndex + 1) % WELLS.length;
   wellSelect.value = wellIndex;
+  loadOffsetForWell();
   render();
 });
 
@@ -276,6 +390,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "w" || e.key === "W") {
     wellIndex = (wellIndex + 1) % WELLS.length;
     wellSelect.value = wellIndex;
+    loadOffsetForWell();
     render();
   }
 });
@@ -287,9 +402,30 @@ function render() {
   const lit = new Set();
   const litCount = parseInt(litCountEl.value, 10);
   for (let i = 0; i < litCount; i++) lit.add(i);
-  drawWell(ctx, well, level, lit, 0.5, dimBandToggle.checked);
+  const offX = parseFloat(offXEl.value), offY = parseFloat(offYEl.value);
+  const spokes = drawWell(ctx, well, level, lit, 0.5, dimBandToggle.checked,
+                          offX, offY, markToggle.checked);
+
+  let worst = spokes[0], best = spokes[0];
+  for (const sp of spokes) {
+    if (sp.px < worst.px) worst = sp;
+    if (sp.px > best.px) best = sp;
+  }
+  const ok = worst.px >= knobs.MIN_LANE_SPOKE_PX;
+  const shipped = shippedOffset(well);
+  const moved = Math.abs(offX - shipped.x) > 1e-9 || Math.abs(offY - shipped.y) > 1e-9;
+  spokeReadout.innerHTML =
+    `min lane spoke <b>${worst.px.toFixed(1)} px</b> <span class="dim">(lane ${worst.lane})</span><br>` +
+    `max lane spoke <b>${best.px.toFixed(1)} px</b> <span class="dim">(lane ${best.lane})</span><br>` +
+    `ratio <b>${(best.px / worst.px).toFixed(2)}</b><br>` +
+    `gate ${knobs.MIN_LANE_SPOKE_PX} px: ` +
+    (ok ? `<span class="pass">PASS</span>` : `<span class="fail">FAIL</span>`) +
+    `<br><span class="dim">shipped offset {x: ${shipped.x}, y: ${shipped.y}}` +
+    (moved ? ` — slider is at {x: ${offX}, y: ${offY}}, hand-port it` : "") +
+    `</span>`;
 }
 
+loadOffsetForWell();
 render();
 </script>
 </body>

@@ -127,10 +127,18 @@ This is the analogue of Orbital Overhaul's wrap-aware `dist2`/`angleTo`/`shortDe
 ### 3.3 Well data
 
 ```js
-{ id, name, closed, lanes, rim: [{x,y}, ...], throatScale, throatOffset }
+{ id, name, closed, lanes, rim: [{x,y}, ...], throatScale, throatOffset? }
 ```
 
 The throat is the rim polygon scaled toward its centroid. This makes the figure-eight work with no special case: its throat is a smaller figure-eight, lanes cross correctly, and no code notices.
+
+**Shipped CS006 P2 — the field's definition, which is what `wellThroat()` already implemented.**
+
+> ⛔ **`throatOffset` translates the throat polygon in normalized rim space, applied after the centroid scale.** It is the escape hatch for a rim whose centroid lies on or near the rim itself. Absent means `{x: 0, y: 0}`, so a well that omits it is not a special case.
+
+⛔ **An offset is DATA and is never written at runtime.** `wellThroat()` memoizes on `well._throat` under a header that assumes the rim is immutable at runtime. An offset in the well definition is immutable and safe; one written later — a camera effect, a tool poking the live data — would be read once and cached forever, and the throat would silently keep describing the old shape. A moving throat is a new per-frame quantity in the renderer, never a write into the well data. `tools/well-lab.html` may move one because its duplicated slice has no cache; values read off there are hand-ported in as data.
+
+⛔ **And an offset moves nothing in lane space.** Entity position is `(lane, depth)` and the projection happens at paint time (§3.2), so an offset moves the *visual* end of an open well and no lane, no clamp, no boundary and no hash. `laneClamp` and `polyAt`'s open-well backstop are functions of `well.lanes`, not of geometry, and CS005's boundary lattice (§3.5) is a lane-space fact rather than a screen one. `scratchpad/test-cs006-p2.js` asserts both halves — that `screenPos` moved on exactly the two wells that gained an offset, and that every lane-space helper is bit-identical on all sixteen.
 
 ### 3.4 The sixteen wells
 
@@ -152,6 +160,15 @@ The throat is the rim polygon scaled toward its centroid. This makes the figure-
 | 14 | **Double-Vee** | **Open** | 14 | Three defensible positions |
 | 15 | **Fan** | **Open** | 11 | Fewest lanes; every one matters |
 | 16 | Twist | Closed | 16 | Figure-eight. The signature shape. |
+
+⛔ **Two wells carry a `throatOffset` (§3.3), and both are the same defect measured twice.** `wellThroat()` scales the rim toward its *centroid*, so a rim whose centroid sits on or near the rim itself produces a throat on top of the rim and lanes with almost no length. Measured at `C.WELL_RADIUS` 300, shortest lane-**centre** spoke:
+
+| # | Well | Cause | Was | Offset | Now | max/min |
+|---|---|---|---|---|---|---|
+| 9 | **Stair** | rim vertex 6 is `(0, 0)` and the centroid is `(0, -0.108)`, so lane 5's spoke was a tenth of lane 11's | **30.4 px** | `{x: 0, y: -0.35}` | 79.6 px | 4.84 |
+| 11 | **Flat** | thirteen rim vertices all at `y = 0.3`, so the centroid is `(0, 0.3)` and rim, throat and all thirteen spokes were **collinear** — the well drew as a single horizontal line | **23.6 px** | `{x: 0, y: -0.50}` | 151.8 px | 1.98 |
+
+Both land inside the max/min family the other fourteen already occupy — the widest shipped spread is the Double-Vee's 4.25, then the Twist's 3.75 — so neither well is now an outlier in either direction. Nothing else moved: the other fourteen have no offset and are bit-identical to the pre-CS006 build.
 
 ### 3.5 ⛔ Open wells are not closed wells with a clamp
 
@@ -1124,7 +1141,7 @@ Carried over from Orbital Overhaul, which has 41 changesets of evidence behind t
 Required coverage:
 
 1. **Determinism** — same seed and inputs, identical state hash after 10,000 ticks.
-2. **Geometry** — all 16 wells: lane count matches vertices, no NaN in any derived position.
+2. **Geometry** — all 16 wells: lane count matches vertices, no NaN in any derived position, at lane centres **and** at boundaries. ⛔ **And every lane centre of every well has a spoke of at least `C.MIN_LANE_SPOKE_PX`** (60 px at `WELL_RADIUS` 300). A shorter lane is one an enemy climbs in almost no screen distance — stationary, then lethal, with nothing for the player to read, which is §1.1 P2 failing. It is a **gate, not a tunable**: a well that fails it is redrawn or given a `throatOffset` (§3.3), and the constant is never lowered to admit it. The number separates the two wells CS006 P2 fixed (24 px, 30 px) from the tightest working one (Twist, 74 px) with no well inside 20 % of the line.
 3. ⛔ **Enemy wall behaviour** — no entity's lane leaves `[0, lanes-1]` on any open well, 5,000-tick soak each. Written against the §3.5 bug.
 4. **Shot cap** — never exceeds `SHOT_MAX` under held fire.
 5. **Purge** — first use clears all enemies and zero Thorns; second removes exactly one.

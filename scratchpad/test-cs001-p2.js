@@ -67,14 +67,23 @@ for (const w of WELLS) {
   H.eq(wellVertCount(w), w.rim.length, `${label}: wellVertCount agrees with the rim data`);
 
   // Throat derivation: same vertex count as the rim, and every throat vertex
-  // is throatScale of the way from the centroid to its rim vertex (GDD 3.3).
+  // is throatScale of the way from the centroid to its rim vertex (GDD 3.3),
+  // then TRANSLATED by throatOffset.
+  //
+  // ⚠ The offset term is CS006 P2's, added here 2026-08-30 because CS006 P2 is
+  // the phase that gave two wells a nonzero one — before it, this line was
+  // exact on all sixteen. ⛔ The claim is unchanged: this is still "the throat
+  // is the rim scaled toward the centroid", stated over the same sixteen wells
+  // to the same 1e-12. It is not a narrowing and it is not a re-record.
   const throat = wellThroat(w);
   const cen = wellCentroid(w);
+  const offX = (w.throatOffset && w.throatOffset.x) || 0;
+  const offY = (w.throatOffset && w.throatOffset.y) || 0;
   H.eq(throat.length, w.rim.length, `${label}: throat has one vertex per rim vertex`);
   let throatOk = true, throatFinite = true;
   for (let i = 0; i < throat.length; i++) {
-    const wantX = cen.x + (w.rim[i].x - cen.x) * w.throatScale;
-    const wantY = cen.y + (w.rim[i].y - cen.y) * w.throatScale;
+    const wantX = cen.x + (w.rim[i].x - cen.x) * w.throatScale + offX;
+    const wantY = cen.y + (w.rim[i].y - cen.y) * w.throatScale + offY;
     if (Math.abs(throat[i].x - wantX) > 1e-12 || Math.abs(throat[i].y - wantY) > 1e-12) throatOk = false;
     if (!Number.isFinite(throat[i].x) || !Number.isFinite(throat[i].y)) throatFinite = false;
   }

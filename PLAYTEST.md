@@ -26,8 +26,8 @@ on every one of them.
 
 ## The ⛔ asks — readability rules the suite cannot check
 
-Four asks whose failure mode is *a death, or a wrong move, the player cannot
-account for*. Everything else in this file is tuning; these four are
+Five asks whose failure mode is *a death, or a wrong move, the player cannot
+account for*. Everything else in this file is tuning; these five are
 correctness. One per phase that shipped something judgeable.
 
 **⛔ Are the two Drifter states separable at a GLANCE, on a busy well?** Press
@@ -71,6 +71,25 @@ bolt, a fuse and a discharging lane are separable by eye. Knobs:
 readability ceiling — this ask is exactly the one that would move it). The real
 answer is GDD §8.1's introduction schedule, which is CS007's: if six at once is
 noise, the schedule is what has to keep them apart.
+
+**⛔ Do the Flat (11) and the Stair (9) READ as wells now?** CS006 P2 gave both
+a `throatOffset` — the Flat `{x: 0, y: -0.50}`, the Stair `{x: 0, y: -0.35}` —
+and until it did, the Flat drew as a single horizontal **line** with no depth at
+all and the Stair had one lane a tenth the length of another. Open
+`tools/well-lab.html`, pick each, and read the new **Legibility** panel: it
+gives the shortest lane-centre spoke, its lane, the max/min ratio, and PASS/FAIL
+against `C.MIN_LANE_SPOKE_PX`, and it draws the shortest lane in green or red so
+the eye can find it. The `throatOffset.x` / `.y` sliders move the throat live,
+and the readout says when the slider has left the shipped value so a number is
+hand-ported rather than guessed. ⚠ **The numbers are settled and the picture is
+not**: the geometry was auditioned headlessly against the build to 1e-13 px, no
+well's spokes cross and every well stays on screen, but nobody has *looked* at
+either shape. Two things only the eye can answer — does the Flat read as depth
+rather than as a fan of lines, and on the Stair does the throat sitting above
+the left rim end read as perspective or as a mistake. Knobs: the two offsets
+themselves, then `C.THROAT_SCALE` (0.055) if the throat is the problem rather
+than its position. ⛔ If a number moves, move it in `src/03-wells.js`, in
+`tools/well-lab.html`'s copy of the data, and in GDD §3.4's table.
 
 ---
 
