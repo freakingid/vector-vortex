@@ -455,6 +455,6 @@ const C = {
   GLOW_THIN_ALPHA:      0.95,
 
   // ---- Build / debug ------------------------------------------------------
-  GAME_VERSION:         "0.0.1",
+  GAME_VERSION:         "0.0.3",   // ⚠ 0.0.2 was never written here — see log/CS006.md
   GAME_ID:              "vector-vortex",   // must match the Worker registry
 };

@@ -26,8 +26,8 @@ on every one of them.
 
 ## The ⛔ asks — readability rules the suite cannot check
 
-Six asks whose failure mode is *a death, or a wrong move, the player cannot
-account for*. Everything else in this file is tuning; these six are
+Seven asks whose failure mode is *a death, or a wrong move, the player cannot
+account for*. Everything else in this file is tuning; these seven are
 correctness. One per phase that shipped something judgeable.
 
 **⛔ Are the two Drifter states separable at a GLANCE, on a busy well?** Press
@@ -109,6 +109,24 @@ the left rim end read as perspective or as a mistake. Knobs: the two offsets
 themselves, then `C.THROAT_SCALE` (0.055) if the throat is the problem rather
 than its position. ⛔ If a number moves, move it in `src/03-wells.js`, in
 `tools/well-lab.html`'s copy of the data, and in GDD §3.4's table.
+
+**⛔ Does the Dive read as a BREATH, or as more work?** GDD §1.1 pillar P4 says
+*"pacing has a heartbeat — every well ends in a dive: a few seconds of release
+with a small skill test attached"*, and this is the one thing in the changeset
+the suite cannot check at all. Clear a well with a Thorn or two still standing
+(press `3`, let a Weaver lay one, then finish the well) and pay attention to the
+2.6 s that follow. The read is meant to be **release with a thread-the-gap on
+top**, not a second, worse well. ⚠ **Judge the beat, not the picture**: the Dive
+has no visual yet — no camera widen, no doppler, no descent rendering — so what
+is on screen is a still board and the only thing available to your eye is the
+*length* and the *shape* of the pause. Three things: does 2.6 s feel like a
+breath or like a wait; is `C.DIVE_GRACE` 0.35 s long enough to see which lanes
+are thorned before the descent starts; and — the one that would be a P2 failure —
+when you die to a Thorn, can you tell **what killed you**, given there is nothing
+drawn descending. Knobs, in order: `C.DIVE_TIME` (2.6, ⛔ the WHOLE dive, grace
+included), then `C.DIVE_GRACE` (0.35). ⛔ If the answer is "I could not tell what
+killed me", that is not a tuning answer — it is the Dive's rendering, which no
+changeset owns yet.
 
 ---
 

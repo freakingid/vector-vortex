@@ -359,32 +359,73 @@ H.eq(probes % 5, 0, "the NaN walk probed five depths per lane (non-vacuous)");
 // 7. ⛔ AND NOTHING IN THE SIMULATION MOVED. Entity position is (lane, depth)
 //    and screen position is derived at paint time, so a moved throat cannot
 //    move a hash — asserted, not commented. The constant is the 10,000-tick
-//    hash at seed 20260830, taken from the CS006 P1 build.
+//    hash at seed 20260830. ⚠ It was taken from the CS006 P1 build and is now
+//    taken from the P4 build; the block below says why, and §8 is what carries
+//    the pre-offset half of the claim after the move.
 // ---------------------------------------------------------------------------
 
-// ⛔ RED SINCE CS006 P3, DELIBERATELY, AND P5 OWNS THE SINGLE RE-RECORD.
-// P3 landed GDD §5's Dive, which replaced the one-second between-wells hold
-// with a 2.6 s sequence and changed what the soak below mixes into its hash.
-// The constant is therefore unreachable by any build after P3 — ⛔ do not
-// re-record it here to make the suite green: this assertion's CLAIM is "P2's
-// throatOffset moved no simulation", and a constant taken from a later build
-// asserts nothing about P2 at all.
+// ⛔ RE-RECORDED ONCE, AT THE CS006 P5 CLOSE, AND THE CAUSE IS NAMED. It was
+// 1743051713, taken from 8e0fb7c (the CS006 P1 build); it is 2063617640, taken
+// from the P4 build at ed79a32. ⛔ A RE-RECORD IS THE ONE MOMENT A STRAY RNG
+// DRAW CAN BE LAUNDERED INTO A NEW BASELINE, so it happened once, deliberately,
+// with the cause re-verified rather than re-derived.
 //
-// ⛔ THE CAUSE IS PROVEN, NOT ASSUMED. Driven tick by tick against the build at
-// 40044ee over the fields both builds share, the two are bit-identical for
-// 1,112 ticks and diverge on EXACTLY the tick wellCleared() first returns true
-// — in one field, shots.length, which is startDive() clearing the player's
-// in-flight shots (GDD §5, ⚠ SETTLED). Nothing else moved.
+// ⛔ THE CAUSE IS GDD §5's DIVE (CS006 P3), AND THE OLD NUMBER CANNOT COME
+// BACK. Two independent reasons, either alone sufficient: the between-wells
+// beat is 2.6 s where CS003 P2's deleted hold was 1.0 s, AND the soak below now
+// mixes `dive.timer` / `dive.depth` where it mixed the deleted `clearHold`. The
+// hashed FIELD SET changed, so ⛔ no value of C.DIVE_TIME restores it and
+// bisecting for one would read as a second unexplained cause.
 //
-// ⚠ CS006 P3's prompt predicted this red would land on test-cs004-p1.js's
-// GOLDEN_LANES instead. It did not — that sequence is unmoved, measured — and
-// this is the one baseline that did move. See STATUS.md.
-const P1_DETERMINISM_HASH = 1743051713;
+// ⛔ AND THE CAUSE LIST IS COMPLETE, MEASURED TWICE. Driven tick by tick against
+// the build at 40044ee over the fields both builds share, the two are
+// bit-identical up to the tick wellCleared() first returns true and diverge on
+// exactly that tick, in one place — the shots array, emptied by startDive()
+// (GDD §5, ⚠ SETTLED). Nothing else moved, on either board:
+//   shipped ["vaulter"] list  first clear at tick 1112  (P3's measurement)
+//   the six-kind MIXED list   first clear at tick 1287  (the board this hash
+//                                                        actually runs on)
+// ⚠ P3's ledger entry says 1,112 without saying which board; both numbers are
+// the same finding measured on different spawn lists.
+//
+// ⛔ WHAT THE RE-RECORD RETIRES, AND WHAT REPLACES IT. This constant used to say
+// "P2's throatOffset moved no simulation" as a PRE-OFFSET comparison; a number
+// taken from a build that also contains the Dive can only say "these two runs
+// of THIS build agree". That half of P2's claim is retired here and is carried
+// instead by three things the Dive cannot touch: §4 and §5 above, both still on
+// their original 8e0fb7c recordings (screenPos moves on exactly the two offset
+// wells; every lane-space helper is unmoved on all sixteen), and the source
+// assertion below, which needs no baseline at all.
+const P1_DETERMINISM_HASH = 2063617640;
 
 const child = execFileSync(process.execPath,
   [path.join(__dirname, "test-cs005-p5.js"), "--hash-only"],
   { cwd: path.join(__dirname, ".."), encoding: "utf8", stdio: "pipe" }).trim();
 H.eq(Number(child), P1_DETERMINISM_HASH,
-     "⛔ the 10,000-tick hash at seed 20260830 is identical to the pre-offset build");
+     "⛔ the 10,000-tick hash at seed 20260830 is the one recorded at the CS006 P5 close");
+
+// ---------------------------------------------------------------------------
+// 8. ⛔ THE BASELINE-FREE FORM OF THE SAME CLAIM: NO SIMULATION CODE CAN READ
+//    A throatOffset AT ALL. It is DATA, read in exactly one function, and that
+//    function is on the paint path.
+// ---------------------------------------------------------------------------
+//
+// ⛔ This is what a re-record costs and this is what pays for it. A hash says
+// "nothing moved on one seed for 10,000 ticks"; this says "nothing CAN move",
+// and it survives every future retune, every new entity and the Dive itself.
+// Read off the built file (the behaviour oracle, GDD §16.2) with wellThroat()'s
+// own source removed from it — Function.prototype.toString() returns the exact
+// slice, so the subtraction needs no comment stripping (_harness.js's header).
+const buildSrc = H.extractScript(
+  require("fs").readFileSync(path.join(__dirname, "..", "dist", "vector-vortex.html"), "utf8"));
+const throatFn = X.wellThroat.toString();
+H.assert(buildSrc.indexOf(throatFn) !== -1,
+         "wellThroat()'s source is found verbatim in the built file (the subtraction is real)");
+H.assert((throatFn.match(/\.throatOffset/g) || []).length >= 2,
+         "⛔ wellThroat() reads throatOffset — the one function that may");
+H.eq((buildSrc.split(throatFn).join("").match(/\.throatOffset/g) || []).length, 0,
+     "⛔ and NOTHING ELSE IN THE BUILD READS IT — every `.throatOffset` in the shipped " +
+     "file is inside wellThroat(), so an offset cannot reach a simulation value by any " +
+     "path, on any seed, for any number of ticks");
 
 H.report("test-cs006-p2.js");

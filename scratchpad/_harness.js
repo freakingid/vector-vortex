@@ -134,6 +134,9 @@ function buildGame(opts = {}) {
     "Surger", "SURGER_POLY", "drawSurger", "drawSurgeLane",
     // the spawner and the well lifecycle (08/23, CS003 P2)
     "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit", "ENEMY_KINDS",
+    // the interval spawner's lane source (08, CS003 P2) — CS006 P5 counts its
+    // bounded redraws directly, which is the form that outlives a golden
+    "pickSpawnLane",
     "enterWell", "nextWell", "startGame",
     // collision and the Purge (09-collision.js, CS003 P3)
     "updateCollisions", "collideShots", "collideSkimmer", "killSkimmer",

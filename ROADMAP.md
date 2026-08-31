@@ -47,7 +47,7 @@ closed session believed, and correcting it is falsifying it. If you find another
 live pointer, it means the same thing both times: read it, decide what it
 *meant*, and correct it.
 
-**CS001 through CS005 are closed.** Their narratives are in `log/CS00#.md`;
+**CS001 through CS006 are closed.** Their narratives are in `log/CS00#.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -72,6 +72,28 @@ live (only item 5, a Thorn during the Dive, is unwired, and it is not a
 `0` and restoring it** rather than by an eighth contract field or a branch in
 the collision pass — recorded in GDD §6.5 and `DECISIONS.md`, and the roster's
 first mutated contract field.
+
+**CS006 held as ONE changeset after splitting itself in two, and shipped its row
+in full.** Six phases: the renumber (P0), past-99 progression and the band roll
+(P1), `throatOffset` and the two degenerate wells (P2), the Dive (P3),
+`laneState` and the dim band (P4), the soak and the close (P5). ⛔ **The Dive
+REPLACED CS003 P2's between-wells hold** — the constant, the `state` field and
+the branch are all deleted, and neither name survives in the built file — and it
+lands GDD §4.5's fifth and last death condition, with the death-loop guard that
+makes a fully thorned well terminate. `C.MIN_LANE_SPOKE_PX` 60 lands as a
+**gate**: the Flat and the Stair were the only two wells under it, both are
+offset, and no untouched well is inside 20 % of the line.
+
+⚠ **What CS006 deliberately left.** The Dive has **no visual** — no camera
+widen, no doppler, no descent rendering; GDD §5 scopes those as presentation and
+no changeset owns them yet, which makes it the largest gap in the build between
+what is simulated and what is seen. The spawner stall it inherited is untouched
+and still CS007's, on purpose: the design call belongs to the changeset that
+makes it reachable. And ⛔ **the single sanctioned baseline re-record was NOT the
+one the plan predicted** — `test-cs004-p1.js`'s `GOLDEN_LANES` is green and
+untouched, and `test-cs006-p2.js`'s `P1_DETERMINISM_HASH` is what the Dive moved.
+`log/CS006.md` carries the cause, and CS006 P5 replaced the golden's guard role
+with a draws-per-spawn count so CS007 can move it without laundering anything.
 
 ---
 
@@ -120,6 +142,18 @@ adding two more to the same `run-all.js` output, and the heat clock's guard is
 written in `respawnSkimmer()`, which the Dive changes — so heat has to land
 *after* the Dive rather than beside it.
 
+⚠ **MEASURED AT CS006's CLOSE, AND THE PREMISE ABOVE IS HALF WRONG — the split is
+still right, for a better reason.** The Dive does **not** move `GOLDEN_LANES`:
+its 3,000-tick window now crosses a well clear, but the extra 1.6 s of dive costs
+it no spawn, so the recorded sequence is identical and CS006 re-recorded nothing
+there. What the Dive moved was `test-cs006-p2.js`'s `P1_DETERMINISM_HASH`, a
+baseline this paragraph did not anticipate. ⛔ The conclusion holds and is
+stronger for it: **two changesets meant two separately-reasoned re-records, and
+each landed on a different baseline with one nameable cause.** CS007 still moves
+`GOLDEN_LANES` — the introduction schedule changes the draw count per spawn — and
+`test-cs006-p5.js` now carries the draws-per-spawn count that makes that move
+checkable rather than merely recorded.
+
 **A playable Classic game exists at CS008.** Everything after it is addition.
 If the schedule breaks, the game that ships is Classic-only and complete rather
 than Overdrive-half-done.
@@ -160,8 +194,10 @@ question that only becomes reachable when the introduction schedule lands, which
 is why it is named against CS007 rather than left unowned. The last is the
 module seam, named against CS012 for the same reason.
 
-- **GDD §3.3's `throatOffset` is undefined.** No well uses it and the GDD never
-  says what it offsets; `wellThroat()` defaults it to zero.
+- ✅ **CLOSED by CS006 P2 — GDD §3.3's `throatOffset` is defined.** It is a
+  translation of the throat polygon in normalized rim space, applied **after**
+  the centroid scale, DATA and never written at runtime. GDD §3.3 carries the
+  definition; `test-cs006-p2.js` asserts it on all sixteen wells.
 - ⚠ **A standing Thorn holds a spawner slot** (CS004 P5). `updateSpawner()`
   blocks on `state.enemies.length >= min(ENEMY_CONCURRENT, ENEMY_CAP)`, a count
   of *everything* in the one array — so three Thorns nobody shoots hold the
@@ -170,12 +206,11 @@ module seam, named against CS012 for the same reason.
   **live the moment CS007's introduction schedule lands Weavers at L5**, which
   makes it CS007's to answer rather than a standing task. Measured repro and the
   numbers are in `STATUS.md`.
-- **The Flat well (11) is geometrically degenerate.** Its rim is a straight line,
-  so it renders with zero depth. An offset throat is what would fix it, which is
-  why it is the same question. The natural landing spot is **CS006** with well
-  progression. ⚠ `STATUS.md` used to attribute a CS004 landing spot to this
-  file, which was never in it; CS004 P1 corrected that line and both documents
-  now say CS006.
+- ✅ **CLOSED by CS006 P2 — the Flat (11) and the Stair (9) are offset.** The
+  Flat's shortest lane-centre spoke went 23.6 → 151.8 px, the Stair's 30.4 →
+  79.6 px, both past `C.MIN_LANE_SPOKE_PX` 60. ⚠ **The numbers are settled and
+  the picture is not** — nobody has looked at either shape, and the ask is in
+  `PLAYTEST.md`.
 - ⛔ **`src/07-enemies.js` wants splitting, and the moment is CS012.** Measured
   at the CS005 close, not felt: it went from **39.1 KB / 782 lines** at CS004
   close (`74fb50c`) to **65.2 KB / 1,277 lines** — **+67% by size for two
