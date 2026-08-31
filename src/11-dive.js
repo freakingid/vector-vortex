@@ -143,6 +143,10 @@ function diveStrike(state, well) {
   if (!sk || sk.dead) return false;
   if (!diveHazard(state, well, sk.lane, state.dive.depth)) return false;
   killSkimmer(state);
+  // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and behind the same `sk.dead`
+  // the return value is read off: an invulnerable diver passes through the
+  // Thorn, and a strike that killed nobody is not a death. GDD 4.5 item 5.
+  if (sk.dead) state.tally.thornDeaths++;
   return sk.dead;
 }
 
@@ -282,5 +286,9 @@ function updateDive(state, well, dt) {
   // killSkimmer() has already set screen = "gameover" and Game.update() returns
   // above this on every later step, so a dive death that ends a run stops the
   // dive too and the frozen board stays on screen.
-  if (d.timer >= C.DIVE_TIME) nextWell();
+  // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and ⚠ it is `divesCompleted`
+  // rather than "divesSurvived": a diver who loses a life to a Thorn respawns
+  // and finishes the dive, so this counts dives that REACHED C.DIVE_TIME. The
+  // lives lost inside them are `thornDeaths`, beside it.
+  if (d.timer >= C.DIVE_TIME) { state.tally.divesCompleted++; nextWell(); }
 }

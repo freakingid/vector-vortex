@@ -1115,6 +1115,28 @@ This is a tuning and debugging instrument. Because the simulation is determinist
 
 **⚠ SETTLED 2026-08-30** — strictly local CSV export; nothing is posted anywhere. See §21 and `DECISIONS.md`.
 
+**As shipped — CS007 P4, `src/21-telemetry.js`.** Twenty-nine columns, in `TELEMETRY_FIELDS`' order, with `TELEMETRY_KINDS` carrying each one's kind as data so the sawtooth exclusion is by name rather than by guess:
+
+| Group | Columns | Kind |
+|---|---|---|
+| The run | `t`, `level`, `seed`, `mode`, `startDepth` | instantaneous |
+| The heat curve | `heat`, `spawnInterval`, `enemyConcurrent`, `climbMult`, `vaultInterval`, `vaultRimInterval`, `surgeInterval`, `weaverApex` | instantaneous |
+| The board | `enemiesAlive`, `threatsAlive`, `thornsStanding`, `livesLeft` | instantaneous |
+| Per-well | `spawnRemaining`, `purgeUses` | **sawtooth** |
+| Run totals | `score`, `maxCombo`, `deaths`, `wellsCleared`, `purgesSpent`, `divesCompleted`, `thornDeaths`, `shotsFired`, `kills`, `spawnBlockedTicks` | cumulative |
+
+⛔ **All eight heat-derived values are columns** — the seven accessors of §8 plus `heat()` itself. That is what makes the log a tuning instrument rather than a score log: a retune can be replotted against a recorded run.
+
+⛔ **Four columns ship with known-constant values from `C.TELEMETRY_PLACEHOLDER`** — `score` and `maxCombo` (0), `mode` (`"classic"`), `startDepth` (1) — because a column added later invalidates every log recorded before it. Each key is deleted from that object by the changeset that gives its column a real source (CS008 for `score` and `mode`, §4.6 for `startDepth`, §14.4 for `maxCombo`).
+
+⛔ **There is no per-kind kill column.** The roster grows (§6.4), so a column per kind guarantees the column list churns — which is what the rule above exists to prevent. `kills` is one number: enemies the player destroyed, by shot or by Purge.
+
+⚠ The column names map one-to-one onto the seven `statsFields` the Worker registers for `vector-vortex` (§15.4), snake_case to camelCase, and the mapping is total.
+
+**The ring and the surface.** `C.TELEMETRY_CAP` rows, sampled every `C.TELEMETRY_INTERVAL` seconds of **simulation** time from `update()` — never from `draw()`, which runs on a frame clock. ⛔ **The ring latches `wrapped` on the first row it drops and the export reports it in the header block**; a total read off a silently wrapped buffer is wrong and nothing else would say so. The surface until CS008's Options screen is the debug bench: `t` toggles capture, `e` exports. ⛔ **Export writes the CSV to `console.log`** — the only path that works on `file://` — with a `navigator.clipboard` attempt beside it inside a try/catch. Never an `<a download>`, never a `fetch`.
+
+⛔ **Nothing is persisted before CS011.** `kit-storage` owns the keyspace and `Profiles.keyFor(base)` is the one route to a key; `22-meta.js` is still a placeholder, so writing rows today would mean the game choosing a raw `localStorage` key name. CS011 owns persistence, the profile scope and `read()`'s envelope-version rejection above.
+
 ---
 
 ### 15.7 Kit boundary and extraction

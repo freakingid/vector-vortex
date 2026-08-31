@@ -161,6 +161,12 @@ function buildGame(opts = {}) {
     // eligibleKinds is the schedule itself, and it is what lets a test assert a
     // level's set rather than infer it from what spawned.
     "pickSpawnKind", "eligibleKinds",
+    // telemetry (21-telemetry.js, CS007 P4). ⛔ TELEMETRY_FIELDS is the one
+    // source of truth for the row shape and the CSV column order, and
+    // telemetryRow is the other half GDD 17 item 11 compares it against — both
+    // are named here so the assertion reads the BUILT file rather than src/.
+    "TELEMETRY_FIELDS", "TELEMETRY_KINDS", "telemetryRow", "telemetryCell",
+    "Telemetry",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +

@@ -529,7 +529,22 @@ const heatTBody = bodyOf(X.heatT);
 H.eq((heatTBody.match(HEAT_CALL) || []).length, 2,
      "⛔ heatT() is where the clock meets the curve — it calls heat() twice, once for the " +
      "level and once for HEAT_FULL_LEVEL");
-H.eq((code.split(heatTBody).join("").match(HEAT_CALL) || []).length, 1,
+// ⛔ REWRITTEN IN PLACE, CS007 P4, AND NOT WEAKENED. The claim is unchanged —
+// no call site computes heat inline — and the count is still exact; what moved
+// is that the build gained a SECOND kind of reader, and it derives nothing.
+// telemetryRow() (21-telemetry.js) RECORDS the curve as a column so a log can
+// be replotted against a retune; it feeds no entity, no spawner and no
+// collision, and the phase that added it was forbidden from moving any
+// simulation value. Its body is excluded exactly as heatT()'s is, and pinned to
+// one call of its own, so a THIRD reader — or a second call inside the
+// instrument — still turns this red.
+const telemetryRowBody = bodyOf(X.telemetryRow);
+H.assert(code.indexOf(telemetryRowBody) !== -1, "telemetryRow()'s source is in the stripped build");
+H.eq((telemetryRowBody.match(HEAT_CALL) || []).length, 1,
+     "⛔ telemetryRow() calls heat() exactly once — it SAMPLES the curve into a column and " +
+     "derives nothing from it (GDD §15.6)");
+const noHeatReaders = code.split(heatTBody).join("").split(telemetryRowBody).join("");
+H.eq((noHeatReaders.match(HEAT_CALL) || []).length, 1,
      "⛔ and heat() is named NOWHERE ELSE in the build but its own declaration — no call " +
      "site computes heat inline, so there is exactly one route from the clock to a value");
 

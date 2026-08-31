@@ -45,6 +45,12 @@ const STATE_FIELDS = {
   CS003: ["seed", "rng", "enemies", "spawn", "purgeUses", "purgeLatched",
           "lives", "invulnTime"],
   CS006: ["bandRoll", "dive"],
+  // ⛔ ONE FIELD, NOT EIGHT. CS007 P4's telemetry counters are a BAG
+  // (state.tally) rather than eight fields on state, so the sum guard above
+  // moves by one and a ninth counter costs this file nothing — the inventory
+  // is about fields built ahead of their changeset, and a counter inside a bag
+  // one changeset owns is not a second answer to that question.
+  CS007: ["tally"],
 };
 
 function stateFields() {

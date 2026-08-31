@@ -90,6 +90,11 @@ function collideShots(state, well) {
       // C.SHOT_MAX the same step, which is what makes camping a thorned lane
       // chip rapidly (GDD 4.2, ⚠ SETTLED — emergent, not a bug to smooth out).
       if (e.onShot(shot)) shot.dead = true;
+      // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and read off `e.dead` rather
+      // than off the return value: onShot() answers "was the shot consumed",
+      // which is a different question from "did the enemy die" — a Thorn chips
+      // and lives, and a Carrier that splits dies. Nothing here branches on it.
+      if (e.dead) state.tally.kills++;
       break;
     }
   }
@@ -189,6 +194,11 @@ function killSkimmer(state) {
 
   sk.dead = true;
   state.lives -= 1;
+  // ⛔ TELEMETRY ONLY (02-state.js's `tally`). Counted HERE and never derived
+  // as START_LIVES - lives: CS008's extra-life awards raise `lives` mid-run,
+  // and the derived form would start quietly under-reporting the moment they
+  // land. Below the invulnerability guard, so a declined kill is not a death.
+  state.tally.deaths++;
 
   // ⛔ THE BUTTON IS RE-LATCHED BY DEATH. Devices are still drained during
   // hit-stop (23-main.js — a freeze must not dump a second of banked mouse
@@ -279,6 +289,11 @@ function updatePurge(state) {
   if (!rising) return;
 
   state.purgeUses++;
+  // ⛔ TELEMETRY ONLY (02-state.js's `tally`). A CHARGE CONSUMED, which is uses
+  // 1 and 2 and never 3+ — the counter above keeps rising so a HUD can tell
+  // "spent" from "spent twice", and a telemetry column that followed it would
+  // report a player mashing an empty button as having spent five purges.
+  if (state.purgeUses <= 2) state.tally.purgesSpent++;
 
   // ⚠ SETTLED — THE PURGE KILLS, IT DOES NOT ASK. Both branches below set
   // `dead` directly and NEITHER calls onShot(). That is why a Purge on a well
@@ -294,7 +309,7 @@ function updatePurge(state) {
   if (state.purgeUses === 1) {
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) e.dead = true;
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; }
     }
     return;
   }
@@ -304,7 +319,9 @@ function updatePurge(state) {
     // A second use with nothing left to kill is still SPENT. The charge is
     // consumed by the press, not by the result — otherwise a player could bank
     // the weak use by firing it into an empty well.
-    if (victim) victim.dead = true;
+    // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
+    // branches of the panic button count here (02-state.js's `tally`).
+    if (victim) { victim.dead = true; state.tally.kills++; }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.

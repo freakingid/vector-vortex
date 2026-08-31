@@ -627,6 +627,28 @@ const C = {
   GLOW_WIDE_ALPHA:      0.20,
   GLOW_THIN_ALPHA:      0.95,
 
+  // ---- Telemetry (GDD 15.6) -----------------------------------------------
+  // ⛔ THE RING IS IN MEMORY AND NOTHING IS PERSISTED THIS CHANGESET.
+  // kit-storage owns the keyspace and Profiles.keyFor(base) is the one route to
+  // a key (CLAUDE.md, Save data); 22-meta.js is still a placeholder, so there is
+  // no keyspace and no Profiles in the build. Writing telemetry anywhere today
+  // would mean the game choosing a raw localStorage key name, which is
+  // forbidden outright. CS011 owns persistence, the profile scope and read()'s
+  // envelope-version rejection.
+  TELEMETRY_CAP:        4096,   // rows. ⛔ the ring DROPS the oldest and latches
+                                // `wrapped`; a total read off a wrapped buffer
+                                // is wrong, so the export says so in its header.
+  TELEMETRY_INTERVAL:   0.50,   // s of SIMULATION time between samples (never
+                                // wall clock). 4096 rows is ~34 min of a run.
+  // ⛔ FOUR COLUMNS THAT SHIP NOW WITH KNOWN-CONSTANT VALUES, and that is GDD
+  // 15.6's rule rather than laziness: a column added later invalidates every
+  // log recorded before it, so the ones whose SOURCE is scheduled get their
+  // place in the order now and their source later. `score` and `maxCombo` land
+  // with addScore() (CS008) and GDD 14.4's combo; `mode` and `startDepth` with
+  // GDD 13's mode select and GDD 4.6's Start Depth. ⛔ Each key is DELETED from
+  // here by the changeset that gives that column a real source.
+  TELEMETRY_PLACEHOLDER: { score: 0, maxCombo: 0, mode: "classic", startDepth: 1 },
+
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.3",   // ⚠ 0.0.2 was never written here — see log/CS006.md
   GAME_ID:              "vector-vortex",   // must match the Worker registry
@@ -823,6 +845,7 @@ function rngPick(rng, arr) {
 // `purgeLatched`,
 // and P4 added `lives` and `invulnTime`. CS006 P1 adds `bandRoll`, and P3 adds
 // `dive` — which DELETED CS003 P2's hold field rather than joining it (GDD 5).
+// CS007 P4 adds `tally`, the run's cumulative counters.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -990,6 +1013,51 @@ function newState() {
     //           LENGTH — comparing the two is the strike test and it is the
     //           only two-depth comparison in the build (11-dive.js).
     dive: { active: false, phase: "grace", timer: 0, depth: 1 },
+
+    // ⛔ THE RUN'S CUMULATIVE COUNTERS (GDD 15.6; 21-telemetry.js). CS007 P4.
+    //
+    // ⛔ WRITE-ONLY AS FAR AS THE SIMULATION IS CONCERNED. Eight numbers, each
+    // incremented at the ONE place its event actually happens, and read by
+    // exactly one consumer: Telemetry's row builder. ⛔ NOTHING IN THE
+    // SIMULATION BRANCHES ON ONE — that is what makes CS007 P4's headline
+    // assertion true, that the 10,000-tick determinism hash is identical with
+    // capture ON and OFF. A future reader that wants to gate behaviour on one
+    // of these has turned an instrument into a mechanic; give it its own field.
+    //
+    // ⛔ THEY ARE MAINTAINED WHETHER OR NOT CAPTURE IS ON, and that is
+    // deliberate: capture is a session switch a player flips mid-run
+    // (21-telemetry.js), and counters that only started counting at the flip
+    // would make every `deaths` and `wellsCleared` in the log a lie about the
+    // run. CS008's HUD and the leaderboard's registered stats read the same
+    // numbers without going near telemetry.
+    //
+    // ⛔ HERE AND NOT INSIDE Telemetry, so newState() resets them — a run's
+    // totals belong to the run, and startGame() already writes this whole
+    // object. A bag inside the module would need a second reset path and would
+    // drift from this one the first time a caller forgot it.
+    //
+    //   deaths             killSkimmer() — ⛔ NOT START_LIVES - lives, which
+    //                      CS008's extra-life awards would quietly falsify
+    //   wellsCleared       the wellCleared() -> startDive() edge (23-main.js)
+    //   purgesSpent        a charge actually consumed: uses 1 and 2, never 3+
+    //   divesCompleted     a dive that reached C.DIVE_TIME. ⚠ COMPLETED, not
+    //                      "survived" — a diver who loses a life to a Thorn
+    //                      respawns and finishes the dive, and a column named
+    //                      for what it does not count is GDD 15.6's own trap
+    //   thornDeaths        GDD 4.5 item 5 — the dive strike that actually killed
+    //   shotsFired         shots that left the rim, cooldown and cap already paid
+    //   kills              enemies the PLAYER destroyed — by shot or by Purge.
+    //                      ⛔ Not per kind: the roster grows (GDD 6.4), and a
+    //                      column per kind guarantees the column list churns,
+    //                      which is exactly what GDD 15.6's rule exists to stop
+    //   spawnBlockedTicks  ⛔ the stall's own signature. A step where the
+    //                      spawner had quota left and its timer at the interval
+    //                      and still released nothing — the release budget
+    //                      (CS007 P1) or C.ENEMY_CAP
+    tally: {
+      deaths: 0, wellsCleared: 0, purgesSpent: 0, divesCompleted: 0,
+      thornDeaths: 0, shotsFired: 0, kills: 0, spawnBlockedTicks: 0,
+    },
   };
 }
 
@@ -2289,6 +2357,11 @@ function updateShots(state, well, dt) {
     const lane = laneNormalize(well, Math.round(state.skimmer.lane));
     state.shots.push(new Shot(well, lane));
     state.shotCooldown = 0;
+    // ⛔ TELEMETRY ONLY, AND WRITE-ONLY (02-state.js's `tally`). Inside the
+    // branch, so it counts shots that actually left the rim rather than trigger
+    // presses the cooldown or C.SHOT_MAX refused. Nothing in the simulation
+    // reads it; GDD 4.2's economy is unchanged.
+    state.tally.shotsFired++;
   }
 
   for (let i = 0; i < state.shots.length; i++) state.shots[i].update(dt);
@@ -3904,13 +3977,24 @@ function updateSpawner(state, well, dt) {
   const interval = spawnInterval();
   if (sp.timer < interval) sp.timer += dt;
   if (sp.timer < interval) return;
-  if (threatCount(state) >= spawnLimit()) return;
+
+  // ⛔ FROM HERE DOWN THE SPAWNER WANTED TO RELEASE: quota left, timer at the
+  // interval. A step that gets this far and releases nothing is a BLOCKED BEAT
+  // — PLANNED-FEATURES-CS007.md 4.2's metric, and the stall's own signature in
+  // a played run. ⛔ Counted for telemetry and read by nothing here (02-state.js
+  // at `tally`): both refusals below already existed and neither changed.
+  if (threatCount(state) >= spawnLimit()) { state.tally.spawnBlockedTicks++; return; }
 
   // Depth 0 is the throat — the far aperture, the only place a well releases
   // an enemy from. GDD 3.2's convention, not a magic number.
   const lane = pickSpawnLane(state, well);
   const e = spawnEnemy(pickSpawnKind(state), lane, 0);
-  if (!e) return;              // refused (the cap): the quota is not spent
+  // Refused (the cap): the quota is not spent. ⛔ The SECOND blocked beat, and
+  // it is a different cause from the one above — the budget counts THREATS and
+  // the cap counts ENTITIES (CS007 P1), so a well full of Thorns blocks here
+  // and not there. One column counts both; the two are told apart by reading
+  // `thornsStanding` beside it.
+  if (!e) { state.tally.spawnBlockedTicks++; return; }
 
   sp.timer = 0;
   sp.remaining--;
@@ -4028,6 +4112,11 @@ function collideShots(state, well) {
       // C.SHOT_MAX the same step, which is what makes camping a thorned lane
       // chip rapidly (GDD 4.2, ⚠ SETTLED — emergent, not a bug to smooth out).
       if (e.onShot(shot)) shot.dead = true;
+      // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and read off `e.dead` rather
+      // than off the return value: onShot() answers "was the shot consumed",
+      // which is a different question from "did the enemy die" — a Thorn chips
+      // and lives, and a Carrier that splits dies. Nothing here branches on it.
+      if (e.dead) state.tally.kills++;
       break;
     }
   }
@@ -4127,6 +4216,11 @@ function killSkimmer(state) {
 
   sk.dead = true;
   state.lives -= 1;
+  // ⛔ TELEMETRY ONLY (02-state.js's `tally`). Counted HERE and never derived
+  // as START_LIVES - lives: CS008's extra-life awards raise `lives` mid-run,
+  // and the derived form would start quietly under-reporting the moment they
+  // land. Below the invulnerability guard, so a declined kill is not a death.
+  state.tally.deaths++;
 
   // ⛔ THE BUTTON IS RE-LATCHED BY DEATH. Devices are still drained during
   // hit-stop (23-main.js — a freeze must not dump a second of banked mouse
@@ -4217,6 +4311,11 @@ function updatePurge(state) {
   if (!rising) return;
 
   state.purgeUses++;
+  // ⛔ TELEMETRY ONLY (02-state.js's `tally`). A CHARGE CONSUMED, which is uses
+  // 1 and 2 and never 3+ — the counter above keeps rising so a HUD can tell
+  // "spent" from "spent twice", and a telemetry column that followed it would
+  // report a player mashing an empty button as having spent five purges.
+  if (state.purgeUses <= 2) state.tally.purgesSpent++;
 
   // ⚠ SETTLED — THE PURGE KILLS, IT DOES NOT ASK. Both branches below set
   // `dead` directly and NEITHER calls onShot(). That is why a Purge on a well
@@ -4232,7 +4331,7 @@ function updatePurge(state) {
   if (state.purgeUses === 1) {
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) e.dead = true;
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; }
     }
     return;
   }
@@ -4242,7 +4341,9 @@ function updatePurge(state) {
     // A second use with nothing left to kill is still SPENT. The charge is
     // consumed by the press, not by the result — otherwise a player could bank
     // the weak use by firing it into an empty well.
-    if (victim) victim.dead = true;
+    // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
+    // branches of the panic button count here (02-state.js's `tally`).
+    if (victim) { victim.dead = true; state.tally.kills++; }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.
@@ -4408,6 +4509,10 @@ function diveStrike(state, well) {
   if (!sk || sk.dead) return false;
   if (!diveHazard(state, well, sk.lane, state.dive.depth)) return false;
   killSkimmer(state);
+  // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and behind the same `sk.dead`
+  // the return value is read off: an invulnerable diver passes through the
+  // Thorn, and a strike that killed nobody is not a death. GDD 4.5 item 5.
+  if (sk.dead) state.tally.thornDeaths++;
   return sk.dead;
 }
 
@@ -4547,7 +4652,11 @@ function updateDive(state, well, dt) {
   // killSkimmer() has already set screen = "gameover" and Game.update() returns
   // above this on every later step, so a dive death that ends a run stops the
   // dive too and the frozen board stays on screen.
-  if (d.timer >= C.DIVE_TIME) nextWell();
+  // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and ⚠ it is `divesCompleted`
+  // rather than "divesSurvived": a diver who loses a life to a Thorn respawns
+  // and finishes the dive, so this counts dives that REACHED C.DIVE_TIME. The
+  // lives lost inside them are `thornDeaths`, beside it.
+  if (d.timer >= C.DIVE_TIME) { state.tally.divesCompleted++; nextWell(); }
 }
 
 // ==========================================================================
@@ -5398,7 +5507,399 @@ function drawSurger(ctx, well, lane, depth, tip, live) {
 // ==========================================================================
 // 21-telemetry.js
 // ==========================================================================
-// 21-telemetry.js — placeholder. See VECTOR-VORTEX-GDD.md for the section that owns this.
+// 21-telemetry.js — the tuning instrument (GDD 15.6, 17 item 11). CS007 P4.
+//
+// A ring buffer of rows sampled off the simulation clock, exported as CSV to
+// the console. It exists to answer GDD 8.2's tuning question — where does a
+// first-time player actually die, where does a competent one — against CS007's
+// heat curve, which is why every heat-derived value is a column of its own. A
+// log that carried only score and level would be a score log; the curve is what
+// makes it an instrument.
+//
+// ⛔ NOTHING IS POSTED ANYWHERE. Strictly local CSV export (GDD 15.6, ⚠ SETTLED
+// 2026-08-30; GDD 21 item 5). It is explicitly NOT an anti-cheat mechanism.
+//
+// ⛔ IT MOVES NO BASELINE, AND THAT IS THE HEADLINE CLAIM (test-cs007-p4.js).
+// It spends no RNG draw, reads no state.rng, writes nothing the simulation
+// reads back, and is sampled from update() on the SIMULATION clock — never from
+// draw(). draw() runs on a frame clock and update() does not (CLAUDE.md, Math
+// and lifecycle; RATIONALE.md#draw-path-rng), so a sample taken there would
+// make a capture-on run diverge from a capture-off one — GDD 17.1's replay
+// guarantee failing inside the one system built to observe it.
+//
+// ⛔ NO PERSISTENCE THIS CHANGESET, and the reason is a shipped rule rather than
+// a preference. kit-storage owns the keyspace and Profiles.keyFor(base) is the
+// one route from a store's base name to the key it reads (CLAUDE.md, Save
+// data); 22-meta.js is a placeholder, so there is no keyspace and no Profiles
+// in this build. Writing rows anywhere today would mean the game choosing a raw
+// localStorage key name, which is forbidden outright. ⛔ CS011 owns persistence,
+// the profile scope and GDD 15.6's read() envelope-version rejection — and it
+// is wiring rather than a rewrite, because the row shape and the export exist.
+// ⛔ THERE IS NO STORAGE CALL IN THIS FILE AND THERE MUST NOT BE ONE.
+//
+// ⛔ NOT ON CLAUDE.md's EXTRACTION LIST. Six modules are built kit-shaped from
+// v1 and this is not one of them, so it reads `state` and `C` directly like
+// every other game module. A future kit-telemetry would take a snapshot
+// callback instead; do not half-shape it here in anticipation.
+
+// ---------------------------------------------------------------------------
+// ⛔ THE COLUMNS — TELEMETRY_FIELDS IS THE ONE SOURCE OF TRUTH (GDD 15.6)
+// ---------------------------------------------------------------------------
+//
+// ⛔ It drives the CSV header AND the row shape. telemetryRow() below writes the
+// same names in the same order, and GDD 17 item 11 asserts they agree in LENGTH
+// AND ORDER off the built file — so adding or reordering a column means editing
+// this list and that function TOGETHER, in one commit, or the suite goes red.
+//
+// ⛔ THREE COLUMN KINDS AND THE NAMES DO NOT TELL YOU WHICH — TELEMETRY_KINDS
+// below is the table, and it is DATA rather than a comment so the exclusion
+// below can be made by name:
+//
+//   instantaneous  the state at the sample instant. May go up or down.
+//   cumulative     a run total. Rises, and resets only when a run does.
+//   sawtooth       reset by an EVENT mid-run. ⛔ EXCLUDED BY NAME from any
+//                  monotonicity check — a sawtooth column falling is the column
+//                  working, and a check that did not know which ones they were
+//                  would flag the two most useful stall columns in the file.
+//
+// ⛔ FOUR COLUMNS SHIP WITH KNOWN-CONSTANT VALUES rather than being added when
+// their source lands: `score` and `maxCombo` (0), `mode` ("classic") and
+// `startDepth` (1), out of C.TELEMETRY_PLACEHOLDER. A column added in CS008
+// invalidates every log recorded before it, which is the whole reason GDD 15.6
+// makes the column list a thing you edit deliberately.
+//
+// ⚠ CROSS-CHECKED AGAINST THE WORKER, which already registers seven statsFields
+// for `vector-vortex` in coinless-kit's services/leaderboard/src/registry.js
+// (measured at 79206f3). The two instruments name the same quantities; the
+// Worker's keys are snake_case and these are camelCase, and the mapping is
+// exact and total:
+//
+//   level_reached -> level      mode -> mode            start_depth -> startDepth
+//   wells_cleared -> wellsCleared               purges_spent -> purgesSpent
+//   max_combo -> maxCombo       deaths -> deaths
+//
+// ⛔ ALL EIGHT HEAT-DERIVED VALUES ARE SAMPLED, not the six the phase prompt
+// enumerated: CLAUDE.md names SEVEN accessors and heat() itself, and
+// vaultInterval() / vaultRimInterval() are two of the seven. "Sample every
+// heat-derived value" is the rule; the six-name list under-named it. A log
+// missing two rows of the curve cannot be replotted against a retune of them,
+// which is the one job this file has.
+//
+// ⛔ THERE IS NO PER-KIND KILL COLUMN, and that is a decision. The roster grows
+// (GDD 6.4's three Overdrive enemies), so a column per kind guarantees the
+// column list churns — exactly what GDD 15.6's rule exists to prevent. `kills`
+// is one number: enemies the player destroyed, by shot or by Purge.
+const TELEMETRY_FIELDS = [
+  // ---- the run, and where it is -------------------------------------------
+  "t",                  // instantaneous — simulation seconds (state.time)
+  "level",              // instantaneous — ⛔ THE ONE CLOCK (GDD 8)
+  "seed",               // instantaneous — constant within a run; a restart moves it
+  "mode",               // instantaneous — ⚠ "classic" until CS008 (GDD 13)
+  "startDepth",         // instantaneous — ⚠ 1 until GDD 4.6's Start Depth
+  // ---- the heat curve, sampled (GDD 8; 00-config.js) ----------------------
+  "heat",               // instantaneous
+  "spawnInterval",      // instantaneous
+  "enemyConcurrent",    // instantaneous
+  "climbMult",          // instantaneous
+  "vaultInterval",      // instantaneous
+  "vaultRimInterval",   // instantaneous
+  "surgeInterval",      // instantaneous
+  "weaverApex",         // instantaneous
+  // ---- the board, with CS007 P1's split visible in the field ---------------
+  "enemiesAlive",       // instantaneous — every entity, what C.ENEMY_CAP counts
+  "threatsAlive",       // instantaneous — blocksClear, what the release budget counts
+  "thornsStanding",     // instantaneous — `anchored`; the difference between the two above
+  "livesLeft",          // instantaneous — GDD 8.2's targets are about where a player dies
+  // ---- the two sawtooths ---------------------------------------------------
+  "spawnRemaining",     // ⛔ SAWTOOTH — the well's quota, re-armed by enterWell()
+  "purgeUses",          // ⛔ SAWTOOTH — one charge per well, re-armed by enterWell()
+  // ---- the run's totals ----------------------------------------------------
+  "score",              // cumulative — ⚠ 0 until addScore() lands in CS008
+  "maxCombo",           // cumulative — ⚠ 0 until GDD 14.4's combo (Overdrive)
+  "deaths",             // cumulative
+  "wellsCleared",       // cumulative
+  "purgesSpent",        // cumulative
+  "divesCompleted",     // cumulative — ⚠ completed, NOT survived (02-state.js)
+  "thornDeaths",        // cumulative — GDD 4.5 item 5, a subset of `deaths`
+  "shotsFired",         // cumulative
+  "kills",              // cumulative — by shot or by Purge
+  "spawnBlockedTicks",  // cumulative — ⛔ the stall's own signature (08-spawner.js)
+];
+
+// ⛔ EVERY NAME ABOVE HAS A ROW HERE AND NOTHING ELSE DOES. test-cs007-p4.js
+// asserts the two key sets are equal, so a column added without a kind — the
+// easy half of the edit — turns the suite red rather than shipping a column
+// nobody can classify.
+const TELEMETRY_KINDS = {
+  t: "instantaneous",
+  level: "instantaneous",
+  seed: "instantaneous",
+  mode: "instantaneous",
+  startDepth: "instantaneous",
+  heat: "instantaneous",
+  spawnInterval: "instantaneous",
+  enemyConcurrent: "instantaneous",
+  climbMult: "instantaneous",
+  vaultInterval: "instantaneous",
+  vaultRimInterval: "instantaneous",
+  surgeInterval: "instantaneous",
+  weaverApex: "instantaneous",
+  enemiesAlive: "instantaneous",
+  threatsAlive: "instantaneous",
+  thornsStanding: "instantaneous",
+  livesLeft: "instantaneous",
+  spawnRemaining: "sawtooth",
+  purgeUses: "sawtooth",
+  score: "cumulative",
+  maxCombo: "cumulative",
+  deaths: "cumulative",
+  wellsCleared: "cumulative",
+  purgesSpent: "cumulative",
+  divesCompleted: "cumulative",
+  thornDeaths: "cumulative",
+  shotsFired: "cumulative",
+  kills: "cumulative",
+  spawnBlockedTicks: "cumulative",
+};
+
+// ⛔ THE OTHER HALF OF TELEMETRY_FIELDS. The names, in the list's order, and
+// nothing else — a reader comparing this function to the list above is doing
+// exactly what GDD 17 item 11 asserts mechanically.
+//
+// ⛔ EVERY HEAT ACCESSOR IS PASSED THE LEVEL EXPLICITLY rather than left to
+// default to state.level (00-config.js). Identical today; it says in the code
+// that a row is a function of the level it records, which is what makes a
+// re-plot against a retune honest.
+//
+// ⛔ threatCount() IS THE REAL ONE (08-spawner.js), not a copy: the whole point
+// of the column is to show what the release budget saw, and a second count here
+// could disagree with the spawner's the first time `blocksClear` moved.
+function telemetryRow(state) {
+  const lvl = state.level;
+  const P = C.TELEMETRY_PLACEHOLDER;
+  const T = state.tally;
+
+  // One pass for both board counts. ⛔ `anchored` is read off the entity, never
+  // a class name (GDD 6.5) — it is the Thorn and nothing else, and it is what
+  // makes enemiesAlive and threatsAlive differ.
+  let alive = 0;
+  let thorns = 0;
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (e.dead) continue;
+    alive++;
+    if (e.anchored) thorns++;
+  }
+
+  return {
+    t:                 state.time,
+    level:             lvl,
+    seed:              state.seed,
+    mode:              P.mode,
+    startDepth:        P.startDepth,
+    heat:              heat(lvl),
+    spawnInterval:     spawnInterval(lvl),
+    enemyConcurrent:   enemyConcurrent(lvl),
+    climbMult:         climbMult(lvl),
+    vaultInterval:     vaultInterval(lvl),
+    vaultRimInterval:  vaultRimInterval(lvl),
+    surgeInterval:     surgeInterval(lvl),
+    weaverApex:        weaverApex(lvl),
+    enemiesAlive:      alive,
+    threatsAlive:      threatCount(state),
+    thornsStanding:    thorns,
+    livesLeft:         state.lives,
+    spawnRemaining:    state.spawn.remaining,
+    purgeUses:         state.purgeUses,
+    score:             P.score,
+    maxCombo:          P.maxCombo,
+    deaths:            T.deaths,
+    wellsCleared:      T.wellsCleared,
+    purgesSpent:       T.purgesSpent,
+    divesCompleted:    T.divesCompleted,
+    thornDeaths:       T.thornDeaths,
+    shotsFired:        T.shotsFired,
+    kills:             T.kills,
+    spawnBlockedTicks: T.spawnBlockedTicks,
+  };
+}
+
+// One CSV cell. Integers plain, everything else to six decimals — enough to
+// replot the curve and short enough that a row is readable. ⛔ No quoting and no
+// escaping, because no column can contain a comma: every one is a number except
+// `mode`, which comes from C.TELEMETRY_PLACEHOLDER.
+function telemetryCell(v) {
+  if (typeof v === "number") {
+    if (!isFinite(v)) return String(v);
+    return v === Math.floor(v) ? String(v) : v.toFixed(6);
+  }
+  return String(v);
+}
+
+const Telemetry = (function () {
+
+  // ⛔ CAPTURE IS A SESSION SWITCH: OPT-IN, OFF AT EVERY LAUNCH, NEVER
+  // PERSISTED (GDD 15.6). A plain module-level boolean is the whole mechanism,
+  // and the absence of a load path is the guarantee — there is no storage read
+  // anywhere in this file, so a launch has nothing to revive a stale "was ON
+  // last session" state from. CS008's Options screen is a control surface over
+  // this switch and must not become a settings store for it.
+  let capturing = false;
+
+  // The ring. ⛔ FIXED LENGTH, oldest dropped, and `wrapped` LATCHES the first
+  // time a row is actually dropped — Orbital Overhaul's v4 lesson: a total read
+  // off a silently wrapped buffer is wrong and nothing said so. The export
+  // reports it in the header block, every time.
+  let ring = new Array(C.TELEMETRY_CAP);
+  let head = 0;      // where the next row goes
+  let count = 0;     // rows held, <= C.TELEMETRY_CAP
+  let wrapped = false;
+
+  // The sample clock, in SIMULATION seconds. -Infinity means "due now", which
+  // is the state a fresh buffer and a freshly enabled capture are both in.
+  let lastAt = -Infinity;
+
+  // ⛔ ONE ROW IN, THE RING'S ONLY WRITER. Returns the row so a caller — and
+  // GDD 17 item 11's assertion — can read its key ORDER, which is the half of
+  // the contract a length check cannot see.
+  //
+  // ⛔ UNGATED BY `capturing` ON PURPOSE. sample() is the gate; this is the
+  // mechanism, and a test that had to flip a session switch to drive the row
+  // builder would be testing the switch twice and the shape not at all.
+  function push(state) {
+    const row = telemetryRow(state);
+    // The write that is about to overwrite a live row is the drop.
+    if (count === C.TELEMETRY_CAP) wrapped = true;
+    ring[head] = row;
+    head = (head + 1) % C.TELEMETRY_CAP;
+    if (count < C.TELEMETRY_CAP) count++;
+    return row;
+  }
+
+  // ⛔ CALLED FROM update(), ON THE SIMULATION CLOCK, AND FROM NOWHERE ELSE
+  // (23-main.js). Returns the row it took, or null.
+  //
+  // ⛔ THE INTERVAL IS SIMULATION SECONDS, so a slow frame, a hit-stop freeze
+  // and a headless soak driving update() directly all sample identically. At
+  // C.TELEMETRY_INTERVAL 0.50 s a 60 Hz run spends one row every 30 ticks.
+  //
+  // ⚠ A CLOCK THAT WENT BACKWARDS IS A NEW RUN. startGame() puts state.time
+  // back to 0, and a `lastAt` left at the old run's time would silence the
+  // instrument for as many minutes as the previous run lasted. The rows carry
+  // `seed`, so the restart is legible in the file rather than hidden.
+  function sample(state) {
+    if (!capturing) return null;
+    const t = state.time;
+    if (t < lastAt) lastAt = -Infinity;
+    if (t - lastAt < C.TELEMETRY_INTERVAL) return null;
+    lastAt = t;
+    return push(state);
+  }
+
+  // Rows oldest-first. Allocates; the export and the suite are the callers and
+  // neither is in the hot path.
+  function rows() {
+    const out = new Array(count);
+    const start = count === C.TELEMETRY_CAP ? head : 0;
+    for (let i = 0; i < count; i++) out[i] = ring[(start + i) % C.TELEMETRY_CAP];
+    return out;
+  }
+
+  // Drops every row and re-arms the sample clock. ⛔ It does NOT touch the
+  // capture switch — clearing the buffer and turning the instrument off are two
+  // different intentions and a player who means one rarely means the other.
+  function clear() {
+    ring = new Array(C.TELEMETRY_CAP);
+    head = 0;
+    count = 0;
+    wrapped = false;
+    lastAt = -Infinity;
+    return true;
+  }
+
+  // ⛔ ENABLING DOES NOT CLEAR. A player toggling capture off across a menu and
+  // back on wants one log, not two; the sample clock is re-armed so the first
+  // step after the flip takes a row rather than waiting out an interval that
+  // elapsed while the instrument was off. Use clear() to start a fresh file.
+  function setEnabled(on) {
+    const next = !!on;
+    if (next !== capturing) {
+      capturing = next;
+      if (capturing) lastAt = -Infinity;
+    }
+    return capturing;
+  }
+
+  function toggle() { return setEnabled(!capturing); }
+  function enabled() { return capturing; }
+
+  // The file. ⛔ A `#` HEADER BLOCK, THEN TELEMETRY_FIELDS.join(","), THEN THE
+  // ROWS — the header line is the first line that does not start with `#`, and
+  // it is exactly the field list, which is what makes the list the one source
+  // of truth for the column order rather than merely the intended one.
+  //
+  // ⛔ THE WRAP IS REPORTED, LOUDLY. `wrapped=true` means the oldest rows are
+  // gone, so a total read off the first row of this file is wrong — the
+  // cumulative columns start mid-run. That is the whole reason the flag latches.
+  function csv() {
+    const all = rows();
+    const last = count > 0 ? all[count - 1] : null;
+    const lines = [];
+    lines.push("# vector-vortex telemetry (GDD 15.6) v" + C.GAME_VERSION);
+    lines.push("# rows=" + count +
+               " capacity=" + C.TELEMETRY_CAP +
+               " interval=" + C.TELEMETRY_INTERVAL +
+               " wrapped=" + wrapped +
+               " seed=" + (last ? last.seed : "none"));
+    if (wrapped) {
+      lines.push("# WARNING: the ring dropped its oldest rows. The cumulative " +
+                 "columns start mid-run, so a total read off row 1 is wrong.");
+    }
+    lines.push(TELEMETRY_FIELDS.join(","));
+    for (let i = 0; i < all.length; i++) {
+      const r = all[i];
+      const cells = new Array(TELEMETRY_FIELDS.length);
+      for (let k = 0; k < TELEMETRY_FIELDS.length; k++) {
+        cells[k] = telemetryCell(r[TELEMETRY_FIELDS[k]]);
+      }
+      lines.push(cells.join(","));
+    }
+    return lines.join("\n");
+  }
+
+  // ⛔ THE EXPORT WRITES TO console.log, AND THAT IS THE WHOLE MECHANISM. It is
+  // the only path that works on file://, which the built game must open and
+  // play from by double-click (CLAUDE.md, Build rules). ⛔ NEVER AN <a download>
+  // AND NEVER A fetch — both are the same failure, a capability the shipped
+  // artifact does not have.
+  //
+  // ⛔ THE CLIPBOARD ATTEMPT IS AN OPTIONAL ENHANCEMENT AND ITS FAILURE IS THE
+  // NORMAL PATH (EXTERNAL-FILES.md rule 1). file:// is not a secure context, so
+  // navigator.clipboard is usually absent there — and writeText() REJECTS
+  // asynchronously rather than throwing, so the promise is caught too. Neither
+  // failure is surfaced and neither changes what the console already has.
+  function exportCsv() {
+    const text = csv();
+    console.log(text);
+    try {
+      if (typeof navigator !== "undefined" && navigator &&
+          navigator.clipboard && navigator.clipboard.writeText) {
+        const p = navigator.clipboard.writeText(text);
+        if (p && typeof p.catch === "function") p.catch(function () {});
+      }
+    } catch (e) { /* absence is the normal fallback path */ }
+    return text;
+  }
+
+  return {
+    fields: TELEMETRY_FIELDS,
+    kinds: TELEMETRY_KINDS,
+    enabled, setEnabled, toggle,
+    sample, push, rows, clear, csv, exportCsv,
+    get count() { return count; },
+    get wrapped() { return wrapped; },
+  };
+})();
 
 // ==========================================================================
 // 22-meta.js
@@ -5746,6 +6247,19 @@ const Game = (function () {
       spawnDrifter: ["5"],
       spawnSurger:  ["6"],
       spawnRow:     ["0"],
+      // ⛔ THE TELEMETRY BENCH (GDD 15.6; 21-telemetry.js). CS007 P4. Two
+      // actions, because there is no HUD and no Options screen until CS008 and
+      // the debug bench is the only surface there is.
+      //
+      // ⛔ AND THESE ARE THE FIRST DEBUG KEYS THAT ARE SAFE INSIDE A HASHED RUN.
+      // "r", "w" and the seven digits are on three closed soaks' FORBIDDEN list
+      // because each moves the run's stream or its clock; neither of these
+      // touches the simulation at all — one flips a module-level boolean and one
+      // reads the ring and writes to the console. That is the same claim
+      // test-cs007-p4.js's headline assertion makes, from the other side, and it
+      // is why the soaks' lists are correct WITHOUT these two.
+      telemetryToggle: ["t"],
+      telemetryExport: ["e"],
     },
     onAction:         runAction,
   });
@@ -5851,7 +6365,11 @@ const Game = (function () {
       hitStopLeft = 0;
     }
 
-    // ⚠ TEMPORARY — the debug bench. ⛔ Through spawnEnemy(), the one entry
+    // The debug bench. ⚠ THE ⚠ TEMPORARY MARKER THAT USED TO OPEN THIS LINE IS
+    // GONE, and CS007 P3 is where it stopped being true — see DEBUG_SPAWN_ACTIONS
+    // above for Paul's H5 call. Left here it would have read as covering the two
+    // telemetry actions below it, which are not temporary either.
+    // ⛔ Through spawnEnemy(), the one entry
     // point (GDD 6.5): the bench inherits the safe-spawn rule and C.ENEMY_CAP
     // exactly as the interval spawner does, and a bench that pushed straight
     // into state.enemies would be the second way in that the one entry point
@@ -5859,6 +6377,17 @@ const Game = (function () {
     const kind = DEBUG_SPAWN_ACTIONS[name];
     if (kind !== undefined && state.skimmer) spawnEnemy(kind, state.skimmer.lane, 0);
     if (name === "spawnRow") spawnRow();
+
+    // ⛔ CAPTURE IS OFF AT EVERY LAUNCH AND IS NEVER PERSISTED (GDD 15.6), so
+    // this is the ONLY way it is ever turned on. The console line is the
+    // feedback — there is nothing on screen to show a switch with yet.
+    if (name === "telemetryToggle") {
+      console.log("telemetry capture: " + (Telemetry.toggle() ? "ON" : "off") +
+                  " (" + Telemetry.count + " rows)");
+    }
+    // ⛔ console.log, never an <a download> and never a fetch — see
+    // 21-telemetry.js. It is the only export path that works on file://.
+    if (name === "telemetryExport") Telemetry.exportCsv();
   }
 
   function nowMs() {
@@ -5891,6 +6420,19 @@ const Game = (function () {
     // never armed. ⛔ Still the one path (enterWell); boot goes through
     // startGame().
     if (!state.skimmer) enterWell();
+
+    // ⛔ THE TELEMETRY SAMPLE, AND THIS IS THE ONE PLACE IT IS TAKEN (GDD 15.6;
+    // 21-telemetry.js). ⛔ ON THE SIMULATION CLOCK — inside update(), never in
+    // draw(), which runs on a frame clock and would make a capture-on run
+    // diverge from a capture-off one. Telemetry.sample() is a no-op unless
+    // capture was turned on this session, and it spends no RNG draw either way.
+    //
+    // ⛔ ABOVE THE DIVE BRANCH, so the ~2.6 s a run spends in a dive is sampled
+    // rather than being a hole in the log; below the game-over stop, so a
+    // stopped run stops logging. A row is therefore the simulation as this step
+    // BEGINS, with state.time already advanced — one call site, and the two
+    // returns below cannot silently halve the coverage.
+    Telemetry.sample(state);
 
     const well = WELLS[state.wellIndex];
 
@@ -5950,7 +6492,11 @@ const Game = (function () {
     // survivors, and nextWell() is reached only from the dive's END, in
     // updateDive() (11-dive.js). One step of the dive runs on the NEXT step —
     // the branch above — never a second pass through this function.
-    if (wellCleared(state)) startDive(state);
+    // ⛔ TELEMETRY ONLY (02-state.js's `tally`). Counted at the EDGE — the step
+    // wellCleared() first says yes — and not inside startDive(), which the suite
+    // also drives directly; a well cleared by play is the event the column is
+    // about. Nothing here branches on it.
+    if (wellCleared(state)) { state.tally.wellsCleared++; startDive(state); }
   }
 
   // ---- presentation --------------------------------------------------------

@@ -578,6 +578,28 @@ const C = {
   GLOW_WIDE_ALPHA:      0.20,
   GLOW_THIN_ALPHA:      0.95,
 
+  // ---- Telemetry (GDD 15.6) -----------------------------------------------
+  // ⛔ THE RING IS IN MEMORY AND NOTHING IS PERSISTED THIS CHANGESET.
+  // kit-storage owns the keyspace and Profiles.keyFor(base) is the one route to
+  // a key (CLAUDE.md, Save data); 22-meta.js is still a placeholder, so there is
+  // no keyspace and no Profiles in the build. Writing telemetry anywhere today
+  // would mean the game choosing a raw localStorage key name, which is
+  // forbidden outright. CS011 owns persistence, the profile scope and read()'s
+  // envelope-version rejection.
+  TELEMETRY_CAP:        4096,   // rows. ⛔ the ring DROPS the oldest and latches
+                                // `wrapped`; a total read off a wrapped buffer
+                                // is wrong, so the export says so in its header.
+  TELEMETRY_INTERVAL:   0.50,   // s of SIMULATION time between samples (never
+                                // wall clock). 4096 rows is ~34 min of a run.
+  // ⛔ FOUR COLUMNS THAT SHIP NOW WITH KNOWN-CONSTANT VALUES, and that is GDD
+  // 15.6's rule rather than laziness: a column added later invalidates every
+  // log recorded before it, so the ones whose SOURCE is scheduled get their
+  // place in the order now and their source later. `score` and `maxCombo` land
+  // with addScore() (CS008) and GDD 14.4's combo; `mode` and `startDepth` with
+  // GDD 13's mode select and GDD 4.6's Start Depth. ⛔ Each key is DELETED from
+  // here by the changeset that gives that column a real source.
+  TELEMETRY_PLACEHOLDER: { score: 0, maxCombo: 0, mode: "classic", startDepth: 1 },
+
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.3",   // ⚠ 0.0.2 was never written here — see log/CS006.md
   GAME_ID:              "vector-vortex",   // must match the Worker registry

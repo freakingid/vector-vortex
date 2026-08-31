@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.3 · Changeset: CS007 (P3 of 5 built) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.3 · Changeset: CS007 (P4 of 5 built) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS007
 
@@ -12,6 +12,10 @@ One line per phase here; reasoning goes to `log/CS007.md`.
 - **P3 — GDD §8.1's introduction schedule.** `C.SPAWN_SCHEDULE` in, ⚠ the bench
   constant out, **eight** closed files repaired. 32 files green, zero skips. New
   `scratchpad/test-cs007-p3.js` (69 assertions).
+- **P4 — telemetry, the tuning instrument.** 29 columns, the ring, the session
+  switch, the CSV. ⛔ **No baseline moved.** 33 files green, zero skips. New
+  `scratchpad/test-cs007-p4.js` (201 assertions). ⛔ **Reasoning is in
+  `log/CS007.md`** — P4 is the first phase to write there as it went.
 
 ⛔ **P1 AND P2, COMPRESSED — ✅ Paul authorized this at the P2 close to make room
 for P3.** Nothing is deleted and every measured figure is kept; the full
@@ -141,12 +145,46 @@ the original never had — the kind actually reached the board — and both
 ⚠ TEMPORARY bench-key headers are corrected, since the keys are not.
 
 
-⚠ **P4/P5 HAZARDS, two.** (1) `CLAUDE.md` carries **no rule** for the schedule —
+⛔ **P4 — TELEMETRY, AND ⛔ NO BASELINE MOVED.** `src/21-telemetry.js`: 29
+columns — **all EIGHT** heat-derived values (the prompt enumerated six;
+`CLAUDE.md` names seven accessors plus `heat()`, and the rule beat its own list),
+P1's split as three columns, cumulative `spawnBlockedTicks`, and **two
+sawtooths** (`spawnRemaining`, `purgeUses`) that make the three-kind
+classification real. ⛔ **10,000 ticks hash IDENTICALLY with capture ON and OFF**
+— two builds, 325 rows, level 6. ⛔ Capture is OFF at a fresh build after one
+left it ON; the module names no storage API, comments stripped. ⛔ `state.tally`
+is **ONE** state field (eight counters, nine write-only sites); nothing in the
+simulation branches on one. Bench keys **`t`** / **`e`**; ⚠ the first debug keys
+that cannot move a hash, so the soaks' `FORBIDDEN` lists are right without them.
+⛔ **`EXTERNAL-FILES.md` gains NOTHING — nothing new loads.** ⚠ And `runAction()`'s
+stale inline `⚠ TEMPORARY — the debug bench` was deleted: P3's H5 call made it
+false, and left there it would have read as covering the two telemetry actions
+below it. Reasoning: `log/CS007.md`.
+
+⛔ **ONE CLOSED FILE EDITED — `test-cs007-p2.js`, IN PLACE, NOT WEAKENED.** Its
+`heat()`-has-one-call-site assertion met the mandated `heat` column;
+`telemetryRow()`'s body is now excluded as `heatT()`'s is **and pinned to one
+call of its own**, so a third reader still turns it red. ⚠ **`climbMult()`'s
+neighbouring assertion needed nothing, and that is now a rule**: it counts the
+ZERO-ARGUMENT form, and every heat accessor in the row builder is passed its
+level explicitly.
+
+⚠ **P5 HAZARDS, four — two carried from P3 and two new.** (1) `CLAUDE.md` carries **no rule** for the schedule —
 its Config section names the seven heat accessors and says nothing about
 `C.SPAWN_SCHEDULE`, `eligibleKinds()` or the no-weight-table decision; only the
 code-map line was updated. GDD §6.2/§8.1 and the config comment carry it, and
 ⛔ whether it earns a rule in a 50 KB auto-loading file is not a build phase's
-call. (2) ⚠ **This file is 416 lines against its ~400 ceiling** even with P1 and P2
+call. (3) ⛔ **`CLAUDE.md` carries no telemetry rule either**, and P4 did not add one
+for the same reason P3 did not add a schedule rule: only the code-map line was
+updated (`21-telemetry.js` now has its own line). GDD §15.6 carries the shipped
+column table, the ring, the surface and the no-persistence rule. ⛔ Whether the
+session switch, the one sample site and the `TELEMETRY_FIELDS`/`push()` pairing
+earn a rule in a 50 KB auto-loading file is Paul's call, not a build phase's.
+(4) ⚠ **`C.TELEMETRY_PLACEHOLDER` is a four-key object that SHRINKS**, and no
+changeset owns emptying it: CS008 deletes `score` and `mode`, GDD §4.6's Start
+Depth deletes `startDepth`, GDD §14.4's combo deletes `maxCombo`. ⛔ A key left
+there after its column has a real source is a column silently reporting zero.
+(2) ⚠ **This file is 416 lines against its ~400 ceiling** even with P1 and P2
 compressed once (Paul's authorization, spent) and the shipped-curve table
 replaced by a pointer to GDD §8, its permanent home. ⛔ The remaining excess is
 P3's own entry, and every measured figure in it exists **only** here until P5
@@ -323,8 +361,20 @@ knob**; *Carrier cargo weights* has **no** mechanism and is emergent from §8.1
 
 ## Carried tasks (not blocking, no changeset owns them yet)
 
-- Register `vector-vortex` in the Worker's `services/leaderboard/src/registry.js`
-  with the seven stats keys, before any submission is attempted.
+- ⛔ **CS011 OWNS TELEMETRY PERSISTENCE**, and CS007 P4 built the row shape and
+  the export so it is wiring rather than a rewrite. What is missing: the
+  `telemetry` key's profile scope, `Profiles.keyFor(base)` as the one route to
+  it, and GDD §15.6's `read()` rejecting any envelope `v` that does not match the
+  current shape. ⛔ **Not buildable before `22-meta.js` exists** — there is no
+  keyspace and no `Profiles` in the build, and a raw `localStorage` key name is
+  forbidden outright.
+- ⚠ **STALE, CORRECTED — `vector-vortex` IS ALREADY REGISTERED** in
+  `coinless-kit`'s `services/leaderboard/src/registry.js` (measured at
+  `79206f3`) with all seven `statsFields`. What remains is confirming the
+  **deployed** Worker carries it, and that is CS011's. ⛔ P4 cross-checked the
+  column names against all seven and the mapping is **total** — `level_reached`,
+  `mode`, `start_depth`, `wells_cleared`, `purges_spent`, `max_combo`, `deaths`
+  each have a column, `max_combo` shipping at a known-constant 0.
 - Backport `kit-input` (`src/04-input.js`, all four devices, v0.3.0) to
   coinless-kit — a separate manual step, verified against that repo's own suite.
 - ⛔ **DONE, CS007 P3 — the pair is split and this is what is left of the task.**
@@ -338,6 +388,12 @@ knob**; *Carrier cargo weights* has **no** mechanism and is emergent from §8.1
 - `state.screen === "gameover"` is a STOP with nothing on screen but the frozen
   board. `r` restarts. CS008 owns the screen, the submission and the real restart
   flow, and the `restart` debug action should be folded into it.
+- ⚠ **THE TELEMETRY COLUMN LIST IS FROZEN UNTIL A CHANGESET DELIBERATELY MOVES
+  IT** (GDD §15.6). A column added in CS008 invalidates every CS007 log, which is
+  why `score`, `maxCombo`, `mode` and `startDepth` already ship at known
+  constants. ⛔ Adding or reordering one edits `TELEMETRY_FIELDS`,
+  `TELEMETRY_KINDS` and `telemetryRow()` **together**; `test-cs007-p4.js` drives
+  the real `push()` and goes red on any two of the three drifting.
 - **No scoring anywhere.** `PTS_VAULTER`, `PTS_CARRIER`, `PTS_WEAVER`,
   `PTS_THORN`, `PTS_WELL_PER_LEVEL`, `PTS_NO_DEATH_WELL` and
   `PURGE_SAVED_BONUS` are deliberately unread until `addScore()` lands in CS008,

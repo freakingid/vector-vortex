@@ -12,6 +12,7 @@
 // `purgeLatched`,
 // and P4 added `lives` and `invulnTime`. CS006 P1 adds `bandRoll`, and P3 adds
 // `dive` — which DELETED CS003 P2's hold field rather than joining it (GDD 5).
+// CS007 P4 adds `tally`, the run's cumulative counters.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -179,6 +180,51 @@ function newState() {
     //           LENGTH — comparing the two is the strike test and it is the
     //           only two-depth comparison in the build (11-dive.js).
     dive: { active: false, phase: "grace", timer: 0, depth: 1 },
+
+    // ⛔ THE RUN'S CUMULATIVE COUNTERS (GDD 15.6; 21-telemetry.js). CS007 P4.
+    //
+    // ⛔ WRITE-ONLY AS FAR AS THE SIMULATION IS CONCERNED. Eight numbers, each
+    // incremented at the ONE place its event actually happens, and read by
+    // exactly one consumer: Telemetry's row builder. ⛔ NOTHING IN THE
+    // SIMULATION BRANCHES ON ONE — that is what makes CS007 P4's headline
+    // assertion true, that the 10,000-tick determinism hash is identical with
+    // capture ON and OFF. A future reader that wants to gate behaviour on one
+    // of these has turned an instrument into a mechanic; give it its own field.
+    //
+    // ⛔ THEY ARE MAINTAINED WHETHER OR NOT CAPTURE IS ON, and that is
+    // deliberate: capture is a session switch a player flips mid-run
+    // (21-telemetry.js), and counters that only started counting at the flip
+    // would make every `deaths` and `wellsCleared` in the log a lie about the
+    // run. CS008's HUD and the leaderboard's registered stats read the same
+    // numbers without going near telemetry.
+    //
+    // ⛔ HERE AND NOT INSIDE Telemetry, so newState() resets them — a run's
+    // totals belong to the run, and startGame() already writes this whole
+    // object. A bag inside the module would need a second reset path and would
+    // drift from this one the first time a caller forgot it.
+    //
+    //   deaths             killSkimmer() — ⛔ NOT START_LIVES - lives, which
+    //                      CS008's extra-life awards would quietly falsify
+    //   wellsCleared       the wellCleared() -> startDive() edge (23-main.js)
+    //   purgesSpent        a charge actually consumed: uses 1 and 2, never 3+
+    //   divesCompleted     a dive that reached C.DIVE_TIME. ⚠ COMPLETED, not
+    //                      "survived" — a diver who loses a life to a Thorn
+    //                      respawns and finishes the dive, and a column named
+    //                      for what it does not count is GDD 15.6's own trap
+    //   thornDeaths        GDD 4.5 item 5 — the dive strike that actually killed
+    //   shotsFired         shots that left the rim, cooldown and cap already paid
+    //   kills              enemies the PLAYER destroyed — by shot or by Purge.
+    //                      ⛔ Not per kind: the roster grows (GDD 6.4), and a
+    //                      column per kind guarantees the column list churns,
+    //                      which is exactly what GDD 15.6's rule exists to stop
+    //   spawnBlockedTicks  ⛔ the stall's own signature. A step where the
+    //                      spawner had quota left and its timer at the interval
+    //                      and still released nothing — the release budget
+    //                      (CS007 P1) or C.ENEMY_CAP
+    tally: {
+      deaths: 0, wellsCleared: 0, purgesSpent: 0, divesCompleted: 0,
+      thornDeaths: 0, shotsFired: 0, kills: 0, spawnBlockedTicks: 0,
+    },
   };
 }
 

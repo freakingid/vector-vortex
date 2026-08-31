@@ -21,6 +21,15 @@ on every one of them.
 - Grouped by what you would have on screen, because a playtest is a sitting and
   not a checklist. The debug bench is `1`–`6` for one of a kind in your lane and
   `0` for the full staggered row.
+- ⛔ **`t` toggles telemetry capture and `e` exports the CSV to the console**
+  (CS007 P4). Capture is OFF at every launch and is never persisted, so a
+  sitting that wants a log presses `t` first — the console line confirms it.
+  ⛔ `e` prints the file; open the browser console, select it and copy. There is
+  no download link and there cannot be one: the built game runs from `file://`.
+  ⚠ The two keys are the only debug keys that cannot change what a run does —
+  the suite asserts a 10,000-tick hash is identical with capture on and off — so
+  pressing them mid-sitting costs nothing and answers *what were the numbers
+  when that happened*.
 
 ---
 

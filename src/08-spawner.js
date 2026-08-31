@@ -292,13 +292,24 @@ function updateSpawner(state, well, dt) {
   const interval = spawnInterval();
   if (sp.timer < interval) sp.timer += dt;
   if (sp.timer < interval) return;
-  if (threatCount(state) >= spawnLimit()) return;
+
+  // ⛔ FROM HERE DOWN THE SPAWNER WANTED TO RELEASE: quota left, timer at the
+  // interval. A step that gets this far and releases nothing is a BLOCKED BEAT
+  // — PLANNED-FEATURES-CS007.md 4.2's metric, and the stall's own signature in
+  // a played run. ⛔ Counted for telemetry and read by nothing here (02-state.js
+  // at `tally`): both refusals below already existed and neither changed.
+  if (threatCount(state) >= spawnLimit()) { state.tally.spawnBlockedTicks++; return; }
 
   // Depth 0 is the throat — the far aperture, the only place a well releases
   // an enemy from. GDD 3.2's convention, not a magic number.
   const lane = pickSpawnLane(state, well);
   const e = spawnEnemy(pickSpawnKind(state), lane, 0);
-  if (!e) return;              // refused (the cap): the quota is not spent
+  // Refused (the cap): the quota is not spent. ⛔ The SECOND blocked beat, and
+  // it is a different cause from the one above — the budget counts THREATS and
+  // the cap counts ENTITIES (CS007 P1), so a well full of Thorns blocks here
+  // and not there. One column counts both; the two are told apart by reading
+  // `thornsStanding` beside it.
+  if (!e) { state.tally.spawnBlockedTicks++; return; }
 
   sp.timer = 0;
   sp.remaining--;

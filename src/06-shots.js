@@ -61,6 +61,11 @@ function updateShots(state, well, dt) {
     const lane = laneNormalize(well, Math.round(state.skimmer.lane));
     state.shots.push(new Shot(well, lane));
     state.shotCooldown = 0;
+    // ⛔ TELEMETRY ONLY, AND WRITE-ONLY (02-state.js's `tally`). Inside the
+    // branch, so it counts shots that actually left the rim rather than trigger
+    // presses the cooldown or C.SHOT_MAX refused. Nothing in the simulation
+    // reads it; GDD 4.2's economy is unchanged.
+    state.tally.shotsFired++;
   }
 
   for (let i = 0; i < state.shots.length; i++) state.shots[i].update(dt);

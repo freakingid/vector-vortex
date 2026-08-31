@@ -570,7 +570,9 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     16-audio-engine.js AudioSys + MusicSys: transport, voices, buses
     17-audio-tracks.js track tables (DATA, ported from music-lab)
     18-audio-director.js intensity -> tier + filter sweep
-    19-sfx.js          20-achievements.js  21-telemetry.js
+    19-sfx.js          20-achievements.js
+    21-telemetry.js    TELEMETRY_FIELDS + the ring. Capture is a SESSION switch,
+                       OFF at every launch; sampled from update(), never draw()
     22-meta.js         profiles, scores, leaderboard wiring
     23-main.js         loop, state machine, well lifecycle, respawn
 ```

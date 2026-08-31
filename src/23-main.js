@@ -336,6 +336,19 @@ const Game = (function () {
       spawnDrifter: ["5"],
       spawnSurger:  ["6"],
       spawnRow:     ["0"],
+      // ⛔ THE TELEMETRY BENCH (GDD 15.6; 21-telemetry.js). CS007 P4. Two
+      // actions, because there is no HUD and no Options screen until CS008 and
+      // the debug bench is the only surface there is.
+      //
+      // ⛔ AND THESE ARE THE FIRST DEBUG KEYS THAT ARE SAFE INSIDE A HASHED RUN.
+      // "r", "w" and the seven digits are on three closed soaks' FORBIDDEN list
+      // because each moves the run's stream or its clock; neither of these
+      // touches the simulation at all — one flips a module-level boolean and one
+      // reads the ring and writes to the console. That is the same claim
+      // test-cs007-p4.js's headline assertion makes, from the other side, and it
+      // is why the soaks' lists are correct WITHOUT these two.
+      telemetryToggle: ["t"],
+      telemetryExport: ["e"],
     },
     onAction:         runAction,
   });
@@ -441,7 +454,11 @@ const Game = (function () {
       hitStopLeft = 0;
     }
 
-    // ⚠ TEMPORARY — the debug bench. ⛔ Through spawnEnemy(), the one entry
+    // The debug bench. ⚠ THE ⚠ TEMPORARY MARKER THAT USED TO OPEN THIS LINE IS
+    // GONE, and CS007 P3 is where it stopped being true — see DEBUG_SPAWN_ACTIONS
+    // above for Paul's H5 call. Left here it would have read as covering the two
+    // telemetry actions below it, which are not temporary either.
+    // ⛔ Through spawnEnemy(), the one entry
     // point (GDD 6.5): the bench inherits the safe-spawn rule and C.ENEMY_CAP
     // exactly as the interval spawner does, and a bench that pushed straight
     // into state.enemies would be the second way in that the one entry point
@@ -449,6 +466,17 @@ const Game = (function () {
     const kind = DEBUG_SPAWN_ACTIONS[name];
     if (kind !== undefined && state.skimmer) spawnEnemy(kind, state.skimmer.lane, 0);
     if (name === "spawnRow") spawnRow();
+
+    // ⛔ CAPTURE IS OFF AT EVERY LAUNCH AND IS NEVER PERSISTED (GDD 15.6), so
+    // this is the ONLY way it is ever turned on. The console line is the
+    // feedback — there is nothing on screen to show a switch with yet.
+    if (name === "telemetryToggle") {
+      console.log("telemetry capture: " + (Telemetry.toggle() ? "ON" : "off") +
+                  " (" + Telemetry.count + " rows)");
+    }
+    // ⛔ console.log, never an <a download> and never a fetch — see
+    // 21-telemetry.js. It is the only export path that works on file://.
+    if (name === "telemetryExport") Telemetry.exportCsv();
   }
 
   function nowMs() {
@@ -481,6 +509,19 @@ const Game = (function () {
     // never armed. ⛔ Still the one path (enterWell); boot goes through
     // startGame().
     if (!state.skimmer) enterWell();
+
+    // ⛔ THE TELEMETRY SAMPLE, AND THIS IS THE ONE PLACE IT IS TAKEN (GDD 15.6;
+    // 21-telemetry.js). ⛔ ON THE SIMULATION CLOCK — inside update(), never in
+    // draw(), which runs on a frame clock and would make a capture-on run
+    // diverge from a capture-off one. Telemetry.sample() is a no-op unless
+    // capture was turned on this session, and it spends no RNG draw either way.
+    //
+    // ⛔ ABOVE THE DIVE BRANCH, so the ~2.6 s a run spends in a dive is sampled
+    // rather than being a hole in the log; below the game-over stop, so a
+    // stopped run stops logging. A row is therefore the simulation as this step
+    // BEGINS, with state.time already advanced — one call site, and the two
+    // returns below cannot silently halve the coverage.
+    Telemetry.sample(state);
 
     const well = WELLS[state.wellIndex];
 
@@ -540,7 +581,11 @@ const Game = (function () {
     // survivors, and nextWell() is reached only from the dive's END, in
     // updateDive() (11-dive.js). One step of the dive runs on the NEXT step —
     // the branch above — never a second pass through this function.
-    if (wellCleared(state)) startDive(state);
+    // ⛔ TELEMETRY ONLY (02-state.js's `tally`). Counted at the EDGE — the step
+    // wellCleared() first says yes — and not inside startDive(), which the suite
+    // also drives directly; a well cleared by play is the event the column is
+    // about. Nothing here branches on it.
+    if (wellCleared(state)) { state.tally.wellsCleared++; startDive(state); }
   }
 
   // ---- presentation --------------------------------------------------------
