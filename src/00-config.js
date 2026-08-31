@@ -371,21 +371,54 @@ const C = {
   ENEMY_CONCURRENT_MAX: 8,      // ⛔ its ceiling at HEAT_FULL_LEVEL
   SPAWN_LANE_TRIES:     4,      // deterministic lane redraws before settling
 
-  // ⚠ TEMPORARY — what the interval spawner picks a kind from (pickSpawnKind,
-  // 08-spawner.js). ⛔ CS003 P2's between-wells hold used to stand above this with
-  // the same ⚠ standing and CS006 P3 DELETED it: the Dive (GDD 5, DIVE_GRACE /
-  // DIVE_TIME above) is what a cleared well does now, and a placeholder that
-  // survives beside its replacement is the thing this file is worst at. It
-  // ships as one
-  // entry, so the game plays exactly as it did before this list existed;
-  // editing it to ["vaulter", "carrier", "weaver"] gives a mixed well with no
-  // code change, which is the whole point while GDD 8.1's introduction
-  // schedule does not exist yet. ⛔ That schedule DELETES this constant and its
-  // reader — it is a bench, not a difficulty knob, and never both.
+  // ⛔ GDD 8.1's INTRODUCTION SCHEDULE — which kinds the interval spawner may
+  // release, as a function of state.level and NOTHING ELSE (eligibleKinds() and
+  // pickSpawnKind(), 08-spawner.js). CS007 P3. It replaces CS004's ⚠ TEMPORARY
+  // bench list, which answered the same question with a hand-edited array of
+  // kind names — deleted with its reader, exactly as CS003 P2's between-wells
+  // hold was deleted when the Dive replaced it. ⛔ NEITHER DELETED NAME IS
+  // WRITTEN ANYWHERE IN THIS BUILD, not even in a comment: a placeholder that
+  // outlives its replacement is what this file is worst at, and test-cs003-p2.js
+  // and test-cs007-p3.js both scan the built file for the name. ⛔ The seven
+  // debug spawn keys in 23-main.js answer a DIFFERENT question ("put one on
+  // screen so I can look at it"), so they are not TEMPORARY and they stay.
   //
-  // ⛔ NEVER EMPTY, and ⛔ A ONE-ENTRY LIST SPENDS NO RNG DRAW. See
-  // pickSpawnKind() for why the second one is load-bearing.
-  DEBUG_SPAWN_KINDS:    ["vaulter"],
+  // ⛔ DATA, and these levels are difficulty numbers — GDD 1.1 P3, "escalation
+  // you can name": every new KIND of threat arrives at a specific, learnable
+  // level. ⛔ CUMULATIVE AND SORTED: a row is eligible from its level onward, so
+  // the set only ever GROWS, and the first row's level must be 1 because
+  // state.level starts there and an empty set has nothing to spawn.
+  //
+  // ⛔ `thorn` AND `weaverBolt` ARE NEVER ELIGIBLE and their absence here is the
+  // whole mechanism. Both enter through Weaver.layThorn() and Weaver.fire(),
+  // which call spawnEnemy() directly (08-spawner.js); a row for either would put
+  // one in the throat with no parent — a Thorn nobody grew, a bolt nobody fired.
+  //
+  // ⛔ NO CARGO WEIGHT TABLE, AND THAT IS A DECISION RATHER THAN A GAP (Paul,
+  // 2026-08-31 — DECISIONS.md; PLANNED-FEATURES-CS007.md 5.3). GDD 8's row
+  // "Carrier cargo weights shift toward Drifter/Surger" is delivered by
+  // ARITHMETIC ALONE: the three Carrier variants are three rows below, so the
+  // cargo split WITHIN Carriers is 100% Vaulter at levels 3-17, 50/50 at 18-22
+  // and 33/33/33 from 23, and the Carrier share of the whole set falls from 1/2
+  // to 3/7. ⛔ The kind pick stays a UNIFORM rngPick over the eligible set, which
+  // is what keeps "one draw when there is a choice, none when there is not" true
+  // without a second mechanism. ⛔ Do not add weights; do not add a second draw.
+  //
+  // ⛔ TWO OF GDD 8.1's ROWS ARE NOT ENTRIES HERE, BECAUSE THEY WERE ALREADY
+  // TRUE. Rows 1 and 2 ("Vaulters, non-vaulting" then "Vaulting") are
+  // VAULT_FIRST_LEVEL 2 above; row 8 ("First open well") is nextWell()'s modulo
+  // mapping, which puts WELLS[7] — Vee, closed: false — at level 8. MEASURED,
+  // CS007 planning. The schedule DOCUMENTS both and implements neither, and
+  // ⛔ nothing in CS007 touched well selection.
+  SPAWN_SCHEDULE: [
+    { level:  1, kind: "vaulter" },
+    { level:  3, kind: "carrierVaulter" },
+    { level:  5, kind: "weaver" },
+    { level:  9, kind: "drifter" },
+    { level: 13, kind: "surger" },
+    { level: 18, kind: "carrierDrifter" },
+    { level: 23, kind: "carrierSurger" },
+  ],
 
   // ---- Collision (GDD 4.5) ------------------------------------------------
   // The band below the rim in which an enemy's contact kills (GDD 4.5 item 1).

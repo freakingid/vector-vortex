@@ -1,5 +1,7 @@
 // test-cs004-p1.js — CS004 P1: the seventh contract field, the debug bench,
-// and the no-draw rule under C.DEBUG_SPAWN_KINDS (GDD 4.4, 6.5, 9.5, 17.1).
+// and the no-draw rule in pickSpawnKind (GDD 4.4, 6.5, 9.5, 17.1). ⛔ The kind
+// source was ⚠ C.DEBUG_SPAWN_KINDS and is GDD 8.1's schedule since CS007 P3;
+// the no-draw block below was rewritten in place and the claim did not move.
 //
 // Asserts what P1 owns. It makes no claim about the Carrier, the Weaver, the
 // Thorn, scoring or the heat curve — none of those exist yet.
@@ -214,28 +216,44 @@ for (let i = 1; i < row.length; i++) if (!(row[i].depth > row[i - 1].depth)) asc
 H.assert(ascending, "and the stagger ascends");
 
 // ---------------------------------------------------------------------------
-// ⚠ C.DEBUG_SPAWN_KINDS and ⛔ the no-draw rule (GDD 17.1)
+// ⛔ pickSpawnKind's SOURCE and ⛔ the no-draw rule (GDD 17.1)
 // ---------------------------------------------------------------------------
+//
+// ⛔ REWRITTEN IN PLACE, CS007 P3. This block asserted the no-draw rule against
+// ⚠ C.DEBUG_SPAWN_KINDS, a hand-edited list; GDD 8.1's introduction schedule
+// DELETED that constant and pickSpawnKind() now reads C.SPAWN_SCHEDULE by
+// level. ⛔ The CLAIM is unchanged and is CS004 P1's: a kind source with no
+// choice in it spends nothing, a kind source with a choice spends exactly one
+// draw and replays. Only the way the two cases are ARMED moved — from setting a
+// constant to setting the level — and the multi-entry case got STRONGER on the
+// way, because "carrier" in the old list was never an ENEMY_KINDS row and level
+// 5's set is three kinds the game actually releases.
 
-H.assert(Array.isArray(C.DEBUG_SPAWN_KINDS), "C.DEBUG_SPAWN_KINDS is a list");
-H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
-         "⚠ it ships as one entry, so the game plays exactly as it did before it existed");
+H.assert(Array.isArray(C.SPAWN_SCHEDULE), "C.SPAWN_SCHEDULE is a list");
+H.assert(JSON.stringify(X.eligibleKinds(1)) === JSON.stringify(["vaulter"]),
+         "⛔ level 1's eligible set is one entry, so the game plays exactly as it did " +
+         "before any kind source existed");
 
-// ⛔ THE NO-DRAW RULE, MEASURED DIRECTLY. A one-entry list is not a choice, so
+// ⛔ THE NO-DRAW RULE, MEASURED DIRECTLY. A one-entry set is not a choice, so
 // pickSpawnKind() must leave the stream exactly where it found it: rngPick()
 // on a single-element array still advances mulberry32, and the stream is
 // shared with every spawn lane in the run.
-quietWell();
+quietWell();                                    // startGame() leaves state.level 1
+H.eq(state.level, 1, "the no-draw case runs at the level whose set has one entry");
 const noDrawProbe = X.mulberry32(SEED);
 state.rng = X.mulberry32(SEED);
 for (let i = 0; i < 8; i++) H.eq(X.pickSpawnKind(state), "vaulter", `pick ${i} is the one entry`);
 H.eq(state.rng(), noDrawProbe(),
-     "⛔ eight picks from a one-entry list spent NO draw — the stream is exactly where it started");
+     "⛔ eight picks from a one-entry set spent NO draw — the stream is exactly where it started");
 
-// A genuine choice DOES draw, from state.rng, and replays identically.
-const MIXED = ["vaulter", "carrier", "weaver"];
-const savedKinds = C.DEBUG_SPAWN_KINDS;
-C.DEBUG_SPAWN_KINDS = MIXED;
+// A genuine choice DOES draw, from state.rng, and replays identically. ⛔ LEVEL
+// 5 is the arming, and it is the schedule's own three-entry band (vaulter,
+// carrierVaulter, weaver) — the same three kinds this block always named.
+const MIXED = ["vaulter", "carrierVaulter", "weaver"];
+const savedLevel = state.level;
+state.level = 5;
+H.assert(JSON.stringify(X.eligibleKinds(5)) === JSON.stringify(MIXED),
+         "⛔ level 5's eligible set is exactly the three kinds this case is about");
 function kindRun() {
   state.rng = X.mulberry32(SEED);
   const out = [];
@@ -247,14 +265,13 @@ const kindsB = kindRun();
 H.assert(kindsA.join(",") === kindsB.join(","),
          "⛔ two runs on one seed produce the same kind sequence");
 H.assert(new Set(kindsA).size === MIXED.length,
-         "and a three-entry list really draws — all three kinds appear");
+         "and a three-entry set really draws — all three kinds appear");
 state.rng = X.mulberry32(SEED);
 X.pickSpawnKind(state);
 H.assert(state.rng() !== X.mulberry32(SEED)(),
          "⛔ a multi-entry pick DOES advance the stream — the no-draw case above is not vacuous");
-C.DEBUG_SPAWN_KINDS = savedKinds;
-H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
-         "the shipped list is restored before the golden run");
+state.level = savedLevel;
+H.eq(state.level, 1, "the level is restored before the golden run");
 
 // ---------------------------------------------------------------------------
 // ⛔ THE GOLDEN: the spawn-lane sequence is bit-identical to the pre-change build

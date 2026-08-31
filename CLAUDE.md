@@ -526,7 +526,8 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     05-skimmer.js      movement, snap assist, the wall squash, the blink
     06-shots.js        firing, lane-locked travel
     07-enemies.js      the entity contract + the Vaulter
-    08-spawner.js      spawnEnemy() — the ONE way in — cadence, quota, clear
+    08-spawner.js      spawnEnemy() — the ONE way in — cadence, quota, clear,
+                       and GDD 8.1's introduction schedule (eligibleKinds)
     09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge
     10-powerups.js     Overdrive tokens
     11-dive.js         the Dive: the beat, the Thorn strike, the loop guard

@@ -20,7 +20,14 @@
 //     cleared well advances to the next shape and the stop freezes the board,
 //     and either one ends the soak early in a well it was not aimed at.
 //  4. Levels are chosen so shapeIndex lands on the intended well AND is at
-//     least C.VAULT_FIRST_LEVEL, or nothing mid-climb ever vaults.
+//     least C.VAULT_FIRST_LEVEL, or nothing mid-climb ever vaults. ⛔ AND SINCE
+//     CS007 P3 THE LEVEL DECIDES A THIRD THING — which kinds the well releases
+//     (GDD §8.1) — so the open-well soak sets the shape and the level
+//     SEPARATELY. This file is the project's VAULTER soak (STATUS.md, "four
+//     soaks, and they prove different things on different boards"): its lane
+//     bound is the Vaulter's hop and its wall assertions are about an entity
+//     that hops at all. Level 2 is the only level that is both the schedule's
+//     one-entry band and at C.VAULT_FIRST_LEVEL.
 "use strict";
 
 const path = require("path");
@@ -293,8 +300,26 @@ for (const well of OPEN) {
   state.level = idx;
   X.nextWell();
   H.eq(state.wellIndex, idx, `${well.name}: nextWell() lands on the intended shape`);
+
+  // ⛔ REPAIRED, CS007 P3 — THE FIXTURE'S PRECONDITION MOVED AND NO ASSERTION
+  // DID. nextWell() above leaves level idx+1, which is 8 to 15 across the open
+  // wells, and GDD §8.1's introduction schedule now reads the level: at 8 that
+  // board is Vaulters, Carriers and Weavers, and by 13 it is five kinds. This
+  // file is CS003's soak and CS003's board is VAULTERS — its per-tick bound is
+  // the Vaulter's hop and its wall assertions are about the one entity that
+  // hops. A wider board does not strengthen them; it dilutes them, by spending
+  // the release budget on entities with no lane arithmetic in them at all. That
+  // is measured, not argued: it is what turned "Flat: an enemy reached an end
+  // lane" red. ⛔ The SHAPE stays idx; the LEVEL goes back to the schedule's
+  // one-entry band, which RESTORES a Vaulter-only well exactly as it was before
+  // the schedule existed. ⛔ Trap 3's per-tick `spawn.remaining` top-up is what
+  // holds it there — the well never clears, so nothing advances the level.
+  state.level = C.VAULT_FIRST_LEVEL;
   H.assert(state.level >= C.VAULT_FIRST_LEVEL,
            `${well.name}: the soak runs above VAULT_FIRST_LEVEL — vaulting is on`);
+  H.assert(JSON.stringify(X.eligibleKinds(state.level)) === JSON.stringify(["vaulter"]),
+           `${well.name}: ⛔ and on a VAULTER-ONLY well, which is this file's board ` +
+           `(${JSON.stringify(X.eligibleKinds(state.level))})`);
 
   let laneOut = null, notFinite = null, depthOut = null;
   let nanPath = null, projBad = null;
@@ -400,6 +425,32 @@ for (const well of OPEN) {
 // long run interesting. Each run is a different seed and is driven by the same
 // recorded input list as the determinism case, so a failure here is replayable.
 
+// ⛔ THE WALL-TO-WALL PIN, AND IT IS A DRIVER REPAIR, NOT A RELAXED ASSERTION.
+// ⚠ THREE OF THE SIX ROSTER CLASSES PARK RATHER THAN HUNT — Carrier, Weaver,
+// Surger (STATUS.md, "Known issues"). All three are `blocksClear: true`, so a
+// well whose only survivors are parked correctly never clears, and a scripted
+// player whose rotation never reaches their lane neither kills them nor dies to
+// them. The build is behaving correctly; the DRIVER is what cannot reach them.
+//
+// ⛔ MEASURED, and this is what changed: before GDD §8.1's schedule this soak ran
+// a Vaulter-only board on every level, and a Vaulter hunts — so it could not
+// reach the fixed point. Under the schedule a run past level 3 meets the parked
+// classes, and seed 20889204 walks into it at LEVEL 9: quota 0, three Carriers
+// parked at the rim in lane 8 and a Weaver at 0.51 in lane 6, with no level and
+// no quota movement from tick 10,714 to the 20,000-tick cap.
+//
+// ⛔ THE REPAIR IS THE ONE CS005 WROTE AND CS007 P1 REUSED for the same fixed
+// point in test-cs004-p5.js: pin the craft wall to wall so the rotation covers
+// every lane. Nothing is relaxed — RUN_CAP is unchanged, the seeds are
+// unchanged, and the stop is still asserted. ⛔ `replay` ITSELF IS UNTOUCHED,
+// because it is what the determinism hash above is recorded against and trap 1's
+// key check is written against; the pin is a wrapper, and it is still a pure
+// function of the tick index, so a failing seed is still replayable.
+function replayWide(input, i) {
+  replay(input, i);
+  if (i % PIN_TICKS === 0) input.mouseMove((Math.floor(i / PIN_TICKS) % 2) ? 4000 : -4000);
+}
+
 let threw = null, stuck = null;
 let soakMaxEnemies = 0, soakMaxShots = 0, soakNaN = null, soakLevels = 0;
 
@@ -410,7 +461,7 @@ for (let r = 0; r < RUNS && !threw && !stuck; r++) {
     X.startGame(seed);
     let ticks = 0;
     while (state.screen !== "gameover" && ticks < RUN_CAP) {
-      replay(G.input, ticks);
+      replayWide(G.input, ticks);
       G.update(DT);
       ticks++;
       if (state.enemies.length > soakMaxEnemies) soakMaxEnemies = state.enemies.length;

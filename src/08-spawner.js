@@ -164,22 +164,57 @@ function spawnEnemy(kind, lane, depth) {
   return e;
 }
 
-// ⚠ TEMPORARY, with C.DEBUG_SPAWN_KINDS (00-config.js). Which kind the
-// interval spawner releases next. GDD 8.1's introduction schedule is what
-// decides this for real — at which point the constant and this function both
-// go, and nothing else has to change, because updateSpawner() below asks a
-// function rather than naming a kind.
+// GDD 8.1's INTRODUCTION SCHEDULE, read (CS007 P3). Which kinds the well may
+// release at `level` — ⛔ A FUNCTION OF THE LEVEL AND NOTHING ELSE. No board
+// state, no heat, no draw: GDD 1.1 P3 is "escalation you can name", and a set
+// that depended on what happened to be on screen is not nameable.
 //
-// ⛔ A ONE-ENTRY LIST SPENDS NO DRAW, AND THAT IS NOT AN OPTIMISATION.
+// ⛔ THE SCHEDULE ITSELF IS DATA IN C (C.SPAWN_SCHEDULE, 00-config.js), where
+// the reasoning lives — the cumulative rule, why `thorn` and `weaverBolt` are
+// absent, why there is no cargo weight table, and which two of GDD 8.1's rows
+// were already true before CS007. This function is the whole of the mechanism:
+// the rows at or below the level, in schedule order.
+//
+// ⛔ IT IS THE SET THAT GROWS, NOT THE MIX THAT SHIFTS. The three Carrier
+// variants are three separate rows, so GDD 8's "cargo weights shift toward
+// Drifter/Surger" falls out of this loop and out of the uniform pick below.
+//
+// The array is allocated per call and that is deliberate: the one caller is
+// pickSpawnKind(), which runs once per interval spawn — of the order of once a
+// second, and never in the draw path, which is where GDD 17's no-allocation
+// budget applies. Returning a shared array would hand a mutable schedule to
+// whatever asked for it.
+function eligibleKinds(level) {
+  const out = [];
+  for (let i = 0; i < C.SPAWN_SCHEDULE.length; i++) {
+    const row = C.SPAWN_SCHEDULE[i];
+    if (level >= row.level) out.push(row.kind);
+  }
+  return out;
+}
+
+// Which kind the interval spawner releases next. ⛔ ITS NAME, SIGNATURE AND
+// NO-DRAW CONTRACT ARE UNCHANGED FROM CS004; only its READER moved, from the
+// ⚠ TEMPORARY bench list CS007 P3 deleted to the schedule above. updateSpawner()
+// below still asks a function rather than naming a kind, which is why the swap
+// touched nothing else in this file.
+//
+// ⛔ A UNIFORM PICK OVER THE ELIGIBLE SET, AND THERE IS NO WEIGHT TABLE
+// (Paul, 2026-08-31 — DECISIONS.md). See C.SPAWN_SCHEDULE for why that is a
+// decision: the cargo mix shifts because the SET grows, not because anything
+// here weighs it.
+//
+// ⛔ A ONE-ENTRY SET SPENDS NO DRAW, AND THAT IS NOT AN OPTIMISATION.
 // rngPick() on a single-element array still advances the run's ONE stream
 // (01-rng.js), and the stream is shared: one extra draw per spawn moves every
 // spawn lane in every run, including the 10,000-tick replay GDD 17 item 1
 // hashes. The game shipped without this function, so the no-choice case has to
 // spend exactly what the old `spawnEnemy("vaulter", ...)` literal did — which
 // is nothing. There is no genuine choice to make, so no randomness is spent
-// making it.
+// making it. ⛔ Levels 1-2 are that case, and they are the levels every golden
+// recording in the suite lives in.
 function pickSpawnKind(state) {
-  const kinds = C.DEBUG_SPAWN_KINDS;
+  const kinds = eligibleKinds(state.level);
   if (kinds.length < 2) return kinds[0];
   return rngPick(state.rng, kinds);
 }

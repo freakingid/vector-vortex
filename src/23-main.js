@@ -340,13 +340,24 @@ const Game = (function () {
     onAction:         runAction,
   });
 
-  // ⚠ TEMPORARY — THE DEBUG BENCH, with C.DEBUG_SPAWN_KINDS (00-config.js).
+  // THE DEBUG BENCH. ⛔ NOT ⚠ TEMPORARY, AND CS007 P3 IS WHERE IT STOPPED BEING
+  // SO. It used to be paired with CS004's ⚠ TEMPORARY bench list in
+  // 00-config.js, and GDD 8.1's introduction schedule was going to delete both.
+  // It deleted that list and ⛔ deliberately kept these (Paul's H5 call,
+  // PLANNED-FEATURES-CS007.md 4.3), because the two answer different questions
+  // and only one of them is a difficulty question:
   //
-  // GDD 8.1 introduces the Carrier at L3, the Weaver and Thorn at L5 and the
-  // Drifter at L9, but the introduction schedule and the heat clock are CS007's,
-  // so nothing new spawns on its own yet. These keys are how the roster is
-  // judged on hardware before that exists. GDD 8.1's schedule is what deletes
-  // them.
+  //   The deleted list asked "what does the well RELEASE" — which is difficulty,
+  //     and C.SPAWN_SCHEDULE now owns it. A bench and a difficulty knob are
+  //     never the same constant.
+  //   These keys ask "put ONE of these on screen so I can LOOK at it" — which
+  //     is a hardware-pass question, and the schedule neither addresses it nor
+  //     can. Reaching level 23 to see a Surger Carrier is not a way to judge a
+  //     silhouette.
+  //
+  // ⛔ The six enemy colours are still ⚠ provisional (GDD 6.1), PLAYTEST.md is
+  // written around these keys, and `0` is the only way to see the palette
+  // together. They ship until CS016 decides whether debug keys ship at all.
   //
   // ⛔ A kind that is not in ENEMY_KINDS yet is a NO-OP, not a throw:
   // spawnEnemy() returns null for an unknown kind, so a later phase lit one up

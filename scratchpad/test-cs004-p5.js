@@ -10,10 +10,13 @@
 // that lays, a Thorn that is chipped, and a bolt that is fired.
 //
 // ⛔ SIX TRAPS IN THE FIXTURES.
-//  1. C.DEBUG_SPAWN_KINDS ships as ["vaulter"], so with the shipped value NOT
-//     ONE of CS004's entities ever reaches the board and every case below is
-//     vacuous. Every run here sets the mixed list first, and the non-vacuity
-//     assertions are what say it worked.
+//  1. A level-1 well releases Vaulters and nothing else, so on a board left at
+//     level 1 NOT ONE of CS004's entities ever reaches it and every case below
+//     is vacuous. Every run here arms the mixed board first, and the
+//     non-vacuity assertions are what say it worked. ⛔ REPAIRED IN PLACE,
+//     CS007 P3: the arming was `C.DEBUG_SPAWN_KINDS = MIXED` and is now
+//     `state.level = MIXED_LEVEL`, because GDD 8.1's introduction schedule
+//     deleted that constant and supplies this exact set at levels 5-8.
 //  2. The recorded input list must press neither "r" (restarts on a
 //     time-derived seed) nor "w" (cycles the well out from under the level
 //     clock) nor any of the five DEBUG DIGITS — a spawn action inside a hashed
@@ -53,10 +56,36 @@ const HASH_ONLY = process.argv.includes("--hash-only");
 // point: a Thorn is LAID by a Weaver and a bolt is FIRED by one, and neither
 // belongs in a list of things a well releases from its throat.
 //
-// ⚠ TEMPORARY, exactly as C.DEBUG_SPAWN_KINDS itself is. Whichever changeset
-// lands GDD §8.1's introduction schedule deletes the constant, and this line
-// becomes "run at a level where all four are introduced".
+// ⛔ NO LONGER ⚠ TEMPORARY, AND IT DID BECOME "run at a level where all of them
+// are introduced" (CS007 P3). GDD §8.1's introduction schedule landed, deleted
+// C.DEBUG_SPAWN_KINDS, and ⛔ SUPPLIES THIS SET CHARACTER FOR CHARACTER: levels
+// 5-8 are `vaulter, carrierVaulter, weaver` and nothing else. So MIXED stopped
+// being a list this file writes into the build and became a list this file
+// CHECKS the build against, and the fixture is a LEVEL.
+//
+// ⛔ MIXED_LEVEL is 7, and ⚠ WHICH LEVEL INSIDE THE BAND IS MEASURED RATHER THAN
+// PICKED. Every level from 5 to 8 gives this exact set, so any of them restores
+// the BOARD; what separates them is whether this file's own non-vacuity
+// assertions still describe paths the runs actually take. ⛔ ALL FOUR WERE RUN:
+//   level 5 — the scripted player survives the whole hashed window, so
+//     `restarts > 0` ("the restart path is in the hash") goes red;
+//   level 6 — Double-Vee's 5,000-tick soak never sees a Carrier split, so
+//     "a Carrier split during the soak" goes red;
+//   level 8 — the player dies repeatedly and never clears a well, so
+//     `hashed.level` never advances and "nextWell() is in the hash" goes red;
+//   level 7 — all of them green.
+// ⛔ Picking a level that made any of those vacuous would be a weakening dressed
+// as a fixture, which is the one thing the repair rule forbids. ⚠ And they are
+// sensitive: a Carrier split needs the scripted player to shoot a Carrier, which
+// is a per-run accident, so a future retune may move this number again. It is a
+// fixture; the assertions are the claim.
+//
+// ⛔ Level 9 introduces the Drifter, so the band ENDS at 8 and the run must not
+// walk out of it — a Drifter under a Carrier's exact-lane assertion is CS005's
+// entity inside CS004's claim. Asserted at the fixture and again on the level
+// the hashed run actually reached, rather than left to a comment.
 const MIXED = ["vaulter", "carrierVaulter", "weaver"];
+const MIXED_LEVEL = 7;
 
 // ---------------------------------------------------------------------------
 // GDD 17 item 1 — determinism, with the new draws in it
@@ -114,7 +143,7 @@ function replay(input, i) {
 // CS004 adds the four class flags, because a hash that never saw a Carrier
 // proves nothing about the split.
 const lastRun = {
-  maxEnemies: 0, restarts: 0, level: 0,
+  maxEnemies: 0, restarts: 0, level: 0, kindsAtMax: null,
   sawCarrier: false, sawWeaver: false, sawThorn: false, sawBolt: false,
 };
 
@@ -128,16 +157,24 @@ function hashRun(gameSeed) {
   const C = X.C, G = X.Game, st = X.state;
   const DT = C.FIXED_DT;
 
-  // Trap 1, and it has to happen before startGame so the very first spawn of
-  // the run already draws a kind.
-  C.DEBUG_SPAWN_KINDS = MIXED.slice();
-
   // Cargo names become indices the same way phases do, and off the CARGO table
   // rather than a literal, so CS005's two rows need no edit here.
   const cargoNames = Object.keys(X.CARGO);
 
+  // Trap 1, repaired. The LEVEL is the fixture, so it is set the moment a run
+  // begins and the very first spawn of that run already draws a kind. ⛔ AND
+  // AFTER EVERY RESTART TOO — startGame() puts the level back to 1, so a run
+  // that dies out would finish the window on a Vaulter-only board and the old
+  // constant, which survived a restart, would not have let it.
+  function armMixed() {
+    st.level = MIXED_LEVEL;
+    st.wellIndex = (MIXED_LEVEL - 1) % X.WELLS.length;
+    X.enterWell();
+  }
+
   G.reset();
   X.startGame(gameSeed);
+  armMixed();
 
   let h = 2166136261 >>> 0;
   let restarts = 0;
@@ -154,6 +191,7 @@ function hashRun(gameSeed) {
     if (st.screen === "gameover") {
       restarts++;
       X.startGame((gameSeed + restarts * 7919) >>> 0);
+      armMixed();
     }
 
     h = mix(h, st.time);
@@ -185,7 +223,15 @@ function hashRun(gameSeed) {
     // them a build that had lost the Weaver's cycle or the Thorn's chip would
     // hash the same as one that had not.
     if (st.enemies.length > lastRun.maxEnemies) lastRun.maxEnemies = st.enemies.length;
-    if (st.level > lastRun.level) lastRun.level = st.level;
+    // ⛔ AND WHAT THE SCHEDULE ANSWERS THERE — CS007 P3. The run climbs out of
+    // MIXED_LEVEL as it clears wells, and GDD §8.1 widens the eligible set as it
+    // does; level 9 would put a Drifter on a board whose lane assertions were
+    // written for entities that never change lane. Recorded here rather than
+    // asserted here, because `X` in this function is hashRun's own build.
+    if (st.level > lastRun.level) {
+      lastRun.level = st.level;
+      lastRun.kindsAtMax = X.eligibleKinds(st.level);
+    }
     h = mix(h, st.enemies.length);
     for (let k = 0; k < st.enemies.length; k++) {
       const e = st.enemies[k];
@@ -251,6 +297,22 @@ const child = execFileSync(process.execPath, [__filename, "--hash-only"],
   { cwd: ROOT, encoding: "utf8", stdio: "pipe" }).trim();
 H.eq(Number(child), hashA, `${TICKS} ticks hash identically across two processes`);
 
+// ⛔ SNAPSHOT THE HASHED RUN'S BOOKKEEPING BEFORE THE DIFFERENT-SEED CASE.
+// REPAIRED, CS007 P3 — a fixture, not an assertion, and it is character for
+// character the repair CS007 P1 made to test-cs005-p5.js and test-cs006-p5.js.
+// `lastRun` is overwritten by every hashRun(), so the checks below read whatever
+// ran LAST, and the line under this one runs SEED + 1. Every one of them says
+// "the hashed run", so they were always about the SEED run; on SEED + 1 they
+// were describing a run nothing else in this file looks at.
+//
+// ⚠ P1 FOUND THIS DEFECT HERE, MEASURED IT AS NOT FIRING, AND LEFT IT ALONE
+// BECAUSE P1 DID NOT INVALIDATE IT (STATUS.md). ⛔ P3 does: the schedule makes
+// the two seeds' runs diverge in which paths they take, and on SEED + 1 the
+// scripted player no longer reaches the stop inside the window, so `restarts`
+// came back 0 against an assertion about the SEED run. Nothing in hashRun()
+// changed, so the hash itself does not move.
+const hashed = Object.assign({}, lastRun);
+
 // A different seed must move the hash, or the two cases above prove nothing.
 H.assert(hashRun(SEED + 1) !== hashA, "a different seed produces a different hash");
 
@@ -258,14 +320,22 @@ H.assert(hashRun(SEED + 1) !== hashA, "a different seed produces a different has
 // CS003 one either. All four of CS004's entities have to have been on the board
 // inside the hashed window, or "determinism with the new draws" is a claim about
 // draws that were never spent.
-H.assert(lastRun.maxEnemies > 0, "the hashed run had enemies on the board");
-H.assert(lastRun.level > 1, "and cleared at least one well — nextWell() is in the hash");
-H.assert(lastRun.restarts > 0,
+H.assert(hashed.maxEnemies > 0, "the hashed run had enemies on the board");
+H.assert(hashed.level > MIXED_LEVEL,
+         `⛔ and cleared at least one well — nextWell() is in the hash (reached ` +
+         `${hashed.level} from ${MIXED_LEVEL}). ⛔ REWRITTEN, CS007 P3: this read ` +
+         `"> 1", which a run STARTED at MIXED_LEVEL satisfies without clearing anything. ` +
+         `The claim is "the level advanced", and it is the start level it must advance from`);
+H.assert(hashed.restarts > 0,
          "and reached the game-over stop at least once — the restart path is in the hash");
-H.assert(lastRun.sawCarrier, "⛔ and a Carrier was on the board — the split's two draws are in it");
-H.assert(lastRun.sawWeaver, "⛔ and a Weaver");
-H.assert(lastRun.sawThorn, "⛔ and a Thorn it laid — that draw is in the hash too");
-H.assert(lastRun.sawBolt, "⛔ and a bolt it fired");
+H.assert(hashed.sawCarrier, "⛔ and a Carrier was on the board — the split's two draws are in it");
+H.assert(hashed.sawWeaver, "⛔ and a Weaver");
+H.assert(hashed.sawThorn, "⛔ and a Thorn it laid — that draw is in the hash too");
+H.assert(hashed.sawBolt, "⛔ and a bolt it fired");
+H.assert(JSON.stringify(hashed.kindsAtMax) === JSON.stringify(MIXED),
+         `⛔ AND THE WHOLE HASHED WINDOW STAYED ON THE THREE-KIND BOARD — the run climbs ` +
+         `from MIXED_LEVEL as it clears wells, and level 9 would put a Drifter in it ` +
+         `(reached ${hashed.level})`);
 
 // ---------------------------------------------------------------------------
 // everything below shares one build
@@ -277,6 +347,19 @@ const C = X.C;
 const G = X.Game;
 const state = X.state;
 const DT = C.FIXED_DT;
+
+// ⛔ THE KIND FIXTURE IS CHECKED BEFORE IT IS USED. Every case in this file arms
+// its board by setting the level to MIXED_LEVEL, so a schedule that stopped
+// answering exactly these three kinds there would make the whole file quietly
+// assert something else — a Drifter's crossing under a Carrier's exact-lane
+// assertion, say.
+H.assert(JSON.stringify(X.eligibleKinds(MIXED_LEVEL)) === JSON.stringify(MIXED),
+         `⛔ GDD §8.1's eligible set at level ${MIXED_LEVEL} is exactly this file's three ` +
+         `kinds (${JSON.stringify(X.eligibleKinds(MIXED_LEVEL))})`);
+H.assert(JSON.stringify(X.eligibleKinds(8)) === JSON.stringify(MIXED) &&
+         X.eligibleKinds(9).length > MIXED.length,
+         "⛔ and the band ENDS at 8 — level 9 adds the Drifter, whose crossing is exactly " +
+         "what this file's `hopless` exact-lane assertions do not describe");
 
 // ---------------------------------------------------------------------------
 // the roster count, against the one file that may name a global count
@@ -448,14 +531,25 @@ for (const well of OPEN) {
   // least 7 here, so mid-climb vaulting is on (C.VAULT_FIRST_LEVEL).
   G.reset();
   X.startGame(SEED + idx);
-  C.DEBUG_SPAWN_KINDS = MIXED.slice();
   C.ENEMY_CONCURRENT = C.ENEMY_CAP;
   C.ENEMY_CONCURRENT_MAX = C.ENEMY_CAP;
   state.level = idx;
   X.nextWell();
   H.eq(state.wellIndex, idx, `${well.name}: nextWell() lands on the intended shape`);
+
+  // ⛔ Trap 1, repaired (CS007 P3). nextWell() above leaves level idx+1, which
+  // is 8 to 15 across the open wells — and under GDD §8.1 that is a FOUR- or
+  // FIVE-kind board, i.e. CS005's Drifter and Surger inside CS004's soak. ⛔ The
+  // SHAPE is what this loop is about; the level was only ever how it got the
+  // shape and how it turned vaulting on. It is pinned back into the schedule's
+  // three-kind band, so the board is the one this file's assertions describe.
+  // ⛔ Trap 5's per-tick `spawn.remaining` top-up is what holds it there: the
+  // well never clears, so nothing advances the level out from under it.
+  state.level = MIXED_LEVEL;
   H.assert(state.level >= C.VAULT_FIRST_LEVEL,
            `${well.name}: the soak runs above VAULT_FIRST_LEVEL — vaulting is on`);
+  H.assert(JSON.stringify(X.eligibleKinds(state.level)) === JSON.stringify(MIXED),
+           `${well.name}: ⛔ and on the three-kind board, from the first spawn`);
 
   let laneOut = null, notFinite = null, depthOut = null;
   let nanPath = null, projBad = null;
@@ -622,7 +716,12 @@ H.assert(soakChip,
 function quietBoard() {
   G.reset();
   X.startGame(SEED);
-  C.DEBUG_SPAWN_KINDS = MIXED.slice();
+  // ⛔ NO KIND FIXTURE, AND CS007 P3 REMOVED THE ONE THAT WAS HERE RATHER THAN
+  // TRANSLATING IT. `C.DEBUG_SPAWN_KINDS = MIXED` stood here and was already
+  // inert: this case empties the board and stages every entity by hand through
+  // spawnEnemy() below, and runs four steps against a 1.6 s interval. What the
+  // interval spawner may release is not a precondition of a Purge case, and
+  // writing a level here would claim it was.
   state.enemies = [];
   state.shots = [];
   // ⛔ ONE UNSPENT QUOTA SLOT, NOT ZERO, AND CS006 P3 IS WHY. The first Purge
@@ -791,7 +890,15 @@ for (let r = 0; r < RUNS && !threw && !stuck; r++) {
   try {
     G.reset();
     X.startGame(seed);
-    C.DEBUG_SPAWN_KINDS = MIXED.slice();
+    // Trap 1, repaired: the level is the arming. ⛔ AND THE RUN ESCALATES FROM
+    // HERE rather than being pinned — a soak to game over is a played run, and
+    // GDD §8.1 widening the set as it climbs is what a played run does. The
+    // five classes below are the ones this file owns and asserts; the schedule
+    // adding CS005's on top makes the no-throw / no-NaN claim harder, not
+    // weaker.
+    state.level = MIXED_LEVEL;
+    state.wellIndex = (MIXED_LEVEL - 1) % X.WELLS.length;
+    X.enterWell();
     let ticks = 0;
     while (state.screen !== "gameover" && ticks < RUN_CAP) {
       replayWide(G.input, ticks);

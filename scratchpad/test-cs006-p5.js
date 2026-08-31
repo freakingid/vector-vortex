@@ -19,10 +19,13 @@
 // claiming work it did not do.
 //
 // ⛔ SIX TRAPS IN THE FIXTURES.
-//  1. C.DEBUG_SPAWN_KINDS ships as ["vaulter"], so on the shipped value no
-//     Weaver ever spawns, no Thorn is ever laid, and every dive below threads
-//     an EMPTY well — which is a set of cases that cannot fail. Every soak run
-//     here sets MIXED first; the non-vacuity assertions say it worked.
+//  1. A level-1 well releases Vaulters and nothing else, so on a board left at
+//     level 1 no Weaver ever spawns, no Thorn is ever laid, and every dive below
+//     threads an EMPTY well — a set of cases that cannot fail. Every soak run
+//     here arms MIXED_LEVEL first; the non-vacuity assertions say it worked.
+//     ⛔ REPAIRED IN PLACE, CS007 P3: the arming was `C.DEBUG_SPAWN_KINDS =
+//     MIXED` and is now `state.level = MIXED_LEVEL`, because GDD §8.1's
+//     introduction schedule deleted that constant.
 //  2. ⛔ AND C.ENEMY_CONCURRENT IS RAISED TO C.ENEMY_CAP for the soak, exactly
 //     as CS004's and CS005's closes do — it keeps the board busy enough that a
 //     dive has Thorns to thread. ⛔ REWRITTEN, CS007 P1: this used to be a
@@ -46,11 +49,23 @@
 //     board that EMPTIES, never as one that grows — so "never grows" and "at
 //     least one dive began with a survivor, and every survivor was anchored"
 //     are two different assertions and both are here.
-//  6. The RNG counting section runs on the SHIPPED one-entry list and restores
-//     it. Its control is a two-entry list of the SAME kind — which spends
-//     pickSpawnKind's draw without putting a splitting Carrier or a laying
-//     Weaver on the board, so the extra draw is provably the kind pick and not
-//     a second entity's.
+//  6. ⛔ REWRITTEN, CS007 P3 — the RNG counting section is now armed by LEVEL
+//     and it no longer writes anything into the build at all. Its one-entry case
+//     is levels 1-2, GDD §8.1's Vaulter-only band; its control is levels 3-4,
+//     ⛔ THE ONLY BAND WHOSE ELIGIBLE SET IS EXACTLY TWO. The control's second
+//     entry is a Carrier rather than a duplicate Vaulter, so — unlike the
+//     deleted `["vaulter","vaulter"]` list — the board really can gain two
+//     entities in one tick when one splits. The file already routed `added > 1`
+//     to `out.extra` and already asserted `extra === 0` on the ONE-ENTRY run
+//     only, so `min(perSpawn)` is unaffected and the extra draw is still
+//     provably the kind pick's.
+//  7. ⛔ AND EACH COUNTING RUN STOPS AT ITS BAND'S EDGE rather than being pinned
+//     with a `spawn.remaining` top-up. A top-up stops the well ever clearing,
+//     and a well that never clears never dives — which would make trap 4's
+//     sibling claim, "a dive spends ZERO draws on a live board", a claim about
+//     a path the run never took. Running the band and stopping when the level
+//     leaves it keeps both. ⛔ The spawner runs BEFORE the well-clear check in
+//     Game.update(), so a tick that BEGAN inside the band spawned inside it.
 "use strict";
 
 const path = require("path");
@@ -67,12 +82,19 @@ const RUN_CAP = 30000;      // ticks before a run is declared stuck
 const PIN_TICKS = 300;      // test-cs005-p5.js's wall-to-wall pin period
 const HASH_ONLY = process.argv.includes("--hash-only");
 
-// The six-kind bench list, character for character test-cs005-p5.js's. ⚠
-// TEMPORARY exactly as C.DEBUG_SPAWN_KINDS itself is: GDD §8.1's introduction
-// schedule deletes the constant and this line becomes "run at a level where all
-// six are introduced". ⛔ The Weaver is the load-bearing entry HERE — it is the
-// only source of Thorns, and a Thorn is the Dive's only hazard.
+// The six-kind board, character for character test-cs005-p5.js's. ⛔ NO LONGER
+// ⚠ TEMPORARY, and it did become "run at a level where all six are introduced"
+// (CS007 P3): GDD §8.1's schedule landed, deleted C.DEBUG_SPAWN_KINDS, and
+// ⛔ MIXED_LEVEL 23 is where it has released every kind. MIXED stopped being a
+// list this file writes into the build and became the list it CHECKS the
+// build's board against. ⚠ The schedule's set at 23 is a SUPERSET by one —
+// `carrierVaulter` — and every check here is by CLASS, so a third Carrier
+// variant is the same class with a different cargo (GDD §6.2).
+//
+// ⛔ The Weaver is the load-bearing entry HERE — it is the only source of
+// Thorns, and a Thorn is the Dive's only hazard.
 const MIXED = ["vaulter", "carrierDrifter", "carrierSurger", "weaver", "drifter", "surger"];
+const MIXED_LEVEL = 23;
 
 // ---------------------------------------------------------------------------
 // GDD §17 item 1 — determinism, with a completed dive inside the window
@@ -161,14 +183,22 @@ function hashRun(gameSeed) {
   const C = X.C, G = X.Game, st = X.state;
   const DT = C.FIXED_DT;
 
-  // Trap 1, before startGame so the very first spawn of the run already draws
-  // a kind off the six-long list.
-  C.DEBUG_SPAWN_KINDS = MIXED.slice();
-
   const cargoNames = Object.keys(X.CARGO);
+
+  // Trap 1, repaired (CS007 P3). The LEVEL is the fixture, so it is set the
+  // moment a run begins and the very first spawn already draws off a full board.
+  // ⛔ AND AFTER EVERY RESTART — startGame() puts the level back to 1, and a
+  // restarted run finishing on a Vaulter-only board would thread every
+  // subsequent dive through an empty well, which is trap 1 all over again.
+  function armMixed() {
+    st.level = MIXED_LEVEL;
+    st.wellIndex = (MIXED_LEVEL - 1) % X.WELLS.length;
+    X.enterWell();
+  }
 
   G.reset();
   X.startGame(gameSeed);
+  armMixed();
 
   let h = 2166136261 >>> 0;
   let restarts = 0;
@@ -191,6 +221,7 @@ function hashRun(gameSeed) {
     if (st.screen === "gameover") {
       restarts++;
       X.startGame((gameSeed + restarts * 7919) >>> 0);
+      armMixed();
     }
 
     // ⛔ A COMPLETED DIVE, NOT MERELY A STARTED ONE (trap 4). The only path out
@@ -325,7 +356,10 @@ H.assert(hashRun(SEED + 1) !== hashA, "a different seed produces a different has
 // ⛔ AND THE HASHED RUN DIVED — trap 4. Everything above is a claim about a
 // beat, and without these it is a claim about a beat that never ran.
 H.assert(hashed.maxEnemies > 0, "the hashed run had enemies on the board");
-H.assert(hashed.level > 1, "and cleared at least one well");
+H.assert(hashed.level > MIXED_LEVEL,
+         `and cleared at least one well (reached ${hashed.level} from ${MIXED_LEVEL}). ` +
+         `⛔ REWRITTEN, CS007 P3: this read "> 1", which a run STARTED at MIXED_LEVEL ` +
+         `satisfies without clearing anything`);
 H.assert(hashed.restarts > 0, "and reached the game-over stop at least once");
 H.assert(hashed.divesStarted > 0, "⛔ and a dive STARTED inside the hashed window");
 H.assert(hashed.divesCompleted > 0,
@@ -387,7 +421,6 @@ function firstNaN(v, label, depth) {
 // A dive with no Thorn in it is a 2.6 s pause: the hazard exists only if a
 // Weaver survived long enough to lay one, and the concurrency block is what
 // stops Weavers reaching the board at all once three Thorns are standing.
-const SHIPPED_KINDS = C.DEBUG_SPAWN_KINDS.slice();
 // ⛔ REPAIRED, CS007 P2 — THE FIXTURE'S PRECONDITION MOVED AND THE ASSERTIONS DID
 // NOT. `C.ENEMY_CONCURRENT` is no longer the release budget; it is the budget's
 // LEVEL-1 ENDPOINT, and `spawnLimit()` reads `enemyConcurrent()`, which
@@ -412,9 +445,14 @@ for (let r = 0; r < RUNS && !threw && !stuck; r++) {
   try {
     G.reset();
     X.startGame(seed);
-    C.DEBUG_SPAWN_KINDS = MIXED.slice();
     C.ENEMY_CONCURRENT = C.ENEMY_CAP;
     C.ENEMY_CONCURRENT_MAX = C.ENEMY_CAP;
+    // Trap 1, repaired: the level is the arming. ⛔ A soak to game over is a
+    // PLAYED run, so it starts on a full board and escalates from there rather
+    // than being pinned — GDD §8.1 has nothing left to add at 23.
+    state.level = MIXED_LEVEL;
+    state.wellIndex = (MIXED_LEVEL - 1) % X.WELLS.length;
+    X.enterWell();
 
     let ticks = 0;
     let wasActive = false, levelAtDiveStart = state.level;
@@ -493,7 +531,10 @@ H.assert(soakMaxEnemies <= C.ENEMY_CAP,
          `the enemy array stays under ENEMY_CAP across the soak (peak ${soakMaxEnemies})`);
 H.assert(soakMaxShots <= C.SHOT_MAX,
          `the shot array stays under SHOT_MAX across the soak (peak ${soakMaxShots})`);
-H.assert(soakLevels > 1, `the soak cleared at least one well (reached ${soakLevels})`);
+H.assert(soakLevels > MIXED_LEVEL,
+         `the soak cleared at least one well (reached ${soakLevels} from ${MIXED_LEVEL}). ` +
+         `⛔ REWRITTEN, CS007 P3: "> 1" is true of a run that starts at MIXED_LEVEL and ` +
+         `clears nothing`);
 
 // ⛔ THE ARRAY ACROSS A DIVE, BOTH DIRECTIONS — trap 5.
 H.assert(!diveGrew,
@@ -537,16 +578,20 @@ H.assert(worstDiveLives <= 2,
 // down because it is the opposite of what the phase prompt expected. A well
 // clears on `quota spent AND nothing that blocks the clear alive`, and a player
 // who never fires kills nothing, so a passive run never reaches a dive at all:
-// state.level is 1 at the stop on every seed below. The Dive cannot rescue a
-// passive run; the game-over stop is what ends it.
+// the level is unmoved at the stop on every seed below. The Dive cannot rescue a
+// passive run; the game-over stop is what ends it. ⚠ CS007 P3 arms these runs at
+// MIXED_LEVEL like every other soak here, so "unmoved" now reads 23 rather than
+// 1 — the CLAIM is that a passive run never clears a well, and it is unchanged.
 let passiveStuck = null, passiveLevels = 0, passiveTicks = 0;
 for (let r = 0; r < 4 && !passiveStuck; r++) {
   const seed = (SEED + r * 31337) >>> 0;
   G.reset();
   X.startGame(seed);
-  C.DEBUG_SPAWN_KINDS = MIXED.slice();
   C.ENEMY_CONCURRENT = C.ENEMY_CAP;
   C.ENEMY_CONCURRENT_MAX = C.ENEMY_CAP;
+  state.level = MIXED_LEVEL;
+  state.wellIndex = (MIXED_LEVEL - 1) % X.WELLS.length;
+  X.enterWell();
   let ticks = 0;
   while (state.screen !== "gameover" && ticks < RUN_CAP) {
     replayPassive(G.input, ticks);
@@ -567,14 +612,25 @@ H.assert(passiveTicks > 0 && passiveTicks < RUN_CAP,
 // ⛔ THE FIXTURES GO BACK, AND THEY ARE ASSERTED BACK
 // ---------------------------------------------------------------------------
 //
-// Leaving either raised would make every case below a different game from the
-// one that ships — and the RNG section below is the one that would notice, so
-// the restore comes first and is checked before it runs.
-C.DEBUG_SPAWN_KINDS = SHIPPED_KINDS.slice();
+// Leaving it raised would make every case below a different game from the one
+// that ships — and the RNG section below is the one that would notice, so the
+// restore comes first and is checked before it runs.
+//
+// ⛔ REWRITTEN, CS007 P3. There used to be TWO fixtures here and now there is
+// ONE: the kind fixture was a write into `C` and is now a write into
+// `state.level`, which every `startGame()` resets on its own. So the claim it
+// carried — "this file leaves the build exactly as it found it" — is asserted on
+// the mechanism that exists now: ⛔ THE SCHEDULE IS DATA THIS FILE NEVER WROTE
+// TO, and level 1 still answers one entry, which is the precondition the whole
+// counting section below rests on.
 C.ENEMY_CONCURRENT = SHIPPED_CONCURRENT;
 C.ENEMY_CONCURRENT_MAX = SHIPPED_CONCURRENT_MAX;
-H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
-         "⛔ the soak's kind fixture is put back to the shipped one-entry list");
+H.assert(JSON.stringify(X.eligibleKinds(1)) === JSON.stringify(["vaulter"]),
+         "⛔ the shipped schedule still answers one entry at level 1 — this file arms boards " +
+         "by setting the level and has written nothing into C.SPAWN_SCHEDULE");
+H.eq(C.SPAWN_SCHEDULE.length, 7,
+     "⛔ and the schedule is the seven spawner-eligible kinds — `thorn` and `weaverBolt` " +
+     "are not in it, and never were");
 H.eq(C.ENEMY_CONCURRENT, 3, "⛔ and the concurrency fixture is put back");
 H.eq(C.ENEMY_CAP, 16, "⛔ and C.ENEMY_CAP was never touched — it is a readability ceiling");
 
@@ -587,18 +643,39 @@ H.eq(C.ENEMY_CAP, 16, "⛔ and C.ENEMY_CAP was never touched — it is a readabi
 // spawner retune legitimately moves it, and a stray draw hides inside a
 // legitimate move. ⛔ THIS IS THE ABSOLUTE FORM OF THE SAME CLAIM. An interval
 // spawn spends exactly pickSpawnLane's bounded [1, C.SPAWN_LANE_TRIES] plus
-// spawnEnemy's ONE heading draw, and — while C.DEBUG_SPAWN_KINDS has one entry
-// — no third. It needs no baseline and survives every retune.
+// spawnEnemy's ONE heading draw, and — on a level whose eligible set has one
+// entry — no third. It needs no baseline and survives every retune.
+//
+// ⛔ AND UNDER GDD §8.1 IT SAYS STRICTLY MORE THAN IT COULD BEFORE (CS007 P3).
+// The third draw is now a FUNCTION OF THE LEVEL rather than of a constant a test
+// wrote: +0 at levels 1-2, +1 from level 3. So the two cases below are two
+// LEVELS of the shipped game rather than one shipped list and one invented one,
+// and the difference between them is a difference a player reaches by playing.
 //
 // ⛔ THIS FILE OWNS THE FORM, NOT THE GOLDEN. GOLDEN_LANES is green and on its
 // original recording from 9ebd27b; CS006 did not move it and did not re-record
 // it. CS007's introduction schedule is what legitimately moves it, and this is
 // the assertion that lets it be replaced rather than merely re-recorded
 // (PLANNED-FEATURES-CS006.md, H6).
-function countingRun(kinds, ticks) {
+// ⛔ ARMED BY LEVEL, AND BOUNDED BY ITS BAND — traps 6 and 7. `level` is the
+// first of the band and `bandTop` its last; the run stops the moment the level
+// leaves it, because the eligible set — and therefore the draw count — is a
+// function of the level and would change underneath the counters.
+//
+// ⛔ NOT PINNED WITH A `spawn.remaining` TOP-UP, deliberately: a well that never
+// clears never dives, and "a dive spends ZERO draws" is one of the claims below.
+// ⛔ The bound is checked at the TOP of the tick, and that is exactly right —
+// Game.update() runs the spawner BEFORE the well-clear check, so a tick that
+// began inside the band did its spawning inside it. `maxLevel` records what the
+// counters actually saw, and it is asserted rather than assumed.
+function countingRun(level, bandTop, ticks) {
   G.reset();
   X.startGame(SEED);
-  C.DEBUG_SPAWN_KINDS = kinds.slice();
+  if (level > 1) {
+    state.level = level;
+    state.wellIndex = (level - 1) % X.WELLS.length;
+    X.enterWell();
+  }
 
   // ⛔ WRAPPED AFTER startGame(), because startGame() rebuilds state.rng from
   // state.seed — a proxy installed before it is thrown away by it. Every draw
@@ -609,8 +686,11 @@ function countingRun(kinds, ticks) {
   state.rng = () => { draws++; return real(); };
 
   const seen = new Set(state.enemies);
-  const out = { perSpawn: [], idleDraws: 0, diveDraws: 0, diveTicks: 0, extra: 0 };
-  for (let i = 0; i < ticks && state.screen !== "gameover"; i++) {
+  const out = { perSpawn: [], idleDraws: 0, diveDraws: 0, diveTicks: 0, extra: 0,
+                maxLevel: state.level, ticks: 0 };
+  for (let i = 0; i < ticks && state.screen !== "gameover" && state.level <= bandTop; i++) {
+    if (state.level > out.maxLevel) out.maxLevel = state.level;
+    out.ticks = i + 1;
     replay(G.input, i);
     const before = draws;
     const wasDive = state.dive.active;
@@ -629,10 +709,15 @@ function countingRun(kinds, ticks) {
   return out;
 }
 
-// ⛔ ONE ENTRY. Only the interval spawner puts anything on the board — a
-// Vaulter neither splits nor lays — so a tick's draws are attributable to the
-// spawn that happened in it and to nothing else.
-const one = countingRun(["vaulter"], 6000);
+// ⛔ ONE ENTRY — GDD §8.1's LEVELS 1-2, the Vaulter-only band the game actually
+// ships with. Only the interval spawner puts anything on the board — a Vaulter
+// neither splits nor lays — so a tick's draws are attributable to the spawn that
+// happened in it and to nothing else.
+const one = countingRun(1, 2, 6000);
+H.eq(X.eligibleKinds(one.maxLevel).length, 1,
+     `⛔ every tick counted in the one-entry run ran on a ONE-ENTRY eligible set — the ` +
+     `run climbs as it clears wells and level 3 would add the kind draw ` +
+     `(reached level ${one.maxLevel} in ${one.ticks} ticks)`);
 H.assert(one.perSpawn.length >= 8,
          `the counting run actually spawned (${one.perSpawn.length} interval spawns)`);
 H.eq(one.extra, 0,
@@ -655,11 +740,21 @@ H.assert(one.diveTicks > 0 && one.diveDraws === 0,
          `${one.diveDraws} draws)`);
 
 // ⛔ THE CONTROL, AND IT IS WHAT MAKES "no third draw" MEAN ANYTHING — trap 6.
-// Two entries of the SAME kind: pickSpawnKind now faces a genuine choice and
-// spends its draw, and nothing else about the board changes — no Carrier to
-// split, no Weaver to lay. The difference between the two runs is therefore
-// exactly one draw, and it is provably the kind pick's.
-const two = countingRun(["vaulter", "vaulter"], 6000);
+// GDD §8.1's LEVELS 3-4: pickSpawnKind now faces a genuine choice and spends its
+// draw. ⛔ REWRITTEN, CS007 P3 — this used to be `["vaulter","vaulter"]`, two
+// entries of the same kind, chosen so nothing else about the board changed. The
+// schedule's two-entry band adds a CARRIER instead, which CAN split and put two
+// entities on the board in one tick; the file already routes that to `out.extra`
+// and asserts `extra === 0` on the ONE-ENTRY run only, so `min(perSpawn)` is
+// counted off single-arrival ticks either way and the difference between the two
+// runs is still exactly one draw. ⚠ A split's own two draws land in an
+// `out.extra` tick and are never counted here — that is the routing doing its
+// job, not an omission.
+const two = countingRun(3, 4, 6000);
+H.eq(X.eligibleKinds(two.maxLevel).length, 2,
+     `⛔ and every tick counted in the control ran on a TWO-ENTRY eligible set — levels 3-4 ` +
+     `are the ONLY band GDD §8.1 gives that is exactly two (reached level ${two.maxLevel} ` +
+     `in ${two.ticks} ticks)`);
 H.assert(two.perSpawn.length >= 8, `the control run spawned too (${two.perSpawn.length})`);
 H.eq(Math.min(...two.perSpawn), oneMin + 1,
      "⛔ a two-entry list spends exactly ONE draw more per spawn — so the one-entry case " +
@@ -670,24 +765,29 @@ H.eq(two.idleDraws, 0, "and the control spends nothing on a tick that spawned no
 // grew rather than only in the total. Each of the three is counted directly on
 // the shipped function, which is the form that needs no baseline at all.
 G.reset();
-X.startGame(SEED);
-C.DEBUG_SPAWN_KINDS = SHIPPED_KINDS.slice();
+X.startGame(SEED);                         // startGame leaves state.level 1
 state.enemies = [];
 let fnDraws = 0;
 const realFn = state.rng;
 state.rng = () => { fnDraws++; return realFn(); };
 
+H.eq(state.level, 1, "the decomposed case starts at level 1, where the set is one entry");
 fnDraws = 0;
-X.pickSpawnKind(state);
+H.eq(X.pickSpawnKind(state), "vaulter", "level 1 releases the Vaulter and nothing else");
 H.eq(fnDraws, 0,
-     "⛔ pickSpawnKind spends ZERO draws on the shipped one-entry list — there is no " +
-     "choice to make, so no randomness is spent making it");
+     "⛔ pickSpawnKind spends ZERO draws at level 1 — the eligible set has one entry, so " +
+     "there is no choice to make and no randomness is spent making it");
 
-C.DEBUG_SPAWN_KINDS = ["vaulter", "vaulter"];
+// ⛔ AND THE OTHER SIDE IS A LEVEL, NOT A LIST (CS007 P3). This wrote a
+// two-entry C.DEBUG_SPAWN_KINDS; the constant is gone and level 3 is where GDD
+// §8.1 puts the second kind. The claim — "exactly one draw the moment there is a
+// choice" — is the same one, now measured on a board the game reaches by itself.
+state.level = 3;
+H.eq(X.eligibleKinds(3).length, 2, "level 3's eligible set is exactly two entries");
 fnDraws = 0;
 X.pickSpawnKind(state);
-H.eq(fnDraws, 1, "and exactly ONE on a two-entry list — rngPick's");
-C.DEBUG_SPAWN_KINDS = SHIPPED_KINDS.slice();
+H.eq(fnDraws, 1, "and exactly ONE draw at level 3 — rngPick's");
+state.level = 1;
 
 fnDraws = 0;
 const probe = X.spawnEnemy("vaulter", 3, 0.2);
@@ -723,10 +823,12 @@ H.eq(laneDraws, C.SPAWN_LANE_TRIES,
      "⛔ a fully crowded board spends exactly C.SPAWN_LANE_TRIES lane draws and then " +
      "SETTLES — bounded, never a board-dependent search");
 
-// The fixtures, once more, after the last case that touched them.
-C.DEBUG_SPAWN_KINDS = SHIPPED_KINDS.slice();
-H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
-         "⛔ and the shipped kind list is what this file leaves behind");
+// The fixtures, once more, after the last case that touched them. ⛔ The kind
+// fixture is no longer among them — it is `state.level`, which the next
+// `startGame()` resets — so what is asserted here is that the schedule itself is
+// still the shipped one.
+H.assert(JSON.stringify(X.eligibleKinds(1)) === JSON.stringify(["vaulter"]),
+         "⛔ and the shipped schedule is what this file leaves behind, unwritten-to");
 H.eq(C.ENEMY_CONCURRENT, SHIPPED_CONCURRENT,
      "⛔ and the shipped concurrency knob is what this file leaves behind");
 H.eq(C.ENEMY_CONCURRENT_MAX, SHIPPED_CONCURRENT_MAX,

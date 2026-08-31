@@ -152,9 +152,15 @@ function buildGame(opts = {}) {
     // the Dive (11-dive.js, CS006 P3)
     "resetDive", "startDive", "updateDive", "diveHazard", "diveLaneBlocked",
     "diveStrike", "diveRespawnLane", "diveRespawn",
-    // the interval spawner's kind source (08, CS004 P1) — ⚠ TEMPORARY, it goes
-    // with C.DEBUG_SPAWN_KINDS when GDD 8.1's introduction schedule lands
-    "pickSpawnKind",
+    // the interval spawner's kind source (08, CS004 P1). ⛔ THE EXPORT SURVIVED
+    // THE SCHEDULE AND THE REASON CHANGED (CS007 P3): it used to be ⚠ TEMPORARY
+    // because it went with C.DEBUG_SPAWN_KINDS, and GDD 8.1's introduction
+    // schedule deleted that constant WITHOUT deleting this function — only its
+    // reader moved, to C.SPAWN_SCHEDULE. Four closed files call it directly, so
+    // a rename here comes back null and fails them differently than intended.
+    // eligibleKinds is the schedule itself, and it is what lets a test assert a
+    // level's set rather than infer it from what spawned.
+    "pickSpawnKind", "eligibleKinds",
   ];
   const tail = "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +

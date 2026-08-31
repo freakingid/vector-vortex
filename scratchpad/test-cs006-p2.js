@@ -454,8 +454,38 @@ H.eq(probes % 5, 0, "the NaN walk probed five depths per lane (non-vacuous)");
 // with NO edit and NO re-record. ⚠ That last one contradicts a prediction
 // PLANNED-FEATURES-CS007.md §1.1 and this phase's own prompt both carried; the
 // correction is measured and is in STATUS.md.
+//
 // ---------------------------------------------------------------------------
-const P1_DETERMINISM_HASH = 3019834406;
+// ⛔ RE-RECORDED A FOURTH AND LAST TIME, AT CS007 P3, AND THE CAUSE IS ONE
+// THING: THE SOAK'S KIND FIXTURE BECAME A LEVEL. 3019834406 -> 3661952239.
+//
+// GDD §8.1's introduction schedule landed and DELETED C.DEBUG_SPAWN_KINDS, the
+// constant test-cs005-p5.js's hashRun() wrote its six-kind list into before
+// every run. That file now arms the same board the way the shipped game does —
+// `state.level = 23`, the level at which the schedule has released every kind,
+// re-entered through the real enterWell() — and it re-arms after each in-window
+// restart, because startGame() puts the level back to 1.
+//
+// ⛔ THE HASHED RUN THEREFORE STARTS ON A DIFFERENT WELL AND A DIFFERENT HEAT.
+// This is not a subtle divergence to hunt for a tick number in: the run's very
+// first hashed value is state.level, 23 instead of 1, and st.wellIndex is 6
+// instead of 0. ⛔ THAT IS THE WHOLE CAUSE and it is the only one — the spawner
+// is the only code CS007 P3 changed, pickSpawnKind()'s SIGNATURE and its
+// no-draw contract did not move, and on a one-entry eligible set it still
+// spends nothing. test-cs006-p5.js's draws-per-spawn control is the
+// baseline-free form of that claim and it is green: 0 draws at level 1,
+// exactly 1 at level 3, counted on the shipped function.
+//
+// ⛔ GUARDED, again, and this is the guard that matters most for THIS cause:
+// test-cs004-p1.js's GOLDEN_LANES is green with NO edit and NO re-record.
+// MEASURED at this commit — its 3,000-tick window ends at LEVEL 2 (2,065 ticks
+// at level 1, 935 at level 2), and GDD §8.1's eligible set is one entry at both,
+// so the kind pick spends no draw anywhere inside it. A schedule that had
+// leaked a draw into levels 1-2 would have moved that golden, and it did not.
+// §4, §5 and the §8 source assertion below are untouched and still on their
+// original 8e0fb7c recordings.
+// ---------------------------------------------------------------------------
+const P1_DETERMINISM_HASH = 3661952239;
 
 const child = execFileSync(process.execPath,
   [path.join(__dirname, "test-cs005-p5.js"), "--hash-only"],

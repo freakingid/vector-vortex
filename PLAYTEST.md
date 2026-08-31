@@ -58,10 +58,15 @@ glyph in the cargo's own colour. ⚠ The suite asserts the compact/wide separati
 and the doubling-back off the real draw calls; it cannot assert a read.
 
 **⛔ Is a six-kind board READABLE, or is it noise?** CS005 is the first build in
-which all six Classic enemies can be on one well at once, and no played build
-does it yet — set `C.DEBUG_SPAWN_KINDS` to
-`["vaulter", "carrierDrifter", "carrierSurger", "weaver", "drifter", "surger"]`
-and play a well or two. ⚠ **The closing soak proved that board is STABLE, and
+which all six Classic enemies can be on one well at once, and ⛔ **since CS007 P3
+a played build does it by itself** — GDD §8.1's introduction schedule landed, so
+press `w` up to **level 23** (or start a run and cycle) and play a well or two.
+That is the level at which the schedule has released every kind, and it is the
+board this ask is about. ⚠ **The instruction used to be "set
+`C.DEBUG_SPAWN_KINDS`"; that constant was deleted with the schedule** — the
+difficulty question it answered is now `C.SPAWN_SCHEDULE`'s, and the six spawn
+keys `1`–`6` and the row key `0` are untouched and are still how one silhouette
+at a time is judged. ⚠ **The closing soak proved that board is STABLE, and
 that is a different claim from playable**: it ran 5,000 ticks on each of the six
 open wells with the concurrency knob raised to the readability ceiling, and
 proved no lane leaves the well, no NaN reaches a projected point and no array

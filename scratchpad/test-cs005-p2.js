@@ -659,7 +659,7 @@ for (const w of [WELLS[0], OPEN[0]]) {
 H.eq(drew, 16, "both silhouettes project on both topologies at every depth, with no NaN");
 
 // ---------------------------------------------------------------------------
-// the debug bench key P1 left dark (GDD 9.5) — ⚠ TEMPORARY
+// the debug bench key P1 left dark (GDD 9.5) — ⛔ NOT TEMPORARY (CS007 P3)
 // ---------------------------------------------------------------------------
 
 useWell(0);
@@ -672,21 +672,68 @@ G.input.keyUp("5");
 H.eq(state.enemies.length, 1, "⚠ pressing 5 puts exactly one entity on the board");
 H.assert(state.enemies[0] instanceof X.Drifter, "and it is a Drifter");
 
-// ⛔ C.DEBUG_SPAWN_KINDS is a bench, never a difficulty knob: it still ships as
-// one entry, so a played build is still a Vaulter build until GDD 8.1 lands.
-H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
-         "⛔ the shipped spawn list is untouched by this phase");
+// ⛔ THE BENCH KEY IS A BENCH AND NEVER A DIFFICULTY KNOB, AND CS007 P3 IS
+// WHERE THAT STOPPED BEING A COMMENT AND BECAME TWO SEPARATE MECHANISMS.
+// This used to read C.DEBUG_SPAWN_KINDS and assert it still shipped as one
+// entry — "a played build is still a Vaulter build until GDD 8.1 lands". GDD
+// 8.1 landed: the constant is gone, the key above is not, and the claim is now
+// the schedule's own — ⛔ THE DRIFTER IS NOT RELEASED BEFORE GDD 8.1's LEVEL
+// 9, however many times a bench key puts one on the board.
+H.assert(!X.eligibleKinds(8).includes("drifter"),
+         "⛔ the drifter is not eligible at level 8 — pressing the bench key is not " +
+         "the schedule, and this phase did not move what a played well releases");
+H.assert(X.eligibleKinds(9).includes("drifter"),
+         "⛔ and level 9 is where GDD 8.1 introduces it");
 
 // …and the interval spawner releases Drifters when a test asks it to, through
 // the one entry point, with the run's one stream deciding the lane.
-const savedKinds = C.DEBUG_SPAWN_KINDS;
-C.DEBUG_SPAWN_KINDS = ["drifter"];
-useWell(7);                                  // Vee, open, 13 lanes
+//
+// ⛔ THE FIXTURE IS REPAIRED, NOT RELAXED (CS007 P3). This case armed a
+// DRIFTER-ONLY well by writing C.DEBUG_SPAWN_KINDS = ["drifter"], and GDD 8.1's
+// schedule deleted that constant. ⚠ NO LEVEL OF §8.1 HAS A ONE-ENTRY SET
+// CONTAINING THE DRIFTER — it arrives fourth, at level 9, never alone — so the
+// single-kind well is not reconstructible and asking for one back would be
+// asking the schedule to be something else.
+//
+// ⛔ The precondition this case was always about is restored instead, on the ONE
+// ENTRY POINT the claim names: at the level where the Drifter first becomes
+// eligible, pickSpawnKind() really returns it, spawnEnemy() really builds one
+// from that string, and thirty seconds of a live well with Drifters in it runs.
+// That is PLANNED-FEATURES-CS007.md §4.4's option 1, and it is stronger than
+// what it replaces on the one axis that matters: "ran without throwing" is now
+// "ran without throwing AND a Drifter reached the board through the interval
+// spawner", which the old fixture asserted nowhere.
+useWell(7);                                  // Vee, open, 13 lanes — unchanged
+state.level = 9;                             // ⛔ the LEVEL is the arming now
+X.enterWell();                               // …through the real path
 state.spawn.remaining = C.SPAWN_QUOTA;
-for (let i = 0; i < 1800; i++) G.update(DT);
-C.DEBUG_SPAWN_KINDS = savedKinds;
-H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
-         "the fixture put the shipped list back");
-H.assert(state.time > 0, "thirty seconds of a Drifter-only well ran without throwing");
+
+// The entry point, driven directly: over a long run of picks on the run's own
+// stream, "drifter" is one of the answers level 9 gives.
+let pickedDrifter = false;
+for (let i = 0; i < 300 && !pickedDrifter; i++) {
+  if (X.pickSpawnKind(state) === "drifter") pickedDrifter = true;
+}
+H.assert(pickedDrifter,
+         "⛔ pickSpawnKind returns 'drifter' at level 9 — the schedule, not a constant, is " +
+         "what puts the kind in reach of the interval spawner");
+H.assert(X.spawnEnemy("drifter", 3, 0) instanceof X.Drifter,
+         "⛔ and spawnEnemy turns that string into a Drifter — ENEMY_KINDS is still the one " +
+         "place a kind name becomes a class");
+
+useWell(7);
+state.level = 9;
+X.enterWell();
+state.spawn.remaining = C.SPAWN_QUOTA;
+let sawSpawnedDrifter = false;
+for (let i = 0; i < 1800; i++) {
+  G.update(DT);
+  for (const e of state.enemies) if (e instanceof X.Drifter) sawSpawnedDrifter = true;
+}
+H.eq(state.level, 9, "the well never left level 9, so the whole run was on that eligible set");
+H.assert(sawSpawnedDrifter,
+         "⛔ and a Drifter reached the board during it — the interval spawner released one, " +
+         "which is what the deleted single-kind fixture was standing in for");
+H.assert(state.time > 0, "thirty seconds of a level-9 well ran without throwing");
 
 H.report("test-cs005-p2.js");

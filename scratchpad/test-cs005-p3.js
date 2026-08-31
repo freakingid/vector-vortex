@@ -645,7 +645,7 @@ for (const w of [WELLS[0], WELLS.filter(x => !x.closed)[0]]) {
 H.eq(drew, 48, "the bar and every fuse state project on both topologies with no NaN");
 
 // ---------------------------------------------------------------------------
-// the debug bench key P2 left dark (GDD 9.5) — ⚠ TEMPORARY
+// the debug bench key P2 left dark (GDD 9.5) — ⛔ NOT TEMPORARY (CS007 P3)
 // ---------------------------------------------------------------------------
 
 useWell(0);
@@ -658,25 +658,60 @@ G.input.keyUp("6");
 H.eq(state.enemies.length, 1, "⚠ pressing 6 puts exactly one entity on the board");
 H.assert(state.enemies[0] instanceof X.Surger, "and it is a Surger");
 
-// ⛔ C.DEBUG_SPAWN_KINDS is a bench, never a difficulty knob: it still ships as
-// one entry, so a played build is still a Vaulter build until GDD 8.1 lands.
-H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
-         "⛔ the shipped spawn list is untouched by this phase");
+// ⛔ THE BENCH KEY IS A BENCH AND NEVER A DIFFICULTY KNOB, AND CS007 P3 IS
+// WHERE THAT STOPPED BEING A COMMENT AND BECAME TWO SEPARATE MECHANISMS.
+// This used to read C.DEBUG_SPAWN_KINDS and assert it still shipped as one
+// entry — "a played build is still a Vaulter build until GDD 8.1 lands". GDD
+// 8.1 landed: the constant is gone, the key above is not, and the claim is now
+// the schedule's own — ⛔ THE SURGER IS NOT RELEASED BEFORE GDD 8.1's LEVEL
+// 13, however many times a bench key puts one on the board.
+H.assert(!X.eligibleKinds(12).includes("surger"),
+         "⛔ the surger is not eligible at level 12 — pressing the bench key is not " +
+         "the schedule, and this phase did not move what a played well releases");
+H.assert(X.eligibleKinds(13).includes("surger"),
+         "⛔ and level 13 is where GDD 8.1 introduces it");
 
 // …and the interval spawner releases Surgers when a test asks it to, through
 // the one entry point, with the run's one stream deciding the lane.
-const savedKinds = C.DEBUG_SPAWN_KINDS;
-C.DEBUG_SPAWN_KINDS = ["surger"];
-useWell(7);                                  // Vee, open, 13 lanes
+//
+// ⛔ THE FIXTURE IS REPAIRED, NOT RELAXED (CS007 P3), and test-cs005-p2.js's
+// Drifter case carries the same repair for the same reason. This armed a
+// SURGER-ONLY well through C.DEBUG_SPAWN_KINDS, which GDD 8.1's schedule
+// deleted; ⚠ no level of §8.1 has a one-entry set containing the Surger — it
+// arrives fifth, at level 13, never alone. The precondition is restored on the
+// ONE ENTRY POINT the claim names instead (PLANNED-FEATURES-CS007.md §4.4,
+// option 1), and the run gains a non-vacuity assertion it never had.
+useWell(7);                                  // Vee, open, 13 lanes — unchanged
+state.level = 13;                            // ⛔ the LEVEL is the arming now
+X.enterWell();                               // …through the real path
 state.spawn.remaining = C.SPAWN_QUOTA;
+
+let pickedSurger = false;
+for (let i = 0; i < 300 && !pickedSurger; i++) {
+  if (X.pickSpawnKind(state) === "surger") pickedSurger = true;
+}
+H.assert(pickedSurger,
+         "⛔ pickSpawnKind returns 'surger' at level 13 — the schedule, not a constant, is " +
+         "what puts the kind in reach of the interval spawner");
+H.assert(X.spawnEnemy("surger", 3, 0) instanceof X.Surger,
+         "⛔ and spawnEnemy turns that string into a Surger — ENEMY_KINDS is still the one " +
+         "place a kind name becomes a class");
+
+useWell(7);
+state.level = 13;
+X.enterWell();
+state.spawn.remaining = C.SPAWN_QUOTA;
+let sawSpawnedSurger = false;
 for (let i = 0; i < 1800; i++) {
   state.lives = C.START_LIVES;
   G.update(DT);
+  for (const e of state.enemies) if (e instanceof X.Surger) sawSpawnedSurger = true;
 }
-C.DEBUG_SPAWN_KINDS = savedKinds;
-H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
-         "the fixture put the shipped list back");
-H.assert(state.time > 0, "thirty seconds of a Surger-only well ran without throwing");
+H.eq(state.level, 13, "the well never left level 13, so the whole run was on that eligible set");
+H.assert(sawSpawnedSurger,
+         "⛔ and a Surger reached the board during it — the interval spawner released one, " +
+         "which is what the deleted single-kind fixture was standing in for");
+H.assert(state.time > 0, "thirty seconds of a level-13 well ran without throwing");
 
 H.report("test-cs005-p3.js");
 
