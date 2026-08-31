@@ -47,7 +47,7 @@ closed session believed, and correcting it is falsifying it. If you find another
 live pointer, it means the same thing both times: read it, decide what it
 *meant*, and correct it.
 
-**CS001 through CS006 are closed.** Their narratives are in `log/CS00#.md`;
+**CS001 through CS007 are closed.** Their narratives are in `log/CS00#.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -93,7 +93,43 @@ makes it reachable. And ⛔ **the single sanctioned baseline re-record was NOT t
 one the plan predicted** — `test-cs004-p1.js`'s `GOLDEN_LANES` is green and
 untouched, and `test-cs006-p2.js`'s `P1_DETERMINISM_HASH` is what the Dive moved.
 `log/CS006.md` carries the cause, and CS006 P5 replaced the golden's guard role
-with a draws-per-spawn count so CS007 can move it without laundering anything.
+with a draws-per-spawn count so CS007 could move it without laundering anything.
+⚠ **CS007 never needed to** — see the correction under "Why this order" — but the
+count is what let all three of CS007's `P1_DETERMINISM_HASH` re-records be
+*checked* rather than merely recorded, which is the job it was built for.
+
+**CS007 held as ONE changeset and shipped its row in full.** Five phases — the
+spawner-stall split (P1), the heat clock and every value derived from it (P2),
+GDD §8.1's introduction schedule (P3), telemetry (P4), the soak and the close
+(P5). ⚠ **It was planned as six and dropped to five when Paul answered H1**: the
+guarantee is held by a hard `C.CLIMB_MULT_MAX` of 1.40 with
+`C.RESPAWN_PUSH_DEPTH` staying 0.55 at every level, so the phase that was to
+build a derived push had no production code left to write.
+
+**What CS007 shipped against the row.** ⛔ **One clock** — `heat()` and seven
+accessors beside `C`, Form A endpoint interpolation, `C.HEAT_FULL_LEVEL` 99, and
+`heat(1)` exactly 0. ⛔ **The introduction schedule as DATA** — `C.SPAWN_SCHEDULE`,
+seven `{ level, kind }` rows, `eligibleKinds(level)` a function of the level and
+nothing else, and CS004's ⚠ TEMPORARY bench constant deleted outright. ⛔ **The
+spawner-stall call built as settled** — the release budget counts THREATS, the
+readability ceiling keeps counting ENTITIES, `wellCleared()` untouched and no
+Thorn expiring. ⛔ **Telemetry** — 29 columns including all eight heat-derived
+values, a ring, a session switch that is OFF at every launch, and a CSV export to
+`console.log`. And a **fifth soak file**, `test-cs007-p5.js`, which owns the run
+that moves between bands rather than one pinned to a level.
+
+⚠ **What CS007 deliberately left.** ⛔ **Nothing was tuned.** The instrument was
+built and the curve was chosen from measured option tables, but no playtest
+evidence has been collected and GDD §8.2's targets are still targets — the ask is
+in `PLAYTEST.md`, and it is the one thing the suite cannot check. ⛔ **No
+persistence** for the telemetry buffer: `kit-storage` owns the keyspace and
+`22-meta.js` is still a placeholder, so CS011 owns it. **No scoring, no HUD, no
+Start Depth** (CS008's), **no Dive visual**, **no spawn-lane weighting toward the
+player's lane** (GDD §12's four-second promise is onboarding and is CS015's), and
+**`src/07-enemies.js` is not split** — still CS012's. ⛔ **And the four-key
+`C.TELEMETRY_PLACEHOLDER` shrinks rather than staying**: CS008 deletes two keys,
+Start Depth a third and the combo the fourth, and a key left there after its
+column has a real source is a column silently reporting zero.
 
 ---
 
@@ -130,29 +166,44 @@ and the run half (the heat clock, the introduction schedule, the spawner-stall
 call, telemetry) **share exactly one file, `23-main.js`, and they share it in two
 different functions.** The well is CS006; the run is CS007.
 
-⛔ **The split's real justification is `test-cs004-p1.js`'s `GOLDEN_LANES`, and
-both halves move it.** The Dive changes when level 2 starts inside the golden's
-3,000-tick window; heat changes the spawn interval; the introduction schedule
-changes the draw count per spawn. Split, that is **two small, separately-reasoned
-re-records** instead of one large one that absorbs three unrelated causes at
-once — and a re-record is the one moment a stray RNG draw can be laundered into a
-new baseline, so a re-record with one nameable cause is worth two commits. The
+⛔ **The split's real justification is a BASELINE RE-RECORD, and this paragraph
+named the wrong baseline** — see the ⚠ correction below, written after both
+changesets measured it. It predicted `test-cs004-p1.js`'s `GOLDEN_LANES` on three
+grounds: the Dive changing when level 2 starts inside its 3,000-tick window, heat
+changing the spawn interval, and the introduction schedule changing the draw count
+per spawn. **All three are measured false.** The argument for splitting survives
+intact on the baseline that did move: **separately-reasoned re-records instead of
+one that absorbs three unrelated causes at once** — and a re-record is the one
+moment a stray RNG draw can be laundered into a new baseline, so a re-record with
+one nameable cause is worth two commits. The
 supporting reasons: CS006 already has to edit four closed test files without
 adding two more to the same `run-all.js` output, and the heat clock's guard is
 written in `respawnSkimmer()`, which the Dive changes — so heat has to land
 *after* the Dive rather than beside it.
 
-⚠ **MEASURED AT CS006's CLOSE, AND THE PREMISE ABOVE IS HALF WRONG — the split is
-still right, for a better reason.** The Dive does **not** move `GOLDEN_LANES`:
-its 3,000-tick window now crosses a well clear, but the extra 1.6 s of dive costs
-it no spawn, so the recorded sequence is identical and CS006 re-recorded nothing
-there. What the Dive moved was `test-cs006-p2.js`'s `P1_DETERMINISM_HASH`, a
-baseline this paragraph did not anticipate. ⛔ The conclusion holds and is
-stronger for it: **two changesets meant two separately-reasoned re-records, and
-each landed on a different baseline with one nameable cause.** CS007 still moves
-`GOLDEN_LANES` — the introduction schedule changes the draw count per spawn — and
-`test-cs006-p5.js` now carries the draws-per-spawn count that makes that move
-checkable rather than merely recorded.
+⚠ **MEASURED AT BOTH CLOSES, AND THE PREMISE ABOVE IS WRONG IN BOTH HALVES — the
+split is still right, for a better reason.** The Dive does **not** move
+`GOLDEN_LANES`: its 3,000-tick window now crosses a well clear, but the extra
+1.6 s of dive costs it no spawn, so the recorded sequence is identical and CS006
+re-recorded nothing there. ⛔ **And neither does the introduction schedule, which
+is what this paragraph used to predict.** Measured at CS007 P3: the golden's
+window ends at **level 2** (2,065 ticks at level 1, 935 at level 2), and GDD
+§8.1's eligible set is **one entry** throughout that band — a one-entry set spends
+no draw, so the draw count per spawn is unchanged where the golden lives. ⛔ **And
+it was not heat either** (the other prediction, in `PLANNED-FEATURES-CS007.md`
+§1.1): level 2's spawn interval is **1.5472**, not the 1.428 four documents
+printed, which is level *5*'s. `GOLDEN_LANES` is on its original `9ebd27b`
+recording, all sixteen entries, through the whole of CS006 and CS007.
+
+⛔ **What actually moved, both times, was `test-cs006-p2.js`'s
+`P1_DETERMINISM_HASH`** — once in CS006 (the Dive) and three times in CS007 (the
+threats split, heat, and a closed soak's fixture becoming a level), each with one
+nameable cause. **The conclusion holds and is stronger for it: two changesets
+meant separately-reasoned re-records rather than one that absorbed three unrelated
+causes at once.** `test-cs006-p5.js`'s draws-per-spawn count is what made each of
+CS007's three checkable rather than merely recorded — it needs no baseline and
+survives every retune, and CS007 P3 made it a function of the LEVEL, which is
+strictly more than it could say before.
 
 **A playable Classic game exists at CS008.** Everything after it is addition.
 If the schedule breaks, the game that ships is Classic-only and complete rather
@@ -179,7 +230,7 @@ these three cuts touches another changeset's code.
 |---|---|---|
 | #1 Dim band (§3.7) | Keep as specced: levels 65–80 at `DIM_BAND_ALPHA` 0.18, lanes lighting on occupancy, shot travel and Surger charge. Spend no tuning time on it — the renderer handles lane occupancy anyway, so the band is a few lines on top of work already required. Re-audition only if telemetry ever shows a player past level 65. | CS001 P3 — **shipped** |
 | #4 Achievements | Local-only. The evaluator returns a payload-shaped object from day one, so server-backing later is wiring rather than a rewrite. | CS011 |
-| #5 Aggregate telemetry | Strictly local CSV export. Nothing is posted anywhere. It is a tuning instrument and explicitly not anti-cheat; a destination adds a privacy surface for no tuning benefit. | CS007 |
+| #5 Aggregate telemetry | Strictly local CSV export. Nothing is posted anywhere. It is a tuning instrument and explicitly not anti-cheat; a destination adds a privacy surface for no tuning benefit. | CS007 P4 — **shipped**; ⛔ persistence is CS011's |
 | #6 Mimic | Build it. ~100 lines against an existing shot path, and the probation verdict needs a playtest rather than an argument. Cut it in CS016, without ceremony, if it reads cheap. | CS013, verdict in CS016 |
 | #7 Track count | Three at launch: `title`, `pulse`, `drive`. `deep` and `rush` are new table entries with no code change, so they are post-ship content, not a scope cut. | CS009 |
 
@@ -198,14 +249,18 @@ module seam, named against CS012 for the same reason.
   translation of the throat polygon in normalized rim space, applied **after**
   the centroid scale, DATA and never written at runtime. GDD §3.3 carries the
   definition; `test-cs006-p2.js` asserts it on all sixteen wells.
-- ✅ **ANSWERED 2026-08-31 — a standing Thorn holds a spawner slot, and the
-  budget will count THREATS** (found CS004 P5, settled by Paul before CS007's
-  spec). `updateSpawner()` blocks on `state.enemies.length >=
+- ✅ **CLOSED by CS007 P1 — a standing Thorn holds a spawner slot, and the budget
+  now counts THREATS** (found CS004 P5, settled by Paul before CS007's spec, built
+  at `adb0bd7`). `updateSpawner()` blocks on `state.enemies.length >=
   min(ENEMY_CONCURRENT, ENEMY_CAP)`, a count of *everything* in the one array —
   so three Thorns nobody shoots hold the spawner shut and the well never clears.
-  ⛔ **CS007 builds the split**: the release budget counts `blocksClear && !dead`,
-  `C.ENEMY_CAP` keeps counting entities, no Thorn expires and `wellCleared()` is
-  untouched. Reasoning in `DECISIONS.md`; measured repro in `STATUS.md`.
+  ⛔ **CS007 P1 built the split**: the release budget counts `blocksClear && !dead`
+  (`threatCount()`), `C.ENEMY_CAP` keeps counting entities at one enforcement
+  site, no Thorn expires and `wellCleared()` is untouched. Reasoning in
+  `DECISIONS.md`; the repro, the re-record and its cause in `log/CS007.md`.
+  ⛔ **`test-cs007-p5.js` verifies it end to end on a played board**: every blocked
+  beat in a twenty-run soak is legal against a threat count recomputed off GDD
+  §6.5's contract field, and reverting `threatCount()` turns that red.
 - ✅ **CLOSED by CS006 P2 — the Flat (11) and the Stair (9) are offset.** The
   Flat's shortest lane-centre spoke went 23.6 → 151.8 px, the Stair's 30.4 →
   79.6 px, both past `C.MIN_LANE_SPOKE_PX` 60. ⚠ **The numbers are settled and
@@ -241,7 +296,7 @@ module seam, named against CS012 for the same reason.
 | 3 | Telemetry ships with the heat clock, not with the other meta systems. ⚠ Since CS006's split that is the **new CS007**, not CS006 — the same pairing it always had, one row further down | It is a tuning instrument, and the tuning it serves is difficulty. An instrument built one changeset *before* the thing it measures ships with a column list that has to be edited the moment heat lands, and `TELEMETRY_FIELDS` and `push()` must be edited together (GDD §15.6). If difficulty tuning turns out to need nothing beyond `feel-lab`, move it back to CS011 with the other meta systems |
 | 4 | Meta (CS011) sits after audio, not before | Meta's only external dependency is the Worker registry entry, which Paul can make in parallel today. If that registration proves slow, move CS011 earlier |
 | 5 | Front of house (CS008) comes before audio | The audio director reads score, combo, lives and level; specifying it against a real HUD and a real game-over path is cheaper than against placeholders |
-| 6 | ⚠ **GDD §12's four-second promise is onboarding, and it is CS015's.** Settled 2026-08-30 | CS003 P5 flagged that this file and `STATUS.md` disagreed — this file read it as a spawner-tuning question for the level-flow changeset, `STATUS.md` read it as onboarding. `STATUS.md` wins: it needs spawn lanes weighted toward the player's lane, which is a *teaching* decision made against a first-run experience, not a difficulty curve. If CS007's heat pass finds it falls out of the spawner for free, take it there and note the move |
+| 6 | ⚠ **GDD §12's four-second promise is onboarding, and it is CS015's.** Settled 2026-08-30 | CS003 P5 flagged that this file and `STATUS.md` disagreed — this file read it as a spawner-tuning question for the level-flow changeset, `STATUS.md` read it as onboarding. `STATUS.md` wins: it needs spawn lanes weighted toward the player's lane, which is a *teaching* decision made against a first-run experience, not a difficulty curve. If CS007's heat pass finds it falls out of the spawner for free, take it there and note the move. ⚠ **It did not** — CS007 touched no spawn-lane selection at all, and `pickSpawnLane()` is unchanged since CS003 |
 | 7 | No changeset is reserved for refactoring | If the CS008 HUD and the CS011 meta screens end up duplicating layout code, propose a refactor changeset then — don't reserve time for a problem that may not appear |
 | 8 | `ROADMAP.md` is its own file, not a section of `DECISIONS.md`. Paul's call, 2026-08-30 | It needs editing every time a changeset is renumbered, and `DECISIONS.md` is append-only. Adding it means one row in `CLAUDE.md`'s document map and one in GDD §16.4, both on the "on demand only" read contract |
 | 9 | The enemy palette is chosen as a set in CS004 P1, all six Classic colours at once, all ⚠ provisional | Picking four now and two in CS005 guarantees a clash, and `C` already carries forward-looking constants. `tools/glow-lab.html` remains unbuilt and unowned; whichever changeset takes the art pass owns it |

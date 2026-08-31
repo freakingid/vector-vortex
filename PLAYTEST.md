@@ -21,6 +21,15 @@ on every one of them.
 - Grouped by what you would have on screen, because a playtest is a sitting and
   not a checklist. The debug bench is `1`–`6` for one of a kind in your lane and
   `0` for the full staggered row.
+- ⛔ **THE BENCH KEYS ARE PERMANENT NOW, AND THIS FILE DEPENDS ON THEM.**
+  Paul's H5 call, 2026-08-31: CS004 shipped them ⚠ TEMPORARY, paired with a
+  bench constant GDD §8.1's introduction schedule was going to delete. CS007 P3
+  deleted that constant and ⛔ **deliberately kept these**, because the two answer
+  different questions and only one of them is a difficulty question — the schedule
+  says what a well *releases*, and these say *put one on screen so I can look at
+  it*. Reaching level 23 to judge a Surger Carrier's silhouette is not a way to
+  judge a silhouette. ⛔ They ship until CS016 decides whether debug keys ship at
+  all; ⛔ **an ask in this file that names a key is naming something stable.**
 - ⛔ **`t` toggles telemetry capture and `e` exports the CSV to the console**
   (CS007 P4). Capture is OFF at every launch and is never persisted, so a
   sitting that wants a log presses `t` first — the console line confirms it.
@@ -35,7 +44,7 @@ on every one of them.
 
 ## The ⛔ asks — readability rules the suite cannot check
 
-Seven asks whose failure mode is *a death, or a wrong move, the player cannot
+Eight asks whose failure mode is *a death, or a wrong move, the player cannot
 account for*. Everything else in this file is tuning; these seven are
 correctness. One per phase that shipped something judgeable.
 
@@ -82,9 +91,15 @@ proved no lane leaves the well, no NaN reaches a projected point and no array
 grows without bound. It cannot tell you whether six silhouettes, a Thorn, a
 bolt, a fuse and a discharging lane are separable by eye. Knobs:
 `C.ENEMY_CONCURRENT` (3, the difficulty knob) and `C.ENEMY_CAP` (16, ⛔ the
-readability ceiling — this ask is exactly the one that would move it). The real
-answer is GDD §8.1's introduction schedule, which is CS007's: if six at once is
-noise, the schedule is what has to keep them apart.
+readability ceiling — this ask is exactly the one that would move it). ⛔ **The
+real answer was GDD §8.1's introduction schedule and it SHIPPED (CS007 P3)**: if
+six at once is noise, the schedule is what has to keep them apart, and it now
+does — six kinds are not reachable at all before level 18 and seven not before
+23. ⚠ **That makes this ask narrower than it was.** It is no longer "is a
+six-kind board readable"; it is **"is a six-kind board readable at the level the
+game hands it to you, having taught you the six one at a time on the way up"** —
+which is a different and much fairer question, and the one the next sitting should
+actually answer.
 
 **⛔ At level 65, does an occupied lane read as LIT, or does the band just look
 broken?** The dim band (GDD §3.6–3.7) draws levels 65–80 at `C.DIM_BAND_ALPHA`
@@ -143,6 +158,36 @@ killed me", that is not a tuning answer — it is the Dive's rendering, which no
 changeset owns yet.
 
 ---
+
+**⛔ CAN YOU NAME WHAT CHANGED AT LEVEL 5, AT 9, AT 13 — OR DOES IT JUST FEEL
+BUSIER?** CS007's whole reason to exist is GDD §1.1 pillar P3: *"Difficulty rises
+continuously from one clock, but every new **kind** of threat arrives at a
+specific, learnable level."* Play a run from level 1 without cycling wells, and
+at each death say out loud what is new. The suite can prove the schedule fired —
+`test-cs007-p5.js` asserts that across twenty played runs and seven boundary runs
+**no kind ever appears below its scheduled level**, and that each one does appear
+at or after it — and ⛔ **it cannot prove a single thing about whether you
+noticed.** The two failure modes are opposite and both are real: the arrival is
+**invisible**, drowned in a board already busy from heat, so escalation reads as
+one undifferentiated ramp; or it is **invisible because it is too far apart** —
+levels 5 → 9 → 13 is four to five wells between introductions, and a player who
+died at 6 has met four of the seven kinds ever.
+
+⛔ **PRESS `t` AT THE START AND `e` AT THE END.** This is the ask the telemetry
+instrument was built for, and the log carries the answer to *what were the
+numbers when it stopped being fun*: `level`, `heat` and all seven derived values
+on every row. ⚠ Bring the CSV to the next tuning session — an impression plus a
+log beats an impression, and nothing in this project has been tuned against a
+real player yet.
+
+Knobs, in order, and ⛔ **only one of them is `C.SPAWN_SCHEDULE`**: first
+`C.HEAT_KNEE` (6.0 — how fast the early ramp arrives, which is what decides
+whether an introduction lands on a calm board or a loud one), then
+`C.HEAT_FULL_LEVEL` (99 — where every row saturates together), then the schedule
+rows themselves. ⚠ **Moving a schedule row is the LAST resort**, not the first:
+GDD §8.1's levels are compressed against a tuned ceiling of ~35–40 already, and
+`DIFFICULTY-NOTES.md` carries the curve, the clamps and the concurrency ladder's
+step levels so a change can be reasoned about before it is made.
 
 ## The Drifter — key `5`
 
