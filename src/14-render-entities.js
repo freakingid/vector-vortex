@@ -2,7 +2,9 @@
 // glow/particle primitives here can move into kit-fx wholesale later (CLAUDE.md
 // "Modules built here, destined for the kit"). CS002 P3 added the shot streak;
 // CS003 P1 adds the shared entity projection helper and the Vaulter; CS004 P2
-// adds the Carrier's hull and its cargo glyphs.
+// adds the Carrier's hull and its cargo glyphs, P3 the Weaver and its bolt, and
+// P4 the Thorn — which is the first entity here that is NOT a silhouette at a
+// point and so does not use entityPoints() at all. See drawThorn() at the foot.
 //
 // ⛔ drawPoly + glowStroke only (GDD 10.2). No fill, no sprite, no texture.
 //
@@ -301,4 +303,61 @@ const WEAVER_BOLT_POLY = [
 function drawWeaverBolt(ctx, well, lane, depth) {
   drawPoly(ctx, entityPoints(well, lane, depth, WEAVER_BOLT_POLY, C.WEAVER_BOLT_SIZE), true);
   glowStroke(ctx, C.WEAVER_BOLT_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
+// The Thorn (GDD 6.1, 4.2, 10.2, 10.3, 18) — a bright lane segment.
+// ---------------------------------------------------------------------------
+//
+// ⛔ entityPoints() DOES NOT APPLY HERE, AND THAT IS NOT AN OVERSIGHT. Every
+// other enemy is a silhouette AT a point: a local-space poly projected around
+// one (lane, depth). A Thorn is a SEGMENT ALONG the lane, from the throat to
+// its tip, and it has no local-space shape at all — it is the same class of
+// drawing as a shot's streak or the well's own spokes. The pattern it reuses is
+// drawShot()'s at the top of this file: preallocated scratch points, screenPos
+// per end, drawPoly, glowStroke. CS005's Surger telegraph is the other one.
+//
+// ⛔ NO PER-FRAME ALLOCATION (GDD 17's perf budget). The two point PAIRS are
+// preallocated as well as the points, because `drawPoly(ctx, [a, b])` allocates
+// an array literal every call — cheap, and still an allocation in a per-frame
+// path with up to C.ENEMY_CAP Thorns in it.
+const _thornRoot = { x: 0, y: 0 };   // the throat end — always depth 0
+const _thornNeck = { x: 0, y: 0 };   // C.THORN_TIP_LEN back from the tip
+const _thornTip  = { x: 0, y: 0 };
+const _thornBody = [_thornRoot, _thornTip];
+const _thornCrown = [_thornNeck, _thornTip];
+
+// ⛔ FULL ALPHA AT EVERY DEPTH, INCLUDING INSIDE THE THROAT ZONE. GDD 10.3 is a
+// rule about what may be drawn OVER that zone — explosions, particles, score
+// popups, the things that hide an approaching enemy. A Thorn is not drawn over
+// the well, it IS lane geometry, and the player has to be able to see which
+// lanes are thorned from the moment one starts growing. Fading it would be the
+// readability failure, exactly as it would be on a Vaulter.
+//
+// The tip is brighter because it is drawn TWICE — glowStroke composites with
+// `lighter`, so the last C.THORN_TIP_LEN of the segment accumulates both
+// strokes. ⛔ That is why there is no second colour and no alpha split: a chip
+// landing is a visible step of the bright band down the lane, and one constant
+// controls how much band there is.
+//
+// Line weight follows the well's own spokes (13-render-well.js): a stroke that
+// spans a range of depths takes the weight of its MIDPOINT, because a single
+// stroke has one width and the lane it lies in is getting narrower. The body's
+// midpoint is depth/2; the crown sits at the tip and is therefore the wider of
+// the two, which is the right way round for the thing the player is aiming at.
+function drawThorn(ctx, well, lane, depth) {
+  const tip = depth > 1 ? 1 : (depth < 0 ? 0 : depth);
+  if (tip <= 0) return;   // a Thorn with no length yet — the step a Weaver
+                          // stands one up. Nothing to draw, and drawing it
+                          // would be a zero-length path.
+
+  screenPos(well, lane, 0, _thornRoot);
+  screenPos(well, lane, tip, _thornTip);
+  drawPoly(ctx, _thornBody, false);
+  glowStroke(ctx, C.THORN_COLOR, laneLineWidth(tip / 2), 1);
+
+  const neck = tip - C.THORN_TIP_LEN;
+  screenPos(well, lane, neck < 0 ? 0 : neck, _thornNeck);
+  drawPoly(ctx, _thornCrown, false);
+  glowStroke(ctx, C.THORN_COLOR, laneLineWidth(tip), 1);
 }

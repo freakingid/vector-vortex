@@ -453,15 +453,61 @@ class Weaver extends Enemy {
     this.phase = "climb";
     this.holdTimer = 0;   // counts UP toward C.WEAVER_APEX_HOLD
     this.fired = false;   // ⛔ per-CYCLE latch, cleared on entering the hold
+
+    // The Thorn this Weaver is growing (CS004 P4). ⛔ AN INSTANCE FIELD AND NOT
+    // state: nothing outside this Weaver needs to know which segment is its,
+    // and a Thorn outlives the Weaver that laid it. It is re-resolved through
+    // thornInLane() whenever it is missing or dead, which is also how a SECOND
+    // Weaver arriving in this lane adopts the first one's Thorn rather than
+    // standing a second one up behind it.
+    this.thorn = null;
   }
 
-  // ⛔ P4'S HOOK, AND IT IS DELIBERATELY EMPTY. GDD 6.1's "climbs partway
-  // LAYING A THORN" is the other half of this enemy and CS004 P4 owns it: the
-  // Thorn class, the chip economy, and this Weaver's lay-and-adopt (a live
-  // Thorn in its lane is adopted rather than joined by a second one — two
-  // overlapping Thorns are two hit-point pools behind one silhouette). ⛔ Do
-  // not write a Thorn here because the cycle mentions one.
-  layThorn(well, state) {}
+  // GDD 6.1's "climbs partway LAYING A THORN", filled in by CS004 P4. Called
+  // every step of the climb phase and nowhere else, so a retreating Weaver
+  // neither grows nor shortens what it left behind.
+  //
+  // ⛔ IT ONLY EVER GROWS. `if (tip > thorn.depth)` is not defensive
+  // programming, it is the rule: the Thorn's depth is a LENGTH (07-enemies.js's
+  // `anchored`), the Weaver's is a POSITION, and the cycle sends that position
+  // back to the throat every time round. An unconditional `thorn.depth = tip`
+  // would saw the Thorn back down to nothing on the second climb, which is not
+  // laying — it is the Weaver eating its own work while the player watches.
+  // It is also what makes "a Weaver killed mid-climb leaves its Thorn at the
+  // length it reached" true by construction rather than by luck.
+  //
+  // ⛔ IT ADOPTS A LIVE THORN IN ITS LANE RATHER THAN CREATING A SECOND. Two
+  // overlapping Thorns are two hit-point pools behind one silhouette: a GDD 1.1
+  // P2 failure (the player cannot see how much is left) and a scoring oddity
+  // (CS007 pays per chip) at once. The lookup is what makes a second Weaver
+  // arriving in this lane extend the first one's segment.
+  //
+  // ⛔ THROUGH spawnEnemy(), the one entry point (GDD 6.5) — the third
+  // non-spawner caller, after the Carrier's split and this class's own fire().
+  // GDD 6.3's safe-spawn rule is harmless here, and precisely because a Weaver
+  // GROWS a Thorn instead of dropping a finished one: it is created at the
+  // Weaver's own depth, one climb step above the throat, where the rule has
+  // nothing to do. ⚠ Worth knowing anyway, because it is reachable from the
+  // debug bench, which can stage a Weaver deep in the Skimmer's lane: applied
+  // to an anchored entity that rule does not lower a position, it SHORTENS a
+  // length — the same trap `anchored` fixes in respawnSkimmer(). It is harmless
+  // HERE only because the grow below runs on the same step and writes the tip
+  // back up to the Weaver's own depth. ⛔ Do not reorder those two.
+  //
+  // A refusal (C.ENEMY_CAP, ⛔ counted before any RNG draw is spent, so a full
+  // board costs the run's one stream nothing) simply means no Thorn this step;
+  // the next climb step tries again.
+  layThorn(well, state) {
+    if (!this.thorn || this.thorn.dead) this.thorn = thornInLane(state, well, this.lane);
+    if (!this.thorn) {
+      this.thorn = spawnEnemy("thorn", this.lane, this.depth);
+      if (!this.thorn) return;
+    }
+    // GDD 8's "clamp: lane length". The tip tracks the Weaver's own depth,
+    // never past C.THORN_MAX.
+    const tip = this.depth > C.THORN_MAX ? C.THORN_MAX : this.depth;
+    if (tip > this.thorn.depth) this.thorn.depth = tip;
+  }
 
   update(dt, well, state) {
     if (this.phase === "climb") {
@@ -624,4 +670,113 @@ class WeaverBolt extends Enemy {
   onShot(shot) {
     return false;
   }
+}
+
+// ---------------------------------------------------------------------------
+// The Thorn (GDD 6.1, 4.2, 4.3, 5, 8) — a bright lane segment, first at L5,
+// 5 points per chip. Static. Laid by a Weaver, killed only by shots, and its
+// real consequence is the Dive.
+// ---------------------------------------------------------------------------
+//
+// ⛔ IT IS NOT AN ENEMY IN ANY NORMAL SENSE, AND IT LIVES IN state.enemies
+// ANYWAY (GDD 6.5's one array). It does not move, the Purge does not touch it,
+// it does not hold a well open, and contact with it is harmless until CS006's
+// Dive exists. Every one of those is a FLAG the machinery CS003 already built
+// reads off the entity — so the Thorn costs the Purge, the clear check, the
+// collision pass and the entity pass exactly nothing. A second array for
+// "hazards" would double all six wiring points to save one boolean.
+//
+// ⛔ ITS `depth` IS THE TIP OF AN EXTENT ROOTED AT THE THROAT, NOT A POSITION.
+// That is what `anchored = true` declares (the base class above), and it is
+// load-bearing in two places pulling opposite ways:
+//
+//   respawnSkimmer()  SKIPS it (23-main.js). GDD 4.4's rim push clamps depth
+//                     down to 0.55 on every player death; on a length that is
+//                     not a push, it is a free chip nobody earned, applied
+//                     silently in the one place nobody would look.
+//   collideShots()    does NOT skip it (09-collision.js). Its one-line hit test
+//                     is `|shotDepth - e.depth| <= HIT_DEPTH_TOL`, and that is
+//                     exactly right on a Thorn BECAUSE depth is the tip: a shot
+//                     stops where the Thorn starts. Move the extent to a second
+//                     field and that pass grows a Thorn branch — which is the
+//                     thing the contract exists to prevent.
+//
+// ⚠ SETTLED — GDD 4.2's RAPID CHIP-AWAY IS EMERGENT AND IS NOT A BUG. onShot
+// CONSUMES the shot, and Game.update()'s end-of-frame filter frees that shot's
+// slot against C.SHOT_MAX the SAME step — so camping a thorned lane chips it
+// down fast. It is in the original, it is deliberate, and ⛔ it must not be
+// rate-limited: no cooldown, no per-step chip cap, no invulnerability window.
+// There is nothing here to add one to, and that is the point.
+class Thorn extends Enemy {
+  // `dir` is ignored — a Thorn has no heading and never moves. The spawner
+  // still spends its draw on one (08-spawner.js), which is what keeps the
+  // run's ONE stream aligned regardless of which kind came out of the throat.
+  constructor(lane, depth) {
+    super(lane, depth);
+
+    // ⛔ GDD 4.3's "does not remove Thorns", as the flag the Purge already
+    // reads. The roster's first false — and the reason the Purge needs no
+    // special case for it, in either of its two uses.
+    this.purgeable = false;
+
+    // ⛔ GDD 5: a Thorn is still standing during the Dive. That is what this
+    // flag MEANS here, not an oversight in wellCleared() — a well full of
+    // Thorns and nothing else is a cleared well, and the Thorns are the thing
+    // the player then has to thread between.
+    this.blocksClear = false;
+
+    // Contact never kills. ⛔ GDD 4.5 item 5 is "a Thorn DURING THE DIVE", and
+    // there is no Dive — CS006 owns it, and it will not be a killDepth: the
+    // Dive is its own sequence with its own rule, not a rim band.
+    this.killDepth = null;
+
+    // ⛔ THE ONLY true IN THE CLASSIC ROSTER. See the header above.
+    this.anchored = true;
+  }
+
+  // ⛔ NOTHING. It is static, its lane never changes, and its length is written
+  // only by the Weaver that is growing it and by onShot below. The signature is
+  // the contract's (GDD 6.5), not this entity's.
+  update(dt, well, state) {}
+
+  draw(ctx, well) {
+    drawThorn(ctx, well, this.lane, this.depth);
+  }
+
+  // ⛔ CHIP, THEN CONSUME. The shot stopped at the tip — that is what the
+  // collision pass's one-line depth test means on an entity whose depth is its
+  // tip — so it does not fly on to whatever is sheltering behind the Thorn.
+  //
+  // ⛔ Clamped at zero on the way out. depth < 0 is no more legal than depth > 1
+  // (GDD 3.2), the entity is dead either way, and leaving a negative length in
+  // the array for the rest of the step is a number no other system can produce.
+  onShot(shot) {
+    this.depth -= C.THORN_CHIP;
+    if (this.depth <= 0) {
+      this.depth = 0;
+      this.dead = true;
+    }
+    return true;
+  }
+}
+
+// The live Thorn in `lane`, or null. ⛔ laneDelta, NEVER a bare subtraction: on
+// a 16-lane Ring, lane 15 and lane 0 are neighbours and `a - b` says fifteen
+// (03-wells.js). C.HIT_LANE_TOL is "the same lane" as the rest of the build
+// already defines it — half a lane either side — so a Thorn this finds is
+// exactly a Thorn a shot fired down that lane would hit, and there is no second
+// idea of sameness to keep in step.
+//
+// ⚠ `instanceof`, where the Purge and the clear check read a flag. That is not
+// an inconsistency: those two ask what an entity DOES, and the answer belongs
+// on the entity. This asks which entity a Weaver is growing, which is a question
+// about identity — and inventing an eighth contract field to answer it is
+// exactly the slope GDD 6.5 warns about at the base class.
+function thornInLane(state, well, lane) {
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (e.dead || !(e instanceof Thorn)) continue;
+    if (Math.abs(laneDelta(well, lane, e.lane)) <= C.HIT_LANE_TOL) return e;
+  }
+  return null;
 }

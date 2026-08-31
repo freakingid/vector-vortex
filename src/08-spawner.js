@@ -40,6 +40,15 @@ const ENEMY_KINDS = {
   // exactly as the Carrier's split does. ⚠ It is NOT a GDD 6.1 roster row, so
   // it is not counted among the enemies in scratchpad/test-registry.js.
   weaverBolt: (lane, depth) => new WeaverBolt(lane, depth),
+  // ⛔ A ROW FOR THE THORN, and `depth` here is the only place in this table
+  // where that argument is not a POSITION: a Thorn's depth is the TIP OF AN
+  // EXTENT rooted at the throat (07-enemies.js's `anchored`). Weaver.layThorn()
+  // asks for one at the Weaver's own depth, one climb step above the throat,
+  // and grows it from there — which is exactly why GDD 6.3's safe-spawn
+  // LOWERING below is harmless on it. ⚠ A caller that asked for a finished
+  // full-length Thorn in the Skimmer's lane would not have it lowered, it would
+  // have it SHORTENED; nothing does, and nothing should.
+  thorn: (lane, depth) => new Thorn(lane, depth),
 };
 
 // How many enemies may be alive at once. ⛔ The MIN of the two, and they are

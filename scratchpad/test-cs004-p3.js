@@ -130,9 +130,13 @@ let climbedBackwards = false, retreatedForwards = false;
 let lastDepth = cy.depth;
 
 for (let i = 0; i < TICKS; i++) {
-  const before = state.enemies.length;
   cy.update(DT, well, state);
-  const fired = state.enemies.length - before;
+  // ⚠ COUNT BOLTS, NOT ARRAY GROWTH. This was `state.enemies.length - before`
+  // until CS004 P4, and a Weaver now lays a THORN on its first climb step —
+  // which grew the array by one and read as a second bolt in the first cycle.
+  // The bolts are cleared at the foot of this loop, so anything of that class
+  // present here was fired on this step.
+  const fired = state.enemies.filter(e => e instanceof X.WeaverBolt).length;
   if (fired > 0) cycleBolts += fired;
 
   if (cy.depth < depthLow) depthLow = cy.depth;
@@ -540,7 +544,13 @@ H.eq(state.enemies.length, 0,
      "⛔ a keydown spawns nothing at event time — named actions are dispatched inside sample()");
 G.update(DT);
 G.input.keyUp("3");
-H.eq(state.enemies.length, 1, "and exactly one entity after the step that sampled it");
+// ⚠ EXACTLY ONE WEAVER, not exactly one ENTITY. This asserted the array length
+// until CS004 P4: the Weaver spawned by the action is already in state.enemies
+// when the same step's entity pass runs, so it takes its first climb step and
+// lays a Thorn before the step is over. That is the lay working, not the bench
+// spawning twice, and test-cs004-p4.js owns the Thorn half of it.
+H.eq(state.enemies.filter(e => e instanceof X.Weaver).length, 1,
+     "and exactly one Weaver after the step that sampled it");
 H.assert(state.enemies[0] instanceof X.Weaver, "⚠ pressing 3 puts a Weaver on the board");
 
 H.report("test-cs004-p3.js");

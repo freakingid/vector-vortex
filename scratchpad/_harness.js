@@ -122,6 +122,8 @@ function buildGame(opts = {}) {
     "Carrier", "CARGO", "splitLanes", "CARRIER_POLY", "CARGO_GLYPHS", "drawCarrier",
     // the Weaver and its bolt (07/14, CS004 P3)
     "Weaver", "WeaverBolt", "WEAVER_POLY", "WEAVER_BOLT_POLY", "drawWeaver", "drawWeaverBolt",
+    // the Thorn, the lane lookup and its segment draw (07/14, CS004 P4)
+    "Thorn", "thornInLane", "drawThorn",
     // the spawner and the well lifecycle (08/23, CS003 P2)
     "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit", "ENEMY_KINDS",
     "enterWell", "nextWell", "startGame",

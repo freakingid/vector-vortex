@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS004 (P3 of 5 done) · Wells: 16/16 · Enemies: 3/6 Classic · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS004 (P4 of 5 done) · Wells: 16/16 · Enemies: 4/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS004
 
@@ -78,11 +78,37 @@ consuming bolt `onShot`, a fire without the latch (21 bolts a cycle), a
 `blocksClear` left true, a `fire()` that pushes straight into `state.enemies`,
 and a Weaver drawn as a closed path.
 
+- **P4 — the Thorn, the chip economy, and the Weaver's lay.** ✅ `class Thorn`,
+  `thornInLane()`, `drawThorn()`, the `thorn` kind, `Weaver.layThorn()` filled,
+  and `scratchpad/test-cs004-p4.js` (96 assertions).
+
+The Thorn is four flags and an `onShot`, and every one of them is machinery
+CS003 already built: ⛔ `purgeable = false` (GDD §4.3's "does not remove
+Thorns"), ⛔ `blocksClear = false` (which is *why* it is standing during the
+Dive), `killDepth = null`, ⛔ `anchored = true`. `update()` is empty.
+⛔ **`depth` is the tip of an extent**, which is what lets `collideShots()`
+hit-test it with the same one line it uses on everything else — a shot stops
+where the Thorn starts — while `respawnSkimmer()` skips it. Both halves are
+asserted, the second through a **real death and respawn** with an inert
+unanchored control at 0.9 proving the push actually ran.
+
+`layThorn()` runs every step of the climb and ⛔ **only ever grows**: the cycle
+returns the Weaver to the throat, so an unconditional write would saw the
+segment down on the second climb. ⛔ It adopts a live Thorn in its lane via
+`thornInLane` (⛔ `laneDelta`, tolerance `C.HIT_LANE_TOL`) rather than standing a
+second one up. ⛔ `drawThorn()` is the build's second non-`entityPoints` draw —
+`drawShot`'s pattern, preallocated points *and* pairs, body plus a twice-drawn
+`THORN_TIP_LEN` crown, full alpha at every depth.
+
+**Mutation-checked, all five red:** a non-consuming `onShot`, a `purgeable`
+Thorn, a Thorn that blocks the clear, dropping the anchored skip, and a Weaver
+that creates a second Thorn.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes: 16 test files, zero skips.
+- `node scratchpad/run-all.js` passes: 18 test files, zero skips.
 - CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer. Full
   narrative in `log/CS001.md`.
 - CS002 closed 2026-08-30 — the loop, the Skimmer, shots, and all four input
@@ -123,8 +149,10 @@ and a Weaver drawn as a closed path.
   `SURGER_COLOR`) are all inference, not design — the GDD specifies no enemy
   palette. They were chosen **as one set** against the constraint recorded in
   `C`: an enemy colour must read against all seven band colours (§3.6), because
-  the well cycles and the enemies do not. ⛔ **The set cannot actually be judged
-  until P4**, because `spawnRow` currently puts two silhouettes on screen.
+  the well cycles and the enemies do not. **The set is judgeable now** — as of
+  P4 `spawnRow` puts all four Classic silhouettes on screen at once, so press
+  `0` on a busy well. The two unread colours (`DRIFTER_COLOR`, `SURGER_COLOR`)
+  still cannot be, and that is CS005's.
 - **`drawWell()`'s `laneState` parameter is still unwired.** Lane occupancy
   lighting (GDD §3.7) belongs with the dim band, in CS006. Note
   `PLANNED-FEATURES-CS004.md` finding 6: the Surger's telegraph is an entity
@@ -228,6 +256,38 @@ and a Weaver drawn as a closed path.
   bolts somewhere else; `test-cs004-p3.js`'s all-sixteen-wells lane soak calls
   `useWell(wi)` per well for exactly this reason, and the trap is in its header.
 
+## Findings from P4 (hazards the phase prompt did not name)
+
+- ⛔ **The lay broke three earlier assertions, and every one was a broken
+  MEASUREMENT rather than a broken claim.** A Weaver lays on every step of its
+  climb, so a board with a Weaver on it has a Thorn on it one step later —
+  including inside the same `G.update()` that spawned the Weaver, because the
+  entity pass reaches it after `sample()` dispatched the action.
+  `test-cs004-p3.js` counted bolts as *array growth* (the Thorn read as a second
+  bolt) and asserted the bench's `3` left exactly one *entity*;
+  `test-cs004-p1.js`'s `spawnRow` case counted kinds on the board after a full
+  step and saw two Thorns. All three now measure BY CLASS, with the reason at
+  each site. ⛔ **The rule for CS005: an assertion about "how many things are on
+  the board" is only safe if the things on the board cannot make more things.**
+- ⚠ **The bench's `4` spawns a ZERO-LENGTH — i.e. invisible — Thorn, and that is
+  correct.** `depth 0` is the literal every bench digit uses, and on an anchored
+  entity it means *no length*, not *at the throat*. It is also exactly what
+  keeps GDD §6.3's safe-spawn rule harmless on a Thorn (a Thorn is grown, never
+  dropped finished). ⛔ Do not "fix" `4` to spawn a finished one — asking
+  `spawnEnemy()` for a long Thorn in the Skimmer's lane does not LOWER it, it
+  SHORTENS it. To see a Thorn, press `3` and watch a Weaver grow one, or `0`.
+- ⚠ **`C.THORN_MAX` 1.00 makes GDD §8's clamp unobservable at shipped values** —
+  it is also the depth ceiling, and `C.WEAVER_APEX` is 0.55, so nothing a Weaver
+  can do reaches it. `test-cs004-p4.js` lowers the constant, drives the clamp,
+  and puts it back. ⛔ CS006 heat-derives `WEAVER_APEX` and is where this stops
+  being theoretical.
+- **Held fire fires more shots than it lands chips**, because auto-fire keeps a
+  pipeline in the air and the last few are still travelling toward a tip that is
+  no longer there. Not a rate limit and not a miss. The test counts chips.
+- ⛔ **Never revert a mutation check with `git checkout -- src/`.** It reverts
+  the whole working tree, not the mutation, and this phase lost its entire
+  `src/` edit to it once. Copy `src/` aside first and restore from the copy.
+
 ## Open questions (blocking)
 
 - None.
@@ -248,25 +308,36 @@ and a Weaver drawn as a closed path.
   board and the craft that died on it. `r` restarts. CS007 owns the screen, the
   submission and the real restart flow, and the `restart` debug action should be
   folded into it rather than left as a second way in.
-- `scratchpad/test-registry.js` now carries TWO counts. `enemies` is 3 (P3
-  raised it for the Weaver) and counts GDD §6.1 roster rows; `enemyKinds` is 4
-  and counts `ENEMY_KINDS` rows. P4 raises both by one for the Thorn. ⛔ Both
-  live there and in no other file, and the Weaver's bolt is a kind and not a
-  roster row.
+- `scratchpad/test-registry.js` now carries TWO counts. `enemies` is 4 (P4
+  raised it for the Thorn) and counts GDD §6.1 roster rows; `enemyKinds` is 5
+  and counts `ENEMY_KINDS` rows. ⛔ Both live there and in no other file, and
+  the Weaver's bolt is a kind and not a roster row. ⛔ **CS005 raises both, and
+  by different amounts** — the Drifter and the Surger are two roster rows but
+  four kinds, because `carrierDrifter` and `carrierSurger` come with them.
+- ⛔ **All five debug digits now answer**, so `test-cs004-p1.js` no longer
+  carries an unbuilt-kind case at all — it was deleted rather than left as a
+  loop over nothing, and the deletion's own comment is the record.
 
 ## Next up
 
-- CS004 P4 — the Thorn and the chip economy, plus the Weaver's lay-and-adopt.
-  ⛔ `Weaver.layThorn(well, state)` in `src/07-enemies.js` is the empty hook P4
-  fills; it is called every step of the climb phase and nowhere else.
-- ⛔ P4 lights up debug digit `4` and must narrow `test-cs004-p1.js`'s no-op
-  loop the way P2 and P3 did — the loop is down to `["4"]` and P4 empties it, so
-  ⛔ **delete the case rather than leave a loop over nothing.**
-- ⛔ P4 raises BOTH registry counts (`enemies` 3 → 4, `enemyKinds` 4 → 5).
-- ⛔ P4 is where P1's `anchored` fix is proved through the real death path: a
-  Thorn at `depth 0.9` still measures `0.9` after a death and respawn.
-- ⛔ The bolt is now the roster's real non-consuming `onShot`, so CS005's
-  armoured Drifter has a working precedent and a mutation check to copy.
+- CS004 P5 — the soak, the docs, the close. It owns four GDD §17 items, the
+  "Shipped, CS004" paragraphs in GDD §4.5/§6.1/§6.2/§6.3, §6.5's six-fields-to-
+  seven edit, `RATIONALE.md#thorn-depth`, `log/CS004.md`, and the reset of this
+  file.
+- ⛔ P5's own prompt says "raise `enemies` from 1 to 4" — **that is stale; P2,
+  P3 and P4 already raised it, and `enemyKinds` with it.** P5 should CONFIRM
+  4 and 5 rather than raise anything, and `test-cs003-p5.js` already compares
+  against `enemyKinds` rather than doing a bare length check.
+- ⛔ P5's soak asserts EXACT lane equality for all four CS004 entities — none of
+  them hops, and a range check misses a wrapping hop (the CS003 P5 finding).
+  The Thorn is the strongest case of the four: its `update()` is empty, so both
+  its lane AND its length are exact for its whole life.
+- ⛔ The bolt is the roster's non-consuming `onShot` and the Thorn is the
+  consuming one, so CS005's armoured Drifter has both precedents and a mutation
+  check to copy.
+- ⚠ CS006 owns the Dive, and with it GDD §4.5's fifth death condition. ⛔ It
+  will **not** be a `killDepth` — the Dive is its own sequence with its own
+  rule, not a rim band. The Thorn's `killDepth` stays `null`.
 
 ## Playtest asks (open only)
 
@@ -306,3 +377,14 @@ and a Weaver drawn as a closed path.
   the apex to the rim.
 - ⚠ **Does a Weaver sitting on the rim in your lane read as safe?** Its body
   never kills, which is correct and is going to look wrong the first time.
+- **Is a landing chip visible?** `THORN_TIP_LEN` 0.05 of twice-drawn tip is the
+  whole feedback for a hit on the one enemy that does not die when you hit it.
+  Press `3`, let a Weaver finish a climb, then hold fire down that lane.
+- **Does a full-length Thorn sealing its own lane feel like lane denial or like
+  a wall?** At `THORN_MAX` 1.00 the tip sits at the rim, so a shot is consumed
+  the instant it is fired. Standing in a sealed lane is safe and useless, which
+  is a strange combination worth looking at on hardware.
+- **Does a Thorn sheltering an enemy behind it read as a consequence or as the
+  game cheating?** A shot stops at the tip, so anything below it cannot be hit
+  until it climbs past — inherited from the original, self-resolving, and the
+  lane you failed to keep clean is the lesson.

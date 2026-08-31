@@ -57,7 +57,8 @@ const C = {
   SHOT_TIME:            0.52,   // s, rim -> throat
   SHOT_COOLDOWN:        0.055,  // s between shots
   SHOT_LEN:             0.06,   // depth units, the trailing streak's length
-  THORN_CHIP:           0.08,   // fraction of lane length removed per hit
+  THORN_CHIP:           0.08,   // fraction of lane length removed per hit — off
+                                // the TIP (07-enemies.js). See THORN_MAX below.
   PURGE_SAVED_BONUS:    500,
   START_LIVES:          3,
   LIVES_MAX:            6,
@@ -153,6 +154,25 @@ const C = {
   WEAVER_APEX_HOLD:     0.35,   // s held at the apex, which is when it fires
   WEAVER_BOLT_SPEED:    0.32,   // depth/s toward the rim. ~1.4 s from apex to rim
   WEAVER_BOLT_SIZE:     0.30,   // lane widths spanned by the dart
+
+  // ---- Thorn (GDD 6.1, 4.2, 5, 8) -----------------------------------------
+  // ⛔ NEITHER OF THESE IS A LANE WIDTH. A Thorn is not a silhouette at a
+  // point — it is a SEGMENT ALONG the lane, so both numbers are in DEPTH units
+  // and neither goes anywhere near entityPoints() (14-render-entities.js).
+  //
+  // ⛔ AND THE THORN'S `depth` IS ITS LENGTH, not its position (07-enemies.js's
+  // `anchored`). THORN_MAX is therefore GDD 8's "clamp: lane length" — the
+  // longest a Weaver may grow one — and at 1.00 a full-length Thorn's tip sits
+  // at the RIM, which seals the lane: a shot fired into it is consumed the
+  // instant it leaves the craft. That is the intended lane denial, and this is
+  // the knob if it reads as unfair rather than as a consequence.
+  //
+  // THORN_CHIP (0.08, up with the Skimmer's firing block where CS001 put it)
+  // is what one shot takes off the tip, so a full-length Thorn is 13 shots.
+  // THORN_TIP_LEN is how much of the tip is drawn a second time, so a chip is
+  // visible as it lands (GDD 1.1 P2).
+  THORN_MAX:            1.00,   // ⛔ depth units of LENGTH — GDD 8's lane-length clamp
+  THORN_TIP_LEN:        0.05,   // depth units of brighter tip
 
   // ---- Spawner / well lifecycle (GDD 2, 6.3, 12) --------------------------
   // ⛔ SPAWN_INTERVAL is what state.spawn.timer counts UP toward, and

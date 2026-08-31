@@ -159,19 +159,14 @@ H.close(X.laneDelta(X.WELLS[state.wellIndex], state.enemies[0].lane, state.skimm
         "in the Skimmer's lane");
 H.assert(state.enemies[0].depth < 0.01, "at the throat");
 
-// An unbuilt kind is a NO-OP, not a throw: spawnEnemy() returns null for a kind
-// ENEMY_KINDS does not list, so P2..P4 light these up by adding a row.
-//
-// ⚠ "2" AND "3" WERE IN THIS LIST AND ARE NOT ANY MORE. CS004 P2 landed the
-// Carrier and wired spawnCarrier to the carrierVaulter kind; CS004 P3 landed
-// the Weaver and lit spawnWeaver the same way. Leaving either here would assert
-// that the phase it was waiting for had not shipped. The cases that "2" spawns
-// exactly one Carrier and "3" exactly one Weaver belong to test-cs004-p2.js and
-// test-cs004-p3.js, which own them. P4 does the same to "4".
-quietWell();
-for (const d of ["4"]) { G.input.keyDown(d); G.update(DT); G.input.keyUp(d); }
-H.eq(state.enemies.length, 0,
-     "⛔ spawnThorn is a no-op while its kind is unbuilt");
+// ⚠ THE UNBUILT-KIND CASE IS GONE, AND ITS ABSENCE IS THE RECORD. P1 wired
+// four spawn digits against ENEMY_KINDS as it stood and asserted that "2", "3"
+// and "4" were no-ops, because spawnEnemy() returns null for a kind the table
+// does not list. CS004 P2 lit "2" (carrierVaulter), P3 lit "3" (weaver) and P4
+// lit "4" (thorn) — every digit the bench binds now answers, so there is no
+// unbuilt kind left to assert about and ⛔ a loop over an empty list is a
+// vacuous pass, not a test. Each phase's own file owns the case that its digit
+// spawns exactly one of its entity.
 
 // ⛔ THROUGH spawnEnemy(), which is what makes the cap apply to the bench too.
 // A bench that pushed straight into state.enemies walks past C.ENEMY_CAP, and
@@ -194,7 +189,19 @@ G.input.keyDown("0");
 H.eq(state.enemies.length, 0, "⛔ spawnRow does not fire at event time either");
 G.update(DT);
 G.input.keyUp("0");
-const row = state.enemies.slice();
+const board = state.enemies.slice();
+
+// ⚠ THE BOARD IS THE ROW PLUS WHAT THE ROW'S OWN ENTITIES DID IN THAT STEP.
+// CS004 P4: a Weaver LAYS A THORN on every step of its climb, and the row's
+// Weaver is already in state.enemies when the same G.update() reaches the
+// entity pass — so it takes its first climb step and stands a Thorn up before
+// the step is over. That is the lay working (test-cs004-p4.js owns it), not
+// spawnRow placing a kind twice. The Weaver holds a reference to the segment it
+// grew, which is the one unambiguous way to tell it from the row's OWN Thorn a
+// few lanes over.
+const laid = board.filter(e => e instanceof X.Weaver).map(w => w.thorn);
+const row = board.filter(e => laid.indexOf(e) === -1);
+
 H.assert(row.length >= 1, "spawnRow puts at least one entity on the board");
 H.assert(row.every(e => liveClasses.indexOf(e.constructor) >= 0),
          "every entity in the row is a kind ENEMY_KINDS actually lists");
