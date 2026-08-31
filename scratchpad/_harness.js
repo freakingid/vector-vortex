@@ -103,6 +103,10 @@ function buildGame(opts = {}) {
   // test asserts on loudly, rather than silently shrinking the surface.
   const EXPORTS = [
     "C", "state", "WELLS",
+    // the heat clock and its seven accessors (00-config.js, CS007 P2)
+    "heat", "heatT", "heatLerp",
+    "spawnInterval", "enemyConcurrent", "climbMult",
+    "vaultInterval", "vaultRimInterval", "surgeInterval", "weaverApex",
     // the depth model (03-wells.js, CS001 P2)
     "screenPos", "perspective", "wellThroat", "wellCentroid", "wellVertCount",
     "rimPoint", "throatPoint",

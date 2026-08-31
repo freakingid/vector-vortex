@@ -421,7 +421,18 @@ function classCounts(list) {
 // `scratchpad/test-cs007-p1.js`, DECISIONS.md 2026-08-31). What is left is a
 // plain difficulty fixture. ⛔ KEEP IT: removing it would change this soak's
 // board for no assertion's benefit, and the claim this phase owns is unchanged.
+// ⛔ REPAIRED, CS007 P2 — THE FIXTURE'S PRECONDITION MOVED AND THE ASSERTIONS DID
+// NOT. `C.ENEMY_CONCURRENT` is no longer the release budget; it is the budget's
+// LEVEL-1 ENDPOINT, and `spawnLimit()` reads `enemyConcurrent()`, which
+// interpolates it toward `C.ENEMY_CONCURRENT_MAX` (00-config.js). Setting the
+// base alone therefore no longer sets the budget: on this soak's levels the
+// interpolation walks it back DOWN toward 8, so the line below quietly stopped
+// meaning "a board held open at C.ENEMY_CAP". ⛔ BOTH ENDPOINTS ARE PINNED, which
+// RESTORES the precondition rather than relaxing it — the budget is C.ENEMY_CAP
+// at every level again, exactly as it was before heat existed. ⛔ Nothing else
+// moved: no cap raised, no seed changed, no assertion edited.
 const SHIPPED_CONCURRENT = C.ENEMY_CONCURRENT;
+const SHIPPED_CONCURRENT_MAX = C.ENEMY_CONCURRENT_MAX;
 
 // Aggregated over the whole soak rather than per well. Splitting and laying are
 // things the BOARD does and happen on every well; a chip needs the player to be
@@ -439,6 +450,7 @@ for (const well of OPEN) {
   X.startGame(SEED + idx);
   C.DEBUG_SPAWN_KINDS = MIXED.slice();
   C.ENEMY_CONCURRENT = C.ENEMY_CAP;
+  C.ENEMY_CONCURRENT_MAX = C.ENEMY_CAP;
   state.level = idx;
   X.nextWell();
   H.eq(state.wellIndex, idx, `${well.name}: nextWell() lands on the intended shape`);
@@ -585,7 +597,9 @@ for (const well of OPEN) {
 // ⛔ The knob goes back before anything else runs. Leaving it raised would make
 // the seeded runs below a different game from the one that ships.
 C.ENEMY_CONCURRENT = SHIPPED_CONCURRENT;
+C.ENEMY_CONCURRENT_MAX = SHIPPED_CONCURRENT_MAX;
 H.eq(C.ENEMY_CONCURRENT, 3, "the soak's concurrency fixture is put back");
+H.eq(C.ENEMY_CONCURRENT_MAX, 8, "and so is its heat endpoint — both halves of the budget");
 
 H.assert(soakChip,
          "⛔ and a Thorn was chipped somewhere in the six-well soak — GDD §4.2's economy " +

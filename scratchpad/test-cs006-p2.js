@@ -426,8 +426,36 @@ H.eq(probes % 5, 0, "the NaN walk probed five depths per lane (non-vacuous)");
 // `blocksClear && !dead` equals `state.enemies.length` on every tick there and
 // the split is provably a no-op for it. A re-record that had moved GOLDEN_LANES
 // would have been a second cause and not this one.
+//
 // ---------------------------------------------------------------------------
-const P1_DETERMINISM_HASH = 571388570;
+// ⛔ RE-RECORDED A THIRD TIME, AT CS007 P2, AND THE CAUSE IS ONE THING: HEAT.
+// 571388570 -> 3019834406. The heat clock and its seven accessors landed
+// (00-config.js), so on this soak's board every climb rate, both Vaulter
+// intervals, the spawn interval, the release budget and the Weaver's apex now
+// rise or fall with state.level — and that soak reaches level 15.
+//
+// ⛔ MEASURED, AND IT IS A STRONGER GUARD THAN A DIVERGENCE TICK: re-running
+// this soak's own --hash-only path with every heat CLAMP flattened onto its
+// level-1 base (SPAWN_INTERVAL_MIN = SPAWN_INTERVAL, ENEMY_CONCURRENT_MAX =
+// ENEMY_CONCURRENT, CLIMB_MULT_MAX = 1, both VAULT floors, SURGE_INTERVAL_MIN
+// and WEAVER_APEX_MAX likewise) — so every accessor returns its base at every
+// level, which is the pre-heat build behaviourally — returns **571388570**,
+// this constant's previous value, exactly. Heat is therefore the WHOLE cause:
+// nothing else CS007 P2 touched moved the simulation by one bit.
+//
+// ⛔ AND THE TWO RUNS ARE IDENTICAL UNTIL THE CLOCK CAN MOVE. heat(1) is
+// exactly 0, so every derived value is its own base while the run is at level
+// 1; MEASURED, the hashed run first steps above level 1 at tick 1,445 of
+// 10,000, and it cannot have diverged before then.
+//
+// ⛔ GUARDED, again: §4, §5 and the §8 source assertion below are untouched and
+// still on their original 8e0fb7c recordings — heat touches no geometry
+// constant and no well datum — and test-cs004-p1.js's GOLDEN_LANES is green
+// with NO edit and NO re-record. ⚠ That last one contradicts a prediction
+// PLANNED-FEATURES-CS007.md §1.1 and this phase's own prompt both carried; the
+// correction is measured and is in STATUS.md.
+// ---------------------------------------------------------------------------
+const P1_DETERMINISM_HASH = 3019834406;
 
 const child = execFileSync(process.execPath,
   [path.join(__dirname, "test-cs005-p5.js"), "--hash-only"],

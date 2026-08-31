@@ -186,10 +186,25 @@ const C = {
   // ---- Vaulter (GDD 6.1, 6.3) ---------------------------------------------
   VAULTER_SIZE:         0.70,   // lane widths spanned by the silhouette
   VAULTER_COLOR:        "#FF4A4A",  // ⚠ placeholder — same standing as SKIMMER_COLOR
+  // ⛔ THE THREE HEAT-DERIVED BASES BELOW ARE LEVEL-1 VALUES AND NOTHING READS
+  // THEM DIRECTLY (CS007 P2). The climb goes through climbMult(), the two
+  // intervals through vaultInterval() / vaultRimInterval(); see THE HEAT CLOCK
+  // at the foot of this file. VAULT_HOP_TIME is NOT one of them — H2: heat
+  // scales intervals and climb rates, never a hop or crossing duration, which
+  // is what keeps three closed soaks' per-tick lane bounds valid unchanged.
   VAULT_CLIMB:          0.18,   // depth/s, throat -> rim ~5.5 s. Level-1 base.
-  VAULT_INTERVAL:       2.20,   // s between mid-climb hops
+  VAULT_INTERVAL:       2.20,   // s between mid-climb hops. ⛔ level-1 base
+  VAULT_INTERVAL_MIN:   1.00,   // ⛔ its floor at HEAT_FULL_LEVEL
   VAULT_HOP_TIME:       0.28,   // s to cross one lane; hittable in both meanwhile
-  VAULT_RIM_INTERVAL:   0.55,   // s between rim hunt hops
+  VAULT_RIM_INTERVAL:   0.55,   // s between rim hunt hops. ⛔ level-1 base
+  // ⛔ 0.35 AND NOT LOWER, AND THE REASON IS SATURATION, NOT OVERLAPPING HOPS.
+  // Vaulter.update() gates on `if (this.hopping)`, so a second hop cannot start
+  // inside a first at any interval. MEASURED (PLANNED-FEATURES-CS007.md §5.1):
+  // the hop rate saturates at 1 / VAULT_HOP_TIME = 3.57 hops/s, so any floor
+  // below 0.28 is inert. 0.35 keeps the knob live at every level — a rim
+  // Vaulter at L99 hops ~79 % of ticks and still visibly pauses, which is the
+  // legibility half of GDD 1.1 P2.
+  VAULT_RIM_INTERVAL_MIN: 0.35, // ⛔ its floor at HEAT_FULL_LEVEL
   VAULT_FIRST_LEVEL:    2,      // ⛔ GDD 6.3 — no mid-climb vaulting at level 1
 
   // ---- Carrier (GDD 6.1, 6.2) ---------------------------------------------
@@ -211,10 +226,19 @@ const C = {
   // deliberately FASTER than WEAVER_CLIMB so leaving reads as a beat rather
   // than as a second approach.
   //
-  // ⚠ WEAVER_APEX IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS007. GDD 8's one
-  // clock (game.level) is what will decide how far up a Weaver comes, so this
-  // number is the level-1 base and not the shape of the rule. Nothing reads it
-  // but the Weaver's own cycle, which is what makes that swap a one-line change.
+  // ⛔ WEAVER_APEX IS THE LEVEL-1 BASE AND weaverApex() IS ITS ONE READER
+  // (CS007 P2). GDD 8's one clock decides how far up a Weaver comes; the
+  // Weaver's cycle reads the accessor, never this number.
+  //
+  // ⛔ ONE NUMBER SETS FOUR THINGS, which is why GDD 8's "Weaver thorn length"
+  // and its apex are one knob and not two: layThorn() writes the Thorn's tip to
+  // the Weaver's own depth, so apex IS thorn length. MEASURED at the 0.75
+  // ceiling (PLANNED-FEATURES-CS007.md §5.1): the bolt's apex→rim flight is
+  // 0.781 s (still 1.7x SURGE_TELEGRAPH's 0.45 s "visible fuse" benchmark), the
+  // Thorn costs 10 shots, it leaves 0.25 of the lane to the player, and a dive
+  // is struck 0.91 s into 2.60. ⛔ The ceiling must stay strictly below 1.00:
+  // at 1.00 the tip sits at the rim, the lane is sealed against the player's
+  // own shots, and the bolt is born in contact.
   //
   // ⛔ WEAVER_SIZE and WEAVER_BOLT_SIZE are LANE widths, the same as
   // CARRIER_SIZE above: entityPoints() scales a poly's `l` by size/2 and its
@@ -223,7 +247,8 @@ const C = {
   WEAVER_SIZE:          0.62,   // lane widths spanned by the spiral
   WEAVER_CLIMB:         0.22,   // depth/s on the way up
   WEAVER_RETREAT:       0.34,   // depth/s down — leaving is faster than arriving
-  WEAVER_APEX:          0.55,   // ⚠ depth it climbs to before turning. CS007 makes this heat-derived
+  WEAVER_APEX:          0.55,   // depth it climbs to before turning. ⛔ level-1 base
+  WEAVER_APEX_MAX:      0.75,   // ⛔ its ceiling at HEAT_FULL_LEVEL. Strictly < 1.00
   WEAVER_APEX_HOLD:     0.35,   // s held at the apex, which is when it fires
   WEAVER_BOLT_SPEED:    0.32,   // depth/s toward the rim. ~1.4 s from apex to rim
   WEAVER_BOLT_SIZE:     0.30,   // lane widths spanned by the dart
@@ -313,8 +338,8 @@ const C = {
   // scratchpad/test-cs005-p3.js asserts it from these two constants, and
   // CS007's heat curve is exactly what would break it.
   //
-  // ⚠ SURGE_INTERVAL IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS007, the same
-  // standing WEAVER_APEX has: this is the level-1 base, not the shape of the
+  // ⛔ SURGE_INTERVAL IS THE LEVEL-1 BASE AND surgeInterval() IS ITS ONE READER
+  // (CS007 P2), the same standing WEAVER_APEX has: this is a level-1 value, not
   // rule.
   //
   // ⛔ DEPTH RISES IN THE CLIMB PHASE ONLY — the Drifter's DRIFT_CLIMB is the
@@ -337,7 +362,15 @@ const C = {
   // number they have to have counted.
   SURGER_SIZE:          0.85,   // lane widths spanned by the zigzag bar
   SURGE_CLIMB:          0.15,   // depth/s, ⛔ in the CLIMB phase only. See above
-  SURGE_INTERVAL:       2.60,   // s of climb between discharges. ⚠ CS007 makes this heat-derived
+  SURGE_INTERVAL:       2.60,   // s of climb between discharges. ⛔ level-1 base
+  // ⛔ 1.40, AND FLOORING IT MAKES THE SURGER SLOWER TO THE RIM, NOT FASTER.
+  // Depth rises in the climb phase only, so the honest throat→rim time is
+  // (1 / climb) * cycle / interval and a shorter interval spends a larger share
+  // of the cycle not climbing. MEASURED (PLANNED-FEATURES-CS007.md §5.1): the
+  // break-even climb multiplier at a 1.40 floor is x1.164 and CLIMB_MULT_MAX is
+  // 1.40, so the shipped pair leaves throat→rim at 8.59 s → 7.31 s while lethal
+  // duty rises 9.0 % → 14.0 %. ⛔ The floor buys LANE DENIAL, not approach speed.
+  SURGE_INTERVAL_MIN:   1.40,   // ⛔ its floor at HEAT_FULL_LEVEL
   SURGE_DISCHARGE:      0.30,   // s the whole lane is live. ⛔ must stay < RESPAWN_INVULN
   SURGE_LIT_WIDTH:      2.20,   // ⛔ x laneLineWidth for the LIVE lane (not the fuse)
 
@@ -373,9 +406,18 @@ const C = {
   // because the draws come from the run's ONE stream: an unbounded retry loop
   // would spend a different number of draws depending on the board and
   // desynchronize every later draw in the run.
-  SPAWN_INTERVAL:       1.60,   // s between spawns. ⛔ counted UP toward.
+  SPAWN_INTERVAL:       1.60,   // s between spawns. ⛔ counted UP toward. Level-1 base
+  SPAWN_INTERVAL_MIN:   0.70,   // ⛔ its floor at HEAT_FULL_LEVEL
   SPAWN_QUOTA:          10,     // enemies released per well
-  ENEMY_CONCURRENT:     3,      // ⛔ alive at once — the difficulty knob
+  ENEMY_CONCURRENT:     3,      // ⛔ alive at once — the difficulty knob. Level-1 base
+  // ⛔ THE KNOB THAT ACTUALLY CHANGES A WELL, and the ladder is meant to be
+  // NAMEABLE by a player watching it (GDD 1.1 P3). enemyConcurrent() floors a
+  // continuous interpolation, so it steps: 3 at levels 1-5, 4 from 6, 5 from
+  // 16, 6 from 40, 7 from 70, 8 at 99. ⛔ Still under min(..., ENEMY_CAP), and
+  // MEASURED: mean live enemies never exceeded 3.85 even at a concurrency of 16
+  // with a firing player, so ENEMY_CAP 16 is nowhere near binding and is not
+  // the thing to raise when a level should feel busier.
+  ENEMY_CONCURRENT_MAX: 8,      // ⛔ its ceiling at HEAT_FULL_LEVEL
   SPAWN_LANE_TRIES:     4,      // deterministic lane redraws before settling
 
   // ⚠ TEMPORARY — what the interval spawner picks a kind from (pickSpawnKind,
@@ -411,10 +453,46 @@ const C = {
   HIT_DEPTH_TOL:        0.05,   // depth units, shot <-> enemy overlap
 
   // ---- Difficulty (GDD 8) — one clock: game.level -------------------------
+  // The four shape constants of heat() itself, unchanged since CS001. ⛔ heat(1)
+  // is EXACTLY 0, which is load-bearing: every derived value below is therefore
+  // its own level-1 base at level 1, and eighteen of the suite's test files —
+  // every one that never leaves level 1 — are provably unreachable by the clock.
   HEAT_BASE:            0.00,
   HEAT_RISE:            1.00,
   HEAT_KNEE:            6.0,    // larger = slower early ramp
   HEAT_LINEAR:          0.020,
+  // ⛔ THE LEVEL PAST WHICH THE GAME STOPS GETTING HARDER (H3, Paul's call,
+  // 2026-08-31). Form A endpoint interpolation reads every derived value as
+  // base + (clamp - base) * min(heat(level) / heat(HEAT_FULL_LEVEL), 1), so
+  // this one number and the per-row clamps ARE the curve — no row needs a rate
+  // constant of its own and every row saturates at the same level.
+  //
+  // ⛔ AND THAT IS WHY THERE IS NO HEAT_HOLD_LEVEL. All seven derived rows are
+  // clamped, so heat past a row's saturation changes nothing in the build and a
+  // hold would be inert by construction; heat() itself never plateaus, which is
+  // what keeps GDD 17 item 7's heat(n+1) > heat(n) literally true over 1..200.
+  // ⛔ A hold, if one is ever needed, belongs in the CALLER and never in heat().
+  HEAT_FULL_LEVEL:      99,     // ⛔ GDD 8.2's "99 is a legend"
+  // ⛔ THE RESPAWN GUARANTEE'S TWO NUMBERS (GDD 4.4; H1, Paul's call).
+  // CLIMB_MULT_MAX is a HARD CAP chosen so RESPAWN_PUSH_DEPTH 0.55 holds at
+  // every level with no derived push: a Vaulter's terminal throat→rim is
+  // 3.97 s against 5.56 s at level 1, and the climb from 0.55 to its kill band
+  // takes 1.587 s against a RESPAWN_INVULN of 1.500 — a margin of +0.087 s.
+  // ⛔ 1.4815 is the breach. Do not raise this without re-deriving the property
+  // in test-cs007-p2.js, which asserts it over levels 1..200.
+  //
+  // ⛔ CLIMB_MAX_BASE IS THE FASTEST CONTACT-KILLING CLIMB ON THE ROSTER, NAMED
+  // ONCE. It equals VAULT_CLIMB today and is a separate constant on purpose:
+  // an assertion that named VAULT_CLIMB would go on passing the day an entity
+  // faster than a Vaulter shipped, and the guarantee would be gone silently.
+  // ⛔ It is NOT WEAVER_BOLT_SPEED's 0.32, which is faster and does carry a rim
+  // killDepth: pushed to 0.55 a bolt reaches that band at 1.250 s, inside the
+  // window, and is safe by SELF-TERMINATION instead — WeaverBolt.update() kills
+  // it on the step after depth >= 1, at 1.406 s + one step, still inside. That
+  // is also why the bolt is not heat-scaled: a FASTER bolt is safer and a
+  // slower one would breach.
+  CLIMB_MULT_MAX:       1.40,   // ⛔ ceiling on climbMult() at HEAT_FULL_LEVEL
+  CLIMB_MAX_BASE:       0.18,   // ⛔ = VAULT_CLIMB. The guarantee's binding rate
 
   // ---- Controls (GDD 9) ---------------------------------------------------
   MOUSE_SENS:           0.022,  // lane-units per px. ⛔ no acceleration curve.
@@ -520,6 +598,118 @@ const C = {
   GAME_VERSION:         "0.0.3",   // ⚠ 0.0.2 was never written here — see log/CS006.md
   GAME_ID:              "vector-vortex",   // must match the Worker registry
 };
+
+// ---------------------------------------------------------------------------
+// THE HEAT CLOCK (GDD 8) — ⛔ ONE CLOCK: state.level
+// ---------------------------------------------------------------------------
+//
+// ⛔ THE ONLY FUNCTIONS IN THIS FILE, AND THEY ARE HERE BECAUSE THEY ARE THE
+// TUNING SURFACE'S OTHER HALF. C above says what a value is at level 1 and what
+// it is at the top; the seven accessors below say how the game walks between
+// the two. Splitting them would put half of one decision in each of two files.
+//
+// ⛔ NO CALL SITE COMPUTES HEAT INLINE AND NO ENTITY READS A HEAT-DERIVED BASE
+// CONSTANT DIRECTLY. Every derived value is exactly one function; the entity
+// reads the function. That is what makes the clamp enforceable in ONE place and
+// testable as a property over levels 1..200 rather than as a spot check —
+// test-cs007-p2.js asserts it off the BUILT file, so a future session that
+// writes a bare climb constant into an entity turns the suite red instead of
+// quietly escaping the clamp. The five climb rates are the one shape that
+// differs: they
+// keep their own constants and are multiplied by climbMult(), because GDD 8
+// says "climb speed", singular, and ONE multiplier is what keeps the respawn
+// guarantee (GDD 4.4) a single arithmetic statement.
+//
+// ⛔ WHAT HEAT DOES NOT SCALE, AND IT IS A LIST, NOT AN OVERSIGHT (H2):
+//   VAULT_HOP_TIME, DRIFT_CROSS_TIME, DRIFT_RIDE_TIME — heat scales intervals,
+//     climb rates and the Weaver's apex, and NEVER a hop or crossing duration.
+//     Three closed soaks derive per-tick lane bounds from those three numbers.
+//   WEAVER_BOLT_SPEED, WEAVER_RETREAT — a bolt is ordnance, not a climb, and a
+//     retreat is a departure. Neither is in GDD 8's list. Scaling the bolt
+//     would shrink the Weaver's warning window twice over, once through the
+//     apex and once through the speed, and see CLIMB_MAX_BASE above for why a
+//     SLOWER bolt would breach the respawn guarantee.
+//   SURGE_DISCHARGE — GDD 8 lists surge FREQUENCY, which is SURGE_INTERVAL.
+//     The discharge window must stay strictly below RESPAWN_INVULN.
+//   ENEMY_CAP — a readability ceiling (GDD 8), never a difficulty knob.
+//   RESPAWN_PUSH_DEPTH — see CLIMB_MULT_MAX above. The guarantee is held by a
+//     hard cap on the climb, so the push is a constant at every level.
+
+// GDD 8's formula, verbatim, from the four constants above. ⛔ heat(1) === 0
+// exactly, and ⛔ it NEVER PLATEAUS — GDD 17 item 7 asserts heat(n+1) > heat(n)
+// over 1..200 and a hold inside here would fail it at n = HEAT_FULL_LEVEL.
+function heat(level) {
+  const t = level - 1;
+  return C.HEAT_BASE
+       + C.HEAT_RISE * (1 - Math.exp(-t / C.HEAT_KNEE))
+       + C.HEAT_LINEAR * t;
+}
+
+// ⛔ FORM A — ENDPOINT INTERPOLATION (H3, Paul's call, 2026-08-31). The clamp
+// values ARE the curve: every row is stated as its level-1 base and its
+// HEAT_FULL_LEVEL endpoint, so no row carries a rate constant of its own and
+// every row saturates together. `min(t, 1)` is the clamp, in one place.
+//
+// ⛔ THE LEVEL ARGUMENT IS OPTIONAL AND IT IS NOT A SECOND CLOCK. Omitted — the
+// shipped call in every entity — it reads state.level, the one clock (GDD 8,
+// 02-state.js). It exists so a test or a probe can evaluate the whole curve
+// without driving a run to level 200.
+function heatT(level) {
+  const t = heat(level === undefined ? state.level : level) / heat(C.HEAT_FULL_LEVEL);
+  return t > 1 ? 1 : t;
+}
+
+function heatLerp(base, clamp, level) {
+  return base + (clamp - base) * heatT(level);
+}
+
+// ---- The seven derived values, one accessor each (GDD 8) -------------------
+
+// Falls. ⚠ Almost inert on its own — MEASURED, dropping it 1.60 → 0.35 at a
+// concurrency of 3 moved spawns in 60 s from 19 to 20. It works WITH the
+// concurrency ladder, not against it.
+function spawnInterval(level) {
+  return heatLerp(C.SPAWN_INTERVAL, C.SPAWN_INTERVAL_MIN, level);
+}
+
+// Rises, and ⛔ FLOORED so the ladder is nameable: 3 at levels 1-5, 4 from 6,
+// 5 from 16, 6 from 40, 7 from 70, 8 at 99. Still read as
+// min(..., C.ENEMY_CAP) by spawnLimit() (08-spawner.js).
+function enemyConcurrent(level) {
+  return Math.floor(heatLerp(C.ENEMY_CONCURRENT, C.ENEMY_CONCURRENT_MAX, level));
+}
+
+// ⛔ ONE MULTIPLIER ON EVERY ENTITY CLIMB — VAULT_CLIMB, CARRIER_CLIMB,
+// WEAVER_CLIMB, DRIFT_CLIMB, SURGE_CLIMB. The base is the identity 1: at level
+// 1 every climb is exactly the number in C above, which is what makes heat(1)
+// = 0's guarantee visible rather than arithmetic. ⛔ Its ceiling is the respawn
+// guarantee's — see CLIMB_MULT_MAX above before touching it.
+function climbMult(level) {
+  return heatLerp(1, C.CLIMB_MULT_MAX, level);
+}
+
+// Both fall. The mid-climb cadence and the rim hunt are separate knobs because
+// they are separate behaviours (07-enemies.js): one is how often a climbing
+// Vaulter changes lane, the other is how hard it hunts once it has arrived.
+function vaultInterval(level) {
+  return heatLerp(C.VAULT_INTERVAL, C.VAULT_INTERVAL_MIN, level);
+}
+
+function vaultRimInterval(level) {
+  return heatLerp(C.VAULT_RIM_INTERVAL, C.VAULT_RIM_INTERVAL_MIN, level);
+}
+
+// Falls — GDD 8's "surge frequency". See SURGE_INTERVAL_MIN above: this one
+// buys lane denial and costs approach speed, and climbMult() pays it back.
+function surgeInterval(level) {
+  return heatLerp(C.SURGE_INTERVAL, C.SURGE_INTERVAL_MIN, level);
+}
+
+// Rises. ⛔ This is GDD 8's "Weaver thorn length" as well as its apex — one
+// number, four consequences; see WEAVER_APEX_MAX above.
+function weaverApex(level) {
+  return heatLerp(C.WEAVER_APEX, C.WEAVER_APEX_MAX, level);
+}
 
 // ==========================================================================
 // 01-rng.js
@@ -644,12 +834,16 @@ function newState() {
     //
     // ⛔ THE HOLD BELONGS IN THE CALLER, NEVER HERE. A reader that must not
     // rise past 99 clamps its own input; nothing clamps `state.level`.
-    // ⚠ The consequence is CS007's and is cheaper to write down here than to
-    // rediscover: GDD 17 item 7 asserts `heat(n+1) > heat(n)` for n in 1..200,
-    // which stays literally true only if `heat()` itself never plateaus. A
-    // heat curve that holds past 99 fails that test at n = 99 — so CS007 owns
-    // the choice of which of the two moves, and it is a design call, not a
-    // test to relax.
+    //
+    // ✅ ANSWERED, CS007 P2 — NEITHER MOVES, AND NO HOLD SHIPS. This note used
+    // to say GDD 17 item 7's `heat(n+1) > heat(n)` over 1..200 and a heat curve
+    // that plateaus past 99 could not both be true, and that CS007 owed the
+    // choice. It owes nothing: every one of the seven heat-derived rows carries
+    // its own clamp (00-config.js), so heat past a row's saturation level
+    // changes no value in the build and a hold would be inert by construction.
+    // `heat()` never plateaus, item 7 is literally true on the shipped formula,
+    // and C.HEAT_HOLD_LEVEL was not built. ⛔ The caller rule above still
+    // stands — it is what a hold would have to obey if one were ever needed.
     level: 1,
 
     // ⛔ GDD 3.6's past-99 band colour, DRAWN IN THE SIMULATION AND READ BY THE
@@ -721,7 +915,7 @@ function newState() {
     enemies: [],
 
     // The spawner's two numbers (08-spawner.js). ⛔ `timer` counts UP toward
-    // C.SPAWN_INTERVAL and HOLDS there when a spawn is blocked, so a slot that
+    // spawnInterval() and HOLDS there when a spawn is blocked, so a slot that
     // frees is used immediately rather than after a fresh interval (GDD 16.3 —
     // no countdown anywhere in the build). `remaining` is a COUNT of enemies
     // the well still owes, not a clock, so it is spent downward. Both are
@@ -2260,19 +2454,23 @@ class Vaulter extends Enemy {
     // every depth comparison downstream (killDepth, the readability zone, the
     // respawn push) read a number no other system could produce.
     if (this.depth < 1) {
-      this.depth += C.VAULT_CLIMB * dt;
+      this.depth += C.VAULT_CLIMB * climbMult() * dt;
       if (this.depth > 1) this.depth = 1;
     }
     const atRim = this.atRim();
 
     // Arriving at the rim restarts the cadence, so the first hunt hop lands a
-    // full C.VAULT_RIM_INTERVAL after arrival. Without this, whatever phase the
+    // full rim interval after arrival. Without this, whatever phase the
     // climb's 2.2 s timer happened to be in decides whether the Vaulter lunges
     // the instant it surfaces — an arrival that is sometimes fair and sometimes
     // not, for a reason the player cannot see (GDD 1.1 P2).
     if (atRim && !wasAtRim) this.hopTimer = 0;
 
-    const interval = atRim ? C.VAULT_RIM_INTERVAL : C.VAULT_INTERVAL;
+    // ⛔ THROUGH THE ACCESSORS, NEVER THE BASE CONSTANTS (CS007 P2, 00-config.js).
+    // Both fall with heat; VAULT_HOP_TIME, which advanceHop() below spends, does
+    // not — H2, and it is what keeps three closed soaks' per-tick lane bounds
+    // (2 * DT / VAULT_HOP_TIME) valid at every level without being re-derived.
+    const interval = atRim ? vaultRimInterval() : vaultInterval();
     // Advances DURING a hop too, so the period between hop STARTS is the
     // interval itself rather than interval + crossing time.
     if (this.hopTimer < interval) this.hopTimer += dt;
@@ -2448,7 +2646,7 @@ class Carrier extends Enemy {
   // signature is the contract's (GDD 6.5), not this enemy's.
   update(dt, well, state) {
     if (this.depth < 1) {
-      this.depth += C.CARRIER_CLIMB * dt;
+      this.depth += C.CARRIER_CLIMB * climbMult() * dt;
       if (this.depth > 1) this.depth = 1;
     }
   }
@@ -2535,7 +2733,7 @@ class Carrier extends Enemy {
 // THE CYCLE, and it should be nameable by a player watching it — it comes up,
 // it leaves a thorn, it spits, it goes back down:
 //
-//   climb     depth rises at C.WEAVER_CLIMB toward C.WEAVER_APEX
+//   climb     depth rises at WEAVER_CLIMB toward weaverApex()
 //   hold      C.WEAVER_APEX_HOLD seconds at the apex; ⛔ EXACTLY ONE bolt
 //   retreat   depth falls at C.WEAVER_RETREAT, which is FASTER, back to 0
 //   climb     …
@@ -2621,20 +2819,27 @@ class Weaver extends Enemy {
   update(dt, well, state) {
     if (this.phase === "climb") {
       // ⛔ Monotonic on the way up and it STOPS at the apex. The guard is
-      // `depth < APEX` rather than an unconditional clamp so a Weaver that
+      // `depth < apex` rather than an unconditional clamp so a Weaver that
       // ARRIVED above the apex — the debug row stages one as deep as
-      // C.SAFE_SPAWN_DEPTH, and CS007's heat curve will move the apex under
+      // C.SAFE_SPAWN_DEPTH, and CS007's heat curve NOW MOVES THE APEX under
       // live entities — turns around from where it is instead of teleporting
       // down to the line. Depth never rises above where it started in that
-      // case, so [0, 1] holds either way.
-      if (this.depth < C.WEAVER_APEX) {
-        this.depth += C.WEAVER_CLIMB * dt;
-        if (this.depth > C.WEAVER_APEX) this.depth = C.WEAVER_APEX;
+      // case, so [0, 1] holds either way. ⛔ The shape of this guard is what
+      // makes a rising apex safe; do not "tidy" it into a clamp.
+      //
+      // ⛔ ONE READ PER STEP, into a local. weaverApex() is a pure function of
+      // the one clock, so three calls would agree — but a single read is what
+      // makes "the apex this Weaver is working against" one value in the step
+      // rather than three that a future caller could desynchronize.
+      const apex = weaverApex();
+      if (this.depth < apex) {
+        this.depth += C.WEAVER_CLIMB * climbMult() * dt;
+        if (this.depth > apex) this.depth = apex;
       }
 
       this.layThorn(well, state);
 
-      if (this.depth >= C.WEAVER_APEX) {
+      if (this.depth >= apex) {
         this.phase = "hold";
         this.holdTimer = 0;
         this.fired = false;
@@ -3046,7 +3251,7 @@ class Drifter extends Enemy {
     // ⛔ THE CLIMB RUNS IN BOTH PHASES, and it is not a flourish — it removes a
     // whole failure mode BY CONSTRUCTION. An unshootable entity that never
     // advances is a permanent concurrency squatter: updateSpawner() blocks on
-    // state.enemies.length against C.ENEMY_CONCURRENT, which counts every
+    // state.enemies.length against the release budget, which counts every
     // entity in the one array, so three parked Drifters would hold the spawner
     // shut and the well would never clear. That is the exact shape of the Thorn
     // stall STATUS.md carries — and the Drifter does not have it, because it
@@ -3059,7 +3264,7 @@ class Drifter extends Enemy {
     // produce. A rim Drifter keeps cycling, so it is a boundary-hopping hunter
     // rather than a parked one.
     if (this.depth < 1) {
-      this.depth += C.DRIFT_CLIMB * dt;
+      this.depth += C.DRIFT_CLIMB * climbMult() * dt;
       if (this.depth > 1) this.depth = 1;
     }
 
@@ -3236,8 +3441,8 @@ class Drifter extends Enemy {
 // THE CYCLE, and a player watching one should be able to name it — it climbs,
 // its lane arms from the throat up, the lane goes live, it climbs again:
 //
-//   climb      depth rises at C.SURGE_CLIMB. surgeTimer counts UP toward
-//              C.SURGE_INTERVAL.  killDepth = the rim band.
+//   climb      depth rises at SURGE_CLIMB. surgeTimer counts UP toward
+//              surgeInterval().  killDepth = the rim band.
 //   telegraph  C.SURGE_TELEGRAPH. The fuse grows throat -> rim in the lane
 //              (14-render-entities.js).  ⛔ killDepth = STILL the rim band.
 //   discharge  C.SURGE_DISCHARGE. ⛔ killDepth = 0; the whole lane is live.
@@ -3328,10 +3533,10 @@ class Surger extends Enemy {
       // the pause is worth having: the bar stops moving at the instant its lane
       // starts arming, which is a fourth channel on GDD 6.3's fuse for free.
       if (this.depth < 1) {
-        this.depth += C.SURGE_CLIMB * dt;
+        this.depth += C.SURGE_CLIMB * climbMult() * dt;
         if (this.depth > 1) this.depth = 1;
       }
-      if (this.surgeTimer >= C.SURGE_INTERVAL) this.setPhase("telegraph");
+      if (this.surgeTimer >= surgeInterval()) this.setPhase("telegraph");
       return;
     }
 
@@ -3388,7 +3593,7 @@ class Surger extends Enemy {
 // suite scans the built file for it.
 //
 // ⛔ The two numbers live in state.spawn (02-state.js): `timer` counts UP
-// toward C.SPAWN_INTERVAL, `remaining` is a count spent downward. Neither is a
+// toward spawnInterval(), `remaining` is a count spent downward. Neither is a
 // countdown clock (GDD 16.3).
 
 // The kind table. ⛔ A spawn names a kind as a STRING and this table is the one
@@ -3450,12 +3655,14 @@ const ENEMY_KINDS = {
 };
 
 // The RELEASE BUDGET — how many THREATS may be alive at once. ⛔ The MIN of the
-// two, and they are not the same kind of number: C.ENEMY_CONCURRENT is the
-// difficulty knob (CS007's heat curve raises it), C.ENEMY_CAP is a readability
-// ceiling that is never raised for difficulty. Reading only one of them is how
-// a retune of the knob quietly walks past the ceiling.
+// two, and they are not the same kind of number: enemyConcurrent() is the
+// difficulty knob and it now RISES WITH HEAT (CS007 P2, 00-config.js), while
+// C.ENEMY_CAP is a readability ceiling that is never raised for difficulty.
+// Reading only one of them is how a retune of the knob quietly walks past the
+// ceiling. ⛔ MEASURED: the shipped ladder tops out at 8, so the cap is never
+// approached and the min() is belt and braces rather than a live clamp.
 function spawnLimit() {
-  return Math.min(C.ENEMY_CONCURRENT, C.ENEMY_CAP);
+  return Math.min(enemyConcurrent(), C.ENEMY_CAP);
 }
 
 // How many things on the board are THREATS — GDD 6.5's `blocksClear`, read off
@@ -3467,7 +3674,7 @@ function spawnLimit() {
 // ENTITIES. Before the split both questions read state.enemies.length, and a
 // Thorn — permanent, unshootable-by-accident, and something the player is not
 // obliged to remove (GDD 6.1) — therefore held a release slot forever. Three
-// standing Thorns at C.ENEMY_CONCURRENT 3 shut the spawner: the quota never
+// standing Thorns at a release budget of 3 shut the spawner: the quota never
 // spent, the well never cleared, and nothing threatened the player either.
 //
 // ⛔ Three follow-ons are settled with it and are NO CHANGE: no Thorn expires
@@ -3602,6 +3809,15 @@ function resetSpawner(state) {
 // enemy pass and its filter, so the alive count it reads is this step's truth
 // and not last step's plus whatever died a moment ago.
 //
+// ⛔ AND THE INTERVAL IS HEAT-DERIVED (CS007 P2) — spawnInterval(), read ONCE
+// per call into a local. Reading it twice would be harmless today and would
+// stop being harmless the first time anything moved the clock mid-step.
+// ⚠ A FALLING INTERVAL AND A HELD TIMER INTERACT, AND IT IS THE INTENDED
+// BEHAVIOUR: a timer parked at the old, longer interval is already past the new
+// one when the level advances, so the first spawn of a harder well is immediate
+// rather than late. That is the same "a freed slot fires at once" rule below,
+// arriving from the other side.
+//
 // ⛔ The timer HOLDS at the interval instead of growing past it. A spawn
 // blocked by the concurrency limit therefore fires the instant a slot frees,
 // which is what keeps the pressure constant; a timer that reset on a blocked
@@ -3617,8 +3833,9 @@ function updateSpawner(state, well, dt) {
   const sp = state.spawn;
   if (sp.remaining <= 0) return;
 
-  if (sp.timer < C.SPAWN_INTERVAL) sp.timer += dt;
-  if (sp.timer < C.SPAWN_INTERVAL) return;
+  const interval = spawnInterval();
+  if (sp.timer < interval) sp.timer += dt;
+  if (sp.timer < interval) return;
   if (threatCount(state) >= spawnLimit()) return;
 
   // Depth 0 is the throat — the far aperture, the only place a well releases

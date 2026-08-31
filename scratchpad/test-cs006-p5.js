@@ -388,7 +388,18 @@ function firstNaN(v, label, depth) {
 // Weaver survived long enough to lay one, and the concurrency block is what
 // stops Weavers reaching the board at all once three Thorns are standing.
 const SHIPPED_KINDS = C.DEBUG_SPAWN_KINDS.slice();
+// ⛔ REPAIRED, CS007 P2 — THE FIXTURE'S PRECONDITION MOVED AND THE ASSERTIONS DID
+// NOT. `C.ENEMY_CONCURRENT` is no longer the release budget; it is the budget's
+// LEVEL-1 ENDPOINT, and `spawnLimit()` reads `enemyConcurrent()`, which
+// interpolates it toward `C.ENEMY_CONCURRENT_MAX` (00-config.js). Setting the
+// base alone therefore no longer sets the budget: on this soak's levels the
+// interpolation walks it back DOWN toward 8, so the line below quietly stopped
+// meaning "a board held open at C.ENEMY_CAP". ⛔ BOTH ENDPOINTS ARE PINNED, which
+// RESTORES the precondition rather than relaxing it — the budget is C.ENEMY_CAP
+// at every level again, exactly as it was before heat existed. ⛔ Nothing else
+// moved: no cap raised, no seed changed, no assertion edited.
 const SHIPPED_CONCURRENT = C.ENEMY_CONCURRENT;
+const SHIPPED_CONCURRENT_MAX = C.ENEMY_CONCURRENT_MAX;
 
 let threw = null, stuck = null;
 let soakMaxEnemies = 0, soakMaxShots = 0, soakNaN = null, soakLevels = 0;
@@ -403,6 +414,7 @@ for (let r = 0; r < RUNS && !threw && !stuck; r++) {
     X.startGame(seed);
     C.DEBUG_SPAWN_KINDS = MIXED.slice();
     C.ENEMY_CONCURRENT = C.ENEMY_CAP;
+    C.ENEMY_CONCURRENT_MAX = C.ENEMY_CAP;
 
     let ticks = 0;
     let wasActive = false, levelAtDiveStart = state.level;
@@ -534,6 +546,7 @@ for (let r = 0; r < 4 && !passiveStuck; r++) {
   X.startGame(seed);
   C.DEBUG_SPAWN_KINDS = MIXED.slice();
   C.ENEMY_CONCURRENT = C.ENEMY_CAP;
+  C.ENEMY_CONCURRENT_MAX = C.ENEMY_CAP;
   let ticks = 0;
   while (state.screen !== "gameover" && ticks < RUN_CAP) {
     replayPassive(G.input, ticks);
@@ -559,6 +572,7 @@ H.assert(passiveTicks > 0 && passiveTicks < RUN_CAP,
 // the restore comes first and is checked before it runs.
 C.DEBUG_SPAWN_KINDS = SHIPPED_KINDS.slice();
 C.ENEMY_CONCURRENT = SHIPPED_CONCURRENT;
+C.ENEMY_CONCURRENT_MAX = SHIPPED_CONCURRENT_MAX;
 H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
          "⛔ the soak's kind fixture is put back to the shipped one-entry list");
 H.eq(C.ENEMY_CONCURRENT, 3, "⛔ and the concurrency fixture is put back");
@@ -715,5 +729,7 @@ H.assert(JSON.stringify(C.DEBUG_SPAWN_KINDS) === JSON.stringify(["vaulter"]),
          "⛔ and the shipped kind list is what this file leaves behind");
 H.eq(C.ENEMY_CONCURRENT, SHIPPED_CONCURRENT,
      "⛔ and the shipped concurrency knob is what this file leaves behind");
+H.eq(C.ENEMY_CONCURRENT_MAX, SHIPPED_CONCURRENT_MAX,
+     "⛔ and so is its heat endpoint — the budget is two numbers now, not one");
 
 H.report("test-cs006-p5.js");

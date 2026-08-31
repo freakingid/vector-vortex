@@ -14,7 +14,7 @@
 // suite scans the built file for it.
 //
 // ⛔ The two numbers live in state.spawn (02-state.js): `timer` counts UP
-// toward C.SPAWN_INTERVAL, `remaining` is a count spent downward. Neither is a
+// toward spawnInterval(), `remaining` is a count spent downward. Neither is a
 // countdown clock (GDD 16.3).
 
 // The kind table. ⛔ A spawn names a kind as a STRING and this table is the one
@@ -76,12 +76,14 @@ const ENEMY_KINDS = {
 };
 
 // The RELEASE BUDGET — how many THREATS may be alive at once. ⛔ The MIN of the
-// two, and they are not the same kind of number: C.ENEMY_CONCURRENT is the
-// difficulty knob (CS007's heat curve raises it), C.ENEMY_CAP is a readability
-// ceiling that is never raised for difficulty. Reading only one of them is how
-// a retune of the knob quietly walks past the ceiling.
+// two, and they are not the same kind of number: enemyConcurrent() is the
+// difficulty knob and it now RISES WITH HEAT (CS007 P2, 00-config.js), while
+// C.ENEMY_CAP is a readability ceiling that is never raised for difficulty.
+// Reading only one of them is how a retune of the knob quietly walks past the
+// ceiling. ⛔ MEASURED: the shipped ladder tops out at 8, so the cap is never
+// approached and the min() is belt and braces rather than a live clamp.
 function spawnLimit() {
-  return Math.min(C.ENEMY_CONCURRENT, C.ENEMY_CAP);
+  return Math.min(enemyConcurrent(), C.ENEMY_CAP);
 }
 
 // How many things on the board are THREATS — GDD 6.5's `blocksClear`, read off
@@ -93,7 +95,7 @@ function spawnLimit() {
 // ENTITIES. Before the split both questions read state.enemies.length, and a
 // Thorn — permanent, unshootable-by-accident, and something the player is not
 // obliged to remove (GDD 6.1) — therefore held a release slot forever. Three
-// standing Thorns at C.ENEMY_CONCURRENT 3 shut the spawner: the quota never
+// standing Thorns at a release budget of 3 shut the spawner: the quota never
 // spent, the well never cleared, and nothing threatened the player either.
 //
 // ⛔ Three follow-ons are settled with it and are NO CHANGE: no Thorn expires
@@ -228,6 +230,15 @@ function resetSpawner(state) {
 // enemy pass and its filter, so the alive count it reads is this step's truth
 // and not last step's plus whatever died a moment ago.
 //
+// ⛔ AND THE INTERVAL IS HEAT-DERIVED (CS007 P2) — spawnInterval(), read ONCE
+// per call into a local. Reading it twice would be harmless today and would
+// stop being harmless the first time anything moved the clock mid-step.
+// ⚠ A FALLING INTERVAL AND A HELD TIMER INTERACT, AND IT IS THE INTENDED
+// BEHAVIOUR: a timer parked at the old, longer interval is already past the new
+// one when the level advances, so the first spawn of a harder well is immediate
+// rather than late. That is the same "a freed slot fires at once" rule below,
+// arriving from the other side.
+//
 // ⛔ The timer HOLDS at the interval instead of growing past it. A spawn
 // blocked by the concurrency limit therefore fires the instant a slot frees,
 // which is what keeps the pressure constant; a timer that reset on a blocked
@@ -243,8 +254,9 @@ function updateSpawner(state, well, dt) {
   const sp = state.spawn;
   if (sp.remaining <= 0) return;
 
-  if (sp.timer < C.SPAWN_INTERVAL) sp.timer += dt;
-  if (sp.timer < C.SPAWN_INTERVAL) return;
+  const interval = spawnInterval();
+  if (sp.timer < interval) sp.timer += dt;
+  if (sp.timer < interval) return;
   if (threatCount(state) >= spawnLimit()) return;
 
   // Depth 0 is the throat — the far aperture, the only place a well releases

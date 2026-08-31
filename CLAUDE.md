@@ -201,6 +201,31 @@ the highest architectural priority in the project.
 ⛔ **One clock: `game.level`.** All difficulty scaling derives from it. No
 parallel clocks. See `DIFFICULTY-NOTES.md`.
 
+⛔ **Every heat-derived value is ONE accessor in `00-config.js`, and no entity
+reads its base constant directly.** `spawnInterval()`, `enemyConcurrent()`,
+`climbMult()`, `vaultInterval()`, `vaultRimInterval()`, `surgeInterval()`,
+`weaverApex()`. Form A: `base + (clamp - base) * min(heat(level)/heat(99), 1)`.
+⛔ **No call site computes heat inline**, and ⛔ **`climbMult()` is the ONE
+multiplier on all five entity climbs** — that is what keeps GDD §4.4's respawn
+guarantee a single arithmetic statement. `test-cs007-p2.js` asserts both off the
+built file, so a direct read turns the suite red.
+
+⛔ **`heat(1)` is exactly 0, and it is load-bearing** — every derived value is
+its own level-1 base at level 1, which is what makes every level-1 test in the
+suite provably unreachable by the clock.
+
+⛔ **Heat never scales a hop or crossing duration** — `VAULT_HOP_TIME`,
+`DRIFT_CROSS_TIME`, `DRIFT_RIDE_TIME` — nor `WEAVER_BOLT_SPEED`,
+`WEAVER_RETREAT` or `SURGE_DISCHARGE`. ⚠ A **slower** bolt would breach the
+respawn guarantee: a pushed bolt reaches its kill band inside the invulnerability
+window and is safe only because it self-terminates at depth 1 first.
+
+⛔ **`C.RESPAWN_PUSH_DEPTH` is 0.55 at every level and `C.CLIMB_MULT_MAX` 1.40 is
+what holds it there** (margin +0.087 s; 1.4815 is the breach). There is no
+derived push. ⛔ **Raising `CLIMB_MULT_MAX` means re-deriving the guarantee**, and
+`C.CLIMB_MAX_BASE` — the fastest contact-killing climb, named once — is what the
+assertion reads so a future faster entity cannot escape it silently.
+
 ### Math and lifecycle
 
 ⛔ **Every entity position is `(lane, depth)`, never a screen coordinate.**
@@ -493,7 +518,7 @@ not obvious from the code.
 Read-order skeleton. GDD §16 is authoritative for what actually exists.
 
 ```
-src/00-config.js       C — every tunable, nothing else
+src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     01-rng.js          mulberry32 — the run's ONE seeded stream
     02-state.js        the one mutable game object
     03-wells.js        the 16 well definitions (DATA) + the depth model

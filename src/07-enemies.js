@@ -186,19 +186,23 @@ class Vaulter extends Enemy {
     // every depth comparison downstream (killDepth, the readability zone, the
     // respawn push) read a number no other system could produce.
     if (this.depth < 1) {
-      this.depth += C.VAULT_CLIMB * dt;
+      this.depth += C.VAULT_CLIMB * climbMult() * dt;
       if (this.depth > 1) this.depth = 1;
     }
     const atRim = this.atRim();
 
     // Arriving at the rim restarts the cadence, so the first hunt hop lands a
-    // full C.VAULT_RIM_INTERVAL after arrival. Without this, whatever phase the
+    // full rim interval after arrival. Without this, whatever phase the
     // climb's 2.2 s timer happened to be in decides whether the Vaulter lunges
     // the instant it surfaces — an arrival that is sometimes fair and sometimes
     // not, for a reason the player cannot see (GDD 1.1 P2).
     if (atRim && !wasAtRim) this.hopTimer = 0;
 
-    const interval = atRim ? C.VAULT_RIM_INTERVAL : C.VAULT_INTERVAL;
+    // ⛔ THROUGH THE ACCESSORS, NEVER THE BASE CONSTANTS (CS007 P2, 00-config.js).
+    // Both fall with heat; VAULT_HOP_TIME, which advanceHop() below spends, does
+    // not — H2, and it is what keeps three closed soaks' per-tick lane bounds
+    // (2 * DT / VAULT_HOP_TIME) valid at every level without being re-derived.
+    const interval = atRim ? vaultRimInterval() : vaultInterval();
     // Advances DURING a hop too, so the period between hop STARTS is the
     // interval itself rather than interval + crossing time.
     if (this.hopTimer < interval) this.hopTimer += dt;
@@ -374,7 +378,7 @@ class Carrier extends Enemy {
   // signature is the contract's (GDD 6.5), not this enemy's.
   update(dt, well, state) {
     if (this.depth < 1) {
-      this.depth += C.CARRIER_CLIMB * dt;
+      this.depth += C.CARRIER_CLIMB * climbMult() * dt;
       if (this.depth > 1) this.depth = 1;
     }
   }
@@ -461,7 +465,7 @@ class Carrier extends Enemy {
 // THE CYCLE, and it should be nameable by a player watching it — it comes up,
 // it leaves a thorn, it spits, it goes back down:
 //
-//   climb     depth rises at C.WEAVER_CLIMB toward C.WEAVER_APEX
+//   climb     depth rises at WEAVER_CLIMB toward weaverApex()
 //   hold      C.WEAVER_APEX_HOLD seconds at the apex; ⛔ EXACTLY ONE bolt
 //   retreat   depth falls at C.WEAVER_RETREAT, which is FASTER, back to 0
 //   climb     …
@@ -547,20 +551,27 @@ class Weaver extends Enemy {
   update(dt, well, state) {
     if (this.phase === "climb") {
       // ⛔ Monotonic on the way up and it STOPS at the apex. The guard is
-      // `depth < APEX` rather than an unconditional clamp so a Weaver that
+      // `depth < apex` rather than an unconditional clamp so a Weaver that
       // ARRIVED above the apex — the debug row stages one as deep as
-      // C.SAFE_SPAWN_DEPTH, and CS007's heat curve will move the apex under
+      // C.SAFE_SPAWN_DEPTH, and CS007's heat curve NOW MOVES THE APEX under
       // live entities — turns around from where it is instead of teleporting
       // down to the line. Depth never rises above where it started in that
-      // case, so [0, 1] holds either way.
-      if (this.depth < C.WEAVER_APEX) {
-        this.depth += C.WEAVER_CLIMB * dt;
-        if (this.depth > C.WEAVER_APEX) this.depth = C.WEAVER_APEX;
+      // case, so [0, 1] holds either way. ⛔ The shape of this guard is what
+      // makes a rising apex safe; do not "tidy" it into a clamp.
+      //
+      // ⛔ ONE READ PER STEP, into a local. weaverApex() is a pure function of
+      // the one clock, so three calls would agree — but a single read is what
+      // makes "the apex this Weaver is working against" one value in the step
+      // rather than three that a future caller could desynchronize.
+      const apex = weaverApex();
+      if (this.depth < apex) {
+        this.depth += C.WEAVER_CLIMB * climbMult() * dt;
+        if (this.depth > apex) this.depth = apex;
       }
 
       this.layThorn(well, state);
 
-      if (this.depth >= C.WEAVER_APEX) {
+      if (this.depth >= apex) {
         this.phase = "hold";
         this.holdTimer = 0;
         this.fired = false;
@@ -972,7 +983,7 @@ class Drifter extends Enemy {
     // ⛔ THE CLIMB RUNS IN BOTH PHASES, and it is not a flourish — it removes a
     // whole failure mode BY CONSTRUCTION. An unshootable entity that never
     // advances is a permanent concurrency squatter: updateSpawner() blocks on
-    // state.enemies.length against C.ENEMY_CONCURRENT, which counts every
+    // state.enemies.length against the release budget, which counts every
     // entity in the one array, so three parked Drifters would hold the spawner
     // shut and the well would never clear. That is the exact shape of the Thorn
     // stall STATUS.md carries — and the Drifter does not have it, because it
@@ -985,7 +996,7 @@ class Drifter extends Enemy {
     // produce. A rim Drifter keeps cycling, so it is a boundary-hopping hunter
     // rather than a parked one.
     if (this.depth < 1) {
-      this.depth += C.DRIFT_CLIMB * dt;
+      this.depth += C.DRIFT_CLIMB * climbMult() * dt;
       if (this.depth > 1) this.depth = 1;
     }
 
@@ -1162,8 +1173,8 @@ class Drifter extends Enemy {
 // THE CYCLE, and a player watching one should be able to name it — it climbs,
 // its lane arms from the throat up, the lane goes live, it climbs again:
 //
-//   climb      depth rises at C.SURGE_CLIMB. surgeTimer counts UP toward
-//              C.SURGE_INTERVAL.  killDepth = the rim band.
+//   climb      depth rises at SURGE_CLIMB. surgeTimer counts UP toward
+//              surgeInterval().  killDepth = the rim band.
 //   telegraph  C.SURGE_TELEGRAPH. The fuse grows throat -> rim in the lane
 //              (14-render-entities.js).  ⛔ killDepth = STILL the rim band.
 //   discharge  C.SURGE_DISCHARGE. ⛔ killDepth = 0; the whole lane is live.
@@ -1254,10 +1265,10 @@ class Surger extends Enemy {
       // the pause is worth having: the bar stops moving at the instant its lane
       // starts arming, which is a fourth channel on GDD 6.3's fuse for free.
       if (this.depth < 1) {
-        this.depth += C.SURGE_CLIMB * dt;
+        this.depth += C.SURGE_CLIMB * climbMult() * dt;
         if (this.depth > 1) this.depth = 1;
       }
-      if (this.surgeTimer >= C.SURGE_INTERVAL) this.setPhase("telegraph");
+      if (this.surgeTimer >= surgeInterval()) this.setPhase("telegraph");
       return;
     }
 

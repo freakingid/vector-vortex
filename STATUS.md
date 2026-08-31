@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.3 · Changeset: CS007 (P1 of 5 built) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.3 · Changeset: CS007 (P2 of 5 built) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS007
 
@@ -7,6 +7,8 @@ One line per phase here; reasoning goes to `log/CS007.md`.
 
 - **P1 — the spawner-stall split.** Budget counts THREATS, ceiling counts
   ENTITIES. 30 files green, zero skips. New `scratchpad/test-cs007-p1.js`.
+- **P2 — the heat clock, the seven accessors, the respawn guarantee.** 31 files
+  green, zero skips. New `scratchpad/test-cs007-p2.js` (186 assertions).
 
 ⛔ **What the two numbers count now.** `min(C.ENEMY_CONCURRENT, C.ENEMY_CAP)` is
 a budget on entities where `blocksClear && !dead`, read off the entity, so it
@@ -37,11 +39,75 @@ to the cap) and got CS005's own repair, the wall-to-wall pin. ⛔ `RUN_CAP`, see
 and assertions unchanged. ⚠ `test-cs004-p5.js` has the same `lastRun` defect and
 is **green**; left alone because this phase did not invalidate it.
 
+⛔ **THE GUARANTEE IS BUILT AND PROVED TWICE, AND IT WAS BUILT FIRST.**
+`C.RESPAWN_PUSH_DEPTH` **stays 0.55** at every level; `C.CLIMB_MULT_MAX` **1.40**
+is what holds it there. Margin **+0.087 s** (1.587 s against `RESPAWN_INVULN`
+1.500), asserted as a property over levels **1..200** *and* driven through the
+real `respawnSkimmer()` + `Game.update()` at levels 1/50/99/200 on a live board.
+⛔ **No derived push, no `respawnPush()`, no `C.RESPAWN_PUSH_MARGIN`** — a source
+assertion pins `RESPAWN_PUSH_DEPTH` to exactly one reader. `C.CLIMB_MAX_BASE`
+0.18 ships as the name of the fastest contact-killer. ⚠ **The `WeaverBolt` is
+the one entity the arithmetic does not save** — pushed to 0.55 it reaches its
+kill band at 1.250 s, inside the window, and survives on self-termination at
+1.406 s + one step. Asserted explicitly, live. ⛔ The `anchored` skip is
+untouched. ⛔ **Mutation-checked:** `CLIMB_MULT_MAX` 1.40 → 1.50 turns the
+property AND the live drive red at L99/L200.
+
+⛔ **Seven accessors, beside `C` in `00-config.js`; Form A, `HEAT_FULL_LEVEL` 99;
+every endpoint EXACT at levels 1 and 99 (`Object.is`).** ⛔ **No
+`C.HEAT_HOLD_LEVEL`** — asserted absent; `02-state.js`'s note is corrected in
+place. ⛔ **A source assertion off the built file** says each base is named only
+inside its own accessor, every `C.*_CLIMB` read is `* climbMult()`, `climbMult()`
+has exactly five call sites, and `heat()` is named only by `heatT()`. Ladder
+asserted at **every** level in each band: 3 (1–5) · 4 (6) · 5 (16) · 6 (40) ·
+7 (70) · 8 (99). ⚠ Level 15 sits at 4.998, the tightest step by far.
+
+⛔ **`P1_DETERMINISM_HASH` re-recorded, 571388570 → 3019834406, one cause: heat.**
+**MEASURED, and it is stronger than a divergence tick:** re-running that soak's
+own `--hash-only` path with all seven clamps flattened onto their level-1 bases
+returns **571388570 exactly** — so heat is the *whole* cause and nothing else P2
+touched moved the simulation by one bit. The hashed run first leaves level 1 at
+tick **1,445** of 10,000 and cannot have diverged before then. `test-cs006-p2.js`'s
+three geometry goldens and its §8 source assertion are untouched and green.
+
+⛔ **`GOLDEN_LANES` WAS *NOT* RE-RECORDED, AND THIS CORRECTS THIS FILE, THE PLAN
+AND THE PHASE PROMPT.** All four predicted "heat lowers the level-2 spawn
+interval from 1.600 to **1.428**, so another spawn fits the window". **MEASURED
+on the shipped curve: 1.428 is level *5*'s interval; level 2's is 1.5472**, and
+the golden's window is unmoved — lanes `10,10,12,0,8,14,12,12,8,14,10,0,7,7,12,3`,
+levels and per-level ticks (2,065 / 935) all character-identical.
+`test-cs004-p1.js` is green with **no edit**. ⛔ CS007's sanctioned re-record
+budget is therefore **three, not four**; P3 still owns the last one.
+
+⛔ **THREE CLOSED-SOAK FIXTURES REPAIRED, ONE ASSERTION REWRITTEN, ZERO
+RELAXED.** `C.ENEMY_CONCURRENT = C.ENEMY_CAP` is no longer a release budget — it
+is the budget's level-1 **endpoint** — so on those soaks' levels the
+interpolation walked the budget *down* toward 8 and the fixture stopped meaning
+what it says. `test-cs004-p5.js`, `test-cs005-p5.js` and `test-cs006-p5.js` now
+pin **both** endpoints, **restoring** a budget of 16 at every level. That was a
+real red: `test-cs005-p5.js` lost `all SIX roster classes` and `a Weaver laid a
+Thorn` on the Flat, and the repair fixed both with **no assertion touched**.
+⛔ No cap raised, no seed moved, no `RUN_CAP` or `TICKS` touched.
+`test-cs007-p1.js`'s §6 min() assertion was rewritten in place to read
+`enemyConcurrent()` — it was green only by accident of where the level was.
+⚠ `test-cs004-p5.js`'s `lastRun` defect **did not fire** and is still latent.
+⚠ **P3 hazard: this file is 378 lines against its ~400 ceiling**, and P3 edits
+seven closed files. Its entry may need P1's body compressed to fit.
+
+⛔ **WHAT P5 OWES `DIFFICULTY-NOTES.md`** (not touched this phase, by instruction).
+Made true by P2: the heat formula block; *spawn interval falls*, *concurrent
+enemies rises*, *enemy climb speed rises*, *vault interval falls*, *surge
+frequency rises*, *Weaver thorn length rises*. Still wrong or missing there:
+`SPAWN_MIN` never existed (it is `SPAWN_INTERVAL_MIN`); four rows now have a
+clamp the table says they lack; *Weaver thorn length* and the apex are **one
+knob**; *Carrier cargo weights* has **no** mechanism and is emergent from §8.1
+(P3's); and the table needs `HEAT_FULL_LEVEL` 99 and the ladder.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **30 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **31 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -81,10 +147,12 @@ is **green**; left alone because this phase did not invalidate it.
   third while `C.DEBUG_SPAWN_KINDS` has one entry — each counted directly on the
   shipped function. ⛔ **It needs no baseline and survives every retune**, which
   is what lets CS007 move `GOLDEN_LANES` without laundering a stray draw into it.
-- ⛔ **`test-cs004-p1.js`'s `GOLDEN_LANES` is still on its ORIGINAL recording
-  from `9ebd27b`** and CS006 did not touch it — measured green, not assumed.
-  ⚠ CS007's introduction schedule is what legitimately re-records it, once, with
-  the cause named.
+- ⛔ **`test-cs004-p1.js`'s `GOLDEN_LANES` is STILL on its ORIGINAL recording
+  from `9ebd27b`** — CS006 did not touch it, CS007 P1 did not, and ⛔ **CS007 P2
+  did not either**: measured green on the shipped heat curve, character for
+  character. ⚠ Three documents predicted P2 would move it; the measurement and
+  the arithmetic error behind the prediction are in the P2 entry above. Nothing
+  in CS007 is now scheduled to re-record it.
 - ⛔ **On a boundary rider the LATTICE is where §17 item 3 stands, not the speed
   bound.** Proved by mutation at the CS005 close: a wrapping Drifter cross leaves
   both a range check and a per-tick speed bound green, because `crossDur()`
@@ -247,8 +315,8 @@ hold, if one is ever needed, belongs in the **caller** is not.
 
 | Phase | Builds | Effort |
 |---|---|---|
-| P1 | The spawner-stall split — the budget counts THREATS | medium |
-| P2 | The heat clock, every derived value, and the respawn guarantee | **high** |
+| P1 ✅ | The spawner-stall split — the budget counts THREATS | medium |
+| P2 ✅ | The heat clock, every derived value, and the respawn guarantee | **high** |
 | P3 | GDD §8.1's introduction schedule | **high** |
 | P4 | Telemetry — the tuning instrument | medium |
 | P5 | The soak, the docs, the close | **high** |
@@ -271,20 +339,22 @@ on a six-kind board. **Measured: three separate CS007 changes move it.**
 
 | Phase | Baseline | ⛔ Cause — exactly one each |
 |---|---|---|
-| P1 | `P1_DETERMINISM_HASH` | the release budget counts threats — 1,082 diverging ticks in that soak's own fixture, first at tick 3,380 |
-| P2 | `GOLDEN_LANES` | heat lowers the level-2 spawn interval (1.600 → 1.428), so another spawn fits the window |
-| P2 | `P1_DETERMINISM_HASH` | heat |
+| P1 ✅ | `P1_DETERMINISM_HASH` | the release budget counts threats — 1,072 diverging beats in that soak's own fixture, first at tick 3,381 |
+| ~~P2~~ | ~~`GOLDEN_LANES`~~ | ⛔ **DID NOT HAPPEN — measured.** Level 2's interval is 1.5472, not 1.428; the window is unmoved. See the P2 entry |
+| P2 ✅ | `P1_DETERMINISM_HASH` | heat — proved sole by flattening every clamp and getting P1's hash back exactly |
 | P3 | `P1_DETERMINISM_HASH` | the soak's kind fixture becomes a level |
 
 ⛔ **`GOLDEN_LANES`'s first ten entries — `10,10,12,0,8,14,12,12,8,14` — must NOT
 move.** They are the level-1 spawns and `heat(1)` is 0. A re-record that moves them
 is heat leaking into level 1, or a draw spent at level 1: a bug, not a baseline.
+⚠ **Measured at P2: all sixteen are unmoved, not merely the first ten.**
 
-⛔ **And the cause is NOT the introduction schedule, which this file and
-`ROADMAP.md` both used to predict.** Measured: the golden's 3,000-tick window
-never leaves level 2 (2,065 ticks at L1, 935 at L2, every spawn a Vaulter), and
-GDD §8.1's eligible set is one entry at both levels, so the kind pick spends
-nothing. P5 corrects `ROADMAP.md`.
+⛔ **And the cause is NOT the introduction schedule** — the golden's 3,000-tick
+window never leaves level 2 (2,065 ticks at L1, 935 at L2, every spawn a
+Vaulter) and GDD §8.1's eligible set is one entry at both levels, so the kind
+pick spends nothing. ⛔ **Nor is it heat, measured at P2.** `ROADMAP.md` still
+carries the schedule prediction; **P5 corrects it, and now also corrects the
+heat one.**
 
 ### ⚠ Other measured corrections the planning session found
 

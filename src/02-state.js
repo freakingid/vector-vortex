@@ -56,12 +56,16 @@ function newState() {
     //
     // ⛔ THE HOLD BELONGS IN THE CALLER, NEVER HERE. A reader that must not
     // rise past 99 clamps its own input; nothing clamps `state.level`.
-    // ⚠ The consequence is CS007's and is cheaper to write down here than to
-    // rediscover: GDD 17 item 7 asserts `heat(n+1) > heat(n)` for n in 1..200,
-    // which stays literally true only if `heat()` itself never plateaus. A
-    // heat curve that holds past 99 fails that test at n = 99 — so CS007 owns
-    // the choice of which of the two moves, and it is a design call, not a
-    // test to relax.
+    //
+    // ✅ ANSWERED, CS007 P2 — NEITHER MOVES, AND NO HOLD SHIPS. This note used
+    // to say GDD 17 item 7's `heat(n+1) > heat(n)` over 1..200 and a heat curve
+    // that plateaus past 99 could not both be true, and that CS007 owed the
+    // choice. It owes nothing: every one of the seven heat-derived rows carries
+    // its own clamp (00-config.js), so heat past a row's saturation level
+    // changes no value in the build and a hold would be inert by construction.
+    // `heat()` never plateaus, item 7 is literally true on the shipped formula,
+    // and C.HEAT_HOLD_LEVEL was not built. ⛔ The caller rule above still
+    // stands — it is what a hold would have to obey if one were ever needed.
     level: 1,
 
     // ⛔ GDD 3.6's past-99 band colour, DRAWN IN THE SIMULATION AND READ BY THE
@@ -133,7 +137,7 @@ function newState() {
     enemies: [],
 
     // The spawner's two numbers (08-spawner.js). ⛔ `timer` counts UP toward
-    // C.SPAWN_INTERVAL and HOLDS there when a spawn is blocked, so a slot that
+    // spawnInterval() and HOLDS there when a spawn is blocked, so a slot that
     // frees is used immediately rather than after a fresh interval (GDD 16.3 —
     // no countdown anywhere in the build). `remaining` is a COUNT of enemies
     // the well still owes, not a clock, so it is spent downward. Both are

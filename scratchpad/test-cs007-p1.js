@@ -247,10 +247,25 @@ function freshWell() {
 // 6. the two numbers are still read as a MIN, and neither was retuned
 // ---------------------------------------------------------------------------
 
+//
+// ⛔ REWRITTEN IN PLACE, CS007 P2 — THE MECHANISM MOVED AND THE CLAIM DID NOT.
+// The left operand of the min() is now `enemyConcurrent()`, which interpolates
+// C.ENEMY_CONCURRENT toward C.ENEMY_CONCURRENT_MAX off the one clock
+// (00-config.js). ⛔ P1's claim is untouched: the budget is still the MIN of a
+// difficulty knob and a readability ceiling, and P1's own boards — every case in
+// this file runs at level 1, where heat(1) = 0 — are bit-identical. The line
+// below used to read `Math.min(C.ENEMY_CONCURRENT, C.ENEMY_CAP)` and say "no
+// heat this phase"; keeping that wording would have made it true only by
+// accident of where the level happened to be.
 H.eq(C.ENEMY_CONCURRENT, 3,
-     "⛔ C.ENEMY_CONCURRENT is still a flat 3 — no heat this phase (that is P2's)");
+     "⛔ C.ENEMY_CONCURRENT is still 3 — CS007 P2 made it the budget's LEVEL-1 BASE " +
+     "rather than retuning it, so P1's board is the board P1 measured");
 H.eq(C.ENEMY_CAP, 16, "⛔ and C.ENEMY_CAP is not raised — it is a readability ceiling");
-H.eq(X.spawnLimit(), Math.min(C.ENEMY_CONCURRENT, C.ENEMY_CAP),
-     "the release budget is still the MIN of the two");
+H.eq(X.spawnLimit(), Math.min(X.enemyConcurrent(), C.ENEMY_CAP),
+     "the release budget is still the MIN of the two — CS007 P2 replaced the difficulty " +
+     "half with an accessor and did not replace the min()");
+H.eq(X.enemyConcurrent(1), C.ENEMY_CONCURRENT,
+     "⛔ and at level 1 the accessor IS the base, which is why nothing above this line " +
+     "had to move");
 
 H.report("test-cs007-p1.js");
