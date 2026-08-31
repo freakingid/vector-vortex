@@ -33,7 +33,11 @@ that has been listed and undefined since v0.1.0, and it is the last chance to
 catch a broken well before a player sees it in sequence. P3 lands a new phase in
 the state machine, GDD §4.5's last unwired death condition, and a loop that costs
 a life every 1.5 s if it is got wrong. P5 owns the only sanctioned re-record of
-`GOLDEN_LANES` and four closed-file edits.
+a baseline and four closed-file edits. ⛔ **CORRECTED 2026-08-31, AFTER P3 AND
+P4 MEASURED IT: the baseline P5 re-records is `test-cs006-p2.js`'s
+`P1_DETERMINISM_HASH`, NOT `test-cs004-p1.js`'s `GOLDEN_LANES`.** The prediction
+this document was written on was inverted — `GOLDEN_LANES` is **green and owes
+nothing**. See P5's step 2 and `STATUS.md`'s P3 entry.
 
 P0 is medium and small — it is a sweep with a known shape. P4 is medium because
 the renderer is already built and the phase is a producer plus a gate; it is also
@@ -568,17 +572,24 @@ the natural place to absorb overflow from P3.
 
 ---
 
-## P5 — the soak, the golden, the docs, the close
+## P5 — the soak, the baseline, the docs, the close
 
 **Model: Opus 5 · Effort: high**
 
 > Read `CLAUDE.md`, `STATUS.md`, `ROADMAP.md`, then `VECTOR-VORTEX-GDD.md` §0,
 > §1, §3.6, §5, §17, §19. Then read `scratchpad/test-cs005-p5.js` end to end
-> including its seven-trap header, and `scratchpad/test-cs004-p1.js`'s golden
-> block. ultrathink.
+> including its seven-trap header, `scratchpad/test-cs006-p2.js`'s
+> `P1_DETERMINISM_HASH` block, and `scratchpad/test-cs004-p1.js`'s golden block.
+> ultrathink.
 >
 > The closing phase. Three jobs: the §17 soak against a build that now has a Dive
-> in it, the single sanctioned re-record of `GOLDEN_LANES`, and the close.
+> in it, the single sanctioned baseline re-record, and the close.
+>
+> ⛔ **READ STEP 2 BEFORE ANYTHING ELSE. THIS DOCUMENT WAS WRITTEN ON AN INVERTED
+> PREDICTION, AND P3's AND P4's PROMPTS ABOVE STILL CARRY IT.** Those two prompts
+> are spent and are deliberately left as they were written; step 2 and the
+> overview are corrected, and `STATUS.md` is the authority. Do not act on the
+> word `GOLDEN_LANES` anywhere above this line.
 >
 > **1. `scratchpad/test-cs006-p5.js` — a fourth soak file, not an edit to the
 > other three.** CS005's close established the pattern and the reason: a soak
@@ -609,22 +620,57 @@ the natural place to absorb overflow from P3.
 > standing-Thorn spawner stall is still live and still CS007's; you are working
 > around it exactly as they did, not fixing it.
 >
-> **2. ⛔ The golden, once.** Re-record `GOLDEN_LANES` in `test-cs004-p1.js`. Before
-> you do:
+> **2. ⛔ The baseline, once — and it is NOT the one this document predicted.**
 >
-> - confirm the **only** cause is the Dive's length. Set `C.DIVE_TIME` temporarily
->   to `1.00 - C.DIVE_GRACE`, re-run, and check the old sequence returns exactly.
->   If it does not, something else moved the stream this changeset and you find it
->   before you re-record anything.
-> - record the new sequence, the commit it came from, and the named cause in the
->   file's header and in `log/CS006.md`.
-> - ⛔ **Add the count-based form to your own file**, because the golden's value as
->   a guard is weakest at the moment it is re-recorded. Wrap `state.rng` in a
->   counting proxy and assert draws-per-interval-spawn is exactly `1` (the heading,
->   in `spawnEnemy`) plus `pickSpawnLane`'s bounded `[1, C.SPAWN_LANE_TRIES]`, with
->   **no third draw** while `C.DEBUG_SPAWN_KINDS` has one entry. That form is
->   absolute and survives every future retune, and CS007 will need it when the
->   introduction schedule moves the golden again.
+> ⛔ **`test-cs004-p1.js`'s `GOLDEN_LANES` IS GREEN AND YOU DO NOT TOUCH IT.**
+> Measured at the P3 close, not assumed: its 3,000-tick window does now cross a
+> well clear, but the extra 1.6 s of dive costs it no spawn, so the recorded lane
+> sequence is identical and no re-record is owed. ⛔ **Re-recording a green
+> baseline is exactly the laundering the once-only rule exists to prevent.** If
+> you find it red, that is a NEW cause, it is not this step, and it gets its own
+> line in `STATUS.md` before you do anything to it.
+>
+> **The one red is `test-cs006-p2.js`'s `P1_DETERMINISM_HASH`** — the 10,000-tick
+> state hash at seed 20260830, `1743051713` recorded at `8e0fb7c`, reading
+> `2063617640` since P3. Re-record **that**, and only that.
+>
+> ⛔ **The cause is already proven and you re-verify it rather than re-deriving
+> it.** P3 drove the post-Dive build tick by tick against the build at `40044ee`
+> over the fields both share: they are **bit-identical for 1,112 ticks and diverge
+> on exactly the tick `wellCleared()` first returns true**, in one field —
+> `shots.length`, which is `startDive()` clearing the player's shots. Nothing else
+> moved. ⛔ **P4 added no second cause, measured:** the hash reads `2063617640`
+> both with and without P4's changes.
+>
+> ⛔ **DO NOT BISECT `C.DIVE_TIME` LOOKING FOR THE OLD NUMBER — IT CANNOT COME
+> BACK, AND THE ATTEMPT WILL READ AS A SECOND UNEXPLAINED CAUSE.** Two independent
+> reasons, either alone sufficient: the between-wells beat is 2.6 s where CS003
+> P2's hold was 1.0 s, **and** the soak's mixer now folds in `dive.timer` /
+> `dive.depth` where it folded the deleted `clearHold`. The hashed field set
+> changed, so no value of `DIVE_TIME` restores the recorded number. What you
+> confirm instead is that the *cause list is complete*: re-run P3's tick-by-tick
+> comparison against `40044ee` and assert the first divergence is still that one
+> tick and that one field.
+>
+> Then:
+>
+> - record the new hash, the commit it came from, and the named cause **at the
+>   assertion itself** and in `log/CS006.md`.
+> - ⛔ **P2's claim must survive the re-record.** `P1_DETERMINISM_HASH` exists to
+>   prove `throatOffset` moved no simulation, and a hash re-recorded on a build
+>   that also contains the Dive proves that for the *new* build only. Add the
+>   claim back in a form the Dive cannot touch — the lane-space helpers P2 already
+>   asserts are unmoved, and `screenPos` moving on exactly the two offset wells —
+>   or say in `log/CS006.md` which part of P2's claim the re-record retires.
+> - ⛔ **Add the count-based form to your own file**, because a baseline's value as
+>   a guard is weakest at the moment it is re-recorded — and here that argument
+>   applies to `GOLDEN_LANES` too, which this changeset never re-recorded and
+>   therefore never re-examined. Wrap `state.rng` in a counting proxy and assert
+>   draws-per-interval-spawn is exactly `1` (the heading, in `spawnEnemy`) plus
+>   `pickSpawnLane`'s bounded `[1, C.SPAWN_LANE_TRIES]`, with **no third draw**
+>   while `C.DEBUG_SPAWN_KINDS` has one entry. That form is absolute and survives
+>   every future retune, and CS007 will need it when the introduction schedule
+>   moves the golden.
 >
 > **3. ⛔ Check the acceptance criteria in `PLANNED-FEATURES-CS006.md` one by one**
 > and say which are met, in `log/CS006.md`. Not "all green" — the list, with a
@@ -659,8 +705,9 @@ the natural place to absorb overflow from P3.
 > **5. Version.** Bump `C.GAME_VERSION` and `STATUS.md`'s header line.
 >
 > ⛔ Run `node build.js` and `node scratchpad/run-all.js` before committing. ⛔
-> **Zero skips and zero failures — including `GOLDEN_LANES`.** A closing phase
-> leaves nothing red. ⛔ Edit docs in place; never print one for copy-paste. ⛔ Do
+> **Zero skips and zero failures — including `P1_DETERMINISM_HASH`, and with
+> `GOLDEN_LANES` still green and still on its original recording.** A closing
+> phase leaves nothing red. ⛔ Edit docs in place; never print one for copy-paste. ⛔ Do
 > not push.
 
 ---
@@ -672,7 +719,7 @@ the natural place to absorb overflow from P3.
 | 1 | Six phases, one of them (P0) trivial | If P3 overruns, P4 absorbs the overflow — it is a producer against a renderer that already exists, and it is the only phase here with slack |
 | 2 | ⛔ **P0 is its own commit** | Nothing. CS004's split renumbered this way and found forty-one stale pointers where the plan predicted twelve; mixing that diff with a build diff makes both unreviewable |
 | 3 | **P1 before P2 before P3** | P1 establishes the no-RNG-in-draw rule that P4 is the first real test of, and it must exist before anything else touches the draw path. P2 is pure geometry and pins the build bit-identically, which is what lets P3 be one system against settled screen math rather than a system *and* an argument about the Flat well |
-| 4 | ⛔ **P3 leaves `GOLDEN_LANES` red and P5 re-records it once** | Nothing. A re-record is the one moment a stray draw can be laundered into a new baseline, so it happens once, at the end, with a named cause and a stronger replacement guard beside it |
+| 4 | ⛔ **P3 leaves one baseline red and P5 re-records it once.** ⚠ **FALSIFIED IN ITS DETAIL, 2026-08-31, and left standing in its principle.** This row predicted the red would be `GOLDEN_LANES`; measured, `GOLDEN_LANES` is **green** and the red is `test-cs006-p2.js`'s `P1_DETERMINISM_HASH` — a hash comparing two runs of the same build, which is the guard the prediction assumed could not be the one to move | Nothing about the once-only rule. A re-record is the one moment a stray draw can be laundered into a new baseline, so it happens once, at the end, with a named cause and a stronger replacement guard beside it. ⛔ What this row's inversion changes is that the *cause* must be re-verified rather than assumed from the plan — P5 step 2 |
 | 5 | **P5 writes a fourth soak file rather than editing the other three** | Nothing. CS005's close established the pattern and the reason — a soak asserts its own changeset's board |
 | 6 | ⛔ **P3 edits four closed test files, under a rule written into `CLAUDE.md` in the same phase** | Nothing. The alternative is deleting CS003 P2's coverage of the between-wells beat, and dropping `clearHold` from three hashes without a replacement |
 | 7 | **Every phase is Opus 5** | Nothing here is mechanical. P0 is the closest and it is a judgment sweep — deciding what a stale pointer *meant* is not a find-and-replace |
