@@ -123,7 +123,7 @@ six-kind board. Three separate CS007 changes move it.
 | Phase | Baseline | Cause — ⛔ exactly one each |
 |---|---|---|
 | P1 | `P1_DETERMINISM_HASH` | the release budget counts threats — **1,082 diverging ticks in that soak's own fixture, first at tick 3,380** |
-| P2 | `GOLDEN_LANES` | heat lowers the level-2 spawn interval (1.600 → 1.428), so another spawn fits the 3,000-tick window. ⛔ **The first ten entries do not move** |
+| ~~P2~~ | ~~`GOLDEN_LANES`~~ | ⛔ **DID NOT HAPPEN.** This row predicted "heat lowers the level-2 spawn interval (1.600 → 1.428)". **MEASURED at CS007 P2:** 1.428 is level *5*'s interval; level 2's is **1.5472**, and all sixteen entries are unmoved. `test-cs004-p1.js` is green with no edit — see `PLANNED-FEATURES-CS007.md` §1.1. ⛔ **There are THREE re-records in CS007, not four** |
 | P2 | `P1_DETERMINISM_HASH` | heat |
 | P3 | `P1_DETERMINISM_HASH` | the soak's kind fixture becomes a level |
 | P4, P5 | — | ⛔ none |
@@ -363,6 +363,14 @@ respawn is unchanged at every level.
 > **5. ⛔ THE ONE SANCTIONED `GOLDEN_LANES` RE-RECORD, AND ITS CAUSE IS NOT WHAT
 > `ROADMAP.md` PREDICTED.**
 >
+> ⛔ **OUTCOME, RECORDED AFTER THE FACT — THIS STEP'S PREMISE WAS FALSE AND NO
+> RE-RECORD HAPPENED.** The prompt below is kept verbatim as the record of what
+> P2 was asked; its arithmetic is not. **MEASURED at P2:** 1.428 is level *5*'s
+> spawn interval, level 2's is **1.5472**, and `test-cs004-p1.js` is green with
+> no edit — all sixteen entries unmoved, not merely the first ten. The
+> correction and its probe output are in `PLANNED-FEATURES-CS007.md` §1.1.
+> ⛔ **P3 does not re-record `GOLDEN_LANES` either.**
+>
 > `STATUS.md` and `ROADMAP.md` both say the *introduction schedule* moves it
 > because it changes the draw count per spawn. **Measured at `1d64329`: false.**
 > The golden's 3,000-tick window never leaves level 2 — 2,065 ticks at level 1 and
@@ -546,7 +554,8 @@ respawn is unchanged at every level.
 >
 > **7. ⛔ RE-RUN THE GOLDEN AND CHECK WHERE ITS WINDOW ENDS.** Measured on the
 > shipped curve: the 3,000-tick window ends at **level 2** (spawn interval 1.600 at
-> L1, 1.428 at L2), so the eligible set is one entry throughout and this phase moves
+> L1, 1.5472 at L2 — ⚠ corrected from 1.428, see §1.1), so the eligible set is one
+> entry throughout and this phase moves
 > nothing there. ⛔ **If it has reached level 3, the kind pick now spends a draw,
 > `GOLDEN_LANES` moves a second time, and that is a NEW cause with its own line in
 > `STATUS.md`** — not a quiet re-record folded into P2's.

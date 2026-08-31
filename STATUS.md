@@ -92,7 +92,11 @@ Thorn` on the Flat, and the repair fixed both with **no assertion touched**.
 `enemyConcurrent()` — it was green only by accident of where the level was.
 ⚠ `test-cs004-p5.js`'s `lastRun` defect **did not fire** and is still latent.
 ⚠ **P3 hazard: this file is 378 lines against its ~400 ceiling**, and P3 edits
-seven closed files. Its entry may need P1's body compressed to fit.
+seven closed files. ✅ **Paul, 2026-08-31: P3 IS AUTHORIZED TO COMPRESS the P1
+and P2 bodies above to one paragraph each** to make room, rather than breaching
+the ⛔ ceiling or improvising around it. ⛔ Compress, never delete — the full
+narrative is P5's to move to `log/CS007.md`, and a measured figure that only
+exists here is a measurement lost.
 
 ⛔ **WHAT P5 OWES `DIFFICULTY-NOTES.md`** (not touched this phase, by instruction).
 Made true by P2: the heat formula block; *spawn interval falls*, *concurrent

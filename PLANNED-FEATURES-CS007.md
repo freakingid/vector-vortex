@@ -96,9 +96,35 @@ time, so this is behaviourally a heat-derived accessor):
    removed one. Entries 10–15 (level 2) move only once the level-2 board is busy
    enough for `pickSpawnLane`'s crowding redraw to fire.
 
-⛔ **So the one sanctioned `GOLDEN_LANES` re-record belongs to P2, and its cause
-is "heat lowers the level-2 spawn interval, so another spawn fits the window" —
-not the introduction schedule.**
+⛔ **CORRECTED AT CS007 P2 — THE SECOND HALF OF THIS FINDING WAS WRONG, AND IT
+WAS MARKED MEASURED.** This section used to conclude: *"the one sanctioned
+`GOLDEN_LANES` re-record belongs to P2, and its cause is 'heat lowers the level-2
+spawn interval, so another spawn fits the window'."* ⛔ **It does not, and there
+is no re-record.**
+
+**The arithmetic error:** the standing wording paired that claim with the figure
+**1.428**, which is §5.1's shipped-curve value for **level 5**, not level 2.
+**MEASURED on the shipped curve at `8b3b907`** (probe: `X.spawnInterval(l)` for
+l = 1..6, and `test-cs004-p1.js`'s own `spawnLaneRun()` fixture re-run):
+
+```
+spawnInterval  L1..L6: 1.6000 1.5472 1.5016 1.4621 1.4277 1.3977
+lanes  : 10,10,12,0,8,14,12,12,8,14,10,0,7,7,12,3    <- character-identical
+levels :  1, 1, 1,1,1, 1, 1, 1,1, 1, 2,2,2,2, 2,2
+ticks per level: {"1":2065,"2":935}   final level: 2
+```
+
+Level 2's interval falls to **1.5472**, not 1.428 — a 3.3 % drop over a 935-tick
+window, and not enough to fit a seventeenth spawn. `test-cs004-p1.js` is **green
+with no edit** on the shipped heat curve, and all sixteen entries are unmoved,
+not merely the ten this section guaranteed.
+
+⛔ **The FIRST half of this finding stands and is what matters for P3:** the
+introduction schedule does not move `GOLDEN_LANES` either, because the window
+never leaves level 2 and §8.1's eligible set is one entry at both levels. ⛔ **So
+nothing in CS007 is scheduled to re-record it, and P3 must not.** The two
+properties below are unchanged and both held: entries 0–9 are invariant under any
+curve with `heat(1) = 0`, and no curve tried ever removed an entry.
 
 ### 1.2 ⛔ MEASURED — CS007 moves a SECOND baseline, and `STATUS.md` says there is only one.
 
@@ -1042,7 +1068,7 @@ green" — the list.
 |---|---|
 | ⛔ **Three re-records of one constant is three chances to launder a stray draw** | §4.5's count guard needs no baseline and is checked at every level; §1.1's level-1 prefix invariant; `test-cs006-p2.js`'s three geometry goldens must not move |
 | P3 is the biggest phase — seven closed files plus `_harness.js` | The edit inventory is measured (§4.4) and the replacement fixture is specified, so the phase executes rather than invents. P3 is **high** effort |
-| A curve Paul picks may push the golden's window into level 3 | ⚠ **MEASURED**: every curve tried ended the window at level 2. ⛔ **MEASURED on the shipped curve: it ends at level 2** (spawn interval 1.600 at L1, 1.428 at L2). P3 re-runs it and confirms; if it ever reaches 3, that is a second `GOLDEN_LANES` re-record with its own cause |
+| A curve Paul picks may push the golden's window into level 3 | ⚠ **MEASURED**: every curve tried ended the window at level 2. ⛔ **RE-MEASURED ON THE BUILT SHIPPED CURVE AT CS007 P2 (`8b3b907`): it ends at level 2**, at 2,065 / 935 ticks, with the spawn interval 1.600 at L1 and **1.5472** at L2 — ⚠ *not* the 1.428 this table used to print, which is level 5's value (§1.1). The golden did **not** move. P3 re-runs it and confirms; if it ever reaches 3, that is a `GOLDEN_LANES` re-record with its own cause |
 | The soaks get much harder at level 5 / level 23 and start failing on time | ⚠ **MEASURED**: under heat, only *non-vacuity* assertions moved (§1.4). P3 must re-check the run caps (`RUN_CAP` 30,000 ticks) after the fixture change |
 | ~~H1's derived push engages inside a soak's level range~~ | ✅ **Gone.** H1's answer keeps `RESPAWN_PUSH_DEPTH` at 0.55, so a respawn is unchanged at every level and the guarantee moves no baseline |
 | Telemetry sampling perturbs the simulation | ⛔ Acceptance criterion 18: hash identical with capture ON and OFF |
