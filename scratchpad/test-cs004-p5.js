@@ -407,7 +407,7 @@ function classCounts(list) {
 //
 // Raising the DIFFICULTY knob to the READABILITY ceiling for the soak is the
 // same class of fixture as topping up the quota and the lives: it keeps the
-// well busy so the geometry is actually stressed, and it is what CS006's heat
+// well busy so the geometry is actually stressed, and it is what CS007's heat
 // curve does anyway. ⛔ C.ENEMY_CAP is untouched and is still asserted below.
 const SHIPPED_CONCURRENT = C.ENEMY_CONCURRENT;
 

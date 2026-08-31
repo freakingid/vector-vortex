@@ -321,7 +321,7 @@ class Vaulter extends Enemy {
 // rows and two glyphs, because CS004 P2 wrote onShot() and splitLanes() to
 // serve every row of this table rather than the one row it could build. ⚠ It
 // is still NOT a weighted draw — GDD 8's "cargo weights shift toward
-// Drifter/Surger" is heat, and heat is CS006's.
+// Drifter/Surger" is heat, and heat is CS007's.
 //
 // ⛔ GDD 6.2's "adjacent" (Vaulter cargo) and "flanking" (Surger cargo) are THE
 // SAME GEOMETRY. The distinction that section draws is between the correct
@@ -510,7 +510,7 @@ class Weaver extends Enemy {
   // ⛔ IT ADOPTS A LIVE THORN IN ITS LANE RATHER THAN CREATING A SECOND. Two
   // overlapping Thorns are two hit-point pools behind one silhouette: a GDD 1.1
   // P2 failure (the player cannot see how much is left) and a scoring oddity
-  // (CS007 pays per chip) at once. The lookup is what makes a second Weaver
+  // (CS008 pays per chip) at once. The lookup is what makes a second Weaver
   // arriving in this lane extend the first one's segment.
   //
   // ⛔ THROUGH spawnEnemy(), the one entry point (GDD 6.5) — the third
@@ -545,7 +545,7 @@ class Weaver extends Enemy {
       // ⛔ Monotonic on the way up and it STOPS at the apex. The guard is
       // `depth < APEX` rather than an unconditional clamp so a Weaver that
       // ARRIVED above the apex — the debug row stages one as deep as
-      // C.SAFE_SPAWN_DEPTH, and CS006's heat curve will move the apex under
+      // C.SAFE_SPAWN_DEPTH, and CS007's heat curve will move the apex under
       // live entities — turns around from where it is instead of teleporting
       // down to the line. Depth never rises above where it started in that
       // case, so [0, 1] holds either way.
@@ -614,7 +614,7 @@ class Weaver extends Enemy {
     drawWeaver(ctx, well, this.lane, this.depth);
   }
 
-  // Any shot kills it and the shot is spent (GDD 6.1) — 50 points, when CS007
+  // Any shot kills it and the shot is spent (GDD 6.1) — 50 points, when CS008
   // builds addScore(). It leaves no bolt behind: what is already in the air
   // stays in the air, and nothing new is fired.
   onShot(shot) {
@@ -886,7 +886,7 @@ class Drifter extends Enemy {
     // Dive, GDD 14.2's Jump — because collideSkimmer would then have two depths
     // to compare. It is a ONE-LINE change at that point. ⛔ Do not give the
     // Skimmer a `depth` field now to make it honest early: that is CS006's and
-    // CS011's work, and a collision pass with a Skimmer-depth term is a second
+    // CS012's work, and a collision pass with a Skimmer-depth term is a second
     // thing to keep in step for no present benefit.
     this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
 
@@ -1265,7 +1265,7 @@ class Surger extends Enemy {
     drawSurger(ctx, well, this.lane, this.depth, this.chargeTip(), this.phase === "discharge");
   }
 
-  // Any shot kills it and the shot is spent (GDD 6.1) — 200 points, when CS007
+  // Any shot kills it and the shot is spent (GDD 6.1) — 200 points, when CS008
   // builds addScore(). ⛔ IN EVERY PHASE, THE DISCHARGE INCLUDED: the lane being
   // live is a threat to the player standing in it, never armour for the thing
   // making it. The answer to a Surger is to shoot it, and the fuse is the

@@ -77,7 +77,7 @@ const ENEMY_KINDS = {
 
 // How many enemies may be alive at once. ⛔ The MIN of the two, and they are
 // not the same kind of number: C.ENEMY_CONCURRENT is the difficulty knob
-// (CS006's heat curve raises it), C.ENEMY_CAP is a readability ceiling that is
+// (CS007's heat curve raises it), C.ENEMY_CAP is a readability ceiling that is
 // never raised for difficulty. Reading only one of them is how a retune of the
 // knob quietly walks past the ceiling.
 function spawnLimit() {

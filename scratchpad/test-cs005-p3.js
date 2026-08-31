@@ -102,17 +102,17 @@ H.assert(typeof C.SURGER_COLOR === "string",
 // is therefore the ONLY thing between a respawn and a discharge that was
 // already running. A discharge that outlasted it would kill the player on the
 // step the blink stopped, in the lane they had no way to leave. This is not a
-// coincidence between two numbers; ⛔ CS006's heat curve is what would break it.
+// coincidence between two numbers; ⛔ CS007's heat curve is what would break it.
 H.assert(C.SURGE_DISCHARGE < C.RESPAWN_INVULN,
          `⛔ C.SURGE_DISCHARGE (${C.SURGE_DISCHARGE}) must stay STRICTLY below ` +
          `C.RESPAWN_INVULN (${C.RESPAWN_INVULN}) — GDD 4.4's rim push does nothing ` +
          `against a killDepth of 0, so the invulnerability window is the only guard`);
 
-// ⛔ Scope boundary: GDD 7's 200 points is CS007's, and addScore() is its one
+// ⛔ Scope boundary: GDD 7's 200 points is CS008's, and addScore() is its one
 // entry point. The constant exists and must still have exactly one mention in
 // the build — its own declaration.
 H.eq(SCRIPT.split("PTS_SURGER").length - 1, 1,
-     "⛔ C.PTS_SURGER is still unread — no scoring lands before addScore() (CS007)");
+     "⛔ C.PTS_SURGER is still unread — no scoring lands before addScore() (CS008)");
 
 // ---------------------------------------------------------------------------
 // the ENEMY_KINDS row — ⛔ `dir` ignored, the draw still spent

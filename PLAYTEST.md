@@ -69,7 +69,7 @@ grows without bound. It cannot tell you whether six silhouettes, a Thorn, a
 bolt, a fuse and a discharging lane are separable by eye. Knobs:
 `C.ENEMY_CONCURRENT` (3, the difficulty knob) and `C.ENEMY_CAP` (16, ⛔ the
 readability ceiling — this ask is exactly the one that would move it). The real
-answer is GDD §8.1's introduction schedule, which is CS006's: if six at once is
+answer is GDD §8.1's introduction schedule, which is CS007's: if six at once is
 noise, the schedule is what has to keep them apart.
 
 ---
@@ -106,7 +106,7 @@ noise, the schedule is what has to keep them apart.
   for 0.30 s, including down in the throat where a lane has never been a threat
   before. If it reads as "bright near the rim", that half is learned by dying.
 - **Does 2.60 s between discharges feel like a rhythm you can play around?**
-  ⚠ CS006 makes `C.SURGE_INTERVAL` heat-derived, so the level-1 base is what
+  ⚠ CS007 makes `C.SURGE_INTERVAL` heat-derived, so the level-1 base is what
   that phase scales from.
 
 ## The Carrier and its cargo — key `2`
@@ -154,13 +154,13 @@ noise, the schedule is what has to keep them apart.
 ## Death, respawn and pressure
 
 - Does the death sequence read? 1.2 s of hit-stop with no fragmentation and no
-  sound is a long time to look at a frozen board. CS007 adds the fragmentation
-  and CS008 the sound, but the freeze LENGTH is settled now and worth judging
+  sound is a long time to look at a frozen board. CS008 adds the fragmentation
+  and CS009 the sound, but the freeze LENGTH is settled now and worth judging
   bare.
 - Is `RESPAWN_PUSH_DEPTH` 0.55 far enough? The clamp plus `RESPAWN_INVULN` 1.5 s
   is meant to guarantee a Vaulter cannot climb back into contact before the
   blink stops. Provable at `VAULT_CLIMB` 0.18; it stops being provable the
-  moment CS006's heat curve raises the climb rate.
+  moment CS007's heat curve raises the climb rate.
 - Does `SPAWN_INTERVAL` 1.60 with `ENEMY_CONCURRENT` 3 produce level-1 pressure
   that feels fair?
 

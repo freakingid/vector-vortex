@@ -38,7 +38,7 @@ const RING = wellByName("Ring");     // closed, 16 lanes — the seam cases
 const FAN  = wellByName("Fan");      // open, 11 lanes — the wall cases
 
 // A rotation-only input struct. The Skimmer reads `rotate` and nothing else
-// this phase; fire/purge/jump are P3's and CS010's.
+// this phase; fire/purge/jump are P3's and CS012's.
 const rot = v => ({ rotate: v, fire: false, purge: false, jump: false });
 
 // ---- the constants this phase adds -----------------------------------------

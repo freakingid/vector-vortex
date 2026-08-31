@@ -192,7 +192,7 @@ const C = {
   // deliberately FASTER than WEAVER_CLIMB so leaving reads as a beat rather
   // than as a second approach.
   //
-  // ⚠ WEAVER_APEX IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS006. GDD 8's one
+  // ⚠ WEAVER_APEX IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS007. GDD 8's one
   // clock (game.level) is what will decide how far up a Weaver comes, so this
   // number is the level-1 base and not the shape of the rule. Nothing reads it
   // but the Weaver's own cycle, which is what makes that swap a one-line change.
@@ -204,7 +204,7 @@ const C = {
   WEAVER_SIZE:          0.62,   // lane widths spanned by the spiral
   WEAVER_CLIMB:         0.22,   // depth/s on the way up
   WEAVER_RETREAT:       0.34,   // depth/s down — leaving is faster than arriving
-  WEAVER_APEX:          0.55,   // ⚠ depth it climbs to before turning. CS006 makes this heat-derived
+  WEAVER_APEX:          0.55,   // ⚠ depth it climbs to before turning. CS007 makes this heat-derived
   WEAVER_APEX_HOLD:     0.35,   // s held at the apex, which is when it fires
   WEAVER_BOLT_SPEED:    0.32,   // depth/s toward the rim. ~1.4 s from apex to rim
   WEAVER_BOLT_SIZE:     0.30,   // lane widths spanned by the dart
@@ -292,9 +292,9 @@ const C = {
   // was already running, so a discharge that outlasted it would kill the player
   // on the step the blink stopped, in the lane they had no way to leave.
   // scratchpad/test-cs005-p3.js asserts it from these two constants, and
-  // CS006's heat curve is exactly what would break it.
+  // CS007's heat curve is exactly what would break it.
   //
-  // ⚠ SURGE_INTERVAL IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS006, the same
+  // ⚠ SURGE_INTERVAL IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS007, the same
   // standing WEAVER_APEX has: this is the level-1 base, not the shape of the
   // rule.
   //
@@ -318,7 +318,7 @@ const C = {
   // number they have to have counted.
   SURGER_SIZE:          0.85,   // lane widths spanned by the zigzag bar
   SURGE_CLIMB:          0.15,   // depth/s, ⛔ in the CLIMB phase only. See above
-  SURGE_INTERVAL:       2.60,   // s of climb between discharges. ⚠ CS006 makes this heat-derived
+  SURGE_INTERVAL:       2.60,   // s of climb between discharges. ⚠ CS007 makes this heat-derived
   SURGE_DISCHARGE:      0.30,   // s the whole lane is live. ⛔ must stay < RESPAWN_INVULN
   SURGE_LIT_WIDTH:      2.20,   // ⛔ x laneLineWidth for the LIVE lane (not the fuse)
 
@@ -331,7 +331,7 @@ const C = {
   // startGame() and in every gap between spawns.
   //
   // ENEMY_CONCURRENT is the difficulty knob — how many are on screen at once,
-  // and CS006's heat curve is what will raise it. ⛔ It is read as
+  // and CS007's heat curve is what will raise it. ⛔ It is read as
   // min(ENEMY_CONCURRENT, ENEMY_CAP): ENEMY_CAP above is a READABILITY ceiling
   // and never a difficulty knob, so the two are not interchangeable and the
   // cap is not the thing to raise when a level should feel busier.
@@ -573,7 +573,7 @@ function newState() {
     rng: mulberry32(C.RNG_DEFAULT_SEED),
 
     // Screen / state machine (GDD 2). CS002 has one screen and no menus; the
-    // enum this becomes is CS007's to define, so the value is a plain string
+    // enum this becomes is CS008's to define, so the value is a plain string
     // rather than a constant nothing else reads yet.
     screen: "play",
 
@@ -606,10 +606,10 @@ function newState() {
     skimmer: null,
 
     // ⛔ GDD 4.4 — the reserve, spent by killSkimmer() and by nothing else.
-    // Zero is the game-over stop (screen = "gameover"), not a screen; CS007
+    // Zero is the game-over stop (screen = "gameover"), not a screen; CS008
     // owns the UI, the submission and the restart flow. The extra-life awards
     // at C.EXTRA_LIFE_FIRST / _EVERY and the C.LIVES_MAX ceiling belong to
-    // addScore() in CS007 and are deliberately unread this changeset.
+    // addScore() in CS008 and are deliberately unread this changeset.
     lives: C.START_LIVES,
 
     // ⛔ Counts UP toward RESPAWN_INVULN and HOLDS there (GDD 16.3 — no
@@ -649,7 +649,7 @@ function newState() {
 
     // GDD 4.3: one Purge charge per well, recharged on entry, never
     // accumulated. ⛔ A COUNT, not a flag: use 1 clears the well, use 2 kills
-    // exactly one enemy, use 3+ does nothing, and CS007's PURGE_SAVED_BONUS
+    // exactly one enemy, use 3+ does nothing, and CS008's PURGE_SAVED_BONUS
     // asks whether this is still 0. enterWell() is the ONLY thing that puts it
     // back to zero; 09-collision.js's updatePurge() is the only thing that
     // raises it. (CS003 P2 landed this as the boolean `purgeReady`, which
@@ -2277,7 +2277,7 @@ class Vaulter extends Enemy {
 // rows and two glyphs, because CS004 P2 wrote onShot() and splitLanes() to
 // serve every row of this table rather than the one row it could build. ⚠ It
 // is still NOT a weighted draw — GDD 8's "cargo weights shift toward
-// Drifter/Surger" is heat, and heat is CS006's.
+// Drifter/Surger" is heat, and heat is CS007's.
 //
 // ⛔ GDD 6.2's "adjacent" (Vaulter cargo) and "flanking" (Surger cargo) are THE
 // SAME GEOMETRY. The distinction that section draws is between the correct
@@ -2466,7 +2466,7 @@ class Weaver extends Enemy {
   // ⛔ IT ADOPTS A LIVE THORN IN ITS LANE RATHER THAN CREATING A SECOND. Two
   // overlapping Thorns are two hit-point pools behind one silhouette: a GDD 1.1
   // P2 failure (the player cannot see how much is left) and a scoring oddity
-  // (CS007 pays per chip) at once. The lookup is what makes a second Weaver
+  // (CS008 pays per chip) at once. The lookup is what makes a second Weaver
   // arriving in this lane extend the first one's segment.
   //
   // ⛔ THROUGH spawnEnemy(), the one entry point (GDD 6.5) — the third
@@ -2501,7 +2501,7 @@ class Weaver extends Enemy {
       // ⛔ Monotonic on the way up and it STOPS at the apex. The guard is
       // `depth < APEX` rather than an unconditional clamp so a Weaver that
       // ARRIVED above the apex — the debug row stages one as deep as
-      // C.SAFE_SPAWN_DEPTH, and CS006's heat curve will move the apex under
+      // C.SAFE_SPAWN_DEPTH, and CS007's heat curve will move the apex under
       // live entities — turns around from where it is instead of teleporting
       // down to the line. Depth never rises above where it started in that
       // case, so [0, 1] holds either way.
@@ -2570,7 +2570,7 @@ class Weaver extends Enemy {
     drawWeaver(ctx, well, this.lane, this.depth);
   }
 
-  // Any shot kills it and the shot is spent (GDD 6.1) — 50 points, when CS007
+  // Any shot kills it and the shot is spent (GDD 6.1) — 50 points, when CS008
   // builds addScore(). It leaves no bolt behind: what is already in the air
   // stays in the air, and nothing new is fired.
   onShot(shot) {
@@ -2842,7 +2842,7 @@ class Drifter extends Enemy {
     // Dive, GDD 14.2's Jump — because collideSkimmer would then have two depths
     // to compare. It is a ONE-LINE change at that point. ⛔ Do not give the
     // Skimmer a `depth` field now to make it honest early: that is CS006's and
-    // CS011's work, and a collision pass with a Skimmer-depth term is a second
+    // CS012's work, and a collision pass with a Skimmer-depth term is a second
     // thing to keep in step for no present benefit.
     this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
 
@@ -3221,7 +3221,7 @@ class Surger extends Enemy {
     drawSurger(ctx, well, this.lane, this.depth, this.chargeTip(), this.phase === "discharge");
   }
 
-  // Any shot kills it and the shot is spent (GDD 6.1) — 200 points, when CS007
+  // Any shot kills it and the shot is spent (GDD 6.1) — 200 points, when CS008
   // builds addScore(). ⛔ IN EVERY PHASE, THE DISCHARGE INCLUDED: the lane being
   // live is a threat to the player standing in it, never armour for the thing
   // making it. The answer to a Surger is to shoot it, and the fuse is the
@@ -3314,7 +3314,7 @@ const ENEMY_KINDS = {
 
 // How many enemies may be alive at once. ⛔ The MIN of the two, and they are
 // not the same kind of number: C.ENEMY_CONCURRENT is the difficulty knob
-// (CS006's heat curve raises it), C.ENEMY_CAP is a readability ceiling that is
+// (CS007's heat curve raises it), C.ENEMY_CAP is a readability ceiling that is
 // never raised for difficulty. Reading only one of them is how a retune of the
 // knob quietly walks past the ceiling.
 function spawnLimit() {
@@ -3503,7 +3503,7 @@ function wellCleared(state) {
 // filters. Nothing here removes an array element; hits set `dead = true` and
 // the caller's .filter() does the removal (GDD 6.5). Never splice mid-loop.
 //
-// ⛔ No scoring. addScore() is CS007's single entry point, and the way to keep
+// ⛔ No scoring. addScore() is CS008's single entry point, and the way to keep
 // it single is to not build a temporary second one here. C.PTS_VAULTER and
 // C.PURGE_SAVED_BONUS are deliberately unread this changeset.
 
@@ -3643,7 +3643,7 @@ function collideSkimmer(state, well) {
 // teleport the killing enemy away during the freeze the player is staring at,
 // and the freeze exists to show them what happened.
 //
-// ⛔ No fragmentation and no score. Both are CS007's — the fragmentation is a
+// ⛔ No fragmentation and no score. Both are CS008's — the fragmentation is a
 // kit-fx primitive, and addScore() is the one scoring entry point. Death in
 // CS003 reads as hit-stop plus a respawn blink.
 function killSkimmer(state) {
@@ -3673,7 +3673,7 @@ function killSkimmer(state) {
   // lets this forced value behave correctly on the way out.
   state.purgeLatched = true;
 
-  // ⛔ THE STOP, not a screen (GDD 4.4). CS007 owns the game-over UI, the score
+  // ⛔ THE STOP, not a screen (GDD 4.4). CS008 owns the game-over UI, the score
   // submission and the restart flow; all this changeset does is stop stepping
   // the gameplay systems, in Game.update(). The freeze below still runs — the
   // last death of a run reads exactly like the others.
@@ -3704,7 +3704,7 @@ function killSkimmer(state) {
 //             button into a decision.
 //   3rd+      nothing.
 //
-// ⛔ No bonus and no points here (GDD 7 is CS007's). C.PURGE_SAVED_BONUS reads
+// ⛔ No bonus and no points here (GDD 7 is CS008's). C.PURGE_SAVED_BONUS reads
 // state.purgeUses === 0 when it lands; that is why this is a count and not the
 // boolean CS003 P2 shipped.
 
@@ -3779,7 +3779,7 @@ function updatePurge(state) {
     // the weak use by firing it into an empty well.
     if (victim) victim.dead = true;
   }
-  // Third and later: nothing. The counter keeps rising so a HUD (CS007) can
+  // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.
 }
 
@@ -4863,7 +4863,7 @@ const Game = (function () {
   // ⚠ TEMPORARY — THE DEBUG BENCH, with C.DEBUG_SPAWN_KINDS (00-config.js).
   //
   // GDD 8.1 introduces the Carrier at L3, the Weaver and Thorn at L5 and the
-  // Drifter at L9, but the introduction schedule and the heat clock are CS006's,
+  // Drifter at L9, but the introduction schedule and the heat clock are CS007's,
   // so nothing new spawns on its own yet. These keys are how the roster is
   // judged on hardware before that exists. GDD 8.1's schedule is what deletes
   // them.
@@ -4940,7 +4940,7 @@ const Game = (function () {
       // does not run at all — precisely the cases a listener gets wrong. Named
       // actions are dispatched from input.sample(), which runs in both.
       //
-      // CS007 owns the real restart flow; this is the debug key that makes the
+      // CS008 owns the real restart flow; this is the debug key that makes the
       // stop observable and recoverable while there is no game-over screen.
       startGame();
       // ⛔ The player reaches for restart DURING the death freeze more often
@@ -4976,7 +4976,7 @@ const Game = (function () {
 
     // ⛔ THE GAME-OVER STOP (GDD 4.4). Lives at zero and the gameplay systems
     // stop stepping: no simulation clock, no entity pass, no spawner, no
-    // collision, no level advance. This is a STOP, not a screen — CS007 owns
+    // collision, no level advance. This is a STOP, not a screen — CS008 owns
     // the game-over UI, the score submission and the restart flow, and the
     // build deliberately has nothing to show here yet. draw() is unaffected, so
     // the frozen board and the craft that died on it stay on screen.
@@ -5172,7 +5172,7 @@ const Game = (function () {
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   Game.init();
   // ⛔ The run begins here, not lazily inside update(). No argument, so the
-  // seed is time-derived and recorded in state.seed. CS007's title screen is
+  // seed is time-derived and recorded in state.seed. CS008's title screen is
   // what will eventually own this call.
   startGame();
   Game.start();

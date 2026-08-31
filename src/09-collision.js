@@ -20,7 +20,7 @@
 // filters. Nothing here removes an array element; hits set `dead = true` and
 // the caller's .filter() does the removal (GDD 6.5). Never splice mid-loop.
 //
-// ⛔ No scoring. addScore() is CS007's single entry point, and the way to keep
+// ⛔ No scoring. addScore() is CS008's single entry point, and the way to keep
 // it single is to not build a temporary second one here. C.PTS_VAULTER and
 // C.PURGE_SAVED_BONUS are deliberately unread this changeset.
 
@@ -160,7 +160,7 @@ function collideSkimmer(state, well) {
 // teleport the killing enemy away during the freeze the player is staring at,
 // and the freeze exists to show them what happened.
 //
-// ⛔ No fragmentation and no score. Both are CS007's — the fragmentation is a
+// ⛔ No fragmentation and no score. Both are CS008's — the fragmentation is a
 // kit-fx primitive, and addScore() is the one scoring entry point. Death in
 // CS003 reads as hit-stop plus a respawn blink.
 function killSkimmer(state) {
@@ -190,7 +190,7 @@ function killSkimmer(state) {
   // lets this forced value behave correctly on the way out.
   state.purgeLatched = true;
 
-  // ⛔ THE STOP, not a screen (GDD 4.4). CS007 owns the game-over UI, the score
+  // ⛔ THE STOP, not a screen (GDD 4.4). CS008 owns the game-over UI, the score
   // submission and the restart flow; all this changeset does is stop stepping
   // the gameplay systems, in Game.update(). The freeze below still runs — the
   // last death of a run reads exactly like the others.
@@ -221,7 +221,7 @@ function killSkimmer(state) {
 //             button into a decision.
 //   3rd+      nothing.
 //
-// ⛔ No bonus and no points here (GDD 7 is CS007's). C.PURGE_SAVED_BONUS reads
+// ⛔ No bonus and no points here (GDD 7 is CS008's). C.PURGE_SAVED_BONUS reads
 // state.purgeUses === 0 when it lands; that is why this is a count and not the
 // boolean CS003 P2 shipped.
 
@@ -296,7 +296,7 @@ function updatePurge(state) {
     // the weak use by firing it into an empty well.
     if (victim) victim.dead = true;
   }
-  // Third and later: nothing. The counter keeps rising so a HUD (CS007) can
+  // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.
 }
 

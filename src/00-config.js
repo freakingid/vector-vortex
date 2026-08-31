@@ -143,7 +143,7 @@ const C = {
   // deliberately FASTER than WEAVER_CLIMB so leaving reads as a beat rather
   // than as a second approach.
   //
-  // ⚠ WEAVER_APEX IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS006. GDD 8's one
+  // ⚠ WEAVER_APEX IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS007. GDD 8's one
   // clock (game.level) is what will decide how far up a Weaver comes, so this
   // number is the level-1 base and not the shape of the rule. Nothing reads it
   // but the Weaver's own cycle, which is what makes that swap a one-line change.
@@ -155,7 +155,7 @@ const C = {
   WEAVER_SIZE:          0.62,   // lane widths spanned by the spiral
   WEAVER_CLIMB:         0.22,   // depth/s on the way up
   WEAVER_RETREAT:       0.34,   // depth/s down — leaving is faster than arriving
-  WEAVER_APEX:          0.55,   // ⚠ depth it climbs to before turning. CS006 makes this heat-derived
+  WEAVER_APEX:          0.55,   // ⚠ depth it climbs to before turning. CS007 makes this heat-derived
   WEAVER_APEX_HOLD:     0.35,   // s held at the apex, which is when it fires
   WEAVER_BOLT_SPEED:    0.32,   // depth/s toward the rim. ~1.4 s from apex to rim
   WEAVER_BOLT_SIZE:     0.30,   // lane widths spanned by the dart
@@ -243,9 +243,9 @@ const C = {
   // was already running, so a discharge that outlasted it would kill the player
   // on the step the blink stopped, in the lane they had no way to leave.
   // scratchpad/test-cs005-p3.js asserts it from these two constants, and
-  // CS006's heat curve is exactly what would break it.
+  // CS007's heat curve is exactly what would break it.
   //
-  // ⚠ SURGE_INTERVAL IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS006, the same
+  // ⚠ SURGE_INTERVAL IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS007, the same
   // standing WEAVER_APEX has: this is the level-1 base, not the shape of the
   // rule.
   //
@@ -269,7 +269,7 @@ const C = {
   // number they have to have counted.
   SURGER_SIZE:          0.85,   // lane widths spanned by the zigzag bar
   SURGE_CLIMB:          0.15,   // depth/s, ⛔ in the CLIMB phase only. See above
-  SURGE_INTERVAL:       2.60,   // s of climb between discharges. ⚠ CS006 makes this heat-derived
+  SURGE_INTERVAL:       2.60,   // s of climb between discharges. ⚠ CS007 makes this heat-derived
   SURGE_DISCHARGE:      0.30,   // s the whole lane is live. ⛔ must stay < RESPAWN_INVULN
   SURGE_LIT_WIDTH:      2.20,   // ⛔ x laneLineWidth for the LIVE lane (not the fuse)
 
@@ -282,7 +282,7 @@ const C = {
   // startGame() and in every gap between spawns.
   //
   // ENEMY_CONCURRENT is the difficulty knob — how many are on screen at once,
-  // and CS006's heat curve is what will raise it. ⛔ It is read as
+  // and CS007's heat curve is what will raise it. ⛔ It is read as
   // min(ENEMY_CONCURRENT, ENEMY_CAP): ENEMY_CAP above is a READABILITY ceiling
   // and never a difficulty knob, so the two are not interchangeable and the
   // cap is not the thing to raise when a level should feel busier.

@@ -219,7 +219,7 @@ const Game = (function () {
   // ⚠ TEMPORARY — THE DEBUG BENCH, with C.DEBUG_SPAWN_KINDS (00-config.js).
   //
   // GDD 8.1 introduces the Carrier at L3, the Weaver and Thorn at L5 and the
-  // Drifter at L9, but the introduction schedule and the heat clock are CS006's,
+  // Drifter at L9, but the introduction schedule and the heat clock are CS007's,
   // so nothing new spawns on its own yet. These keys are how the roster is
   // judged on hardware before that exists. GDD 8.1's schedule is what deletes
   // them.
@@ -296,7 +296,7 @@ const Game = (function () {
       // does not run at all — precisely the cases a listener gets wrong. Named
       // actions are dispatched from input.sample(), which runs in both.
       //
-      // CS007 owns the real restart flow; this is the debug key that makes the
+      // CS008 owns the real restart flow; this is the debug key that makes the
       // stop observable and recoverable while there is no game-over screen.
       startGame();
       // ⛔ The player reaches for restart DURING the death freeze more often
@@ -332,7 +332,7 @@ const Game = (function () {
 
     // ⛔ THE GAME-OVER STOP (GDD 4.4). Lives at zero and the gameplay systems
     // stop stepping: no simulation clock, no entity pass, no spawner, no
-    // collision, no level advance. This is a STOP, not a screen — CS007 owns
+    // collision, no level advance. This is a STOP, not a screen — CS008 owns
     // the game-over UI, the score submission and the restart flow, and the
     // build deliberately has nothing to show here yet. draw() is unaffected, so
     // the frozen board and the craft that died on it stay on screen.
@@ -528,7 +528,7 @@ const Game = (function () {
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   Game.init();
   // ⛔ The run begins here, not lazily inside update(). No argument, so the
-  // seed is time-derived and recorded in state.seed. CS007's title screen is
+  // seed is time-derived and recorded in state.seed. CS008's title screen is
   // what will eventually own this call.
   startGame();
   Game.start();

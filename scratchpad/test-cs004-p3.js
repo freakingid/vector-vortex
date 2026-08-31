@@ -68,7 +68,7 @@ function stub(lane, depth) {
 H.eq(C.WEAVER_SIZE, 0.62, "C.WEAVER_SIZE");
 H.eq(C.WEAVER_CLIMB, 0.22, "C.WEAVER_CLIMB");
 H.eq(C.WEAVER_RETREAT, 0.34, "C.WEAVER_RETREAT");
-H.eq(C.WEAVER_APEX, 0.55, "⚠ C.WEAVER_APEX — flat here, heat-derived in CS006");
+H.eq(C.WEAVER_APEX, 0.55, "⚠ C.WEAVER_APEX — flat here, heat-derived in CS007");
 H.eq(C.WEAVER_APEX_HOLD, 0.35, "C.WEAVER_APEX_HOLD");
 H.eq(C.WEAVER_BOLT_SPEED, 0.32, "C.WEAVER_BOLT_SPEED");
 H.eq(C.WEAVER_BOLT_SIZE, 0.30, "C.WEAVER_BOLT_SIZE");
@@ -196,7 +196,7 @@ H.close(rate.depth, 50 * DT * C.WEAVER_CLIMB, 1e-9,
         "⛔ 50 ticks of climb is exactly 50 * dt * C.WEAVER_CLIMB");
 
 // ⛔ A WEAVER THAT ARRIVED ABOVE THE APEX TURNS AROUND FROM WHERE IT IS. The
-// debug row stages one as deep as C.SAFE_SPAWN_DEPTH, and CS006 moves the apex
+// debug row stages one as deep as C.SAFE_SPAWN_DEPTH, and CS007 moves the apex
 // under live entities. Clamping to the apex on the first step would teleport
 // it down the well, which is a position no motion produced.
 well = useWell(0);

@@ -31,7 +31,7 @@ function newState() {
     rng: mulberry32(C.RNG_DEFAULT_SEED),
 
     // Screen / state machine (GDD 2). CS002 has one screen and no menus; the
-    // enum this becomes is CS007's to define, so the value is a plain string
+    // enum this becomes is CS008's to define, so the value is a plain string
     // rather than a constant nothing else reads yet.
     screen: "play",
 
@@ -64,10 +64,10 @@ function newState() {
     skimmer: null,
 
     // ⛔ GDD 4.4 — the reserve, spent by killSkimmer() and by nothing else.
-    // Zero is the game-over stop (screen = "gameover"), not a screen; CS007
+    // Zero is the game-over stop (screen = "gameover"), not a screen; CS008
     // owns the UI, the submission and the restart flow. The extra-life awards
     // at C.EXTRA_LIFE_FIRST / _EVERY and the C.LIVES_MAX ceiling belong to
-    // addScore() in CS007 and are deliberately unread this changeset.
+    // addScore() in CS008 and are deliberately unread this changeset.
     lives: C.START_LIVES,
 
     // ⛔ Counts UP toward RESPAWN_INVULN and HOLDS there (GDD 16.3 — no
@@ -107,7 +107,7 @@ function newState() {
 
     // GDD 4.3: one Purge charge per well, recharged on entry, never
     // accumulated. ⛔ A COUNT, not a flag: use 1 clears the well, use 2 kills
-    // exactly one enemy, use 3+ does nothing, and CS007's PURGE_SAVED_BONUS
+    // exactly one enemy, use 3+ does nothing, and CS008's PURGE_SAVED_BONUS
     // asks whether this is still 0. enterWell() is the ONLY thing that puts it
     // back to zero; 09-collision.js's updatePurge() is the only thing that
     // raises it. (CS003 P2 landed this as the boolean `purgeReady`, which

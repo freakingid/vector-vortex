@@ -392,7 +392,7 @@ H.eq(thornsOn(state.enemies).length, 1,
 //
 // ⚠ AT SHIPPED VALUES THIS CLAMP IS NOT OBSERVABLE. C.THORN_MAX is 1.00, which
 // is also the depth ceiling, and C.WEAVER_APEX is 0.55 — so nothing a Weaver
-// can do reaches it. It becomes live the moment CS006 heat-derives either
+// can do reaches it. It becomes live the moment CS007 heat-derives either
 // number, which is precisely when a missing clamp would be found the hard way.
 // So the constant is lowered here, the clamp is driven, and it is put back.
 const realMax = C.THORN_MAX;
@@ -440,7 +440,7 @@ H.eq(orphan.depth, reached, "and it stays there: nothing is growing it any more"
 // ---------------------------------------------------------------------------
 //
 // ⛔ TWO OVERLAPPING THORNS ARE TWO HIT-POINT POOLS BEHIND ONE SILHOUETTE. The
-// player cannot see how much is left (P2), and CS007 pays per chip, so it is a
+// player cannot see how much is left (P2), and CS008 pays per chip, so it is a
 // scoring oddity at the same time.
 
 well = useWell(0);

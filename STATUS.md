@@ -1,10 +1,24 @@
 # Vector Vortex — STATUS
-Version: 0.0.2 · Changeset: CS006 (not started) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.2 · Changeset: CS006 (P0 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS006
 
-*Nothing yet.* `PLANNED-FEATURES-CS006.md` and `IMPLEMENTATION-PHASES-CS006.md`
-are not written. One line per phase here; reasoning goes to `log/CS006.md`.
+One line per phase here; reasoning goes to `log/CS006.md`.
+
+- **P0 — the +1 renumber sweep.** CS006 split in two: CS006 is *the well ends*,
+  a new CS007 is *the run escalates*, and the tail shifts +1 (front of house
+  CS008 … ship CS016). `ROADMAP.md`'s sequence table, its renumber note, its
+  "Why this order" section and assumptions #1–#7 are updated. **Seventy-three
+  stale pointers found and corrected outside `ROADMAP.md`** — 26 in `src/`, 20
+  in `scratchpad/`, 12 in the GDD, 9 here, 5 in `PLAYTEST.md`, 1 in
+  `DECISIONS.md` — plus 47 renumbered labels inside `ROADMAP.md` itself. CS004's
+  split predicted twelve and found forty-one; ⚠ 73 is *higher*, not lower, which
+  is the expected direction: there are two more changesets of documents than
+  there were then. ⛔ `log/` (34 hits) and `archive/` (85 hits) were NOT swept —
+  a closed record says what a closed session believed, and correcting it
+  falsifies it. They were read and deliberately left. No code changed: all 52
+  differing lines in `dist/` are comment text, and the suite is green at 24
+  files, zero skips.
 
 ## Working / verified
 
@@ -68,7 +82,7 @@ are not written. One line per phase here; reasoning goes to `log/CS006.md`.
 
   ⚠ **Unreachable in a played build today**, and only because
   `C.DEBUG_SPAWN_KINDS` ships as `["vaulter"]`. It goes **live the moment
-  CS006's introduction schedule puts Weavers at L5.** ⛔ Not fixed yet: the
+  CS007's introduction schedule puts Weavers at L5.** ⛔ Not fixed yet: the
   answer is a design call — *does the concurrency budget count threats or
   entities? does the clear condition change? does a Thorn expire?* — and it
   belongs to the changeset that makes it reachable. Both closing soaks work
@@ -92,7 +106,7 @@ are not written. One line per phase here; reasoning goes to `log/CS006.md`.
      classes park rather than hunt** — Carrier, Weaver, Surger. The Vaulter
      hunts and the Drifter homes; those two will come to you. Fixed in the soak
      *fixture*, never in the build. This is the same design call seen from the
-     other side and it is CS006's.
+     other side and it is CS007's.
 - **`drawWell()`'s `laneState` parameter is still unwired.** Lane occupancy
   lighting (GDD §3.7) belongs with the dim band, in CS006. ⛔ The Surger's
   telegraph shipped as an **entity draw** (`drawSurgeLane`) and must not be
@@ -110,17 +124,17 @@ are not written. One line per phase here; reasoning goes to `log/CS006.md`.
   constraint recorded in `C`: an enemy colour must read against all seven band
   colours (§3.6), because the well cycles and the enemies do not. ⛔ All six are
   judgeable on hardware now, and both CS005 colours for the first time.
-- ⛔ **`src/07-enemies.js` wants splitting, and the moment is CS011.** Measured
+- ⛔ **`src/07-enemies.js` wants splitting, and the moment is CS012.** Measured
   at the CS005 close. The measurement, the seam and the reasoning are in
   `ROADMAP.md` under "Still open" — ⛔ not restated here.
 - **GDD §12's four-second promise is not delivered.** A passive player does die
   on level 1, but not reliably within four seconds — it needs spawn lanes
   weighted toward the player's lane. Settled: that is onboarding and it is
-  **CS014's**.
+  **CS015's**.
 - **A rim Vaulter hunts the Skimmer's *continuous* lane**, so a player parked
   between two lane centres has it hopping back and forth across them. Lethal
   either way, and GDD §6.1 says only "direction from `laneDelta`". Flagged for
-  CS006's tuning pass in case the jitter reads as indecision rather than menace.
+  CS007's tuning pass in case the jitter reads as indecision rather than menace.
 - **GDD §3.3's `throatOffset` is undefined** — no well uses it and the GDD never
   says what it offsets. `wellThroat` defaults it to zero. Design call for Paul.
 - **The Flat well (11) is geometrically degenerate**: its rim is a straight
@@ -144,44 +158,51 @@ are not written. One line per phase here; reasoning goes to `log/CS006.md`.
   that reads them are TEMPORARY and are CS006's to delete when the Dive lands.
 - ⚠ `C.DEBUG_SPAWN_KINDS`, `pickSpawnKind()` (`08-spawner.js`) and the six debug
   spawn actions in `23-main.js` are TEMPORARY. GDD §8.1's introduction schedule
-  replaces all of them, and that is CS006's. ⛔ The list is a bench, never a
+  replaces all of them, and that is CS007's. ⛔ The list is a bench, never a
   difficulty knob — do not tune the game by editing it. ⛔ One key per §6.1
   roster row, none for a Carrier variant; six plus the `0` row is where the
   bench stops.
 - `state.screen === "gameover"` is a STOP with nothing on screen but the frozen
-  board. `r` restarts. CS007 owns the screen, the submission and the real
+  board. `r` restarts. CS008 owns the screen, the submission and the real
   restart flow, and the `restart` debug action should be folded into it rather
   than left as a second way in.
 - **No scoring anywhere.** `PTS_VAULTER`, `PTS_CARRIER`, `PTS_WEAVER`,
   `PTS_THORN` and `PURGE_SAVED_BONUS` are deliberately unread until `addScore()`
-  lands in CS007, which is the one entry point (`CLAUDE.md`, Scoring). ⚠ The
+  lands in CS008, which is the one entry point (`CLAUDE.md`, Scoring). ⚠ The
   Drifter and the Surger shipped **no** points constants at all — GDD §6.1 gives
-  the Drifter 250/500/750 by depth and the Surger 200, and CS007 lands both.
+  the Drifter 250/500/750 by depth and the Surger 200, and CS008 lands both.
 - ⛔ `scratchpad/test-registry.js` carries TWO counts and they are not the same
   number. ✅ **Settled: `enemies` is 6** (GDD §6.1 roster rows, complete) **and
   `enemyKinds` is 9** (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo.
 
-## Next up — CS006
+## Next up — CS006 P1
 
-Level flow, and it is the changeset that makes several things above reachable at
-once. `PLANNED-FEATURES-CS006.md` is unwritten; the scope from `ROADMAP.md` is
-**§5, §3.6–3.7, §8, §15.6** — the Dive, well progression and colour bands, the
-heat clock, GDD §8.1's introduction schedule, and telemetry as the tuning
-instrument.
+**The well ends.** ⛔ CS006's scope was split at P0 and it is now four systems,
+not five: past-99 well progression and the colour-band roll, `laneState` and the
+dim band, `throatOffset` and the two degenerate wells (Flat and Stair), and the
+Dive — GDD §3.3, §3.6–3.7, §5, §4.5 item 5. `PLANNED-FEATURES-CS006.md` and
+`IMPLEMENTATION-PHASES-CS006.md` are written and are the authority on the phase
+order.
 
-Four things it inherits, in the order they will bite:
+⛔ **The heat clock, GDD §8.1's introduction schedule, the spawner-stall call and
+telemetry are the NEW CS007** and are not this changeset's. Three of the four
+things this file said CS006 inherited moved with them:
 
-1. ⛔ **The introduction schedule is what makes the spawner stall live.** It
-   deletes `C.DEBUG_SPAWN_KINDS` and puts Weavers at L5, so the design call
-   above has to be answered *in the same changeset*, not discovered by it.
-2. ⛔ **The heat clock is what breaks `SURGE_DISCHARGE < RESPAWN_INVULN`.** That
-   invariant is asserted from the constants in `test-cs005-p3.js`; a heat curve
-   that raises the discharge past the invulnerability window turns it red, which
-   is the point.
+1. ⛔ **The introduction schedule is what makes the spawner stall live** — and
+   both are CS007's. CS006 does not delete `C.DEBUG_SPAWN_KINDS` and must not
+   answer the "threats or entities?" design call ahead of it.
+2. ⛔ **The heat clock is what breaks `SURGE_DISCHARGE < RESPAWN_INVULN`** —
+   CS007's, asserted from the constants in `test-cs005-p3.js`.
 3. `C.WELL_CLEAR_HOLD` and `state.clearHold` are the Dive's placeholder and are
-   deleted, not kept.
-4. `laneState` and the dim band land together.
+   deleted, not kept. **Still CS006's** — the Dive stays here.
+4. `laneState` and the dim band land together. **Still CS006's.**
+
+⛔ **Both halves move `test-cs004-p1.js`'s `GOLDEN_LANES`, and that is the point
+of the split.** CS006 re-records it once, alone, with the cause named in
+`log/CS006.md`; CS007 re-records it again for its own, separate cause. A
+re-record is the one moment a stray RNG draw can be laundered into a new
+baseline, so one nameable cause per re-record is worth two commits.
 
 ⚠ **One clock: `game.level`** (`CLAUDE.md`, Config; `DIFFICULTY-NOTES.md`). Every
-heat-derived value comes off it. No parallel clocks.
+heat-derived value comes off it, in CS007. No parallel clocks.

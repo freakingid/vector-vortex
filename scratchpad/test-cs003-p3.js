@@ -3,7 +3,7 @@
 //
 // Asserts what P3 owns: the 1-D hit test both ways, the one-enemy-per-shot
 // rule, the three Purge uses and their tie-break, and the rising-edge latch.
-// Makes no claim about lives, respawn, hit-stop or scoring — those are P4/CS007.
+// Makes no claim about lives, respawn, hit-stop or scoring — those are P4/CS008.
 //
 // ⛔ FOUR TRAPS IN THE FIXTURES.
 //  1. Boot calls startGame(), so the live state at load is a run already going.
@@ -73,9 +73,9 @@ H.assert(typeof X.updateCollisions === "function", "updateCollisions is in the b
 H.assert(typeof X.killSkimmer === "function", "killSkimmer is in the build");
 H.assert(typeof X.updatePurge === "function", "updatePurge is in the build");
 
-// ⛔ No scoring this changeset — addScore() is CS007's single entry point.
+// ⛔ No scoring this changeset — addScore() is CS008's single entry point.
 H.assert(typeof X.addScore === "undefined" || X.addScore === null,
-         "no addScore exists yet — scoring is CS007's");
+         "no addScore exists yet — scoring is CS008's");
 H.assert(!("score" in state), "state carries no score field this changeset");
 
 // ---------------------------------------------------------------------------

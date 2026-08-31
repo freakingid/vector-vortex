@@ -106,13 +106,13 @@ H.assert(C.DRIFT_CROSS_WIDTH / C.DRIFT_RIDE_WIDTH >= 2.0,
 H.assert(C.DRIFT_RIDE_ALPHA <= 0.7,
          `⛔ and the riding alpha is at most 0.7 against the crossing 1 (got ${C.DRIFT_RIDE_ALPHA})`);
 
-// ⛔ Scope boundary: GDD 7's 250/500/750-by-depth is CS007's, and addScore() is
+// ⛔ Scope boundary: GDD 7's 250/500/750-by-depth is CS008's, and addScore() is
 // its one entry point. The constant exists and must still have exactly one
 // mention in the build — its own declaration.
 const SCRIPT = H.extractScript(require("fs").readFileSync(
   require("path").join(__dirname, "..", "dist", "vector-vortex.html"), "utf8"));
 H.eq(SCRIPT.split("PTS_DRIFTER").length - 1, 1,
-     "⛔ C.PTS_DRIFTER is still unread — no scoring lands before addScore() (CS007)");
+     "⛔ C.PTS_DRIFTER is still unread — no scoring lands before addScore() (CS008)");
 
 // ---------------------------------------------------------------------------
 // the ENEMY_KINDS row, and ⛔ THE FIRST ROW THAT USES ITS `dir`
