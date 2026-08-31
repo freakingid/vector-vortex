@@ -49,6 +49,17 @@ const ENEMY_KINDS = {
   // full-length Thorn in the Skimmer's lane would not have it lowered, it would
   // have it SHORTENED; nothing does, and nothing should.
   thorn: (lane, depth) => new Thorn(lane, depth),
+  // ⛔ THE FIRST ROW THAT ACTUALLY USES `dir`. Every row above either takes one
+  // and ignores it or does not name it at all; the Vaulter takes one but a
+  // Vaulter that never vaults (level 1, GDD 6.3) never spends it. A Drifter
+  // crosses on its FIRST update, so the draw spawnEnemy() spends below is read
+  // immediately — which is what makes a replay of a seed put the same Drifter
+  // on the same side of the lane it was born in.
+  //
+  // ⛔ It is handed an integer lane CENTRE like everything else and crosses onto
+  // the boundary lattice itself (07-enemies.js). This table stays a function of
+  // (lane, depth, dir) and learns nothing about any entity's lattice.
+  drifter: (lane, depth, dir) => new Drifter(lane, depth, dir),
 };
 
 // How many enemies may be alive at once. ⛔ The MIN of the two, and they are

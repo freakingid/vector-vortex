@@ -280,7 +280,9 @@ The complete list. No chip damage, no health bar.
 
 ⛔ **The bolt dies at `depth 1` on the step AFTER it arrives, and the ordering is why.** `Game.update()` runs the entity pass, then collision, and `collideSkimmer()` skips anything already `dead` — killing it on the step its depth reaches 1 would make the rim step silently non-lethal. The lethal band starts nine steps earlier, so this is belt and braces, written so the belt does not depend on the braces.
 
-⛔ **Conditions 2, 3 and 5 are still unwired, and 5 is not a `killDepth`.** The Drifter's will be `0` (lethal at any depth) and the Surger's is a discharge rather than a contact, both CS005's. **The Thorn's stays `null` forever**: §4.5 item 5 is "a Thorn *during the Dive*", and the Dive is its own sequence with its own rule — CS006's — not a band at the rim. A future session that "finishes" the Thorn by giving it a `killDepth` makes standing still in a thorned lane fatal, which is not the rule this line describes.
+**Shipped, CS005 P2 — condition 2, and ⛔ its `killDepth` is the rim band and NOT `0`.** The Drifter's is `1 - C.RIM_CONTACT_DEPTH`, the same expression the Vaulter, the Carrier and the bolt use. ⛔ **Zero is not a stricter reading of this line, it is a different mechanic.** `collideSkimmer()` is `e.depth >= e.killDepth` plus a lane match and has **no term for where the Skimmer is**, because the Skimmer is always at depth 1 — so `killDepth = 0` does not say "kills on contact at any depth", it says every legal depth is a kill zone. `pickSpawnLane()` draws a lane with no reference to the player and `updateSpawner()` releases at depth 0, and `spawnEnemy()`'s safe-spawn rule only ever *lowers* a depth, which is still lethal at zero: a Drifter released into the player's lane would kill them **on the spawn step, from the throat, having travelled nowhere.** Frequent, free, and exactly the death §6.3's ⛔ exists to prevent. **Item 2's "any depth" means there is no safe *phase*** — a Drifter kills you while it is armoured, so you can neither shoot it nor touch it, where the Weaver has no lethal phase at all and the Thorn none outside the Dive. That is the distinction the condition is listed separately for. ⚠ Zero becomes honest the moment the craft can leave the rim (§5's Dive, §14.2's Jump) and this pass has two depths to compare; it is then a one-line change, and ⛔ building a Skimmer `depth` now to make it honest early is building ahead. Two shipped comments predicted `0` — `07-enemies.js`'s base class and `09-collision.js`'s `collideSkimmer` header — and CS005 P2 corrected both in the commit that landed the entity.
+
+⛔ **Conditions 3 and 5 are still unwired, and 5 is not a `killDepth`.** The Surger's is a discharge rather than a contact, CS005 P3's. **The Thorn's stays `null` forever**: §4.5 item 5 is "a Thorn *during the Dive*", and the Dive is its own sequence with its own rule — CS006's — not a band at the rim. A future session that "finishes" the Thorn by giving it a `killDepth` makes standing still in a thorned lane fatal, which is not the rule this line describes.
 
 ### 4.6 Start Depth
 
@@ -329,7 +331,7 @@ In Overdrive the Dive becomes a ring-flight — §14.5.
 | **Drifter** | Tumbling spark cluster | L9 | Rides lane *boundaries* (invulnerable); crosses lanes (vulnerable); homes near rim | Contact, any depth, instant | Shots only while crossing; Purge anywhere | 250/500/750 by depth |
 | **Surger** | Zigzag bar | L13 | Climbs; periodically electrifies its whole lane | Discharge in your lane | Any shot, Purge | 200 |
 
-**Shipped, CS003 P1 and CS004. Four of the six: the Vaulter, the Carrier, the Weaver and the Thorn.** The Drifter and the Surger are CS005's, and so are the other two Carrier variants (§6.2).
+**Shipped, CS003 P1, CS004 and CS005 P2. Five of the six: the Vaulter, the Carrier, the Weaver, the Thorn and the Drifter.** The Surger is CS005 P3's, and so are the other two Carrier variants (§6.2).
 
 ⚠ **None of them is introduced on a schedule yet.** GDD §8.1's table is CS006's, so until it lands the interval spawner releases whatever ⚠ `C.DEBUG_SPAWN_KINDS` lists — which ships as `["vaulter"]`, so a played build is a Vaulter build. The Carrier does not wait for L3 and the Weaver does not wait for L5 because there is nothing yet that could make them.
 
@@ -371,6 +373,29 @@ Two timing details that look like polish and are not. The hop timer advances **d
 
 ⚠ **A standing Thorn holds a spawner slot.** `updateSpawner()` blocks on `state.enemies.length >= min(ENEMY_CONCURRENT, ENEMY_CAP)`, which counts every entity in the one array — so three Thorns nobody shoots hold the spawner shut and the well never clears. Reachable today only through the debug bench; **live the moment §8.1 introduces Weavers**, and an open design call recorded in `STATUS.md` rather than answered here.
 
+**Shipped, CS005 P2 — the Drifter, and it is the hardest entity in Classic because its failure mode is not difficulty.**
+
+| Property | Constant | Value |
+|---|---|---|
+| Silhouette width | `DRIFTER_SIZE` | 0.66 lane widths (the **crossing** shape; the riding one is deliberately smaller) |
+| Colour | `DRIFTER_COLOR` | `#FF5AC8` ⚠ provisional, with the rest of the palette |
+| Climb rate | `DRIFT_CLIMB` | 0.13 depth/s in **both** phases (throat→rim ≈ 7.7 s) |
+| Time on a boundary | `DRIFT_RIDE_TIME` | 0.85 s — ⛔ **the armour budget** |
+| Lane crossing time | `DRIFT_CROSS_TIME` | 0.45 s, vulnerable throughout |
+| Homing threshold | `DRIFT_HOME_DEPTH` | 0.60 |
+| Stroke width, riding / crossing | `DRIFT_RIDE_WIDTH` / `DRIFT_CROSS_WIDTH` | 0.70 / 1.60 × `laneLineWidth` |
+| Alpha, riding | `DRIFT_RIDE_ALPHA` | 0.55 (crossing is 1) |
+
+**The cycle is a phase string and up-counting timers**, the Weaver's precedent: *birth* — one half-cross from the spawned lane centre onto the nearest legal boundary, over `DRIFT_CROSS_TIME * 0.5`; *ride* — on the boundary, armoured; *cross* — one lane to the next boundary, shootable; *ride*, forever. ⛔ **There is no second flag saying which way anything is moving**: the heading lives in `dir`, written back from the helper that owns the wall.
+
+⛔ **It is born at a lane CENTRE and crosses onto the lattice; the constructor does not snap and does not take a `well`.** That is verified rather than preferred — `spawnEnemy()` is a function of `(kind, lane, depth)` and learns nothing about any entity's lattice, and three closed changesets' test files assert exactly the constructed values. It is also the better read: a Drifter emerges from the throat **visibly vulnerable** and only becomes armoured once it settles, so the player is shown the shootable state at the depth where they have the most time — §1.1 P2 delivered by the movement model rather than by a rule. The half-cross goes through `boundaryFrom()` and ⛔ **not** through `laneHop`, for the reason §3.5 gives.
+
+⛔ **Depth climbs in BOTH phases, and that is a structural decision rather than a feel one.** An unshootable entity that never advances is a permanent concurrency squatter — `updateSpawner()` counts every entity in the one array against `ENEMY_CONCURRENT` — which is the exact shape of the Thorn stall `STATUS.md` carries. A Drifter cannot have it: it reaches the rim on a fixed clock and forces a resolution either way. The climb stops at 1 (the Vaulter's rule, for the Vaulter's reason) and ⛔ **the cycle continues there**, so a rim Drifter is a boundary-hopping hunter rather than a parked one.
+
+⛔ **Every cross goes through `laneHop()` with the BOUNDARY fold bounds, and the returned `dir` is written back.** Both halves are load-bearing and they fail differently: the wrong bounds make a cross from lane 0.5 land back on lane 0.5 — a whole vulnerable window in which the Drifter announces itself as shootable and does not move — and a dropped write-back makes it grind out and back across two boundaries forever, which is §3.5's named bug. **Homing** is a *direction* and never a *whether*: at or above `DRIFT_HOME_DEPTH` the next cross's heading comes from `laneDelta` to the Skimmer, below it the stored heading carries, and ⚠ **a homing answer of zero falls back to the stored heading rather than skipping the beat** — the Vaulter may decline a hop, but a Drifter that declines a cross stays *armoured*, and the armour budget is `DRIFT_RIDE_TIME` and not "until the player moves". ⛔ Nothing in the class reads `well.closed`, and it spawns nothing, ever.
+
+⚠ **A riding Drifter threatens two lanes.** `HIT_LANE_TOL` is half a lane and a boundary is exactly half a lane from two centres, so contact is lethal in both — the largest lethal footprint in Classic, and its whole tactical identity. It also **shields** shots in both of those lanes while riding, because `collideShots()`'s `break` is unconditional; the Weaver bolt's own note predicted this and ⛔ that `break` must not become conditional to "fix" it.
+
 ### 6.2 Carrier variants
 
 Cargo shows as a glyph in the centre. Reading it fast is the skill that separates competent from good.
@@ -383,7 +408,7 @@ Cargo shows as a glyph in the centre. Reading it fast is the skill that separate
 
 The two opposite correct responses make cargo-reading consequential rather than cosmetic.
 
-**Shipped, CS004 P2 — one of the three rows.** `CARGO` (`07-enemies.js`) maps a cargo name to what it splits into, and ⛔ only `vaulter` is buildable: the Drifter and the Surger do not exist, so neither do their rows. The table is a shape with one entry in it and is **not a weighted draw yet** — §8's "cargo weights shift toward Drifter/Surger" is heat, and heat is CS006's.
+**Shipped, CS004 P2 — one of the three rows.** `CARGO` (`07-enemies.js`) maps a cargo name to what it splits into, and ⛔ only `vaulter` is buildable. ⚠ **CS005 P2 landed the Drifter as an ENEMY_KINDS row and deliberately did NOT add its `CARGO` row** — a cargo row and its `carrierDrifter` variant are P4's, one phase per thing, so the entity is judgeable on the bench before it is judgeable inside a hull. The table is a shape with one entry in it and is **not a weighted draw yet** — §8's "cargo weights shift toward Drifter/Surger" is heat, and heat is CS006's.
 
 ⛔ **One `ENEMY_KINDS` row per VARIANT, not one for "a Carrier".** The kind is `carrierVaulter`, because the cargo is half of what the entity is — reading the glyph fast is the skill this section is about — so it belongs in the string exactly as the class it becomes belongs in the table. CS005 adds `carrierDrifter` and `carrierSurger` alongside their `CARGO` entries and touches nothing else.
 
@@ -415,6 +440,20 @@ The safe-spawn rule is enforced inside `spawnEnemy()` — the one entry point (�
 
 The spawner also declines to stack a new enemy on one already sitting in the same lane down in the throat zone (`READABILITY_DEPTH`, §10.3, reused rather than given a second constant for the same band): two silhouettes at the same lane and nearly the same depth read as one, which is §1.1 P2 failing at the moment the player has the most time to react. ⛔ The retry is **bounded** by `SPAWN_LANE_TRIES` and settles for its last draw — the run has one RNG stream, and an unbounded search would spend a board-dependent number of draws and desynchronize every later draw in the run (§17 item 1).
 
+**Shipped, CS005 P2 — the invulnerability read, as THREE independent channels.** §12's first-Drifter prompt names the visual language this ⛔ is asking for: `SOLID = ARMOURED · OPEN = VULNERABLE`. So the two states differ on three things at once, and no one of them carries the read alone:
+
+| Channel | Riding (armoured) | Crossing (vulnerable) |
+|---|---|---|
+| Silhouette | a compact irregular knot, drawn **closed** | a splayed scatter, drawn **open**, reaching ±1 |
+| Stroke width | `laneLineWidth(depth) * C.DRIFT_RIDE_WIDTH` (0.70) | `* C.DRIFT_CROSS_WIDTH` (1.60) |
+| Alpha | `C.DRIFT_RIDE_ALPHA` (0.55) | 1 |
+
+⛔ **Two polys, not one poly restyled.** `entityPoints()` memoizes a scratch array per poly array, so the second one costs one projection loop and zero allocation — the Carrier's shipped hull-and-glyph pattern. One poly drawn closed and then open differs by a single edge, which is not a read at a glance. ⛔ **No global glow constant is touched.** `glowStroke`'s wide pass is `width * GLOW_WIDE_W`, so the narrower riding stroke is *literally* a harder edge — but `GLOW_WIDE_W`, `GLOW_WIDE_ALPHA` and `GLOW_THIN_ALPHA` are shared with the well and every other entity, and retuning one is an art pass across the whole build. Both states are per-entity multipliers only.
+
+⛔ **The separation is a HEADLESS GATE, not an eyeball verdict**, because this is an art rule and art rules rot silently: `scratchpad/test-cs005-p2.js` asserts `DRIFT_CROSS_WIDTH / DRIFT_RIDE_WIDTH >= 2.0` and `DRIFT_RIDE_ALPHA <= 0.7` from the constants, *and* measures the same two ratios back off the real `glowStroke` calls, *and* asserts the two polys are different arrays drawn with different `closed` arguments. A future retune cannot collapse the two reads into one without turning the suite red. That gate is what CS005 does **instead of** building `tools/glow-lab.html`, which tunes the global constants this changeset does not touch.
+
+⚠ **The full-alpha rule the other four enemies carry does not apply to the Drifter, and that is not a hole in §10.3.** That rule is about what may be drawn *over* the throat zone; the Drifter's alpha is constant with depth and *is* the feature. `DRIFT_RIDE_ALPHA` is therefore the one enemy constant in the build that can make an enemy hard to see at the throat, and judging it there is a playtest ask.
+
 ### 6.4 Overdrive enemies
 
 **Reaver** (L6+), **Warden** (L11+), **Mimic** (L16+). Detailed with concerns in §14.6.
@@ -435,7 +474,7 @@ The spawner also declines to stack a new enemy on one already sitting in the sam
 | `dead` | Set true to kill. The caller's end-of-frame `.filter()` does the removal. |
 | `purgeable` | Whether the Purge destroys it (§4.3). **Shipped `false`: the Thorn, and it is the roster's only one** — which is why §4.3's "does not remove Thorns" costs the Purge no special case, in either of its two uses. |
 | `blocksClear` | Whether it must be gone before the well counts as clear. The Thorn is `false`, and that is *why* a Thorn is still standing during the Dive (§5) rather than an oversight in the clear check. |
-| `killDepth` | §4.5's contact rule as a number: contact kills when `depth >= killDepth` and the lanes match. `null` means contact never kills — the Weaver's body. The Drifter's is `0` (lethal at any depth). One comparison covers three of the five death conditions, which is why it is a field. |
+| `killDepth` | §4.5's contact rule as a number: contact kills when `depth >= killDepth` and the lanes match. `null` means contact never kills — the Weaver's body. ⛔ **Every enemy that has a number uses the same one, `1 - C.RIM_CONTACT_DEPTH`, the Drifter included** — there is no term here for where the Skimmer is, so a `killDepth` of `0` would be lethal from the throat rather than "lethal on contact" (§4.5, CS005 P2). One comparison covers three of the five death conditions, which is why it is a field. |
 | `anchored` | ⛔ **What `depth` MEANS on this entity, not whether it moves.** `false` — the default, and every enemy but one — means `depth` is a **position**. `true` means `depth` is a **length**: the tip of an extent rooted at the throat. A stationary enemy whose `depth` is still a position is `false`; anything that ever reads `depth` as a length sets it true. The Thorn is the roster's only `true`. ⛔ **Its one reader is `respawnSkimmer()`**, which skips anchored entities: §4.4's rim push clamps `depth` down to 0.55, and on a length that is not a push but a free chip nobody earned, applied silently on every player death in the one place nobody would look. ⚠ **This is NOT a narrowing of §4.4's SETTLED clamp.** The band is untouched — everything above `RESPAWN_PUSH_DEPTH` still comes down to it, in every lane. The field says *which entities the clamp means anything for*, not *how far down it reaches*. See `RATIONALE.md#thorn-depth`. |
 
 **The three methods:** `update(dt, well, state)`, `draw(ctx, well)`, and `onShot(shot)`. ⛔ **`onShot` returns whether the shot is CONSUMED**, and the *enemy* decides what a hit does — the collision pass only asks. `true` retires the shot; `false` lets it fly on to whatever is behind. That is what keeps the Thorn (chip, consume) and an armoured entity (no damage, do not consume) out of the collision pass as special cases. The base returns `false` deliberately, so a subclass that forgets to override it lets shots through — visible — rather than eating them silently.

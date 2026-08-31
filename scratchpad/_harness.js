@@ -126,6 +126,8 @@ function buildGame(opts = {}) {
     "Weaver", "WeaverBolt", "WEAVER_POLY", "WEAVER_BOLT_POLY", "drawWeaver", "drawWeaverBolt",
     // the Thorn, the lane lookup and its segment draw (07/14, CS004 P4)
     "Thorn", "thornInLane", "drawThorn",
+    // the Drifter and its two silhouettes (07/14, CS005 P2)
+    "Drifter", "DRIFTER_POLY_RIDE", "DRIFTER_POLY_CROSS", "drawDrifter",
     // the spawner and the well lifecycle (08/23, CS003 P2)
     "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit", "ENEMY_KINDS",
     "enterWell", "nextWell", "startGame",

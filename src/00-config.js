@@ -174,6 +174,54 @@ const C = {
   THORN_MAX:            1.00,   // ⛔ depth units of LENGTH — GDD 8's lane-length clamp
   THORN_TIP_LEN:        0.05,   // depth units of brighter tip
 
+  // ---- Drifter (GDD 6.1, 6.3, 4.5 item 2, 3.5) ----------------------------
+  // The cycle, and it is meant to be readable as an ALTERNATION rather than as
+  // a speed: it settles on a lane boundary and is armoured there, it crosses
+  // one lane and is shootable while it does, and it climbs the whole time.
+  //
+  // ⛔ DRIFT_CLIMB APPLIES IN BOTH PHASES. That is what stops an unshootable
+  // entity from parking — see 07-enemies.js — and it also makes the lane SPEED
+  // one number: the birth half-cross covers half a lane in half the time, so
+  // every crossing moves at DT / DRIFT_CROSS_TIME lane units per step and a
+  // soak's bound is derived rather than picked.
+  //
+  // ⛔ DRIFT_RIDE_TIME IS THE ARMOUR BUDGET. At 0.85 s riding against 0.45 s
+  // crossing a Drifter is shootable about a third of the time; raising it is
+  // the fastest way to make an enemy the player cannot answer, and it is the
+  // knob if the Drifter reads as cheap rather than as hard.
+  //
+  // ⛔ DRIFTER_SIZE IS A LANE WIDTH, the same as CARRIER_SIZE and WEAVER_SIZE:
+  // entityPoints() scales a poly's `l` by size/2 and its `d` by
+  // C.ENEMY_DEPTH_SCALE alone. It is the CROSSING silhouette's span — the
+  // riding poly reaches less far across the lanes on purpose, which is one of
+  // the three channels below.
+  DRIFTER_SIZE:         0.66,   // lane widths spanned by the crossing silhouette
+  DRIFT_CLIMB:          0.13,   // depth/s, ⛔ in BOTH phases. throat -> rim ~7.7 s
+  DRIFT_RIDE_TIME:      0.85,   // s on a boundary before a cross — ⛔ the armour budget
+  DRIFT_CROSS_TIME:     0.45,   // s to cross one lane, vulnerable throughout
+  DRIFT_HOME_DEPTH:     0.60,   // at or above this, a cross aims at the Skimmer
+
+  // ⛔ THE THREE-CHANNEL READ (GDD 6.3, 12). GDD 6.3 carries a ⛔ on the
+  // armoured state being visible AT A GLANCE, and GDD 12's first-Drifter prompt
+  // names the visual language it expects: SOLID = ARMOURED · OPEN = VULNERABLE.
+  // So the two states differ on three independent channels at once —
+  // silhouette (two polys, one drawn closed and one open), stroke width, and
+  // alpha — and no one of them carries the read alone.
+  //
+  // ⛔ THESE ARE PER-ENTITY MULTIPLIERS ON laneLineWidth(), NEVER GLOBAL GLOW
+  // CONSTANTS. GLOW_WIDE_W, GLOW_WIDE_ALPHA and GLOW_THIN_ALPHA are shared with
+  // the well and every other entity, and retuning one of those is an art pass
+  // across the whole build. glowStroke's glow spread is width * GLOW_WIDE_W, so
+  // a narrower width here is literally a harder edge.
+  //
+  // ⛔ THE SEPARATION IS A HEADLESS GATE, in scratchpad/test-cs005-p2.js:
+  // DRIFT_CROSS_WIDTH / DRIFT_RIDE_WIDTH >= 2.0 and DRIFT_RIDE_ALPHA <= 0.7.
+  // GDD 6.3's rule is an art rule and art rules rot silently; a future retune
+  // that collapses the two reads into one turns the suite red instead.
+  DRIFT_RIDE_WIDTH:     0.70,   // ⛔ x laneLineWidth while riding — tight, hard-edged
+  DRIFT_CROSS_WIDTH:    1.60,   // ⛔ …and while crossing — bloomed open
+  DRIFT_RIDE_ALPHA:     0.55,   // ⛔ the dim half of the read. Crossing is 1.0
+
   // ---- Spawner / well lifecycle (GDD 2, 6.3, 12) --------------------------
   // ⛔ SPAWN_INTERVAL is what state.spawn.timer counts UP toward, and
   // SPAWN_QUOTA is what state.spawn.remaining starts at — the quota is spent

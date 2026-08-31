@@ -102,9 +102,21 @@ function collideShots(state, well) {
 // ⛔ `killDepth` is read off the entity, never a class name (07-enemies.js).
 // null means contact NEVER kills — the Weaver, whose projectile is the threat
 // and whose body is not. A number is the depth at or past which contact in the
-// Skimmer's lane is lethal: the Vaulter's is the rim band, the Drifter's will
-// be 0 (lethal at any depth, GDD 4.5 item 2). Three of the five death
-// conditions are that one comparison, which is why it is a field.
+// Skimmer's lane is lethal, and every enemy that has one uses the same rim band
+// `1 - C.RIM_CONTACT_DEPTH`. Three of the five death conditions are that one
+// comparison, which is why it is a field.
+//
+// ⛔ THERE IS NO TERM HERE FOR WHERE THE SKIMMER IS, and that is what makes a
+// killDepth of 0 mean something other than it looks like. The craft is always
+// at depth 1, so `e.depth >= 0` is true at EVERY legal depth: a `killDepth = 0`
+// enemy is lethal from the throat, on its spawn step, having travelled nowhere.
+// This header predicted 0 for the Drifter until CS005 P2; GDD 4.5 item 2's "any
+// depth" is about there being no safe PHASE — a Drifter kills you while it is
+// armoured, so you can neither shoot it nor touch it — and the Drifter ships on
+// the rim band with everything else. ⚠ Zero becomes honest the moment the craft
+// can leave the rim (GDD 5's Dive, GDD 14.2's Jump) and this pass has two
+// depths to compare. Until then, a zero here is an unaccountable death and GDD
+// 6.3 names that as the most common complaint about games in this genre.
 function collideSkimmer(state, well) {
   const sk = state.skimmer;
   if (!sk || sk.dead) return;

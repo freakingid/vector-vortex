@@ -48,10 +48,22 @@ class Enemy {
     // ⛔ GDD 4.5's contact rule, as a number. Contact kills the Skimmer when
     // `depth >= killDepth` and the lanes match. `null` means contact NEVER
     // kills — the Weaver is null (its projectile kills, not its body); the
-    // Drifter will be 0 (lethal at any depth, GDD 4.5 item 2); the Vaulter
-    // sets the rim band below. A number covers three of the five death
+    // Vaulter, the Carrier, the bolt and the Drifter all set the rim band,
+    // `1 - C.RIM_CONTACT_DEPTH`. A number covers three of the five death
     // conditions and null covers the other two, which is why this is a field
     // and not a per-enemy method.
+    //
+    // ⛔ NOTHING IN THE ROSTER IS ZERO, AND THIS COMMENT USED TO PREDICT THAT
+    // THE DRIFTER WOULD BE (CS005 P2 corrected it, with collideSkimmer()'s
+    // header in 09-collision.js). There is no term here for where the SKIMMER
+    // is, because the Skimmer is always at depth 1 — so `killDepth = 0` does
+    // not mean "kills on contact at any depth", it means every legal depth is
+    // a kill zone, and an enemy spawned at the throat in the player's lane
+    // kills them on the spawn step having travelled nowhere. See the Drifter's
+    // constructor at the foot of this file for the whole reading of GDD 4.5
+    // item 2. ⚠ Zero becomes honest the moment the craft can leave the rim
+    // (GDD 5's Dive, GDD 14.2's Jump) and this pass has two depths to compare;
+    // it is then a one-line change and not this changeset's.
     this.killDepth = null;
 
     // ⛔ WHAT `depth` MEANS ON THIS ENTITY — not whether it moves.
@@ -779,4 +791,300 @@ function thornInLane(state, well, lane) {
     if (Math.abs(laneDelta(well, lane, e.lane)) <= C.HIT_LANE_TOL) return e;
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// The Drifter (GDD 6.1, 6.3, 4.5 item 2, 3.5) — a tumbling spark cluster, first
+// at L9, 250/500/750 points by depth. Rides lane BOUNDARIES, where it is
+// armoured; crosses lanes, where it is not; homes near the rim. Killed by a
+// shot ONLY while crossing; killed by the Purge in either phase.
+// ---------------------------------------------------------------------------
+//
+// ⛔ ITS FAILURE MODE IS NOT "TOO HARD", IT IS A DEATH THE PLAYER CANNOT
+// ACCOUNT FOR, which GDD 6.3 names as the most common complaint about games in
+// this genre. Everything below that looks like extra care is that ⛔ being
+// obeyed: the killDepth, the birth, the climb in both phases, and the three
+// channels the two states differ on.
+//
+// THE CYCLE, and a player watching one should be able to name it — it settles,
+// it is hard to kill, it slides across, it settles again:
+//
+//   birth   ONE half-cross from the spawned lane CENTRE onto the nearest legal
+//           boundary, over C.DRIFT_CROSS_TIME * 0.5.       VULNERABLE
+//   ride    on the boundary, C.DRIFT_RIDE_TIME.            INVULNERABLE
+//   cross   one lane to the next boundary,
+//           over C.DRIFT_CROSS_TIME.                       VULNERABLE
+//   ride    …
+//
+// ⛔ THE PHASE IS THE WHOLE STATE MACHINE and every timer counts UP (GDD 16.3).
+// The Weaver's `phase` is the precedent. There is no second flag saying which
+// way anything is moving: the heading lives in `dir`, written back from the
+// helper that owns the wall, and the crossing lives in `crossFrom`/`crossDelta`
+// exactly as the Vaulter's hop does.
+//
+// ⛔ NOTHING HERE READS well.closed. `boundaryFrom`, `laneHop`, `laneDelta`,
+// `laneNormalize` and `laneBoundaryLo/Hi` own the topology (03-wells.js), which
+// is the only reason a Drifter behaves on a Ring and on a Fan without a branch
+// — the same property the Vaulter's header claims.
+//
+// ⛔ IT SPAWNS NOTHING, EVER. The Weaver is the only entity in the build that
+// creates other entities from inside its update.
+class Drifter extends Enemy {
+  // `dir` is the initial heading, +1 or -1, and is the spawner's to choose
+  // (08-spawner.js draws it from the run's ONE stream). ⛔ THE FIRST ENEMY_KINDS
+  // ROW THAT ACTUALLY USES ITS `dir`: the Vaulter takes one, and the Carrier,
+  // the Weaver, the bolt and the Thorn all ignore theirs. Anything non-negative,
+  // undefined included, means +1.
+  constructor(lane, depth, dir) {
+    super(lane, depth);
+
+    // ⛔ THE RIM BAND, NOT ZERO — the same expression the Vaulter, the Carrier
+    // and the Weaver's bolt use, so retuning C.RIM_CONTACT_DEPTH moves every
+    // rim-contact entity together. Two comments in this build predicted `0`
+    // here (the base class above, and collideSkimmer's header in
+    // 09-collision.js) and CS005 P2 corrected both.
+    //
+    // ⛔ WHY ZERO WOULD BE WRONG, AND IT IS NOT A TUNING OPINION.
+    // collideSkimmer() is `e.depth >= e.killDepth` plus a lane match, and it
+    // has NO TERM for where the Skimmer is, because the Skimmer is always at
+    // depth 1. So `killDepth = 0` does not read as "kills on contact at any
+    // depth" — it reads as "every legal depth is a kill zone". pickSpawnLane()
+    // draws a lane with no reference to the player and updateSpawner() releases
+    // at depth 0, and spawnEnemy()'s safe-spawn rule only ever LOWERS a depth,
+    // which is still lethal at zero. A Drifter released into the player's lane
+    // would kill them on the spawn step, from the throat, having travelled
+    // nowhere: frequent, free, and exactly the death GDD 6.3's ⛔ exists to
+    // prevent.
+    //
+    // ⛔ AND GDD 4.5 ITEM 2 STILL MEANS SOMETHING UNDER THIS READING. "Contact
+    // with a Drifter, any depth" is about there being no safe PHASE, not no
+    // safe distance: a Drifter kills you while it is armoured, so you can
+    // neither shoot it nor touch it, where the Weaver has no lethal phase at
+    // all and the Thorn has none outside the Dive. That is the distinction the
+    // condition is listed separately for.
+    //
+    // ⚠ Zero becomes honest the moment the craft can leave the rim — GDD 5's
+    // Dive, GDD 14.2's Jump — because collideSkimmer would then have two depths
+    // to compare. It is a ONE-LINE change at that point. ⛔ Do not give the
+    // Skimmer a `depth` field now to make it honest early: that is CS006's and
+    // CS011's work, and a collision pass with a Skimmer-depth term is a second
+    // thing to keep in step for no present benefit.
+    this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
+
+    // ⛔ The heading, kept in step with what boundaryFrom() and laneHop() return
+    // and never inferred from a lane comparison afterwards. The wall and the
+    // crosser's heading are ONE piece of state (GDD 3.5).
+    this.dir = dir < 0 ? -1 : 1;
+
+    // "birth" | "cross" | "ride".
+    //
+    // ⛔ "birth" IS THE STATE OF HAVING BEEN CONSTRUCTED AND NOT YET SEEN A
+    // WELL, and it lasts from the constructor to the first update(). It exists
+    // because THE CONSTRUCTOR MUST NOT SNAP TO A BOUNDARY AND MUST NOT NEED A
+    // `well`, which is verified rather than preferred — three closed
+    // changesets' test files depend on it:
+    //
+    //   test-cs004-p1.js  probes every ENEMY_KINDS row as
+    //                     ENEMY_KINDS[kind](0, 0, 1), with no well in scope.
+    //   test-cs004-p2.js  both loop over CARGO, split a Carrier and assert the
+    //   test-cs004-p5.js  children land in splitLanes()' exact INTEGER lanes at
+    //                     the parent's exact depth. A snapping constructor
+    //                     turns both red the moment CARGO.drifter lands.
+    //
+    // It is also the better read on its own merits, and that is the half worth
+    // keeping if those tests ever change shape: a Drifter emerges from the
+    // throat visibly VULNERABLE — open, bright, wide — and only becomes
+    // armoured once it settles on the lattice. The player is shown the
+    // shootable state at the depth where they have the most time to act on it,
+    // which is GDD 1.1 P2 delivered by the movement model rather than by a rule.
+    this.phase = "birth";
+
+    // Counts UP toward C.DRIFT_RIDE_TIME (GDD 16.3 — no countdown clocks
+    // anywhere in this build).
+    this.rideTimer = 0;
+
+    // The crossing in flight. ⛔ `lane` is CONTINUOUS through one, so these
+    // exist to interpolate it rather than to teleport at the end — the Vaulter's
+    // hop, with a different lattice. There is deliberately no stored DURATION;
+    // see crossDur() below.
+    this.crossTime = 0;
+    this.crossFrom = this.lane;
+    this.crossDelta = 0;
+  }
+
+  // The armour, as one question asked in three places (onShot, draw, and the
+  // tests). ⛔ It is derived from the phase and is never a second field: two
+  // fields that must agree are a bug waiting for a phase to be added.
+  riding() {
+    return this.phase === "ride";
+  }
+
+  // ⛔ THE CROSSING'S DURATION IS DERIVED FROM ITS DISTANCE, NOT STORED. The
+  // birth covers half a lane and a cross covers a whole one, so this makes the
+  // LANE SPEED a single number for the entity's whole life: every crossing step
+  // moves exactly dt / C.DRIFT_CROSS_TIME lane units, birth included. A stored
+  // per-crossing duration would be a second thing to keep in step with
+  // crossDelta, and CS005 P5's soak bound would have to become a table instead
+  // of the one derived number 2 * DT / C.DRIFT_CROSS_TIME.
+  crossDur() {
+    return C.DRIFT_CROSS_TIME * Math.abs(this.crossDelta);
+  }
+
+  update(dt, well, state) {
+    // ⛔ THE CLIMB RUNS IN BOTH PHASES, and it is not a flourish — it removes a
+    // whole failure mode BY CONSTRUCTION. An unshootable entity that never
+    // advances is a permanent concurrency squatter: updateSpawner() blocks on
+    // state.enemies.length against C.ENEMY_CONCURRENT, which counts every
+    // entity in the one array, so three parked Drifters would hold the spawner
+    // shut and the well would never clear. That is the exact shape of the Thorn
+    // stall STATUS.md carries — and the Drifter does not have it, because it
+    // reaches the rim on a fixed clock and forces a resolution either way.
+    //
+    // ⛔ Monotonic, and it STOPS at 1 rather than passing it, the Vaulter's rule
+    // for the Vaulter's reason: depth > 1 is not a legal position, and letting
+    // it run would leave every downstream comparison (killDepth, the
+    // readability zone, the respawn push) reading a number no other system can
+    // produce. A rim Drifter keeps cycling, so it is a boundary-hopping hunter
+    // rather than a parked one.
+    if (this.depth < 1) {
+      this.depth += C.DRIFT_CLIMB * dt;
+      if (this.depth > 1) this.depth = 1;
+    }
+
+    if (this.phase === "birth") {
+      this.startBirth(well);
+      return;
+    }
+
+    if (this.riding()) {
+      this.rideTimer += dt;
+      if (this.rideTimer >= C.DRIFT_RIDE_TIME) this.startCross(well, state);
+      return;
+    }
+
+    this.advanceCross(dt, well);
+  }
+
+  // ⛔ THE ONE HALF-CROSS, and ⛔ IT DOES NOT GO THROUGH laneHop. boundaryFrom()
+  // (03-wells.js) answers a different question: laneHop FOLDS, and folding an
+  // OFF-LATTICE start about the lattice bounds overshoots —
+  // laneHop(Vee, 0, -0.5, -1, 0.5, 11.5) returns lane 1.5, a lane and a half in
+  // one cross time, which a soak reads as a teleport. A half-step that reverses
+  // once at a wall is not a hop that reflects.
+  //
+  // boundaryFrom is also where well.closed is read, which is what keeps this
+  // class free of the topology.
+  startBirth(well) {
+    const b = boundaryFrom(well, this.lane, this.dir);
+    this.dir = b.dir;
+    this.beginCrossTo(well, b.lane);
+  }
+
+  // ⛔ EVERY CROSS GOES THROUGH laneHop() AND THE dir IT RETURNS IS WRITTEN
+  // BACK. Read that helper's header, and the Vaulter's startHop, before
+  // touching this: an enemy that keeps its own heading and asks the helper only
+  // for a POSITION holds a stale direction after a wall bounce and grinds
+  // against an open well's end forever, one cross out and one cross back. That
+  // is GDD 3.5's named bug and GDD 17's third required test.
+  //
+  // ⛔ THE FOLD BOUNDS ARE THE BOUNDARY LATTICE'S (CS005 P1), not laneHop's
+  // defaults. Folded about the lane-CENTRE bounds instead, a cross from lane
+  // 0.5 lands back on lane 0.5 — a whole vulnerable crossing window in which
+  // the Drifter announces itself as shootable and then does not move, which
+  // reads as a bug even to a player who cannot name it. ⚠ On a closed well the
+  // bounds are inert (it wraps), so they are passed unconditionally.
+  startCross(well, state) {
+    const dir = this.crossDir(well, state);
+    const h = laneHop(well, this.lane, dir, dir, laneBoundaryLo(well), laneBoundaryHi(well));
+    this.dir = h.dir;
+    this.beginCrossTo(well, h.lane);
+  }
+
+  // Arm a crossing toward a lane the caller has already resolved. ⛔ laneDelta,
+  // never a bare subtraction: a cross over a closed well's seam travels one
+  // lane forward and not fifteen backwards (03-wells.js).
+  beginCrossTo(well, lane) {
+    this.crossFrom = this.lane;
+    this.crossDelta = laneDelta(well, this.lane, lane);
+    this.crossTime = 0;
+    this.phase = "cross";
+  }
+
+  // Which way the next cross goes. ⛔ GDD 6.1's "homes near rim", as a
+  // DIRECTION and nothing else — the cross itself is unconditional.
+  //
+  // ⚠ A DELIBERATE DIFFERENCE FROM THE VAULTER, and it is the one judgment call
+  // in this class. Vaulter.huntDir() returns 0 in three cases — no Skimmer yet
+  // (23-main.js mints it lazily), a dead one, and "already in the player's
+  // lane" — and the Vaulter answers a 0 by not hopping this beat. A Drifter may
+  // not do that: declining a cross leaves it RIDING, which is armoured, and the
+  // armour budget is C.DRIFT_RIDE_TIME rather than "until the player moves". So
+  // a 0 falls back to the stored heading and the entity keeps its cadence. What
+  // homing changes is where it goes, never whether it goes.
+  crossDir(well, state) {
+    if (this.depth < C.DRIFT_HOME_DEPTH) return this.dir;
+    const d = this.huntDir(well, state);
+    return d === 0 ? this.dir : d;
+  }
+
+  // Which way the Skimmer is, as -1 / 0 / +1 — the shape of Vaulter.huntDir(),
+  // reused deliberately. ⛔ laneDelta, never (a - b): on a 16-lane Ring the way
+  // from lane 15 to lane 0 is +1, and the bare subtraction sends the Drifter
+  // fifteen lanes the wrong way round.
+  huntDir(well, state) {
+    const target = state.skimmer;
+    if (!target || target.dead) return 0;
+    const d = laneDelta(well, this.lane, target.lane);
+    return d > 0 ? 1 : (d < 0 ? -1 : 0);
+  }
+
+  // Carry the crossing forward. ⛔ `lane` moves continuously, so the Drifter is
+  // hittable in both lanes it is near for the whole crossing — which is the
+  // window GDD 6.1's "crosses lanes (vulnerable)" is really describing.
+  advanceCross(dt, well) {
+    const dur = this.crossDur();
+    this.crossTime += dt;
+
+    if (!(dur > 0) || this.crossTime >= dur) {
+      // Landing is EXACT, never the last interpolated step: accumulated float
+      // error would leave the Drifter a hair off the lattice, and every later
+      // cross would inherit the drift — on this entity that matters more than
+      // on the Vaulter, because the lattice point is what the armour is
+      // anchored to visually.
+      this.lane = laneNormalize(well, this.crossFrom + this.crossDelta);
+      this.crossTime = dur;
+      this.phase = "ride";
+      this.rideTimer = 0;
+      return;
+    }
+    // laneNormalize keeps the in-flight lane legal on BOTH topologies.
+    this.lane = laneNormalize(well, this.crossFrom + this.crossDelta * (this.crossTime / dur));
+  }
+
+  draw(ctx, well) {
+    drawDrifter(ctx, well, this.lane, this.depth, this.riding());
+  }
+
+  // ⛔ THE ROSTER'S FIRST PHASE-DEPENDENT onShot, and the first entity to use
+  // the base class's documented `return false` path in anger. Riding is
+  // armoured: the shot is NOT consumed and flies on to whatever is behind it,
+  // exactly as the Weaver's bolt declines every shot. Crossing is not: any shot
+  // kills it and is spent.
+  //
+  // ⚠ A DECLINED SHOT STILL COSTS ITS RESOLUTION FOR THE FEW STEPS OF OVERLAP,
+  // because collideShots()'s `break` is UNCONDITIONAL (09-collision.js) — so a
+  // riding Drifter briefly shields whatever is behind it, in BOTH lanes it sits
+  // between. The bolt's own header predicted this. ⛔ It is not a bug and that
+  // `break` must not become conditional to "fix" it: it is load-bearing for the
+  // Carrier's split and for GDD 4.2's chip economy as well.
+  //
+  // ⛔ The Purge kills it in EITHER phase and that needs no code here — GDD
+  // 6.1's "Purge anywhere" is `purgeable`, inherited true, and updatePurge()
+  // sets `dead` directly without ever asking onShot() (⚠ SETTLED, and it works
+  // by omission). A panic button that armour could refuse would not be one.
+  onShot(shot) {
+    if (this.riding()) return false;
+    this.dead = true;
+    return true;
+  }
 }

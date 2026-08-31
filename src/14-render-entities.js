@@ -366,3 +366,102 @@ function drawThorn(ctx, well, lane, depth) {
   drawPoly(ctx, _thornCrown, false);
   glowStroke(ctx, C.THORN_COLOR, laneLineWidth(tip), 1);
 }
+
+// ---------------------------------------------------------------------------
+// The Drifter's TWO silhouettes (GDD 6.1, 6.3, 12, 18) — the armour, made
+// visible.
+// ---------------------------------------------------------------------------
+//
+// ⛔ GDD 6.3 CARRIES A ⛔ ON THIS BEING READABLE AT A GLANCE, and it is the one
+// place in Classic where a rendering decision is the difference between a hard
+// enemy and an unfair one: a player who cannot tell an armoured Drifter from a
+// vulnerable one is not playing against a threat, they are being killed at
+// random. GDD 12's first-Drifter prompt names the visual language the game
+// promises the player: SOLID = ARMOURED · OPEN = VULNERABLE.
+//
+// So the two states differ on THREE INDEPENDENT CHANNELS, and no one of them
+// carries the read alone:
+//
+//   silhouette   a compact poly drawn CLOSED, against a splayed poly drawn OPEN
+//   stroke width laneLineWidth * C.DRIFT_RIDE_WIDTH against * C.DRIFT_CROSS_WIDTH
+//   alpha        C.DRIFT_RIDE_ALPHA against 1
+//
+// ⛔ TWO POLYS, NOT ONE POLY RESTYLED. entityPoints() memoizes a scratch array
+// PER POLY ARRAY (see its header), so the second one costs one projection loop
+// and zero allocation — the Carrier's shipped hull-and-glyph pattern. One poly
+// drawn closed and then open differs by a single edge, which is not a read at a
+// glance and is exactly what the ⛔ above forbids.
+//
+// ⛔ NO GLOBAL GLOW CONSTANT IS TOUCHED. glowStroke's wide pass is
+// `width * C.GLOW_WIDE_W`, so a narrower width here is literally a harder edge
+// rather than a metaphor for one — but GLOW_WIDE_W, GLOW_WIDE_ALPHA and
+// GLOW_THIN_ALPHA are shared with the well and every other entity, and retuning
+// one of them is an art pass across the whole build. Both Drifter states are
+// per-entity multipliers only.
+//
+// ⛔ THE FULL-ALPHA RULE THE OTHER FOUR ENEMIES CARRY DOES NOT APPLY HERE, and
+// that is not a hole in GDD 10.3. That rule is about what may be drawn OVER the
+// throat zone — explosions, particles, popups, the things that hide an
+// approaching enemy — and it is why the Vaulter, the Carrier, the Weaver and
+// the bolt never fade. The Drifter's alpha is not a distance fade: it is
+// constant with depth and it IS the feature. ⚠ Which means C.DRIFT_RIDE_ALPHA
+// is the one constant in this file that can make an enemy hard to see at the
+// throat, and judging it there is a playtest ask rather than an assertion.
+
+// ⛔ GDD 18 item 3: ours. GDD 6.1's silhouette is a "tumbling spark cluster",
+// and the two shapes below are the same cluster clenched and then thrown open.
+//
+// RIDING is a closed, irregular five-point knot with no axis of symmetry — a
+// clenched thing sitting ON the boundary line, not spanning across it. It
+// reaches only ~0.66 of the lane extent the crossing shape does, so the compact
+// read survives even where the line weight and alpha do not (deep in the
+// throat, where every stroke is thin).
+//
+// ⛔ It must be unmistakable from the Vaulter's flattened X, so there is no
+// four-armed radial shape here and no arm tips at all: the Vaulter is a
+// symmetric wingspan blocking a lane, and this is a lump riding an edge.
+//
+// Shape DATA, the same class of thing as WELLS' rim polygons. The lane extent
+// is scaled by C.DRIFTER_SIZE; the depth extent is not (entityPoints scales `d`
+// by C.ENEMY_DEPTH_SCALE alone).
+const DRIFTER_POLY_RIDE = [
+  { l:  0.06, d: -0.62 },
+  { l:  0.62, d: -0.10 },
+  { l:  0.34, d:  0.56 },
+  { l: -0.40, d:  0.50 },
+  { l: -0.66, d: -0.18 },
+];
+
+// CROSSING is the same cluster coming apart: an OPEN path that zigzags out past
+// both edges of the shape it was, crossing its own centre three times. Open is
+// half of GDD 12's promise, and the reversals are what make it read as a
+// scatter rather than as a bigger version of the knot — a closed version of
+// these points would be a spiky blob and would read as the same creature.
+//
+// `l` reaches exactly ±1 at the extremes, so C.DRIFTER_SIZE means on this what
+// it means on every other silhouette: the lane widths the shape spans.
+const DRIFTER_POLY_CROSS = [
+  { l: -1.00, d:  0.06 },
+  { l: -0.30, d: -0.34 },
+  { l: -0.46, d:  0.88 },
+  { l:  0.08, d: -0.06 },
+  { l:  0.52, d:  0.92 },
+  { l:  0.30, d: -0.42 },
+  { l:  1.00, d: -0.04 },
+];
+
+// ⛔ drawPoly + glowStroke, one path, no fill (GDD 10.2). `riding` selects all
+// three channels at once and is the entity's own phase (07-enemies.js) rather
+// than anything this module decides — which is why the two states can never
+// drift apart from the two behaviours.
+//
+// ⛔ Note that `riding` IS the `closed` argument. That is not a coincidence
+// being exploited: GDD 12 promises the player SOLID = ARMOURED, and armoured is
+// exactly the riding phase, so the two are the same boolean and writing them as
+// one is what stops a later edit changing the shape without changing the rule.
+function drawDrifter(ctx, well, lane, depth, riding) {
+  const poly = riding ? DRIFTER_POLY_RIDE : DRIFTER_POLY_CROSS;
+  const width = laneLineWidth(depth) * (riding ? C.DRIFT_RIDE_WIDTH : C.DRIFT_CROSS_WIDTH);
+  drawPoly(ctx, entityPoints(well, lane, depth, poly, C.DRIFTER_SIZE), riding);
+  glowStroke(ctx, C.DRIFTER_COLOR, width, riding ? C.DRIFT_RIDE_ALPHA : 1);
+}

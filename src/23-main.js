@@ -209,6 +209,7 @@ const Game = (function () {
       spawnCarrier: ["2"],
       spawnWeaver:  ["3"],
       spawnThorn:   ["4"],
+      spawnDrifter: ["5"],
       spawnRow:     ["0"],
     },
     onAction:         runAction,
@@ -216,26 +217,32 @@ const Game = (function () {
 
   // ⚠ TEMPORARY — THE DEBUG BENCH, with C.DEBUG_SPAWN_KINDS (00-config.js).
   //
-  // GDD 8.1 introduces the Carrier at L3 and the Weaver and Thorn at L5, but
-  // the introduction schedule and the heat clock are CS006's, so nothing new
-  // spawns on its own yet. These five keys are how the roster is judged on
-  // hardware before that exists. GDD 8.1's schedule is what deletes them.
+  // GDD 8.1 introduces the Carrier at L3, the Weaver and Thorn at L5 and the
+  // Drifter at L9, but the introduction schedule and the heat clock are CS006's,
+  // so nothing new spawns on its own yet. These keys are how the roster is
+  // judged on hardware before that exists. GDD 8.1's schedule is what deletes
+  // them.
   //
   // ⛔ A kind that is not in ENEMY_KINDS yet is a NO-OP, not a throw:
-  // spawnEnemy() returns null for an unknown kind, so P2 through P4 light
-  // these up by adding a row to that table and touching nothing here.
+  // spawnEnemy() returns null for an unknown kind, so a later phase lights one
+  // up by adding a row to that table and touching nothing here. CS005 P3's
+  // `6` / spawnSurger is the last one waiting.
   //
-  // ⛔ THESE ARE ENEMY_KINDS STRINGS, NOT ROSTER NAMES, and the Carrier is where
-  // the two stop coinciding: GDD 6.2 gives it three variants and 08-spawner.js
-  // carries one row per variant, so the bench key that shows "a Carrier" has to
-  // name one of them. It names the only one CS004 builds. CS005's two rows do
-  // not get their own keys — the bench has five and the roster has six, and
-  // pressing 2 to see the hull and a glyph is what this is for.
+  // ⛔ ONE KEY PER GDD 6.1 ROSTER ROW, and ⛔ THESE ARE ENEMY_KINDS STRINGS
+  // RATHER THAN ROSTER NAMES — the Carrier is where the two stop coinciding.
+  // GDD 6.2 gives it three variants and 08-spawner.js carries one row per
+  // variant, so the bench key that shows "a Carrier" has to name one of them.
+  // It names the only one CS004 built, and ⛔ CS005's two further variant rows
+  // (carrierDrifter, carrierSurger) get no keys of their own: pressing 2 to see
+  // a hull and a glyph is what this is for. Six roster keys plus the row is
+  // where the bench stops; if a later changeset wants more, collapse it to a
+  // select-and-spawn pair rather than growing the digits.
   const DEBUG_SPAWN_ACTIONS = {
     spawnVaulter: "vaulter",
     spawnCarrier: "carrierVaulter",
     spawnWeaver:  "weaver",
     spawnThorn:   "thorn",
+    spawnDrifter: "drifter",
   };
 
   // The Classic roster in GDD 6.1's order, which is also the order they are
