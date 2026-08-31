@@ -89,3 +89,34 @@ in the roadmap's cut order.
 **A changeset roadmap now exists as `ROADMAP.md`**, its own file rather than a
 section here — it is edited every time a changeset is renumbered, and this file
 is append-only.
+
+## 2026-08-30 — the Drifter's `killDepth`, decided against two shipped comments
+
+**The question.** `PLANNED-FEATURES-CS005.md` and `STATUS.md`'s carried-task
+list both said the Drifter's `killDepth` is **`0`**, on the reading of GDD
+§6.1's "Kills by contact, **any depth**, instant". CS005 P2 had to write the
+number, and no plan doc covered the conflict, so the call was made in-phase and
+is recorded here rather than in the log alone.
+
+**The call: `killDepth = 1 - C.RIM_CONTACT_DEPTH`, the same value every other
+contact-killing enemy carries.** `collideSkimmer()` is `depth >= killDepth` plus
+a lane match and it has **no term for where the Skimmer is** — the Skimmer is
+always at the rim, so the depth test is entirely about the enemy. A `killDepth`
+of `0` therefore does not mean "kills at any depth on contact"; it means "is
+lethal from the throat, on its spawn step, before it has been seen". §6.1's
+phrase is about the *absence of a state gate* — a Drifter kills whether it is
+riding or crossing, where a Weaver's body never kills at all — and not about the
+depth comparison.
+
+**Why it needed a decision entry.** It was made **against two shipped comments**
+that predicted the opposite: `07-enemies.js`'s base class said "NOTHING IN THE
+ROSTER IS ZERO" and `09-collision.js`'s `collideSkimmer` header said a zero here
+is an unaccountable death. Both were true when written. P2 corrected five
+passages that carried the wrong value; P3 then shipped a Surger whose discharge
+mutates the field **to `0` transiently**, which makes both of the old comments
+half-true rather than simply wrong, and both now say which kind of zero they
+mean. ⛔ A future session that finds §6.1's "any depth" and "corrects" the
+Drifter back to `0` re-introduces a death from the throat on the spawn step.
+
+**What would change it.** A `collideSkimmer()` that took the Skimmer's position
+as a term. Nothing else.

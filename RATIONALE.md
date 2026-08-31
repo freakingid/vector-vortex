@@ -115,3 +115,67 @@ depending on the entity holding it is a smell. The answer is not to forbid it �
 one line of collision code is worth a great deal — but to make the difference
 *declared*, on the entity, where every system that writes `depth` can ask. The
 declaration is the field.
+
+---
+
+## #boundary-lattice
+
+`CLAUDE.md`'s math-and-lifecycle section says the fold bounds are a parameter,
+that `boundaryFrom()` is a separate helper, and that an open well's two
+outermost boundaries are not addressable. Three rules, three reasons.
+
+**Why the fold bounds are a parameter rather than a second helper.** There is
+exactly **one mirror-fold in this build**, and `#depth-model` names duplicating
+that class of math as the thing that produces subtle bugs everywhere
+downstream. Two entities want different **bounds**, not different arithmetic: a
+lane-centre entity's extreme legal positions are `0` and `lanes-1`, a boundary
+rider's are `0.5` and `lanes-1.5`. Folded about the *centre* bounds, a cross
+from `0.5` lands back on `0.5` — the entity announces itself as shootable, and
+then does not move for a whole crossing window, which is the invulnerability
+read in GDD §6.3 failing in the direction the player cannot see. A second
+helper would have made that a copy of eight lines with two constants changed,
+and the copy is what rots. The parameter has a default, so the Vaulter's call
+site is unchanged and is pinned bit-identical to the pre-change build by a
+16,856-case sweep (`scratchpad/test-cs005-p1.js`).
+
+**Why a rider is born at a lane centre and crosses onto the lattice.** Not a
+feel decision — a *seam* decision. `spawnEnemy(kind, lane, depth)` is the one
+entry point (GDD §6.5) and it is a function of three scalars; teaching it which
+entities have a lattice would put entity knowledge inside the spawner and would
+have to be repeated in `splitLanes()`, in the debug bench, and in every future
+caller. So the entity does it, on its first `update()`, where it already has the
+`well` it needs. That the result is also the better *read* — a Drifter emerges
+from the throat visibly vulnerable and only arms once it settles, at the depth
+where the player has the most time — is a dividend, not the reason.
+
+⛔ **`boundaryFrom()` does not go through `laneHop`, and that is not the
+duplication the first rule forbids.** They answer different questions. `laneHop`
+reflects a whole step about a bound; `boundaryFrom` takes a **half** step from
+an **off-lattice** start, and folding an off-lattice start about the lattice
+bounds overshoots — `laneHop(Vee, 0, -0.5, -1, 0.5, 11.5)` returns lane `1.5`, a
+lane and a half in one cross time, which a soak reads as a teleport. One
+reversal always suffices, proven by exhaustion rather than argued: from an
+integer centre only two births in a whole well can fail, and every shipped well
+is at least eleven lanes wide.
+
+**Why the outermost boundaries are undrawable, which is what makes them
+illegal.** The tempting reading is that `laneClamp` would simply refuse them, so
+the rule is a restatement of the clamp. It is not. `polyAt()` clamps an open
+well's vertex parameter to `[0.5, n - 0.5]`, which is lane `[0, n-1]` — so lane
+`-0.5` and lane `n - 0.5` **project to the same points as the lane centres `0`
+and `n - 1`**. An entity placed on a wall would be drawn exactly on top of
+whatever is standing in the end lane: one silhouette carrying two threats, which
+is GDD §1.1 P2 failing at the position where the player has the least room. The
+ridable boundaries are therefore the strip's interior rim vertices — `lanes - 1`
+of the `lanes + 1` it has. ⚠ A closed well has no walls, so all `lanes`
+boundaries are legal and `laneBoundaryHi` is `lanes - 0.5`, which `polyAt`
+resolves to vertex 0 the long way round the seam. That asymmetry looks like an
+oversight and is forced by the same geometry.
+
+**What this bought, measured.** CS005 P5 mutated a rider's cross to wrap instead
+of fold. A range check stayed green (`laneNormalize` clamps the in-flight lane
+back into `[0, lanes-1]`) and so did a per-tick lane **speed** bound, because
+the cross duration scales with the cross distance — a wrapped cross is not
+faster, only longer. The lattice assertion is what went red. ⛔ On a boundary
+rider the lattice is not a nicety on top of §17 item 3; it is where item 3
+actually stands.

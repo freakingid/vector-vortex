@@ -640,7 +640,7 @@ overflow from P2 or P3.
 > **5. Twenty seeded runs to game over** on the six-kind list, no exception, no
 > stuck run, no NaN, no unbounded array. §17 item 12 at a closing phase's budget.
 >
-> **6. Docs, and there are five of them.**
+> **6. Docs, and there are seven of them.**
 >
 > - **GDD.** §3.5 gains the boundary lattice (P1 wrote the first draft — confirm
 >   it reads right now that two entities exercise it). §6.1's two rows and §6.3's
@@ -648,23 +648,116 @@ overflow from P2 or P3.
 >   §6.5's `killDepth` row notes the roster's first mutated field. ⛔ Check §0 has
 >   a row for everything this changeset edited; if it does not, that is a defect
 >   in §0 and it goes in `STATUS.md`.
-> - **`CLAUDE.md`.** The Math and lifecycle section gains a line: the boundary
->   lattice exists, `laneHop`'s fold bounds are a parameter, and the two
->   outermost boundaries of an open well are not addressable. Keep it a rule, not
->   a reason. ⛔ Under 50 KB.
+>
+> - **`CLAUDE.md`.** Three small edits and ⛔ **nothing else — do not sweep it.**
+>   It measures 21.8 KB against its own 50 KB ceiling (44%), and its valve rule
+>   is explicit: the valve fires when an over-size section is next edited, never
+>   as a standing cleanup. Trimming it now would be re-litigating a rule that is
+>   not firing.
+>   1. The *Math and lifecycle* section gains a line: the boundary lattice
+>      exists, `laneHop`'s fold bounds are a parameter defaulting to the
+>      lane-centre range, and the two outermost boundaries of an open well are
+>      not addressable. Keep it a rule, not a reason — the reason goes in
+>      `RATIONALE.md`.
+>   2. The *Document map* gains a row for `PLAYTEST.md`: *"Open questions only
+>      the eye can answer."* Read it? **Never by default** — the same contract
+>      `log/` and `archive/` carry.
+>   3. The *STATUS.md format* section gains one line: ⛔ **playtest asks live in
+>      `PLAYTEST.md`, not here.** That is the recurrence guard and it is the only
+>      new rule this changeset adds.
+>
+> - **`PLAYTEST.md`.** New, on-demand, at the repo root. See section 7.
+>
 > - **`RATIONALE.md`.** A new `#boundary-lattice` anchor holding the reasons
 >   `CLAUDE.md` does not: why the fold bounds are a parameter rather than a
->   second helper, why a Drifter is born at a lane centre, and the `polyAt` clamp
->   that makes the outer boundaries undrawable.
-> - **`DECISIONS.md`.** One dated entry for the `killDepth` call in P2 — it was
->   made outside the phase flow, against two shipped comments, and it is the kind
->   of thing a future session will rediscover and want to "fix".
-> - **`ROADMAP.md`.** CS005's row against what actually shipped. Note whether the
->   changeset held as one or wanted the seam after P2, and update assumption #2.
+>   second helper, why a Drifter is born at a lane centre and crosses onto the
+>   lattice, and the `polyAt` clamp that makes the outer boundaries undrawable.
 >
-> **7. `STATUS.md` and the log.** Move the whole thing to `log/CS005.md`, reset
-> `STATUS.md` for CS006, and write the "Next up" section from what CS005 leaves
-> on the table. ⛔ Carry these forward explicitly:
+> - **`DECISIONS.md`.** One dated entry for the `killDepth` call in P2 — it was
+>   made outside the phase flow, against two shipped comments, and it is exactly
+>   the kind of thing a future session rediscovers and wants to "fix".
+>
+> - **`ROADMAP.md`.** Two things:
+>   1. CS005's row against what actually shipped. Note whether the changeset held
+>      as one or wanted the seam after P2, and update assumption #2.
+>   2. ⛔ **A new note under "Still open, and not owned by a changeset":
+>      `src/07-enemies.js` wants splitting, and the moment is CS011.** Measured,
+>      not felt: it went **39 KB / 550 lines at CS004 close to 64.8 KB / 1269
+>      lines at CS005 P3** — 66% growth for two entities — and it is 65% comment
+>      by line, which is correct and is the point. CS011 and CS012 add three more
+>      entities (Reaver, Warden, Mimic), which puts it past 100 KB. ⛔ **Not now
+>      and not as its own changeset:** the natural seam is Classic versus
+>      Overdrive, the natural moment is CS011 when a new module is being created
+>      anyway, and `build.js`'s two-way `MANIFEST` check makes adding one cheap
+>      and safe. Recording it here is what stops it being rediscovered as a
+>      surprise. Assumption #7 says no changeset is reserved for refactoring;
+>      this is the alternative that rule asks for.
+>
+> - **`log/CS005.md`.** Section 8.
+>
+> **7. ⛔ `PLAYTEST.md`, and the `STATUS.md` trim.**
+>
+> `STATUS.md` is **407 lines against its own ⛔ ~400-line ceiling**, mid
+> changeset, and it is now larger than `CLAUDE.md` — both auto-load into every
+> session with no opt-out. Measure it yourself before and after
+> (`wc -l STATUS.md`) and put both numbers in `log/CS005.md`.
+>
+> The overage is two sections carrying content their own rules put elsewhere:
+>
+> - **Playtest asks: 88 lines, 22% of the file.** Questions for Paul, at
+>   hardware. No build session can act on any of them, and every build session
+>   loads all eighty-eight.
+> - **Per-phase findings: 62 lines** across P2 and P3. `CLAUDE.md` says plainly:
+>   *"A phase entry is one line in the ledger, ~200 words maximum in the body.
+>   Reasoning goes in `log/CS0##.md`."*
+>
+> What to do:
+>
+> 1. ⛔ **`PLAYTEST.md` has been written and is at the repo root already.** It
+>    was extracted from `STATUS.md` and grouped by debug key, with a read
+>    contract and a maintenance rule at the top. ⛔ **Do not rewrite it and do
+>    not regenerate it from `STATUS.md`** — it is the source of truth for those
+>    asks now. If it is somehow not there, stop and say so rather than
+>    reconstructing it.
+>
+>    ⛔ **IT WAS EXTRACTED AT P3 AND IS THEREFORE INCOMPLETE.** Whatever P4 added
+>    to `STATUS.md`'s "Playtest asks" section is **not** in it. Do not read step
+>    3 as "the section is already covered, delete it."
+>
+> 2. ⛔ **Move P4's asks across BEFORE step 3, and diff to prove it.** Read
+>    `STATUS.md`'s "Playtest asks" section against `PLAYTEST.md` and move over
+>    every ask that is not already there, into the section it belongs to. Then
+>    add P5's own. One ⛔ per phase at most: the ask the phase exists for. P4's
+>    is the cargo glyph at throat depth for the two new rows, since §6.2's
+>    correct responses are opposite and a misread does the exact wrong thing.
+>
+>    ⛔ **Report the arithmetic in your closing message**: how many asks were in
+>    `STATUS.md`, how many were already in `PLAYTEST.md`, how many you moved, and
+>    the final count. Those numbers must add up. An ask lost here is lost
+>    silently and nothing downstream will ever notice.
+>
+> 3. ⛔ **Only then, delete the whole "Playtest asks" section from `STATUS.md`.**
+>    Not moved to `log/CS005.md` — the log is ⛔ never read by default, and
+>    burying open questions there loses them. The log gets one line saying where
+>    they went.
+> 4. **Collapse the P2 and P3 findings sections** into the ledger's ~200-word
+>    bodies. The reasoning goes to `log/CS005.md`, in full, where it belongs.
+>    Nothing is deleted — it relocates to a document already on an on-demand
+>    contract, which is the same valve `CLAUDE.md` uses on itself.
+>
+> **8. The reset, the log, and the close.**
+>
+> Move what remains to `log/CS005.md`, reset `STATUS.md` for CS006, and write
+> the "Next up" section from what CS005 leaves on the table.
+>
+> ⛔ **The reset has a target: under 250 lines.** The ~400 ceiling has to cover
+> the *whole* of CS006's life, and CS006 is five or six phases each adding a
+> ledger entry. Opening at 180–250 leaves the headroom; opening at 350 means the
+> ceiling is breached by P3 again, which is what happened here. State the opening
+> line count in `log/CS005.md` so the next close has something to compare
+> against.
+>
+> ⛔ Carry these forward into the new `STATUS.md` explicitly:
 >
 > - The spawner stall is still unfixed and still CS006's. CS005 did **not** make
 >   it reachable — the stall needs Thorns, which need Weavers, which need
@@ -677,15 +770,22 @@ overflow from P2 or P3.
 > - `tools/glow-lab.html` still does not exist and still has no owner. Record
 >   what CS005 did instead — the three-channel separation gate — and that the lab
 >   is for the **global** glow constants, which this changeset did not touch.
+>   ⛔ One line and a pointer to `PLAYTEST.md`'s palette section, not a
+>   restatement of it.
 > - The whole enemy palette is still ⚠ provisional, and both CS005 colours are
->   now readable on hardware for the first time.
-> - Playtest asks. At minimum: can you tell an armoured Drifter from a crossing
->   one **at a glance**, on a busy well, on the cyan band — that is §6.3's ⛔ and
->   the eye is the only judge of it. Does the fuse read as *travelling up the
->   lane at you*, and can you tell it from a Thorn at L13's cyan band? Is
->   `C.DRIFT_RIDE_TIME` 0.85 the right armour budget, or does the Drifter read as
->   an enemy you cannot answer? Does a boundary Drifter threatening two lanes at
->   once feel like its identity or like an unfair hitbox?
+>   readable on hardware for the first time.
+> - The `07-enemies.js` seam, as one line pointing at `ROADMAP.md`. ⛔ Do not
+>   restate the measurement in two places.
+> - ⛔ **No playtest asks.** They are in `PLAYTEST.md` now. A "see `PLAYTEST.md`"
+>   pointer under Known issues is the whole of it.
+>
+> ⛔ Archive `PLANNED-FEATURES-CS005.md` and `IMPLEMENTATION-PHASES-CS005.md`.
+>
+> **Finish by reporting four numbers**, in `log/CS005.md` and in your closing
+> message: `STATUS.md` lines before and after, `CLAUDE.md` bytes (it should not
+> have moved much), and `PLAYTEST.md` line count. This changeset is the first
+> that measured a document rather than trusting it, and the next close needs a
+> baseline.
 >
 > ⛔ Version bump in `log/CS005.md`, not a central changelog. ⛔ Edit every
 > document in place. ⛔ `node build.js` and `node scratchpad/run-all.js` green,
@@ -703,4 +803,8 @@ overflow from P2 or P3.
 | 4 | P4 is medium effort | CS004 wrote its tests already, as loops. Three table rows and two glyphs against cases that exist. It is also where P2 or P3 overflow lands |
 | 5 | P5 writes a third soak rather than editing two | Verified that neither closed soak's board can contain a CS005 entity, so the edit is unnecessary as well as forbidden. The `git diff --stat` check at the close is what makes that a result rather than an intention |
 | 6 | Every phase runs `run-all.js` before committing, and a red CS004 file means stop | Three closed test files start exercising CS005's entities automatically. If one goes red, the new entity is wrong — editing the test to match would destroy the signal that caught it |
-| 7 | The `killDepth` call gets a `DECISIONS.md` entry, not just a code comment | It was made outside the phase flow, it contradicts two shipped comments, and it is exactly the shape of thing a future session rediscovers and "fixes" |
+| 7 | The `killDepth` call gets a `DECISIONS.md` entry, not just a code comment | It was made outside the phase flow, it contradicts two shipped comments, and it is exactly the shape of thing a future session rediscovers and "fixes" || 8 | ⛔ The `STATUS.md` overage is fixed inside P5, not as its own changeset and not as a mid-flight tidy | P5 already resets `STATUS.md` — it is the valve, and it fires in one phase. A separate changeset for ~150 lines of relocation costs a session to save one, and a mid-flight tidy breaks "one phase per session" for no gain. ⚠ This IS scope growth on a changeset in flight, taken deliberately and confined to the closing phase. If the trim runs long, that is the signal it was a real refactor and should have been scoped |
+| 9 | Playtest asks get their own file rather than going to `log/CS005.md` | The log is ⛔ never read by default; twenty-four open asks, two of them ⛔ readability invariants, would be lost there. `PLAYTEST.md` costs one row in the document map and introduces no new concept — it is the contract `RATIONALE.md` and `DECISIONS.md` already use. ⛔ Answered asks are deleted, not archived: if an answer mattered it changed a constant or a design, and those have homes |
+| 10 | ⛔ `CLAUDE.md` is added to, never swept | It is at 44% of its ceiling and its own valve rule forbids a standing sweep. Three additions take it to roughly 22.3 KB. If it ever passes 40 KB the valve should be brought forward deliberately rather than tripped |
+| 11 | `src/07-enemies.js` is noted in `ROADMAP.md` and split at CS011, not now | P4 adds about thirty lines to it, so splitting now buys nothing and costs a phase. CS011 creates a module anyway and the Classic/Overdrive seam is real rather than arbitrary. If CS006's heat pass turns out to touch every enemy class, that is a second reason and would bring it forward |
+| 12 | ⛔ The reset target is under 250 lines, stated and measured | The ~400 ceiling covers a whole changeset's life, not its first day. Without an opening target the ceiling is breached mid-changeset every time, which is exactly what happened here. If CS006 opens at 250 and still breaches, the ceiling is wrong rather than the reset |

@@ -90,6 +90,7 @@ problem. Never use "Tempest" or a `T-####` naming pattern in any file.
 | `RATIONALE.md` | Why the rules here exist. | On demand only |
 | `DECISIONS.md` | Judgment calls made outside the phase flow. | On demand only |
 | `ROADMAP.md` | Changeset sequence to ship. | On demand only |
+| `PLAYTEST.md` | Open questions only the eye can answer. | **Never by default** |
 | `log/CS0##.md` | Per-changeset narrative log + version history. | **Never by default** |
 | `archive/` | Spent planning docs. | **Never by default** |
 
@@ -117,6 +118,9 @@ Reasoning goes in `log/CS0##.md`.
 ⛔ **Every entry starts on its own paragraph (`\n\n`).** If you append with a
 shell redirect, verify the entry actually begins a new paragraph — a missing
 trailing newline fuses entries into one unreadable line.
+
+⛔ **Playtest asks live in `PLAYTEST.md`, not here.** A question only a player
+at a screen can answer is a tax on every build session that loads it.
 
 ---
 
@@ -184,6 +188,16 @@ most common source of subtle bugs here.
 tactical system: the Skimmer clamps at the ends, **and enemy lane-hopping must
 reverse at the wall rather than wrap.** Clamping the player but leaving enemy AI
 wrapping produces enemies that teleport across the well.
+
+⛔ **A lane BOUNDARY is the half-integer between two lane centres, and the
+boundary lattice is a second set of legal positions.** `laneHop`'s fold bounds
+are a **parameter**, defaulting to the lane-centre range `0 … lanes-1`; a
+boundary rider passes `laneBoundaryLo(well)` / `laneBoundaryHi(well)` instead.
+⛔ **An open well's two outermost boundaries are not addressable** — `polyAt`
+clamps them onto the lane centres `0` and `lanes-1`, so an entity there is a
+second silhouette on top of a first. A rider is born at a lane centre and
+crosses onto the lattice through `boundaryFrom()`, which does **not** go through
+`laneHop`. See `RATIONALE.md#boundary-lattice`.
 
 ⛔ **Entity lifecycle: class with `constructor` / `update(dt)` / `draw()` /
 `dead`.** Kill by setting `dead = true`; remove with an end-of-frame `.filter()`.

@@ -17,7 +17,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS002** | Fixed-timestep loop, one input struct across four devices, Skimmer movement and snap assist, shots, `tools/feel-lab.html` | §2, §4.1–4.2, §9, §16.1 |
 | **CS003** | Entity spine: the class contract, spawner, collision, the Vaulter, well-clear, death and respawn, the Purge | §4.3–4.5, §6.1, §6.3, §6.5 |
 | **CS004** | The Carrier and its split, the Weaver and its bolt, the Thorn; the `anchored` contract field and the debug spawn bench | §4.2, §4.5, §6.1–6.3, §6.5 |
-| **CS005** | The Drifter and the Surger: lane-boundary riding and the `laneHop` fold-point fix, the discharge telegraph, the remaining two cargo rows | §6.1–6.3, §3.5 |
+| **CS005** | The Drifter and the Surger: the boundary lattice and `laneHop`'s fold-bound parameter, the discharge telegraph, the remaining two cargo rows | §6.1–6.3, §3.5, §6.5 |
 | **CS006** | Level flow: the Dive, well progression and colour bands, the heat clock, the introduction schedule, telemetry as the tuning instrument | §5, §3.6–3.7, §8, §15.6 |
 | **CS007** | Front of house: scoring and extra lives, HUD, screen state machine, title → mode → Start Depth → play → game over | §4.6, §7, §10.4, §13 |
 | **CS008** | Audio engine: `AudioSys` + `MusicSys`, per-frame lookahead scheduler, voices, `tools/music-lab.html` with the per-layer solo button, Classic SFX | §11.1–11.3, §11.7–11.8 |
@@ -37,11 +37,31 @@ house* and two that said `CS014` meaning *ship* — the whole tail shifted, not
 just the one label — and swept all of them. If you find another, it means the
 same thing: read it, decide what it meant, and add one.
 
-**CS001 through CS004 are closed.** Their narratives are in `log/CS00#.md`;
-`STATUS.md` carries only the changeset in flight. CS004's row below is what
+**CS001 through CS005 are closed.** Their narratives are in `log/CS00#.md`;
+`STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
 scoring, both of which it deliberately left to CS006 and CS007.
+
+**CS005 held as ONE changeset and did not want the seam after P2.** Five phases,
+in the order the row above names them: the boundary lattice (P1), the Drifter
+(P2), the Surger (P3), the two cargo rows (P4), the soak and the close (P5). The
+plan's own worry was that P1's geometry plus two entities plus two cargo rows
+was two changesets' work; it was not, and the reason is that ⛔ **P1 shipped no
+entity.** A phase of pure geometry, pinned bit-identical to the previous build
+by a 16,856-case sweep, is what let P2 and P3 each be one entity against a
+settled helper rather than an entity *and* an argument about lane arithmetic.
+⚠ The one thing that did grow past its estimate was `src/07-enemies.js` — see
+below, and it is CS011's.
+
+**What CS005 shipped against the row: everything, plus one field mutation the
+plan did not have.** The Classic roster is complete at six, GDD §6.2's variant
+table is complete at three, and four of GDD §4.5's five death conditions are
+live (only item 5, a Thorn during the Dive, is unwired, and it is not a
+`killDepth`). ⛔ The Surger expresses §4.5 item 3 by **mutating `killDepth` to
+`0` and restoring it** rather than by an eighth contract field or a branch in
+the collision pass — recorded in GDD §6.5 and `DECISIONS.md`, and the roster's
+first mutated contract field.
 
 ---
 
@@ -104,10 +124,12 @@ these three cuts touches another changeset's code.
 
 ## Still open, and not owned by a changeset
 
-Design calls for Paul, all carried in `STATUS.md`. The first two are not enemy
-questions, so CS004 did not touch them and CS005 will not either. The third is
-an enemy question that only becomes reachable when the introduction schedule
-lands, which is why it is named against CS006 rather than left unowned.
+Design calls for Paul, all carried in `STATUS.md`, plus one measured
+engineering note that is not a design call at all. The first two are not enemy
+questions, so neither CS004 nor CS005 touched them. The third is an enemy
+question that only becomes reachable when the introduction schedule lands, which
+is why it is named against CS006 rather than left unowned. The last is the
+module seam, named against CS011 for the same reason.
 
 - **GDD §3.3's `throatOffset` is undefined.** No well uses it and the GDD never
   says what it offsets; `wellThroat()` defaults it to zero.
@@ -125,6 +147,24 @@ lands, which is why it is named against CS006 rather than left unowned.
   progression. ⚠ `STATUS.md` used to attribute a CS004 landing spot to this
   file, which was never in it; CS004 P1 corrected that line and both documents
   now say CS006.
+- ⛔ **`src/07-enemies.js` wants splitting, and the moment is CS011.** Measured
+  at the CS005 close, not felt: it went from **39.1 KB / 782 lines** at CS004
+  close (`74fb50c`) to **65.2 KB / 1,277 lines** — **+67% by size for two
+  entities** — and it is **65% comment by line** (833 of 1,277), which is
+  correct and is the point: this is the file where an entity's contract, its
+  cycle and every judgment call behind them are written down. CS011 and CS012
+  add three more entities (Reaver, Warden, Mimic), which puts it past 100 KB.
+
+  ⛔ **Not now, and not as its own changeset.** The natural seam is **Classic
+  versus Overdrive** — it falls exactly where the roster does, so it is a move
+  and not a redesign — and the natural moment is **CS011**, when a new enemy
+  module is being created anyway and the split costs one file that was going to
+  be written regardless. `build.js`'s two-way `MANIFEST` check makes adding a
+  module cheap and safe: a file on disk but unlisted fails the build, and so
+  does a file listed but absent. Assumption #7 says no changeset is reserved for
+  refactoring; ⛔ **this note is the alternative that rule asks for** — recording
+  the measurement and the moment is what stops a future session rediscovering it
+  as a surprise and taking the seam somewhere worse.
 
 ---
 
@@ -133,7 +173,7 @@ lands, which is why it is named against CS006 rather than left unowned.
 | # | Decision | What would change it |
 |---|---|---|
 | 1 | Fifteen changesets, sized so each holds 3–5 phases of one session each | A phase that repeatedly overruns a session means the changeset was too coarse; split it rather than letting phases sprawl |
-| 2 | Enemies split across three changesets: spine plus one enemy, then the three that fit the contract, then the two that need new machinery | Originally two. CS004's scope check found a contract field missing, a `laneHop` degeneracy the Drifter is the first entity to reach, and two cargo rows that cannot be built before their cargo. If CS005 turns out to be two clean sessions, merge it back and renumber again |
+| 2 | ✅ **Settled — enemies split across three changesets**, and the split was right. Spine plus one enemy (CS003), the three that fit the contract (CS004), the two that needed new machinery (CS005) | Originally two. CS004's scope check found a contract field missing, a `laneHop` degeneracy the Drifter is the first entity to reach, and two cargo rows that cannot be built before their cargo. The open question left here was whether CS005 was really two sessions; it was **five phases in one changeset and wanted no seam**, because P1 shipped geometry and no entity, which is what kept P2 and P3 to one entity each. ⛔ Nothing further changes this — the Classic roster is complete. The three Overdrive enemies are CS011 and CS012 and are scoped there |
 | 3 | Telemetry ships in CS006 with the heat clock, not in CS010 with the other meta systems | It is a tuning instrument, and the tuning it serves is difficulty. If difficulty tuning turns out to need nothing beyond `feel-lab`, move it back to CS010 |
 | 4 | Meta (CS010) sits after audio, not before | Meta's only external dependency is the Worker registry entry, which Paul can make in parallel today. If that registration proves slow, move CS010 earlier |
 | 5 | Front of house (CS007) comes before audio | The audio director reads score, combo, lives and level; specifying it against a real HUD and a real game-over path is cheaper than against placeholders |
