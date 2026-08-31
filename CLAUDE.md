@@ -193,6 +193,20 @@ Never splice mid-loop.
 pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order,
 and the well-clear condition. **Decide explicitly whether the Purge destroys it.**
 
+⛔ **`anchored` says what `depth` MEANS on an entity, not whether it moves.**
+`false` is a position; `true` is a length — the tip of an extent rooted at the
+throat, which is the Thorn and nothing else. A stationary enemy whose `depth` is
+still a position is `false`. Its one reader is `respawnSkimmer()`, which skips
+anchored entities: clamping a length is not GDD §4.4's push but a free chip.
+⚠ That is **not** a narrowing of §4.4's SETTLED band. See
+`RATIONALE.md#thorn-depth`.
+
+⚠ **SETTLED — the Purge kills Carriers WITHOUT splitting them, and it does that
+by omission.** `updatePurge()` sets `dead` directly and never calls `onShot()`;
+splitting lives in `Carrier.onShot`. Do not route the Purge through `onShot`
+"for consistency" — a panic button that doubles the enemy count is not a panic
+button. An omission is exactly what a later session unifies away.
+
 ### Rendering
 
 ⛔ **Render through `drawPoly` + `glowStroke`.** New entities define local-space

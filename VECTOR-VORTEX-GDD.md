@@ -270,6 +270,12 @@ The complete list. No chip damage, no health bar.
 
 **Shipped, CS003 P3.** Condition 1 is live, as the one collision pass in `09-collision.js`. ⛔ **Collision is 1-D**: a lane match within `HIT_LANE_TOL` (half a lane either side, via `laneDelta` so a Ring's seam is a neighbourhood and not a fifteen-lane gap) plus an overlap on `depth`. No trigonometry, no screen coordinates, no distance in pixels — a hit test that read a projected point would pass at the rim and fail at the throat, because `perspective()` is not linear. The pass runs once per step in a fixed order (shots against enemies, then enemies against the Skimmer, each front to back), after the entity pass and before the end-of-frame filters; nothing in it splices an array. An enemy kills by contact when its `killDepth` is a number, its `depth` has reached it, and its lane matches — `killDepth === null` means contact never kills, which is the Weaver's body. Shots ask `enemy.onShot(shot)` and the *enemy* decides what a hit does; ⛔ one shot resolves against at most one enemy per step, whether or not that enemy consumed it. Death itself is one call to `killSkimmer()`, which today sets `skimmer.dead` and nothing else — lives, hit-stop, respawn and the game-over stop are CS003 P4's, in that one function.
 
+**Shipped, CS004 P3 — condition 4, with no new collision code.** A Weaver's bolt is `class WeaverBolt` in `07-enemies.js`, an ordinary entity in the one array whose `killDepth` is `1 - C.RIM_CONTACT_DEPTH` — the same expression the Vaulter and the Carrier use. That is the whole of it: the pass above already asks every entity for its `killDepth`, so a second death condition cost three field writes and not one branch. ⛔ The Weaver's own body is the roster's first `null` `killDepth` and never kills, at any depth *including the rim*; §4.5 lists the projectile, and a Weaver sitting on top of the Skimmer is a nuisance. ⚠ That is going to look wrong the first time it is seen and it is correct.
+
+⛔ **The bolt dies at `depth 1` on the step AFTER it arrives, and the ordering is why.** `Game.update()` runs the entity pass, then collision, and `collideSkimmer()` skips anything already `dead` — killing it on the step its depth reaches 1 would make the rim step silently non-lethal. The lethal band starts nine steps earlier, so this is belt and braces, written so the belt does not depend on the braces.
+
+⛔ **Conditions 2, 3 and 5 are still unwired, and 5 is not a `killDepth`.** The Drifter's will be `0` (lethal at any depth) and the Surger's is a discharge rather than a contact, both CS005's. **The Thorn's stays `null` forever**: §4.5 item 5 is "a Thorn *during the Dive*", and the Dive is its own sequence with its own rule — CS006's — not a band at the rim. A future session that "finishes" the Thorn by giving it a `killDepth` makes standing still in a thorned lane fatal, which is not the rule this line describes.
+
 ### 4.6 Start Depth
 
 Options 1, 3, 5, 7, 9 on a first run; thereafter the highest level ever cleared by that profile, snapped down to odd, capped at 81.
@@ -317,7 +323,9 @@ In Overdrive the Dive becomes a ring-flight — §14.5.
 | **Drifter** | Tumbling spark cluster | L9 | Rides lane *boundaries* (invulnerable); crosses lanes (vulnerable); homes near rim | Contact, any depth, instant | Shots only while crossing; Purge anywhere | 250/500/750 by depth |
 | **Surger** | Zigzag bar | L13 | Climbs; periodically electrifies its whole lane | Discharge in your lane | Any shot, Purge | 200 |
 
-**Shipped, CS003 P1. One of the six: the Vaulter.** The Carrier, the Weaver and the Thorn are CS004's; the Drifter and the Surger are CS005's.
+**Shipped, CS003 P1 and CS004. Four of the six: the Vaulter, the Carrier, the Weaver and the Thorn.** The Drifter and the Surger are CS005's, and so are the other two Carrier variants (§6.2).
+
+⚠ **None of them is introduced on a schedule yet.** GDD §8.1's table is CS006's, so until it lands the interval spawner releases whatever ⚠ `C.DEBUG_SPAWN_KINDS` lists — which ships as `["vaulter"]`, so a played build is a Vaulter build. The Carrier does not wait for L3 and the Weaver does not wait for L5 because there is nothing yet that could make them.
 
 | Property | Constant | Value |
 |---|---|---|
@@ -337,6 +345,26 @@ Two timing details that look like polish and are not. The hop timer advances **d
 
 ⚠ A rim Vaulter hunts the Skimmer's *continuous* lane, so a player parked between two lane centres has it hopping back and forth across them. It is lethal either way — contact tolerance is half a lane — and this section says only "direction from `laneDelta`". Flagged for CS006's tuning pass in case the jitter reads as indecision rather than menace.
 
+**Shipped, CS004 — the three new rows, and what each one actually is.**
+
+| Enemy | Constants it shipped with |
+|---|---|
+| **Carrier** | `CARRIER_SIZE` 0.80, `CARRIER_GLYPH_SIZE` 0.34, `CARRIER_CLIMB` 0.11 (throat→rim ≈ 9 s), `CARRIER_COLOR` ⚠ |
+| **Weaver** | `WEAVER_SIZE` 0.62, `WEAVER_CLIMB` 0.22, `WEAVER_RETREAT` 0.34, `WEAVER_APEX` 0.55, `WEAVER_APEX_HOLD` 0.35, `WEAVER_BOLT_SPEED` 0.32, `WEAVER_BOLT_SIZE` 0.30, `WEAVER_COLOR` / `WEAVER_BOLT_COLOR` ⚠ |
+| **Thorn** | `THORN_CHIP` 0.08, `THORN_MAX` 1.00, `THORN_TIP_LEN` 0.05, `THORN_COLOR` ⚠ |
+
+⚠ **The whole enemy palette is provisional**, the same standing as `SKIMMER_COLOR` and `VAULTER_COLOR`: this document specifies none, and CS004 P1 picked all six as ONE SET against the constraint that an enemy colour must read against all seven band colours (§3.6), because the well cycles and the enemies do not. The first art pass owns them and still wants `tools/glow-lab.html`, which does not exist.
+
+⛔ **The Carrier and the Weaver touch no lane helper at all**, and "one lane, never hops" is therefore an absence of code rather than a flag. CS004 P5's soak asserts the strong form — exact lane equality on every tick, on every well — because that is what an entity with no lane arithmetic in it makes available, and because a range check does not catch §3.5's wrapping bug (a hop that wraps a 13-lane strip lands inside `[0, 12]`).
+
+**The Weaver's cycle is a phase string and one up-counting timer** — climb to the apex, hold, retreat faster than it arrived, repeat — and it should be nameable by a player watching it. ⛔ `fired` is a per-**cycle** latch and not a cooldown; the bolt goes out on the FIRST step of the hold, so the player reads it while its parent is still visibly at the apex. A Weaver that arrived *above* the apex turns around from where it is rather than teleporting down to the line, which matters because CS006 makes `WEAVER_APEX` heat-derived and will move it under live entities.
+
+**The Thorn is four flags and an `onShot`.** ⛔ `purgeable = false` (§4.3), ⛔ `blocksClear = false` (§5), `killDepth = null`, ⛔ `anchored = true` (§6.5). `update()` does nothing. A shot stops at its tip, chips `THORN_CHIP` and is **consumed**; a Thorn chipped to zero or below dies. ⚠ **The rapid chip-away under held fire is §4.2's settled emergent behaviour** — a consumed shot frees its `SHOT_MAX` slot the same step, so camping a thorned lane chips fast. Do not rate-limit it.
+
+⛔ **A Weaver GROWS its Thorn and never drops a finished one.** `layThorn()` runs every step of the climb, tracks the tip to the Weaver's own depth, clamps at `THORN_MAX`, and ⛔ **only ever grows** — the cycle sends the Weaver back to the throat, so an unconditional write would saw the segment down again on the second climb. ⛔ It **adopts** a live Thorn already in its lane rather than standing a second one up: two overlapping Thorns are two hit-point pools behind one silhouette, which is §1.1 P2 failing and a scoring oddity at once. A Weaver killed mid-climb leaves its Thorn at the length it reached.
+
+⚠ **A standing Thorn holds a spawner slot.** `updateSpawner()` blocks on `state.enemies.length >= min(ENEMY_CONCURRENT, ENEMY_CAP)`, which counts every entity in the one array — so three Thorns nobody shoots hold the spawner shut and the well never clears. Reachable today only through the debug bench; **live the moment §8.1 introduces Weavers**, and an open design call recorded in `STATUS.md` rather than answered here.
+
 ### 6.2 Carrier variants
 
 Cargo shows as a glyph in the centre. Reading it fast is the skill that separates competent from good.
@@ -349,6 +377,16 @@ Cargo shows as a glyph in the centre. Reading it fast is the skill that separate
 
 The two opposite correct responses make cargo-reading consequential rather than cosmetic.
 
+**Shipped, CS004 P2 — one of the three rows.** `CARGO` (`07-enemies.js`) maps a cargo name to what it splits into, and ⛔ only `vaulter` is buildable: the Drifter and the Surger do not exist, so neither do their rows. The table is a shape with one entry in it and is **not a weighted draw yet** — §8's "cargo weights shift toward Drifter/Surger" is heat, and heat is CS006's.
+
+⛔ **One `ENEMY_KINDS` row per VARIANT, not one for "a Carrier".** The kind is `carrierVaulter`, because the cargo is half of what the entity is — reading the glyph fast is the skill this section is about — so it belongs in the string exactly as the class it becomes belongs in the table. CS005 adds `carrierDrifter` and `carrierSurger` alongside their `CARGO` entries and touches nothing else.
+
+⛔ **"Adjacent" and "flanking" are the same geometry**, and `splitLanes(well, lane)` (`03-wells.js`) serves all three rows. The distinction this section draws is between the correct *responses* — move away versus hold still — which comes from what the cargo does after it lands, not from where it lands. Do not invent a second placement rule to justify the second word; it would be a difference the player cannot see.
+
+⛔ **`splitLanes` shifts the pair inward at an open well's wall; it does not clamp.** `laneNormalize` clamps, so the naive `lane ± 1` puts both children of a lane-0 Carrier into lanes 0 and 1 — two silhouettes in one lane, on the six wells where the player has the least room, at the exact moment they are being asked to read a split. The rule is: shift until both ends are legal and distinct, so the gap stays exactly two lanes at the wall as much as in the middle. A lane-0 parent on the 13-lane Vee yields children at lanes **0 and 2**, and one child therefore still occupies the lane the parent died in. ⚠ Earlier drafts of this said the pair "still straddles the parent's lane"; at a wall that is false — 0 and 2 straddle lane 1 — and the concrete example is the part that was always right.
+
+⛔ **Both children go through `spawnEnemy()`**, so a split inherits §6.3's safe-spawn lowering, `C.ENEMY_CAP` (a split on a full board adds nothing, and "it is only a split" is precisely the bypass one entry point exists to prevent) and two RNG draws. ⚠ **The Purge does not split Carriers**: `updatePurge()` sets `dead` directly and never calls `onShot()`, so a panic button cannot double the enemy count. That works by **omission**, which is exactly the kind of thing a later session "unifies", and it is written down at both sites.
+
 ### 6.3 Behaviour notes that matter
 
 **Vaulters do not vault at level 1.** They climb straight up, which is how the player learns what a lane is. Teach-immediately applied to AI.
@@ -360,6 +398,12 @@ The two opposite correct responses make cargo-reading consequential rather than 
 ⛔ **Never spawn in the Skimmer's lane above `SAFE_SPAWN_DEPTH` (0.75).**
 
 **Shipped, CS003 P1/P2.** The level-1 rule is `C.VAULT_FIRST_LEVEL` and ⛔ **it gates vaulting only.** Rim hunting is *not* gated: §6.1 attaches "from L2" to vaulting, and §12 promises a passive player dies on level 1, which a Vaulter parked politely at the rim cannot deliver. Getting that split wrong in either direction is a level-1 experience that teaches the wrong thing.
+
+**Shipped, CS004 — what the three new entities do and do not read.** ⛔ **Nothing added this changeset reads `well.closed`, and nothing added this changeset hops.** The Carrier, the Weaver, the bolt and the Thorn each write `lane` exactly once, in the constructor. That is deliberate and it is why they behave identically on a Ring and on a Fan: all sixteen topologies live inside `laneHop`/`laneDelta`/`laneNormalize`, and an entity that never asks cannot get the answer wrong.
+
+⛔ **The safe-spawn rule reaches three new callers**, all through the one entry point: the Carrier's split, `Weaver.fire()`, and `Weaver.layThorn()`. Lowering rather than relocating is what makes it safe for all three — a bolt fired from above the line starts deeper, which only ever gives the player more time. ⚠ **On an anchored entity the same rule would SHORTEN rather than lower**, because a Thorn's `depth` is a length; it is harmless because a Thorn is created one climb step above the throat and grown from there, and because the grow runs on the same step. ⛔ Do not reorder those two, and do not teach anything to drop a finished Thorn deep in a lane.
+
+⛔ **A grown Thorn does not block spawns behind it, and that is inherited, not an oversight.** `laneCrowded()` only counts entities *below* `READABILITY_DEPTH` as crowding a lane, so a Thorn whose tip is above 0.25 is invisible to the spawn-lane picker and enemies will appear at the throat in thorned lanes. A shot stops at the tip, so anything below it cannot be hit — until it climbs past, which makes the shelter temporary and self-resolving. ⚠ Not a bug; a playtest question about whether a lane you failed to keep clean reads as a consequence.
 
 The safe-spawn rule is enforced inside `spawnEnemy()` — the one entry point (§6.5) — and ⛔ **by LOWERING the depth to `SAFE_SPAWN_DEPTH`, never by moving the lane and never by refusing the spawn.** CS004's Carrier has to put its two children somewhere specific ("adjacent", "flanking", §6.2), and relocating them sideways would break the shape the player is being taught to read; dropping one deeper only ever gives the player more time. "The Skimmer's lane" is read as anything within one lane of its *continuous* position rather than `Math.round()`'s single answer — a player parked between two centres is half in each, and the wider reading is the safe direction to be wrong in.
 
@@ -383,19 +427,31 @@ The spawner also declines to stack a new enemy on one already sitting in the sam
 |---|---|
 | `lane`, `depth` | ⛔ The whole position (§3.2). Lane-centre units and 0 = throat, 1 = rim. No entity ever stores a screen coordinate. |
 | `dead` | Set true to kill. The caller's end-of-frame `.filter()` does the removal. |
-| `purgeable` | Whether the Purge destroys it (§4.3). CS004's Thorn is the roster's first `false`. |
+| `purgeable` | Whether the Purge destroys it (§4.3). **Shipped `false`: the Thorn, and it is the roster's only one** — which is why §4.3's "does not remove Thorns" costs the Purge no special case, in either of its two uses. |
 | `blocksClear` | Whether it must be gone before the well counts as clear. The Thorn is `false`, and that is *why* a Thorn is still standing during the Dive (§5) rather than an oversight in the clear check. |
 | `killDepth` | §4.5's contact rule as a number: contact kills when `depth >= killDepth` and the lanes match. `null` means contact never kills — the Weaver's body. The Drifter's is `0` (lethal at any depth). One comparison covers three of the five death conditions, which is why it is a field. |
-| `anchored` | ⛔ **What `depth` MEANS on this entity, not whether it moves.** `false` — the default, and every enemy but one — means `depth` is a **position**. `true` means `depth` is a **length**: the tip of an extent rooted at the throat. A stationary enemy whose `depth` is still a position is `false`. The Thorn is the roster's only `true`. |
+| `anchored` | ⛔ **What `depth` MEANS on this entity, not whether it moves.** `false` — the default, and every enemy but one — means `depth` is a **position**. `true` means `depth` is a **length**: the tip of an extent rooted at the throat. A stationary enemy whose `depth` is still a position is `false`; anything that ever reads `depth` as a length sets it true. The Thorn is the roster's only `true`. ⛔ **Its one reader is `respawnSkimmer()`**, which skips anchored entities: §4.4's rim push clamps `depth` down to 0.55, and on a length that is not a push but a free chip nobody earned, applied silently on every player death in the one place nobody would look. ⚠ **This is NOT a narrowing of §4.4's SETTLED clamp.** The band is untouched — everything above `RESPAWN_PUSH_DEPTH` still comes down to it, in every lane. The field says *which entities the clamp means anything for*, not *how far down it reaches*. See `RATIONALE.md#thorn-depth`. |
 
 **The three methods:** `update(dt, well, state)`, `draw(ctx, well)`, and `onShot(shot)`. ⛔ **`onShot` returns whether the shot is CONSUMED**, and the *enemy* decides what a hit does — the collision pass only asks. `true` retires the shot; `false` lets it fly on to whatever is behind. That is what keeps the Thorn (chip, consume) and an armoured entity (no damage, do not consume) out of the collision pass as special cases. The base returns `false` deliberately, so a subclass that forgets to override it lets shots through — visible — rather than eating them silently.
 
 **Four singular things, and each one is singular on purpose:**
 
 - ⛔ **ONE array, `state.enemies`.** Thorns, Carriers and Drifters all live in it; the flags above decide behaviour, not a second array. A second array doubles all six wiring points.
-- ⛔ **ONE spawn entry point, `spawnEnemy(kind, lane, depth)`** (`08-spawner.js`). Every enemy that enters the array comes through it, including CS004's Carrier split. It owns §6.3's safe-spawn rule, the `ENEMY_CAP` ceiling, and the one RNG draw a spawn spends on its heading; a caller that pushes straight into the array re-implements all three and forgets one. A `kind` is a **string**, and `ENEMY_KINDS` is the one table where a string becomes a class — that is where the roster grows. A refused spawn returns `null` and is not an error; the interval spawner spends no quota on one.
+- ⛔ **ONE spawn entry point, `spawnEnemy(kind, lane, depth)`** (`08-spawner.js`). Every enemy that enters the array comes through it, and **CS004 shipped three callers that are not the spawner**: the Carrier's split, `Weaver.fire()` and `Weaver.layThorn()`. It owns §6.3's safe-spawn rule, the `ENEMY_CAP` ceiling, and the one RNG draw a spawn spends on its heading; a caller that pushes straight into the array re-implements all three and forgets one. A `kind` is a **string**, and `ENEMY_KINDS` is the one table where a string becomes a class — that is where the roster grows. A refused spawn returns `null` and is not an error; the interval spawner spends no quota on one.
 - ⛔ **ONE well entry, `enterWell()`** (`23-main.js`). A new run, the next level, the debug cycler and the restart all land there. It clears both entity arrays (**cleared, not filtered** — an enemy's lane is only meaningful against the well it was spawned into, and well lane counts differ), re-arms the Purge charge and the spawner, and mints the craft. It deliberately does **not** touch `state.lives` (the reserve belongs to the run) or `state.purgeLatched` (that is input state, not well state).
 - ⛔ **ONE collision pass** (`09-collision.js`), in a fixed order: shots against enemies, then enemies against the Skimmer, each front to back. §17 item 1's replay guarantee is why the order is written down. It is **1-D throughout** — a lane match within `HIT_LANE_TOL` via `laneDelta`, plus a `depth` overlap within `HIT_DEPTH_TOL`. No projected point appears anywhere in it: the same overlap would start passing at the rim and failing at the throat, because `perspective()` is not linear.
+
+**Shipped, CS004 — the three non-spawner callers, and why the first one is safe.** ⚠ **SETTLED — a Carrier pushes into `state.enemies` from inside `collideShots()`'s own loop over that array**, because `Carrier.onShot()` splits and both children go through `spawnEnemy()`. That is safe, and it is safe because of three separate decisions in two files rather than by luck:
+
+1. the collision loop is **index-based and re-reads `.length`**, so an appended child is simply part of the array — nothing is invalidated and no iterator is live across the push;
+2. the `break` after `onShot` is **unconditional**, so the shot that caused the split stops there and cannot walk forward into the children it just created;
+3. removal is still the end-of-frame `.filter()` — the dead parent is skipped by `e.dead` for the rest of the step. Nothing is spliced mid-loop.
+
+⛔ Do not "fix" this into a deferred spawn queue: a queue would put the children on the board one step late, at a depth they never occupied, and buy nothing. Do not make that `break` conditional either — it is item 2, and it is load-bearing for §4.2's chip-away economy as well.
+
+⚠ **SETTLED — the Purge kills without asking.** `updatePurge()` sets `dead` directly and **never calls `onShot()`**, which is the only reason a Purge on a well of Carriers leaves it empty instead of doubling it. The two are not the same question: a shot *asks* the enemy what a hit does, and the Purge is §4.3's panic button, which is a statement. ⛔ This works by **omission**, so it is written down at both sites — an omission is what a later session "unifies for consistency".
+
+⚠ **A `false` from `onShot` still costs the shot its resolution for that step**, because the `break` is unconditional. The Weaver's bolt is the shipped example: it declines every shot, so it briefly shields whatever is behind it — about three steps against eight shots in flight and a 0.055 s cooldown. That is the same mechanism CS005's armoured Drifter will depend on, and it is not a bug.
 
 **Where the six wiring points actually are today.** `startGame()` resets through `newState()`, so a field added in `02-state.js` is reset without `startGame` being touched. The entity pass, the Purge, the collision pass, both end-of-frame filters, the spawner and the well-clear check are all in `Game.update()` in that order; the z-order is in `Game.draw()`, with enemies between the well and the shots. The clear condition is `wellCleared()` — ⛔ **two conditions, quota spent AND no `blocksClear` survivor.** "The array is empty" alone is true one tick after `startGame()` and in every gap between spawns.
 

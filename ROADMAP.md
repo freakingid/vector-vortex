@@ -29,9 +29,19 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS014** | Onboarding: first-run prompts, attract mode, the teach-in-four-seconds pass on level 1 | §12 |
 | **CS015** | Ship: performance budget on both targets, device matrix, 100-run soak, legal sweep, acceptance-criteria sweep | §17, §18, §19 |
 
-⛔ **The +1 renumber from CS005 onward is new** (2026-08-30, with CS004's split).
-Twelve in-repo comments and notes said `CS005` meaning *level flow*; CS004 P1
-corrects them. If you find another, it means the same thing and it means CS006.
+⛔ **The +1 renumber from CS005 onward landed with CS004's split** (2026-08-30)
+and the sequence above is the corrected one. `PLANNED-FEATURES-CS004.md`
+inventoried twelve in-repo pointers saying `CS005` meaning *level flow*; CS004
+P1 found **seventeen**, plus twenty-two more that said `CS006` meaning *front of
+house* and two that said `CS014` meaning *ship* — the whole tail shifted, not
+just the one label — and swept all of them. If you find another, it means the
+same thing: read it, decide what it meant, and add one.
+
+**CS001 through CS004 are closed.** Their narratives are in `log/CS00#.md`;
+`STATUS.md` carries only the changeset in flight. CS004's row below is what
+actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
+field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
+scoring, both of which it deliberately left to CS006 and CS007.
 
 ---
 
@@ -94,16 +104,27 @@ these three cuts touches another changeset's code.
 
 ## Still open, and not owned by a changeset
 
-Neither is an enemy question, so CS004 and CS005 do not touch them. Both are
-design calls for Paul, and both are carried in `STATUS.md`.
+Design calls for Paul, all carried in `STATUS.md`. The first two are not enemy
+questions, so CS004 did not touch them and CS005 will not either. The third is
+an enemy question that only becomes reachable when the introduction schedule
+lands, which is why it is named against CS006 rather than left unowned.
 
 - **GDD §3.3's `throatOffset` is undefined.** No well uses it and the GDD never
   says what it offsets; `wellThroat()` defaults it to zero.
+- ⚠ **A standing Thorn holds a spawner slot** (CS004 P5). `updateSpawner()`
+  blocks on `state.enemies.length >= min(ENEMY_CONCURRENT, ENEMY_CAP)`, a count
+  of *everything* in the one array — so three Thorns nobody shoots hold the
+  spawner shut and the well never clears. Unreachable in a played build today
+  (⚠ `C.DEBUG_SPAWN_KINDS` ships as `["vaulter"]`, so no Weaver ever spawns);
+  **live the moment CS006's introduction schedule lands Weavers at L5**, which
+  makes it CS006's to answer rather than a standing task. Measured repro and the
+  numbers are in `STATUS.md`.
 - **The Flat well (11) is geometrically degenerate.** Its rim is a straight line,
   so it renders with zero depth. An offset throat is what would fix it, which is
   why it is the same question. The natural landing spot is **CS006** with well
-  progression — ⚠ `STATUS.md` currently says CS004 "per `ROADMAP.md`", which was
-  never in this file. CS004 P1 corrects it.
+  progression. ⚠ `STATUS.md` used to attribute a CS004 landing spot to this
+  file, which was never in it; CS004 P1 corrected that line and both documents
+  now say CS006.
 
 ---
 

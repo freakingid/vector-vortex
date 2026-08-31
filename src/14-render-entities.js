@@ -11,7 +11,12 @@
 // ⛔ Readability contract (GDD 10.3): nothing opaque below C.READABILITY_DEPTH.
 // A shot's leading edge fades linearly to nothing as it nears the throat,
 // rather than snapping to invisible at the boundary or staying legible into
-// the zone Tempest 4000 was criticised for cluttering.
+// the throat zone. GDD 10.3 carries the reason that band is a rule at all.
+//
+// ⛔ GDD 18 item 1 / CLAUDE.md: the title this game is an homage to is not
+// written in any file in this repo, comments included — this one used to name
+// it and CS004 P5 removed it. `src/` is concatenated into the shipped artifact,
+// so a comment here is a string in dist/vector-vortex.html.
 
 // Preallocated projection scratch — one point per end of the streak. Like
 // screenPos() and skimmerPoints(), this makes drawShot() non-reentrant; it is

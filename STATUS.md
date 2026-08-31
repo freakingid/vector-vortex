@@ -1,147 +1,74 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS004 (P4 of 5 done) · Wells: 16/16 · Enemies: 4/6 Classic · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS005 (not started) · Wells: 16/16 · Enemies: 4/6 Classic · Tracks: 0/5
 
-## Phase ledger — CS004
+## Phase ledger — CS005
 
-- **P1 — the seventh contract field, the debug bench, the pointer sweep.** ✅
-  `anchored` on the `Enemy` base, the respawn skip, five named debug spawn
-  actions, `C.DEBUG_SPAWN_KINDS` + `pickSpawnKind()`, the six Classic enemy
-  colours, and the changeset renumber across the repo.
-
-`anchored` is the seventh contract field and says ⛔ **what `depth` MEANS** —
-`false` is a position, `true` is a length rooted at the throat. `respawnSkimmer()`
-skips anchored entities. ⚠ **This is not a narrowing of GDD §4.4's settled rim
-push:** the band is untouched — everything above `RESPAWN_PUSH_DEPTH` still comes
-down to it, in every lane — and the ⚠ comment was extended, not replaced, in the
-code and in GDD §4.4. Every enemy that exists today is `false` and unaffected.
-
-The bench is five named actions on the existing `actionKeys` path (`1`–`4`, `0`),
-never a second listener; the three unbuilt kinds are no-ops because
-`spawnEnemy()` returns `null` for an unknown kind. `pickSpawnKind()` reads ⚠
-`C.DEBUG_SPAWN_KINDS` (`["vaulter"]`) and ⛔ **spends no RNG draw on a one-entry
-list** — the spawn-lane sequence is byte-identical to the pre-change build.
-
-**Mutation-checked:** removing the anchored skip, narrowing the clamp to a rim
-band, and an unconditional `rngPick` each turn the suite red.
-
-- **P2 — the Carrier, the split, and the cargo table.** ✅ `class Carrier`,
-  `CARGO`, `splitLanes()`, the `carrierVaulter` kind, the hull and the cargo
-  glyph, and `scratchpad/test-cs004-p2.js` (91 assertions).
-
-The Carrier climbs one lane at `C.CARRIER_CLIMB` 0.11 and stops at the rim;
-`killDepth` is `1 - C.RIM_CONTACT_DEPTH`, the Vaulter's expression. ⛔ It touches
-no lane helper at all, so "never hops" is an absence of code and the test
-asserts **exact** lane equality over 3,000 ticks on all sixteen wells.
-
-⛔ `splitLanes(well, lane)` lives in `03-wells.js` beside `laneHop`, because what
-makes it hard is GDD §3.5 and nothing about cargo: on an open well the pair is
-**shifted inward**, never clamped, so the gap stays two lanes at the wall — a
-lane-0 parent on the Vee yields 0 and 2, and one child still occupies the lane
-the parent died in. One helper serves all three §6.2 rows.
-
-⛔ Both children go through `spawnEnemy()`, so the split inherits the safe-spawn
-lowering, `C.ENEMY_CAP` (a split with one slot free adds exactly one child), and
-two RNG draws. The push happens inside `collideShots()`'s own loop; the ⚠ SETTLED
-reasoning is at the call site in `07-enemies.js` and in `09-collision.js`, along
-with the ⚠ note that the Purge kills without calling `onShot()`.
-
-**Mutation-checked, all three red:** a split that pushes straight into
-`state.enemies` (8 assertions), a `splitLanes` that is a bare
-`laneNormalize(lane ± 1)` (3), and a conditional `break` in `collideShots` (3
-here plus 2 in `test-cs003-p3.js`).
-
-- **P3 — the Weaver, its bolt, and GDD §4.5 item 4.** ✅ `class Weaver`,
-  `class WeaverBolt`, the `weaver` and `weaverBolt` kinds, the open spiral and
-  the dart, and `scratchpad/test-cs004-p3.js` (99 assertions).
-
-The cycle is a phase string and one up-counting timer: climb at
-`C.WEAVER_CLIMB` to `C.WEAVER_APEX` 0.55, hold `C.WEAVER_APEX_HOLD`, retreat at
-the faster `C.WEAVER_RETREAT`, repeat. ⛔ `fired` is a per-CYCLE latch, not a
-cooldown — the bolt goes out on the FIRST step of the hold, so the player reads
-it while its parent is still at the apex. A Weaver that arrived ABOVE the apex
-turns around from where it is rather than teleporting down to the line.
-
-⛔ The Weaver's `killDepth` is the roster's first `null`: its body never kills at
-any depth, the rim included, and the test proves it through the real
-`collideSkimmer`. `blocksClear` stays `true`. The bolt is the mirror —
-`killDepth = 1 - C.RIM_CONTACT_DEPTH` (GDD §4.5 item 4, live, with no new
-collision code), `blocksClear = false`, `purgeable = true`, ⚠ `onShot` returns
-`false` so it is not shootable, and it dies at `depth 1` the step AFTER arriving
-so the rim step is still lethal.
-
-⛔ `Weaver.fire()` goes through `spawnEnemy()` — the second non-spawner caller —
-so the bolt inherits `C.ENEMY_CAP`, the safe-spawn lowering and one RNG draw.
-The `layThorn()` hook is an empty one-liner naming P4.
-
-**Mutation-checked, all six red:** a rim-band `killDepth` on the Weaver, a
-consuming bolt `onShot`, a fire without the latch (21 bolts a cycle), a
-`blocksClear` left true, a `fire()` that pushes straight into `state.enemies`,
-and a Weaver drawn as a closed path.
-
-- **P4 — the Thorn, the chip economy, and the Weaver's lay.** ✅ `class Thorn`,
-  `thornInLane()`, `drawThorn()`, the `thorn` kind, `Weaver.layThorn()` filled,
-  and `scratchpad/test-cs004-p4.js` (96 assertions).
-
-The Thorn is four flags and an `onShot`, and every one of them is machinery
-CS003 already built: ⛔ `purgeable = false` (GDD §4.3's "does not remove
-Thorns"), ⛔ `blocksClear = false` (which is *why* it is standing during the
-Dive), `killDepth = null`, ⛔ `anchored = true`. `update()` is empty.
-⛔ **`depth` is the tip of an extent**, which is what lets `collideShots()`
-hit-test it with the same one line it uses on everything else — a shot stops
-where the Thorn starts — while `respawnSkimmer()` skips it. Both halves are
-asserted, the second through a **real death and respawn** with an inert
-unanchored control at 0.9 proving the push actually ran.
-
-`layThorn()` runs every step of the climb and ⛔ **only ever grows**: the cycle
-returns the Weaver to the throat, so an unconditional write would saw the
-segment down on the second climb. ⛔ It adopts a live Thorn in its lane via
-`thornInLane` (⛔ `laneDelta`, tolerance `C.HIT_LANE_TOL`) rather than standing a
-second one up. ⛔ `drawThorn()` is the build's second non-`entityPoints` draw —
-`drawShot`'s pattern, preallocated points *and* pairs, body plus a twice-drawn
-`THORN_TIP_LEN` crown, full alpha at every depth.
-
-**Mutation-checked, all five red:** a non-consuming `onShot`, a `purgeable`
-Thorn, a Thorn that blocks the clear, dropping the anchored skip, and a Weaver
-that creates a second Thorn.
+- Not started. `PLANNED-FEATURES-CS005.md` and `IMPLEMENTATION-PHASES-CS005.md`
+  do not exist yet.
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes: 18 test files, zero skips.
-- CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer. Full
-  narrative in `log/CS001.md`.
+- `node scratchpad/run-all.js` passes: 19 test files, zero skips, ~4 s.
+- CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer.
 - CS002 closed 2026-08-30 — the loop, the Skimmer, shots, and all four input
-  devices (mouse/keyboard/touch/gamepad), verified on real hardware. Full
-  narrative in `log/CS002.md`.
+  devices (mouse/keyboard/touch/gamepad), verified on real hardware.
 - CS003 closed 2026-08-30 — the seeded RNG, the entity contract, the Vaulter,
   the spawner and well lifecycle, the one collision pass, the Purge, death,
-  lives, respawn and the game-over stop. Shipped constants, every judgment call
-  and the mutation-check record are in `log/CS003.md`.
-- ⛔ GDD §17 item 1 (determinism) and item 3 (enemy wall behaviour) are both
-  covered by `scratchpad/test-cs003-p5.js`, driven through the real
-  `startGame` / `nextWell` / `update`. **Item 3's finding is worth knowing
-  before touching lane code:** a range check alone does not catch §3.5's bug —
-  a wrapped hop on a 13-lane strip lands inside `[0, 12]`. The tell is the
-  per-tick lane SPEED, and that is what the soak asserts.
-- ⛔ **`test-cs004-p1.js` carries a GOLDEN spawn-lane sequence** recorded from
-  the build at `9ebd27b`, before `pickSpawnKind()` existed. It is the only
-  guard on the no-draw rule that works end to end: `test-cs003-p5.js`'s
-  determinism hash compares two runs of the *same* build, so a stream shift is
-  self-consistent there and invisible. Retuning the spawner legitimately
-  re-records it; a stray RNG draw does not.
-- ⛔ CS004 reads GDD §6.5 before adding an enemy. It now spells out **seven**
-  contract fields, the one enemy array, the one spawn entry point, the one
-  well entry and the one collision pass.
+  lives, respawn and the game-over stop.
+- CS004 closed 2026-08-30 — the Carrier and `splitLanes()`, the Weaver and its
+  bolt, the Thorn and the chip economy, the `anchored` contract field, the debug
+  bench, and the extended §17 soak. **Four of six Classic enemies; GDD §4.5
+  conditions 1 and 4 live.** Full narrative, shipped constants, every judgment
+  call and the seventeen-row mutation-check record are in `log/CS004.md`.
+- ⛔ **Read GDD §6.5 before adding an enemy.** It now carries seven contract
+  fields, six wiring points, the one array / one spawn entry / one well entry /
+  one collision pass rule, and — new in CS004 — why `Carrier.onShot()` may push
+  into `state.enemies` from inside the collision pass's own loop.
+- ⛔ **Two soaks, and they prove different things.** `test-cs003-p5.js` catches
+  GDD §3.5's wrapping hop with a per-tick lane SPEED bound, because a wrapped hop
+  on a 13-lane strip lands inside `[0, 12]` and a range check passes it.
+  `test-cs004-p5.js` asserts the STRONGER form for the four entities that do not
+  hop at all: `lane` is exactly the lane it entered with, `Object.is`, no epsilon.
+  ⛔ `MAX_LANE_STEP` is still the Vaulter's and has to become **per-entity** in
+  CS005 — see the carried tasks.
+- ⛔ **`test-cs004-p1.js` carries a GOLDEN spawn-lane sequence** recorded from the
+  build at `9ebd27b`, before `pickSpawnKind()` existed. It is the only guard on
+  the no-draw rule that works end to end: the determinism hashes compare two runs
+  of the *same* build, so a stream shift is self-consistent there and invisible.
+  Retuning the spawner legitimately re-records it; a stray RNG draw does not.
 - `tools/well-lab.html` — well polygons and the perspective curve.
 - `tools/feel-lab.html` — traverse-and-stop measurement across the four device
   sensitivity/timing constants. Reachable over LAN via `npm run serve`.
 
 ## Known issues
 
+- ⛔ **A STANDING THORN HOLDS A SPAWNER SLOT, and the well can stall.** Found by
+  CS004 P5's soak, measured, not inferred. `updateSpawner()` blocks on
+  `state.enemies.length >= min(ENEMY_CONCURRENT, ENEMY_CAP)` — a count of
+  **everything in the one array, Thorns included** — and `ENEMY_CONCURRENT` is 3.
+  A Thorn nobody shoots is permanent, so **three standing Thorns hold the spawner
+  shut**: the quota never spends, the well never clears, and because a Thorn does
+  not kill, nothing threatens the player either.
+
+  Repro, exact: three Thorns at any length, quota full, no input — after 100
+  simulated seconds the level, the quota and the board are where they started.
+  Measured cost with Weavers in the spawn mix: **three enemies born in 5,000
+  ticks** on the Fan.
+
+  ⚠ **Unreachable in a played build today**, and only because
+  `C.DEBUG_SPAWN_KINDS` ships as `["vaulter"]` so no Weaver ever spawns. It goes
+  **live the moment CS006's introduction schedule puts Weavers at L5.** ⛔ Not
+  fixed here: the answer is a design call (does the concurrency budget count
+  *threats* or *entities*? does the clear condition change? does a Thorn expire?)
+  and it belongs to the changeset that makes it reachable. `test-cs004-p5.js`
+  works around it with a documented fixture — `C.ENEMY_CONCURRENT` raised to
+  `C.ENEMY_CAP` for the six-well soak only, and put back afterwards. ⛔
+  `C.ENEMY_CAP` is untouched; it is a readability ceiling, not a difficulty knob.
 - **`tools/glow-lab.html` does not exist.** `CLAUDE.md`'s design-instruments
   section lists it as the home of the line-weight and glow-falloff decisions
-  measured against a busy frame. It is also the instrument the eight ⚠ colour
+  measured against a busy frame. It is also the instrument the ⚠ colour
   placeholders below are waiting on.
 - **The whole enemy palette is ⚠ provisional.** `SKIMMER_COLOR` (`#FFFFFF`),
   `VAULTER_COLOR` (`#FF4A4A`) and the six CS004 P1 added (`CARRIER_COLOR`,
@@ -149,19 +76,15 @@ that creates a second Thorn.
   `SURGER_COLOR`) are all inference, not design — the GDD specifies no enemy
   palette. They were chosen **as one set** against the constraint recorded in
   `C`: an enemy colour must read against all seven band colours (§3.6), because
-  the well cycles and the enemies do not. **The set is judgeable now** — as of
-  P4 `spawnRow` puts all four Classic silhouettes on screen at once, so press
-  `0` on a busy well. The two unread colours (`DRIFTER_COLOR`, `SURGER_COLOR`)
-  still cannot be, and that is CS005's.
+  the well cycles and the enemies do not. The four Classic ones are judgeable now
+  — press `0` for the staggered row; the two CS005 reads are not.
 - **`drawWell()`'s `laneState` parameter is still unwired.** Lane occupancy
-  lighting (GDD §3.7) belongs with the dim band, in CS006. Note
-  `PLANNED-FEATURES-CS004.md` finding 6: the Surger's telegraph is an entity
-  draw and must NOT be built on `laneState`.
+  lighting (GDD §3.7) belongs with the dim band, in CS006. ⛔ The Surger's
+  telegraph is an entity draw and must **not** be built on `laneState`.
 - **GDD §12's four-second promise is not delivered.** A passive player does die
   on level 1, but not reliably within four seconds — it needs spawn lanes
   weighted toward the player's lane. Settled: that is onboarding and it is
-  **CS014's**. (The earlier ⚠ note that `STATUS.md` and `ROADMAP.md` disagreed
-  is resolved; the renumbered `ROADMAP.md` says the same thing.)
+  **CS014's**.
 - **A rim Vaulter hunts the Skimmer's *continuous* lane**, so a player parked
   between two lane centres has it hopping back and forth across them. Lethal
   either way (contact tolerance is half a lane), and GDD §6.1 says only
@@ -169,124 +92,44 @@ that creates a second Thorn.
   jitter reads as indecision rather than menace.
 - **GDD §3.3's `throatOffset` is undefined** — no well uses it and the GDD never
   says what it offsets. `wellThroat` defaults it to zero. Design call for Paul.
-- **The Flat well (11) is geometrically degenerate**: its rim is a straight
-  line, so it renders with zero depth. Same underlying question as
-  `throatOffset` (an offset throat is what would fix it). It has no owner —
-  `ROADMAP.md` never put well progression in CS004, and well progression is
-  CS006 — so it is a design call for Paul before CS006 rather than a task.
+- **The Flat well (11) is geometrically degenerate**: its rim is a straight line,
+  so it renders with zero depth. Same underlying question as `throatOffset` (an
+  offset throat is what would fix it). Design call for Paul before CS006.
 
-## Findings from P1 (hazards the phase prompt did not name)
+## Findings from CS004 P5 (hazards the phase prompt did not name)
 
-- ⛔ **The +1 renumber is wider than the `CS005` pointers, and stopping at them
-  would have made the repo worse.** Everything from CS005 on shifted, so **front
-  of house moved CS006 → CS007**, **onboarding CS013 → CS014** and **ship
-  CS014 → CS015**. Sweeping only the `CS005` strings would have left `CS006`
-  meaning *two different changesets inside one file*: `23-main.js` would say
-  both "the introduction schedule and the heat clock are CS006's" and, three
-  functions later, "CS006 owns the real restart flow". P1 swept the lot —
-  **22 front-of-house mentions** across `src/02-state.js`,
-  `src/09-collision.js`, `src/23-main.js`, `VECTOR-VORTEX-GDD.md` and the CS003
-  P3/P4 test files, plus **2 ship mentions** (`VECTOR-VORTEX-GDD.md` §21 #6 and
-  `DECISIONS.md`, both the Mimic's probation verdict). ⚠ If a future session
-  finds another, the rule is the same: read it, decide what it *meant*, and add
-  one.
-- **Seventeen `CS005` sites, not twelve.** The inventory in
-  `PLANNED-FEATURES-CS004.md` missed three in `scratchpad/test-cs003-p2.js`
-  (the `SPAWN_MIN` heat-floor comment, its assertion string, and the
-  `WELL_CLEAR_HOLD` note) and counted `src/09-collision.js` outside the total.
-  All seventeen are swept.
-- **The duplicate root `_harness.js` was already gone.** Paul removed it in
-  `7817d33`, after CS003 P5. P1 verified its absence and the green suite rather
-  than deleting it; the stale `STATUS.md` entry is what remained, and it is
-  gone now.
-- **GDD §6.1's "The other five are CS004's" was stale from the split.** Rewritten
-  to name which three are CS004's and which two are CS005's.
-
-## Findings from P2 (hazards the phase prompt did not name)
-
-- ⛔ **The bench key `2` was one string short of working, and P1's "touching
-  nothing here" was wrong about it.** `ENEMY_KINDS` needs one row per Carrier
-  VARIANT — the cargo is half of what the entity is — so the kind is
-  `carrierVaulter`, not `carrier`, and the bench's `DEBUG_SPAWN_ACTIONS` and
-  `DEBUG_ROW_KINDS` both named `"carrier"`. Both are updated. That also made
-  `test-cs004-p1.js`'s "`2`/`3`/`4` are no-ops" assertion false, so it now covers
-  `3` and `4` only, with a ⚠ note saying why; **P3 and P4 will each do the same
-  to their own digit.** The bench has five keys and the roster has six — CS005's
-  two cargo rows do not get keys of their own.
-- **`test-registry.js`'s `enemies` count went 1 → 2 here, not 1 → 4 in P5.**
-  `test-cs003-p5.js` compares `Object.keys(ENEMY_KINDS).length` against it, so
-  the suite goes red the moment a kind lands. P3 and P4 raise it again; ⛔ P5's
-  instruction is therefore **confirm it is 4 and make the check smarter**, not
-  raise it — by then `ENEMY_KINDS` holds more rows than the roster has entries.
-- **The `splitLanes` prose in `PLANNED-FEATURES-CS004.md` and the P2 prompt has a
-  slip, and the concrete example is the one that shipped.** "The pair still
-  straddles a lane, and the lane it straddles is the parent's" cannot be true at
-  a wall: children at 0 and 2 straddle lane **1**. What is actually true there,
-  and what keeps the trap honest, is that **one child occupies the parent's own
-  lane**. The named outcome (0 and 2) is unambiguous and is what the code does.
-- **At the rim the cargo glyph's apex touches the hull's near tip, and that is
-  `entityPoints()`, not the shape.** It clamps every poly so the poly's
-  outermost point lands exactly ON the rim, so two polys drawn at the same depth
-  meet there however differently they are proportioned. It happens only in the
-  clamp band, it is documented at the shape data, and ⛔ fixing it would mean
-  changing `entityPoints`, which finding 4 puts out of scope.
-
-## Findings from P3 (hazards the phase prompt did not name)
-
-- ⛔ **`ENEMY_KINDS` stopped matching the roster count at P3, not at P5.**
-  `test-cs003-p5.js` compared `Object.keys(ENEMY_KINDS).length` against
-  `test-registry.js`'s `enemies`, and the bolt is a kind with no GDD §6.1 roster
-  row — so that equality went red the moment the Weaver landed. STATUS predicted
-  this for P5 ("confirm it is 4 and make the check smarter"); it arrived a phase
-  early. Fixed by **splitting the number in two, in the one file allowed to name
-  a global count**: `enemies` (3) counts roster rows and `enemyKinds` (4) counts
-  `ENEMY_KINDS` rows, and `test-cs003-p5.js` now compares against the latter.
-  ⛔ **CS005 raises both, and by different amounts** — the Drifter and the Surger
-  are two roster rows but four kinds, because `carrierDrifter` and
-  `carrierSurger` come with them.
-- **The bolt's death step is an ORDERING decision, not a clamp.** `Game.update()`
-  runs the entity pass, then collision, and `collideSkimmer()` skips anything
-  already `dead` — so killing the bolt on the step its depth reaches 1 would make
-  the rim step silently non-lethal. It dies on the step AFTER. The lethal band
-  starts nine steps earlier at `killDepth`, so this is belt and braces; it is
-  written that way so the belt does not depend on the braces.
-- **`Weaver.fire()` reads the GLOBAL `state`, the same way `Carrier.onShot()`
-  does**, because that is how `spawnEnemy()` finds the current well. Any test
-  that drives a Weaver's cycle on a well the state is not pointing at puts its
-  bolts somewhere else; `test-cs004-p3.js`'s all-sixteen-wells lane soak calls
-  `useWell(wi)` per well for exactly this reason, and the trap is in its header.
-
-## Findings from P4 (hazards the phase prompt did not name)
-
-- ⛔ **The lay broke three earlier assertions, and every one was a broken
-  MEASUREMENT rather than a broken claim.** A Weaver lays on every step of its
-  climb, so a board with a Weaver on it has a Thorn on it one step later —
-  including inside the same `G.update()` that spawned the Weaver, because the
-  entity pass reaches it after `sample()` dispatched the action.
-  `test-cs004-p3.js` counted bolts as *array growth* (the Thorn read as a second
-  bolt) and asserted the bench's `3` left exactly one *entity*;
-  `test-cs004-p1.js`'s `spawnRow` case counted kinds on the board after a full
-  step and saw two Thorns. All three now measure BY CLASS, with the reason at
-  each site. ⛔ **The rule for CS005: an assertion about "how many things are on
-  the board" is only safe if the things on the board cannot make more things.**
-- ⚠ **The bench's `4` spawns a ZERO-LENGTH — i.e. invisible — Thorn, and that is
-  correct.** `depth 0` is the literal every bench digit uses, and on an anchored
-  entity it means *no length*, not *at the throat*. It is also exactly what
-  keeps GDD §6.3's safe-spawn rule harmless on a Thorn (a Thorn is grown, never
-  dropped finished). ⛔ Do not "fix" `4` to spawn a finished one — asking
-  `spawnEnemy()` for a long Thorn in the Skimmer's lane does not LOWER it, it
-  SHORTENS it. To see a Thorn, press `3` and watch a Weaver grow one, or `0`.
-- ⚠ **`C.THORN_MAX` 1.00 makes GDD §8's clamp unobservable at shipped values** —
-  it is also the depth ceiling, and `C.WEAVER_APEX` is 0.55, so nothing a Weaver
-  can do reaches it. `test-cs004-p4.js` lowers the constant, drives the clamp,
-  and puts it back. ⛔ CS006 heat-derives `WEAVER_APEX` and is where this stops
-  being theoretical.
-- **Held fire fires more shots than it lands chips**, because auto-fire keeps a
-  pipeline in the air and the last few are still travelling toward a tip that is
-  no longer there. Not a rate limit and not a miss. The test counts chips.
-- ⛔ **Never revert a mutation check with `git checkout -- src/`.** It reverts
-  the whole working tree, not the mutation, and this phase lost its entire
-  `src/` edit to it once. Copy `src/` aside first and restore from the copy.
+- ⛔ **The spawner stall above.** It is the finding of the changeset and it was
+  found by the soak coming back nearly empty, not by reading the code.
+- ⚠ **GDD §6.5's field table was already seven fields.** The P5 prompt asked for
+  six → seven; CS004 P1 had done it when it added `anchored`. P5 confirmed it and
+  added the half that was genuinely missing: the row now says that the field is
+  **not** a narrowing of §4.4's settled rim push, and points at
+  `RATIONALE.md#thorn-depth`.
+- ⚠ **The P5 prompt's "raise `enemies` from 1 to 4" was stale.** P2, P3 and P4
+  each raised it as their enemy landed, and P3 created `enemyKinds` besides. P5
+  confirmed 4 and 5 rather than raising anything, and replaced the bare
+  comparison with a **derivation**: the roster is the distinct classes
+  `ENEMY_KINDS` can build, minus the projectiles. ⛔ CS005 adds two roster rows
+  and four kinds and needs no edit to that check.
+- ⚠ **`log/CS003.md`'s changeset numbers predate the +1 renumber.** CS004 P1
+  swept the live repo but left the closed log as written, which is right — a
+  historical record is not revised. P5 added a header note to it saying so, and
+  giving the translation. ⛔ The same will be true of `log/CS004.md` after the
+  next renumber; note, do not rewrite.
+- ⛔ **A LEGAL INVARIANT WAS BEING VIOLATED IN SHIPPED OUTPUT, and P5 fixed it.**
+  `src/14-render-entities.js` carried the homaged title in a comment — one word,
+  from CS002 P3 — and `src/` is concatenated into `dist/vector-vortex.html`, so it
+  was a string in the shipped artifact. `CLAUDE.md` and GDD §18 item 1 both say
+  the word appears in **no file**, comments included, and GDD §19's Quality
+  criteria say the same. The comment now cites GDD §10.3 for the reason instead
+  and carries a ⛔ note saying why it must not come back. ⚠ **The design docs keep
+  the word** — §18 has to name what it prohibits, and the GDD is not shipped.
+  `grep -rn` over `src/`, `tools/`, `build.js` and `README.md` is now zero.
+- **The recorded input list is now checked against the FUNCTION**, not trusted.
+  `test-cs004-p5.js` drives `replay()` into a recorder and asserts it never
+  presses `r`, `w` or any of the five debug digits — a debug spawn inside a
+  hashed run makes the hash depend on a key map, and that failure would look like
+  flaky determinism rather than like its cause.
 
 ## Open questions (blocking)
 
@@ -308,67 +151,67 @@ that creates a second Thorn.
   board and the craft that died on it. `r` restarts. CS007 owns the screen, the
   submission and the real restart flow, and the `restart` debug action should be
   folded into it rather than left as a second way in.
-- `scratchpad/test-registry.js` now carries TWO counts. `enemies` is 4 (P4
-  raised it for the Thorn) and counts GDD §6.1 roster rows; `enemyKinds` is 5
-  and counts `ENEMY_KINDS` rows. ⛔ Both live there and in no other file, and
-  the Weaver's bolt is a kind and not a roster row. ⛔ **CS005 raises both, and
-  by different amounts** — the Drifter and the Surger are two roster rows but
-  four kinds, because `carrierDrifter` and `carrierSurger` come with them.
-- ⛔ **All five debug digits now answer**, so `test-cs004-p1.js` no longer
-  carries an unbuilt-kind case at all — it was deleted rather than left as a
-  loop over nothing, and the deletion's own comment is the record.
+- **No scoring anywhere.** `PTS_VAULTER`, `PTS_CARRIER`, `PTS_WEAVER`,
+  `PTS_THORN` and `PURGE_SAVED_BONUS` are deliberately unread until `addScore()`
+  lands in CS007, which is the one entry point (`CLAUDE.md`, Scoring).
+- ⛔ `scratchpad/test-registry.js` carries TWO counts and they are not the same
+  number. `enemies` is **4** (GDD §6.1 roster rows) and `enemyKinds` is **5**
+  (`ENEMY_KINDS` rows). ⛔ **CS005 raises both, by different amounts** — the
+  Drifter and the Surger are two roster rows but four kinds, because
+  `carrierDrifter` and `carrierSurger` come with them.
 
-## Next up
+## Next up — CS005: the Drifter and the Surger
 
-- CS004 P5 — the soak, the docs, the close. It owns four GDD §17 items, the
-  "Shipped, CS004" paragraphs in GDD §4.5/§6.1/§6.2/§6.3, §6.5's six-fields-to-
-  seven edit, `RATIONALE.md#thorn-depth`, `log/CS004.md`, and the reset of this
-  file.
-- ⛔ P5's own prompt says "raise `enemies` from 1 to 4" — **that is stale; P2,
-  P3 and P4 already raised it, and `enemyKinds` with it.** P5 should CONFIRM
-  4 and 5 rather than raise anything, and `test-cs003-p5.js` already compares
-  against `enemyKinds` rather than doing a bare length check.
-- ⛔ P5's soak asserts EXACT lane equality for all four CS004 entities — none of
-  them hops, and a range check misses a wrapping hop (the CS003 P5 finding).
-  The Thorn is the strongest case of the four: its `update()` is empty, so both
-  its lane AND its length are exact for its whole life.
-- ⛔ The bolt is the roster's non-consuming `onShot` and the Thorn is the
-  consuming one, so CS005's armoured Drifter has both precedents and a mutation
-  check to copy.
-- ⚠ CS006 owns the Dive, and with it GDD §4.5's fifth death condition. ⛔ It
-  will **not** be a `killDepth` — the Dive is its own sequence with its own
-  rule, not a rim band. The Thorn's `killDepth` stays `null`.
+No planning docs yet. What CS004 leaves on the table for it, from
+`ROADMAP.md` and the phases that found it:
+
+- ⛔ **`laneHop()`'s half-lane fold point is CS005's**, and the Drifter is the
+  entity that makes it matter — it is the first thing in the build that rides
+  lane *boundaries* and moves continuously in lane space. ⛔ Do not change the
+  helper without the entity that exercises it; the Vaulter's behaviour on that
+  path is documented and correct.
+- ⛔ **`MAX_LANE_STEP` has to become per-entity**, in `test-cs003-p5.js` and
+  `test-cs004-p5.js` both. Today it is `2 * DT / C.VAULT_HOP_TIME` — the
+  Vaulter's hop — and a continuously-moving Drifter will either trip it or force
+  it so wide it stops catching anything.
+- ⛔ **The armoured Drifter has two shipped precedents for `onShot`.** The
+  Weaver's bolt is the non-consuming one (`return false`, the shot flies on, and
+  ⚠ it still costs that shot its resolution for the few steps of overlap because
+  the `break` is unconditional); the Thorn is the consuming one. Both have
+  mutation checks to copy.
+- ⛔ **Two cargo rows, and they add no test.** `test-cs004-p5.js`'s §17 item 6
+  case is a loop over the `CARGO` table that discovers each cargo's carrier from
+  `ENEMY_KINDS`, so CS005 adds `carrierDrifter` and `carrierSurger` rows and
+  nothing else.
+- ⛔ **The Surger owns its telegraph as an entity draw**, not on `laneState`.
+  `SURGE_TELEGRAPH` (0.45 s) already exists in `C` and is unread.
+- ⚠ The Drifter's `killDepth` is `0` — lethal at any depth — which is GDD §4.5
+  item 2 and needs no collision code, exactly as the bolt's rim band did not.
 
 ## Playtest asks (open only)
 
 - Does the flattened X read as a *threat* at throat depth, and is
   `VAULTER_SIZE` 0.70 enough silhouette to see it coming?
 - Does `SPAWN_INTERVAL` 1.60 with `ENEMY_CONCURRENT` 3 produce level-1 pressure
-  that feels fair? Both halves are fully observable now — a death costs a life
-  and freezes the board.
+  that feels fair?
 - Does the death sequence read? 1.2 s of hit-stop with no fragmentation and no
   sound is a long time to look at a frozen board — CS007 adds the fragmentation
   and CS008 the sound, but the freeze LENGTH is settled now and worth judging
   bare.
 - Is `RESPAWN_PUSH_DEPTH` 0.55 far enough? The clamp plus `RESPAWN_INVULN` 1.5 s
   is meant to guarantee a Vaulter cannot climb back into contact before the
-  blink stops. It is provable at `VAULT_CLIMB` 0.18; it stops being provable the
-  moment CS006's heat curve raises the climb rate.
+  blink stops. Provable at `VAULT_CLIMB` 0.18; it stops being provable the moment
+  CS006's heat curve raises the climb rate.
 - Is `HIT_DEPTH_TOL` 0.05 generous enough that a shot fired at a climbing
-  Vaulter connects when it looks like it should? The band is ~3x the distance a
-  shot covers in one step, so misses should read as aim, never as luck.
-- **Is the cargo glyph readable at throat depth?** §6.2 says reading it fast is
-  the skill that separates competent from good, so the deep end is the test, not
-  the rim. Press `2` and watch one climb the whole way.
+  Vaulter connects when it looks like it should?
+- **Is the cargo glyph readable at THROAT depth?** GDD §6.2 says reading it fast
+  is the skill that separates competent from good, so the deep end is the test,
+  not the rim. Press `2` and watch one climb the whole way.
 - ⚠ **Should the glyph be stroked in the CARGO's colour rather than the hull's?**
   It ships in `CARRIER_COLOR` because §3.6's palette note says silhouette carries
-  the read; a cargo-coloured glyph is one lookup away and is an art call, not a
-  phase's.
+  the read; a cargo-coloured glyph is one lookup away and is an art call.
 - **Does `CARRIER_CLIMB` 0.11 — nine seconds throat to rim — read as §6.2's
   "shoot deep; you have time", or just as slow?**
-- ⚠ **The palette, once P4 lands.** Press `0` on a busy well: do six enemy
-  colours stay separable from each other and from the cyan band, and does the
-  Thorn read as scenery rather than as a creature?
 - **Does the Weaver's cycle read as a cycle?** Press `3` and watch one for ten
   seconds: *it comes up, it spits, it goes back down.* If the retreat reads as a
   second approach, `C.WEAVER_RETREAT` is the knob.
@@ -382,9 +225,11 @@ that creates a second Thorn.
   Press `3`, let a Weaver finish a climb, then hold fire down that lane.
 - **Does a full-length Thorn sealing its own lane feel like lane denial or like
   a wall?** At `THORN_MAX` 1.00 the tip sits at the rim, so a shot is consumed
-  the instant it is fired. Standing in a sealed lane is safe and useless, which
-  is a strange combination worth looking at on hardware.
-- **Does a Thorn sheltering an enemy behind it read as a consequence or as the
-  game cheating?** A shot stops at the tip, so anything below it cannot be hit
-  until it climbs past — inherited from the original, self-resolving, and the
+  the instant it is fired. Standing in a sealed lane is safe and useless.
+- **Does a Thorn sheltering an enemy spawned behind it read as a consequence or
+  as the game cheating?** A shot stops at the tip, so anything below it cannot be
+  hit until it climbs past — inherited from the original, self-resolving, and the
   lane you failed to keep clean is the lesson.
+- ⚠ **The palette, on a busy well.** Press `0`: do the four Classic enemy colours
+  separate from each other and from the cyan band, and does the Thorn read as
+  scenery rather than as a creature?
