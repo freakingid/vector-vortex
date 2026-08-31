@@ -349,11 +349,24 @@ const C = {
   // the clear is left alive; "no enemies alive" alone is true one tick after
   // startGame() and in every gap between spawns.
   //
-  // ENEMY_CONCURRENT is the difficulty knob — how many are on screen at once,
-  // and CS007's heat curve is what will raise it. ⛔ It is read as
-  // min(ENEMY_CONCURRENT, ENEMY_CAP): ENEMY_CAP above is a READABILITY ceiling
-  // and never a difficulty knob, so the two are not interchangeable and the
-  // cap is not the thing to raise when a level should feel busier.
+  // ENEMY_CONCURRENT is the difficulty knob and CS007's heat curve is what
+  // will raise it. ⛔ It is read as min(ENEMY_CONCURRENT, ENEMY_CAP): ENEMY_CAP
+  // above is a READABILITY ceiling and never a difficulty knob, so the two are
+  // not interchangeable and the cap is not the thing to raise when a level
+  // should feel busier.
+  //
+  // ⛔ AND THE TWO NUMBERS COUNT DIFFERENT THINGS (CS007 P1, Paul's call —
+  // DECISIONS.md, "the spawner-stall call"). This comment used to say the
+  // spawner reads state.enemies.length; it does not any more.
+  //   ENEMY_CONCURRENT — a budget on THREATS. updateSpawner() counts entities
+  //     where `blocksClear && !dead` (threatCount, 08-spawner.js) against
+  //     min(ENEMY_CONCURRENT, ENEMY_CAP), so it bounds how much the player has
+  //     to answer, not how much is drawn.
+  //   ENEMY_CAP — a ceiling on ENTITIES. spawnEnemy() still refuses on raw
+  //     state.enemies.length, Thorns and bolts included, because a Thorn is
+  //     drawn and a readability ceiling counts everything on screen.
+  // ⛔ Before the split both read the same count and a standing Thorn held a
+  // release slot forever — three of them shut a well permanently.
   //
   // SPAWN_LANE_TRIES bounds the deterministic redraws 08-spawner.js spends
   // looking for a lane that is not already occupied near the throat. Bounded
@@ -3436,13 +3449,37 @@ const ENEMY_KINDS = {
   surger: (lane, depth) => new Surger(lane, depth),
 };
 
-// How many enemies may be alive at once. ⛔ The MIN of the two, and they are
-// not the same kind of number: C.ENEMY_CONCURRENT is the difficulty knob
-// (CS007's heat curve raises it), C.ENEMY_CAP is a readability ceiling that is
-// never raised for difficulty. Reading only one of them is how a retune of the
-// knob quietly walks past the ceiling.
+// The RELEASE BUDGET — how many THREATS may be alive at once. ⛔ The MIN of the
+// two, and they are not the same kind of number: C.ENEMY_CONCURRENT is the
+// difficulty knob (CS007's heat curve raises it), C.ENEMY_CAP is a readability
+// ceiling that is never raised for difficulty. Reading only one of them is how
+// a retune of the knob quietly walks past the ceiling.
 function spawnLimit() {
   return Math.min(C.ENEMY_CONCURRENT, C.ENEMY_CAP);
+}
+
+// How many things on the board are THREATS — GDD 6.5's `blocksClear`, read off
+// the entity and never off a class name, exactly as wellCleared() reads it.
+//
+// ⛔ THIS IS WHAT THE RELEASE BUDGET COUNTS, AND IT IS NOT WHAT C.ENEMY_CAP
+// COUNTS. Paul's call, 2026-08-31 (DECISIONS.md, "the spawner-stall call"):
+// the concurrency budget counts THREATS; the readability ceiling keeps counting
+// ENTITIES. Before the split both questions read state.enemies.length, and a
+// Thorn — permanent, unshootable-by-accident, and something the player is not
+// obliged to remove (GDD 6.1) — therefore held a release slot forever. Three
+// standing Thorns at C.ENEMY_CONCURRENT 3 shut the spawner: the quota never
+// spent, the well never cleared, and nothing threatened the player either.
+//
+// ⛔ Three follow-ons are settled with it and are NO CHANGE: no Thorn expires
+// (GDD 5's lesson — clear thorns before the last enemy — depends on it
+// persisting), wellCleared() is untouched, and C.ENEMY_CAP is not raised.
+function threatCount(state) {
+  let n = 0;
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (!e.dead && e.blocksClear) n++;
+  }
+  return n;
 }
 
 // Is `lane` the Skimmer's lane? ⛔ laneDelta, never (a - b): on a Ring, lane 15
@@ -3472,7 +3509,10 @@ function inSkimmerLane(well, lane, skimmer) {
 //      Dropping one deeper only ever gives the player more time.
 //
 //   ⛔ C.ENEMY_CAP — the readability ceiling, refused outright. It is not a
-//      difficulty knob and this is the one place it is enforced.
+//      difficulty knob and this is the one place it is enforced. ⛔ It counts
+//      RAW state.enemies.length, Thorns and bolts included, and CS007 P1's
+//      threats split did NOT touch it: a Thorn is drawn, so a ceiling on what
+//      is legible on screen counts it. threatCount() above is the other half.
 function spawnEnemy(kind, lane, depth) {
   const make = ENEMY_KINDS[kind];
   if (!make) return null;
@@ -3567,13 +3607,19 @@ function resetSpawner(state) {
 // which is what keeps the pressure constant; a timer that reset on a blocked
 // beat would make a busy well quieter exactly when it should not be, and one
 // that grew without bound would dump the backlog all at once.
+//
+// ⛔ AND THE BLOCK COUNTS THREATS, NOT ENTITIES (CS007 P1) — threatCount()
+// above, against the release budget. A slot is held by something the player
+// must remove to finish the well; a Thorn is not, so a Thorn does not hold one.
+// The C.ENEMY_CAP refusal inside spawnEnemy() still counts everything, so a
+// well full of Thorns stops releasing at the ceiling rather than at the budget.
 function updateSpawner(state, well, dt) {
   const sp = state.spawn;
   if (sp.remaining <= 0) return;
 
   if (sp.timer < C.SPAWN_INTERVAL) sp.timer += dt;
   if (sp.timer < C.SPAWN_INTERVAL) return;
-  if (state.enemies.length >= spawnLimit()) return;
+  if (threatCount(state) >= spawnLimit()) return;
 
   // Depth 0 is the throat — the far aperture, the only place a well releases
   // an enemy from. GDD 3.2's convention, not a magic number.

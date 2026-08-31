@@ -24,9 +24,13 @@
 //     an EMPTY well — which is a set of cases that cannot fail. Every soak run
 //     here sets MIXED first; the non-vacuity assertions say it worked.
 //  2. ⛔ AND C.ENEMY_CONCURRENT IS RAISED TO C.ENEMY_CAP for the soak, exactly
-//     as CS004's and CS005's closes do, because a standing Thorn holds a
-//     spawner slot (STATUS.md) and three of them shut the well. That is a
-//     WORKAROUND for a live defect that belongs to CS007, not a fix for it.
+//     as CS004's and CS005's closes do — it keeps the board busy enough that a
+//     dive has Thorns to thread. ⛔ REWRITTEN, CS007 P1: this used to be a
+//     WORKAROUND for a live defect — a standing Thorn held a spawner slot and
+//     three of them shut the well — and that defect is now FIXED. The release
+//     budget counts THREATS (`blocksClear && !dead`), the readability ceiling
+//     still counts entities (08-spawner.js, test-cs007-p1.js, DECISIONS.md
+//     2026-08-31). The raise stays as a plain difficulty fixture.
 //     ⛔ Both fixtures are put back and both are asserted back.
 //  3. ⛔ THE HASH MUST COVER dive.active AND dive.phase, not only the two
 //     numbers test-cs005-p5.js already folds in. timer and depth alone would
@@ -303,26 +307,39 @@ const child = execFileSync(process.execPath, [__filename, "--hash-only"],
   { cwd: ROOT, encoding: "utf8", stdio: "pipe" }).trim();
 H.eq(Number(child), hashA, `${TICKS} ticks hash identically across two processes`);
 
+// ⛔ SNAPSHOT THE HASHED RUN'S BOOKKEEPING BEFORE THE DIFFERENT-SEED CASE.
+// REPAIRED, CS007 P1 — a fixture, not an assertion. `lastRun` is overwritten by
+// every hashRun(), so the checks below read whatever ran LAST, and the line
+// above runs SEED + 1. Every one of them says "the hashed run", so they were
+// always about the SEED run; on SEED + 1 they were describing a run nothing
+// else in this file looks at. CS007 P1's threats split is what exposed it —
+// wells now progress instead of stalling, so on SEED + 1 the scripted player
+// survives 913 ticks past this window (MEASURED: first stop at tick 10,913,
+// window 10,000) and `restarts` came back 0. ⛔ This RESTORES the precondition
+// the assertions were always about rather than relaxing one: nothing in
+// hashRun() changed, so the hash itself does not move.
+const hashed = Object.assign({}, lastRun);
+
 H.assert(hashRun(SEED + 1) !== hashA, "a different seed produces a different hash");
 
 // ⛔ AND THE HASHED RUN DIVED — trap 4. Everything above is a claim about a
 // beat, and without these it is a claim about a beat that never ran.
-H.assert(lastRun.maxEnemies > 0, "the hashed run had enemies on the board");
-H.assert(lastRun.level > 1, "and cleared at least one well");
-H.assert(lastRun.restarts > 0, "and reached the game-over stop at least once");
-H.assert(lastRun.divesStarted > 0, "⛔ and a dive STARTED inside the hashed window");
-H.assert(lastRun.divesCompleted > 0,
+H.assert(hashed.maxEnemies > 0, "the hashed run had enemies on the board");
+H.assert(hashed.level > 1, "and cleared at least one well");
+H.assert(hashed.restarts > 0, "and reached the game-over stop at least once");
+H.assert(hashed.divesStarted > 0, "⛔ and a dive STARTED inside the hashed window");
+H.assert(hashed.divesCompleted > 0,
          `⛔ and one COMPLETED — active fell and the level advanced, which is the only ` +
-         `exit updateDive() has (started ${lastRun.divesStarted}, ` +
-         `completed ${lastRun.divesCompleted})`);
-H.assert(lastRun.sawDescent,
+         `exit updateDive() has (started ${hashed.divesStarted}, ` +
+         `completed ${hashed.divesCompleted})`);
+H.assert(hashed.sawDescent,
          "⛔ and the descent beat ran — a window that only ever saw `grace` would hash " +
          "a dive.depth that never left 1");
-H.assert(lastRun.diveTicks > 100,
+H.assert(hashed.diveTicks > 100,
          `⛔ and the dive is a real slice of the window, not a single step ` +
-         `(${lastRun.diveTicks} of ${TICKS} ticks)`);
-H.assert(lastRun.sawCarrier && lastRun.sawWeaver && lastRun.sawThorn &&
-         lastRun.sawDrifter && lastRun.sawSurger,
+         `(${hashed.diveTicks} of ${TICKS} ticks)`);
+H.assert(hashed.sawCarrier && hashed.sawWeaver && hashed.sawThorn &&
+         hashed.sawDrifter && hashed.sawSurger,
          "and the six-kind board was live inside it — the Weaver in particular, " +
          "because it is the only source of the Dive's only hazard");
 

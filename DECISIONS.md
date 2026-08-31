@@ -234,6 +234,25 @@ put back and asserted back).
 with standing Thorns *too* busy to read — which is a playtest answer, not an
 argument, and `PLAYTEST.md`'s six-kind ask is where it would surface.
 
+**Shipped, CS007 P1** — and the two inputs CS005 gave this call are recorded here
+rather than in `STATUS.md`, whose known-issue entry retired with the fix:
+
+1. A **riding Drifter** is temporarily neither a threat the player can remove nor
+   a slot they can free, but it is **self-resolving where a Thorn is not**: it
+   crosses on a fixed cadence bounded by `C.DRIFT_RIDE_TIME` and climbs in
+   **both** phases, so it reaches the rim and forces a resolution. "Threats or
+   entities?" had a case where the honest answer was "neither, for 0.85 s". It
+   is `blocksClear: true`, so the split leaves it holding a slot — correctly.
+2. ⛔ A **rim-parked Carrier is NOT self-resolving**, and it stalled a seeded run
+   at the CS005 close. ⚠ **It is a separate reading and NOT the same bug**: a
+   player cannot shoot it without entering its lane, and entering its lane is
+   contact death, so it looks like a life tax and is not. **The player's answer
+   is the Purge** — unspent on a well that did not need it, recharged on entry,
+   and specified as *"the enemy nearest the rim, deterministically"* (GDD §4.3).
+   It stalls a soak that never presses Purge; it does not stall a played build.
+   ⛔ No code change — the reading is the record, and the soak repair is the
+   driver (`replayWide`'s pin), never the build.
+
 ⚠ **And the previous entry's "what would change it" condition was met.** It asked
 for *a way to isolate P2's `throatOffset` claim that does not depend on a
 whole-run hash*. CS006 P5 found one: every `.throatOffset` in the built file lies

@@ -1,15 +1,47 @@
 # Vector Vortex — STATUS
-Version: 0.0.3 · Changeset: CS007 (planned, not started) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.3 · Changeset: CS007 (P1 of 5 built) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS007
 
-One line per phase here; reasoning goes to `log/CS007.md`. Nothing yet.
+One line per phase here; reasoning goes to `log/CS007.md`.
+
+- **P1 — the spawner-stall split.** Budget counts THREATS, ceiling counts
+  ENTITIES. 30 files green, zero skips. New `scratchpad/test-cs007-p1.js`.
+
+⛔ **What the two numbers count now.** `min(C.ENEMY_CONCURRENT, C.ENEMY_CAP)` is
+a budget on entities where `blocksClear && !dead`, read off the entity, so it
+bounds what the player must *answer*. `C.ENEMY_CAP` is untouched — raw
+`state.enemies.length`, one enforcement site — because a Thorn is drawn.
+**Verified at `1d64329` first** (`git diff 1d64329 HEAD -- src/` empty): the
+repro ran 6,000 ticks at 1 → 1, quota 10 → 10, board 3 → 3; after it the quota
+spends and the well clears with three Thorns standing. ⛔ No heat.
+`wellCleared()`, Thorn persistence and `C.ENEMY_CAP` unchanged, as settled.
+GDD §6.1's ⚠ Thorn-slot note is now what shipped.
+
+⛔ **`P1_DETERMINISM_HASH` re-recorded once, 2063617640 → 571388570**, cause at
+the assertion. **Re-measured** pre-split: **1,072 of 1,417 blocked beats** are
+ones the split releases, first at **tick 3,381**. ⚠ The plan predicted 1,082 /
+3,380 on a byte-identical build — a probe-definition gap, not behaviour.
+`GOLDEN_LANES` and the geometry goldens are untouched and green.
+
+⛔ **THREE REDS THE PLAN DID NOT PREDICT, none a baseline, and P2 should expect
+more.** Wells now progress instead of stalling, so three closed soaks lost a
+*precondition*. Both closing soaks' `lastRun` is overwritten by
+`hashRun(SEED + 1)`, so their "the hashed run reached the stop" checks always
+read the **wrong run** — latent, exposed not caused; on `SEED + 1` the player now
+survives to tick 10,913, past the 10,000 window. Repaired by snapshotting
+`lastRun` before the different-seed case; no hash moves. `test-cs004-p5.js`'s
+20-run soak hit the parked-enemy fixed point CS005 documented (seed 21308120,
+level 8, quota 0, three Weavers parked at 0.55, nothing moving from tick 10,951
+to the cap) and got CS005's own repair, the wall-to-wall pin. ⛔ `RUN_CAP`, seeds
+and assertions unchanged. ⚠ `test-cs004-p5.js` has the same `lastRun` defect and
+is **green**; left alone because this phase did not invalidate it.
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **29 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **30 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -67,53 +99,18 @@ One line per phase here; reasoning goes to `log/CS007.md`. Nothing yet.
 
 ## Known issues
 
-- ⛔ **A STANDING THORN HOLDS A SPAWNER SLOT, and the well can stall.** Found by
-  CS004 P5's soak, measured, not inferred. `updateSpawner()` blocks on
-  `state.enemies.length >= min(ENEMY_CONCURRENT, ENEMY_CAP)` — a count of
-  **everything in the one array, Thorns included** — and `ENEMY_CONCURRENT` is
-  3. A Thorn nobody shoots is permanent, so **three standing Thorns hold the
-  spawner shut**: the quota never spends, the well never clears, and nothing
-  threatens the player either. Repro: three Thorns at any length, quota full, no
-  input — after 100 simulated seconds the level, the quota and the board are
-  where they started.
-
-  ⚠ **Unreachable in a played build today**, and only because
-  `C.DEBUG_SPAWN_KINDS` ships as `["vaulter"]`. It goes **live the moment
-  CS007's introduction schedule puts Weavers at L5.** **Three** closing soaks
-  work around it with the same documented fixture (`C.ENEMY_CONCURRENT` raised to
-  `C.ENEMY_CAP`, put back afterwards and asserted back).
-
-  ✅ **THE DESIGN CALL IS SETTLED AND CS007 BUILDS IT. Paul's, 2026-08-31.**
-  ⛔ **The concurrency budget counts THREATS; the readability ceiling keeps
-  counting ENTITIES.** `updateSpawner()`'s block counts entities where
-  `blocksClear && !dead`; `spawnEnemy()`'s `C.ENEMY_CAP` check stays raw
-  `state.enemies.length`. ⛔ Three follow-ons are settled with it and are **no
-  change**: no Thorn expires (GDD §5's lesson depends on it persisting),
-  `wellCleared()` is untouched, and `C.ENEMY_CAP` is not raised — it is a
-  readability ceiling, not a difficulty knob. Full record in `DECISIONS.md`.
-
-  ⚠ **The two inputs CS005 gave that call, kept because they are why it went the
-  way it did.**
-  1. A **riding Drifter** is temporarily neither a threat the player can remove
-     nor a slot they can free — but it is **self-resolving where a Thorn is
-     not**: it crosses on a fixed cadence, so the window is bounded by
-     `C.DRIFT_RIDE_TIME`, and it climbs in **both** phases, so it reaches the rim
-     and forces a resolution. "Threats or entities?" now has a case where the
-     honest answer is "neither, for 0.85 s".
-  2. ⛔ A **rim-parked Carrier is NOT self-resolving**, and it stalled a seeded
-     run at the CS005 close: one Carrier at depth 1.00 with the quota spent, for
-     the full 30,000-tick cap. ⚠ **Three of the six roster classes park rather
-     than hunt** — Carrier, Weaver, Surger. Fixed in the soak *fixture*, never in
-     the build.
-
-  ⚠ **The rim-parked Carrier is a separate reading and it is NOT the same bug.**
-  H4 traces it: a player cannot shoot it without entering its lane, and entering
-  its lane is contact death — so it looks like a life tax and is not. **The
-  player's answer is the Purge**, unspent on a well that did not need it,
-  recharged on entry, and specified as *"the enemy nearest the rim,
-  deterministically"* (GDD §4.3). It stalls a soak that never presses Purge; it
-  does not stall a played build. ⛔ **No code change — the reading is the
-  record.**
+- ⚠ **THREE OF THE SIX ROSTER CLASSES PARK RATHER THAN HUNT — Carrier, Weaver,
+  Surger — and that is what stalls a SOAK now that wells progress.** ⛔ Not a
+  build defect and not the Thorn stall: a parked entity is `blocksClear: true`,
+  so it correctly holds a release slot and correctly blocks the clear. A well
+  whose only survivors are parked never clears, and a scripted driver whose
+  rotation never reaches their lane neither kills them nor dies to them. ⛔ **The
+  repair is the driver, never the build** — `replayWide`'s wall-to-wall pin,
+  CS005's, and CS007 P1 gave `test-cs004-p5.js` the same one after seed 21308120
+  sat at level 8 for 19,000 ticks. ⚠ **The Purge is the played answer** (GDD
+  §4.3, "the enemy nearest the rim, deterministically"); a soak that never
+  presses it is the only thing that stalls. ⛔ No code change — the reading is
+  the record.
 
 - ⛔ **The Dive has no visual, and a dive reads as 2.6 s of a still board.**
   `Game.draw()` paints the well, the surviving Thorns and a Skimmer still drawn

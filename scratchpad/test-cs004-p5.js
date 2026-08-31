@@ -402,18 +402,25 @@ function classCounts(list) {
   return n;
 }
 
-// ⛔ A FIXTURE, AND IT IS THE ONE THAT MAKES THIS SOAK A SOAK — read the ⚠ in
-// STATUS.md before removing it. C.ENEMY_CONCURRENT is 3 and the spawner blocks
-// on `state.enemies.length >= min(ENEMY_CONCURRENT, ENEMY_CAP)` — a count of
-// EVERYTHING in the array, Thorns included. A Thorn nobody shoots is permanent,
-// so with Weavers in the mix three standing Thorns hold the spawner shut: the
-// measured board on the Fan was THREE enemies born in 5,000 ticks. Every
-// assertion below would still pass, on a well with almost nothing in it.
+// ⛔ A FIXTURE, AND IT IS THE ONE THAT MAKES THIS SOAK A SOAK. C.ENEMY_CONCURRENT
+// is 3, and at 3 this soak's Weaver-heavy board is thin: the measured board on
+// the Fan was THREE enemies born in 5,000 ticks. Every assertion below would
+// still pass, on a well with almost nothing in it.
 //
 // Raising the DIFFICULTY knob to the READABILITY ceiling for the soak is the
 // same class of fixture as topping up the quota and the lives: it keeps the
 // well busy so the geometry is actually stressed, and it is what CS007's heat
 // curve does anyway. ⛔ C.ENEMY_CAP is untouched and is still asserted below.
+//
+// ⛔ REWRITTEN, CS007 P1 — THE REASON CHANGED AND THE FIXTURE DID NOT. This
+// block used to say the raise was "a WORKAROUND for a live defect that belongs
+// to CS007": the spawner blocked on a count of EVERYTHING in the array, Thorns
+// included, so three standing Thorns held it shut permanently. That defect is
+// FIXED — the release budget now counts THREATS (`blocksClear && !dead`) and
+// the readability ceiling still counts entities (`08-spawner.js`,
+// `scratchpad/test-cs007-p1.js`, DECISIONS.md 2026-08-31). What is left is a
+// plain difficulty fixture. ⛔ KEEP IT: removing it would change this soak's
+// board for no assertion's benefit, and the claim this phase owns is unchanged.
 const SHIPPED_CONCURRENT = C.ENEMY_CONCURRENT;
 
 // Aggregated over the whole soak rather than per well. Splitting and laying are
@@ -736,6 +743,31 @@ for (const cargo of cargoNames) {
 // lays, chips and bolts. Each run is a different seed and is driven by the same
 // recorded input list as the determinism case, so a failure here is replayable.
 
+// ⛔ THE DRIVER IS THE RECORDED LIST PLUS A WALL-TO-WALL PIN. REPAIRED,
+// CS007 P1 — a fixture, not an assertion, and it is CS005's own repair for this
+// exact failure mode rather than a new idea. test-cs005-p5.js hit it first and
+// wrote it down: on `replay` alone, seed 21936494 ran its full 30,000 ticks
+// with ONE CARRIER PARKED AT THE RIM and the quota spent. ⚠ Three of the six
+// roster classes park rather than hunt — Carrier, Weaver, Surger — so a well
+// whose only survivors are parked never clears, and a scripted player whose
+// rotation never reaches their lane is neither killing them nor being killed.
+//
+// ⛔ MEASURED, and this is what changed: CS007 P1's threats split made wells
+// progress instead of stalling, and seed 21308120 now walks into that fixed
+// point at LEVEL 8 — quota 0, three Weavers parked at depth 0.55, four Thorns
+// standing, no level and no quota movement from tick 10,951 to the 30,000-tick
+// cap. The build is behaving correctly; the DRIVER is what could not reach
+// them. ⛔ Nothing is relaxed here — RUN_CAP is unchanged, the seeds are
+// unchanged, and the stop is still asserted. The pin is what a real player is
+// and the scripted list is not, and it is still a pure function of the tick
+// index, so a failing seed is still replayable.
+// ⛔ PIN_TICKS is this file's own, already declared above for `adversarial` —
+// the same 300 test-cs005-p5.js uses, and reused rather than redeclared.
+function replayWide(input, i) {
+  replay(input, i);
+  if (i % PIN_TICKS === 0) input.mouseMove((Math.floor(i / PIN_TICKS) % 2) ? 4000 : -4000);
+}
+
 let threw = null, stuck = null;
 let soakMaxEnemies = 0, soakMaxShots = 0, soakNaN = null, soakLevels = 0, soakTicks = 0;
 const soakSeen = { vaulter: false, carrier: false, weaver: false, thorn: false, bolt: false };
@@ -748,7 +780,7 @@ for (let r = 0; r < RUNS && !threw && !stuck; r++) {
     C.DEBUG_SPAWN_KINDS = MIXED.slice();
     let ticks = 0;
     while (state.screen !== "gameover" && ticks < RUN_CAP) {
-      replay(G.input, ticks);
+      replayWide(G.input, ticks);
       G.update(DT);
       ticks++;
       if (state.enemies.length > soakMaxEnemies) soakMaxEnemies = state.enemies.length;

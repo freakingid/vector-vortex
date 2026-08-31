@@ -396,7 +396,38 @@ H.eq(probes % 5, 0, "the NaN walk probed five depths per lane (non-vacuous)");
 // their original 8e0fb7c recordings (screenPos moves on exactly the two offset
 // wells; every lane-space helper is unmoved on all sixteen), and the source
 // assertion below, which needs no baseline at all.
-const P1_DETERMINISM_HASH = 2063617640;
+//
+// ---------------------------------------------------------------------------
+// ⛔ RE-RECORDED A SECOND TIME, AT CS007 P1, AND THE CAUSE IS ONE THING.
+// 2063617640 -> 571388570. ⛔ ONE BASELINE, ONE CAUSE: `updateSpawner()`'s
+// release budget now counts THREATS (`blocksClear && !dead`) where it counted
+// every entity in the array, so a Thorn no longer holds a release slot
+// (08-spawner.js; PLANNED-FEATURES-CS007.md §4.1; DECISIONS.md 2026-08-31,
+// Paul's call). This is a CROSS-FILE baseline — it runs test-cs005-p5.js
+// `--hash-only` in a child process, and that soak drives a six-kind board at
+// C.ENEMY_CONCURRENT 3, which is exactly the fixture the split moves.
+//
+// ⛔ MEASURED, in that soak's own fixture, on the PRE-SPLIT build at 1d64329
+// (`git diff 1d64329 HEAD -- src/` is empty, so the measurement is against the
+// code this re-record replaces): 1,072 of its 1,417 blocked spawner beats are
+// beats where the spawner was blocked and `blocksClear && !dead` was under 3 —
+// beats the split releases — and THE FIRST IS AT TICK 3,381. The two runs are
+// therefore identical for 3,380 ticks and diverge at the first released beat.
+// ⚠ PLANNED-FEATURES-CS007.md predicted 1,082 and tick 3,380 for the same
+// quantity; the build is byte-identical to the one it measured, so the small
+// difference is in how the two probes counted, not in behaviour. The count
+// above is defined as: one per `updateSpawner()` call that reached the
+// concurrency guard, took it, and would not have taken the threats form.
+//
+// ⛔ AND THE RE-RECORD IS GUARDED RATHER THAN TRUSTED. §4, §5 and the §8 source
+// assertion below are untouched and still on their original recordings, and
+// test-cs004-p1.js's GOLDEN_LANES is green with no edit — MEASURED: every
+// entity on its board over its 3,000-tick window is a Vaulter, so
+// `blocksClear && !dead` equals `state.enemies.length` on every tick there and
+// the split is provably a no-op for it. A re-record that had moved GOLDEN_LANES
+// would have been a second cause and not this one.
+// ---------------------------------------------------------------------------
+const P1_DETERMINISM_HASH = 571388570;
 
 const child = execFileSync(process.execPath,
   [path.join(__dirname, "test-cs005-p5.js"), "--hash-only"],

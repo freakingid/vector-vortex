@@ -46,8 +46,13 @@
 //     constants.
 //  5. The open-well soak tops up `spawn.remaining` and `lives` every tick, and
 //     raises C.ENEMY_CONCURRENT to C.ENEMY_CAP. Fixtures to hold the well open
-//     and busy, not weakened assertions — the ⚠ in STATUS.md about a standing
-//     Thorn holding a spawner slot is why the third one exists.
+//     and busy, not weakened assertions. ⛔ REWRITTEN, CS007 P1: the third one
+//     used to be a workaround for a live defect — a standing Thorn held a
+//     spawner slot, because the release budget counted EVERYTHING in the array.
+//     That is fixed (the budget counts THREATS, the ceiling counts entities —
+//     08-spawner.js, test-cs007-p1.js). It stays as a plain difficulty fixture
+//     that keeps the board busy; removing it would move this soak's board for
+//     no assertion's benefit.
 //  6. Splits and lays make the board grow from INSIDE a tick, so every count
 //     here is by class rather than by array length.
 //  7. A Surger MUTATES killDepth to 0 for its discharge and restores it. The
@@ -300,6 +305,19 @@ const child = execFileSync(process.execPath, [__filename, "--hash-only"],
   { cwd: ROOT, encoding: "utf8", stdio: "pipe" }).trim();
 H.eq(Number(child), hashA, `${TICKS} ticks hash identically across two processes`);
 
+// ⛔ SNAPSHOT THE HASHED RUN'S BOOKKEEPING BEFORE THE DIFFERENT-SEED CASE.
+// REPAIRED, CS007 P1 — a fixture, not an assertion. `lastRun` is overwritten by
+// every hashRun(), so the checks below read whatever ran LAST, and the line
+// above runs SEED + 1. Every one of them says "the hashed run", so they were
+// always about the SEED run; on SEED + 1 they were describing a run nothing
+// else in this file looks at. CS007 P1's threats split is what exposed it —
+// wells now progress instead of stalling, so on SEED + 1 the scripted player
+// survives 913 ticks past this window (MEASURED: first stop at tick 10,913,
+// window 10,000) and `restarts` came back 0. ⛔ This RESTORES the precondition
+// the assertions were always about rather than relaxing one: nothing in
+// hashRun() changed, so the hash itself does not move.
+const hashed = Object.assign({}, lastRun);
+
 // A different seed must move the hash, or the two cases above prove nothing.
 H.assert(hashRun(SEED + 1) !== hashA, "a different seed produces a different hash");
 
@@ -307,18 +325,18 @@ H.assert(hashRun(SEED + 1) !== hashA, "a different seed produces a different has
 // one. All six roster classes have to have been on the board inside the hashed
 // window, or "determinism with the new draws" is a claim about draws that were
 // never spent.
-H.assert(lastRun.maxEnemies > 0, "the hashed run had enemies on the board");
-H.assert(lastRun.level > 1, "and cleared at least one well — nextWell() is in the hash");
-H.assert(lastRun.restarts > 0,
+H.assert(hashed.maxEnemies > 0, "the hashed run had enemies on the board");
+H.assert(hashed.level > 1, "and cleared at least one well — nextWell() is in the hash");
+H.assert(hashed.restarts > 0,
          "and reached the game-over stop at least once — the restart path is in the hash");
-H.assert(lastRun.sawCarrier, "and a Carrier — the split's two draws are in the hash");
-H.assert(lastRun.sawWeaver, "and a Weaver");
-H.assert(lastRun.sawThorn, "and a Thorn it laid");
-H.assert(lastRun.sawBolt, "and a bolt it fired");
-H.assert(lastRun.sawDrifter,
+H.assert(hashed.sawCarrier, "and a Carrier — the split's two draws are in the hash");
+H.assert(hashed.sawWeaver, "and a Weaver");
+H.assert(hashed.sawThorn, "and a Thorn it laid");
+H.assert(hashed.sawBolt, "and a bolt it fired");
+H.assert(hashed.sawDrifter,
          "⛔ and a DRIFTER — its heading draw and its cross progress are in the hash");
-H.assert(lastRun.sawSurger, "⛔ and a SURGER");
-H.assert(lastRun.sawDischarge,
+H.assert(hashed.sawSurger, "⛔ and a SURGER");
+H.assert(hashed.sawDischarge,
          "⛔ and one of them reached `discharge` — the killDepth mutation happened " +
          "inside the hashed window, so an unrestored zero would move the hash");
 
@@ -496,14 +514,20 @@ function classCounts(list) {
   return n;
 }
 
-// ⛔ A FIXTURE, AND IT IS THE ONE THAT MAKES THIS SOAK A SOAK — trap 5, and the
-// ⚠ in STATUS.md is why. C.ENEMY_CONCURRENT is 3 and the spawner blocks on
-// `state.enemies.length >= min(ENEMY_CONCURRENT, ENEMY_CAP)`, a count of
-// EVERYTHING in the array, Thorns included. A Thorn nobody shoots is permanent,
-// so with Weavers in the mix three standing Thorns hold the spawner shut.
+// ⛔ A FIXTURE, AND IT IS THE ONE THAT MAKES THIS SOAK A SOAK — trap 5.
+// C.ENEMY_CONCURRENT is 3, and at 3 this soak's six-kind board is thin.
 // Raising the DIFFICULTY knob to the READABILITY ceiling for the soak keeps the
 // well busy so the geometry is actually stressed. ⛔ C.ENEMY_CAP is untouched
 // and is still asserted below.
+//
+// ⛔ REWRITTEN, CS007 P1 — THE REASON CHANGED AND THE FIXTURE DID NOT. This
+// block used to say the spawner blocked on `state.enemies.length >= min(...)`,
+// a count of EVERYTHING in the array, so three standing Thorns held it shut and
+// the raise was a workaround for a live defect. That defect is FIXED: the
+// release budget counts THREATS (`blocksClear && !dead`) and the readability
+// ceiling still counts entities (08-spawner.js, test-cs007-p1.js, DECISIONS.md
+// 2026-08-31). ⛔ KEEP THE FIXTURE — it is now a plain difficulty fixture, and
+// removing it would move this soak's board for no assertion's benefit.
 const SHIPPED_CONCURRENT = C.ENEMY_CONCURRENT;
 
 // Aggregated over the whole soak rather than per well: a chip and a discharge

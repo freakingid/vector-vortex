@@ -300,11 +300,24 @@ const C = {
   // the clear is left alive; "no enemies alive" alone is true one tick after
   // startGame() and in every gap between spawns.
   //
-  // ENEMY_CONCURRENT is the difficulty knob — how many are on screen at once,
-  // and CS007's heat curve is what will raise it. ⛔ It is read as
-  // min(ENEMY_CONCURRENT, ENEMY_CAP): ENEMY_CAP above is a READABILITY ceiling
-  // and never a difficulty knob, so the two are not interchangeable and the
-  // cap is not the thing to raise when a level should feel busier.
+  // ENEMY_CONCURRENT is the difficulty knob and CS007's heat curve is what
+  // will raise it. ⛔ It is read as min(ENEMY_CONCURRENT, ENEMY_CAP): ENEMY_CAP
+  // above is a READABILITY ceiling and never a difficulty knob, so the two are
+  // not interchangeable and the cap is not the thing to raise when a level
+  // should feel busier.
+  //
+  // ⛔ AND THE TWO NUMBERS COUNT DIFFERENT THINGS (CS007 P1, Paul's call —
+  // DECISIONS.md, "the spawner-stall call"). This comment used to say the
+  // spawner reads state.enemies.length; it does not any more.
+  //   ENEMY_CONCURRENT — a budget on THREATS. updateSpawner() counts entities
+  //     where `blocksClear && !dead` (threatCount, 08-spawner.js) against
+  //     min(ENEMY_CONCURRENT, ENEMY_CAP), so it bounds how much the player has
+  //     to answer, not how much is drawn.
+  //   ENEMY_CAP — a ceiling on ENTITIES. spawnEnemy() still refuses on raw
+  //     state.enemies.length, Thorns and bolts included, because a Thorn is
+  //     drawn and a readability ceiling counts everything on screen.
+  // ⛔ Before the split both read the same count and a standing Thorn held a
+  // release slot forever — three of them shut a well permanently.
   //
   // SPAWN_LANE_TRIES bounds the deterministic redraws 08-spawner.js spends
   // looking for a lane that is not already occupied near the throat. Bounded
