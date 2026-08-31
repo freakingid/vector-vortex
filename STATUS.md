@@ -156,9 +156,16 @@ compression authorizations to work around; it should not recur.
   to change.** `test-cs005-p3.js` pinned all five `drawWell` arguments to assert
   one of them. Source-text assertions are the right tool for "this is still
   unwired", but ⛔ **pin only the argument the claim is about**.
-- ⛔ **Playtest asks live in `PLAYTEST.md`**, eight of them marked ⛔. Not session
-  context — pull it up at the machine with a build in front of you, never during
-  a build phase.
+- ⛔ **NO KEY IN THE BUILD REACHES A CHOSEN LEVEL.** `w` (`cycleWell`) advances
+  `state.wellIndex` and never `state.level`, and both `eligibleKinds()` and
+  `wellBandColor(level, …)` are functions of the level. ⚠ Found at the CS007
+  close: `PLAYTEST.md` carried "press `w` up to level 23" and "press `w` to level
+  65" for two asks and both were impossible. ⛔ **GDD §4.6's Start Depth is what
+  unblocks them** — odd depths to 81 — so **CS008 makes two parked playtest asks
+  answerable**, and the plan should say so.
+- ⛔ **Playtest asks live in `PLAYTEST.md`**, eight of them marked ⛔, two of them
+  ⛔ **PARKED until CS008's Start Depth**. Not session context — pull it up at the
+  machine with a build in front of you, never during a build phase.
 
 ## Open questions (blocking)
 
@@ -238,6 +245,11 @@ claim MEASURED or PREDICTED.
 5. ⚠ **The HUD's menu/screen-state portion is `kit-menu`'s draft** (`CLAUDE.md`,
    Kit modules) — it obeys the boundary contract from its first commit and
    carries a `.NOTES.md` beside it in `src/`.
+5a. ⛔ **START DEPTH UNBLOCKS TWO PARKED PLAYTEST ASKS**, and that is a reason to
+   land it early in the changeset rather than last. Nothing in the build reaches a
+   chosen level today (see Known issues), so the played six-kind board at 23 and
+   the dim band at 65 have never been looked at by anybody. Both are odd and
+   inside §4.6's cap of 81.
 6. ⚠ **Nothing has been tuned against GDD §8.2's targets.** CS007 built the
    instrument and chose the curve from measured option tables; the ask is
    `PLAYTEST.md`'s ⛔ *"can you NAME what changed at level 5, at 9, at 13"*. If a

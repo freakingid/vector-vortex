@@ -21,6 +21,15 @@ on every one of them.
 - Grouped by what you would have on screen, because a playtest is a sitting and
   not a checklist. The debug bench is `1`–`6` for one of a kind in your lane and
   `0` for the full staggered row.
+- ⛔ **`w` CYCLES THE WELL SHAPE, NOT THE LEVEL — AND THIS FILE GOT THAT WRONG
+  TWICE.** `cycleWell` advances `state.wellIndex` and calls `enterWell()`; it
+  never touches `state.level`. Both the eligible kind set (`eligibleKinds()`) and
+  the colour band (`wellBandColor(level, …)`) are functions of the **level**, so
+  ⛔ **no key in the build reaches a chosen level.** Two asks below said "press
+  `w` up to level 23" and "press `w` to level 65"; both were impossible and are
+  corrected in place. ⛔ **GDD §4.6's Start Depth is what makes a level
+  selectable** — odd depths to 81, and it is CS008's. Until it lands, an ask that
+  needs a specific level is **parked**, and says so.
 - ⛔ **THE BENCH KEYS ARE PERMANENT NOW, AND THIS FILE DEPENDS ON THEM.**
   Paul's H5 call, 2026-08-31: CS004 shipped them ⚠ TEMPORARY, paired with a
   bench constant GDD §8.1's introduction schedule was going to delete. CS007 P3
@@ -76,15 +85,27 @@ glyph in the cargo's own colour. ⚠ The suite asserts the compact/wide separati
 and the doubling-back off the real draw calls; it cannot assert a read.
 
 **⛔ Is a six-kind board READABLE, or is it noise?** CS005 is the first build in
-which all six Classic enemies can be on one well at once, and ⛔ **since CS007 P3
-a played build does it by itself** — GDD §8.1's introduction schedule landed, so
-press `w` up to **level 23** (or start a run and cycle) and play a well or two.
-That is the level at which the schedule has released every kind, and it is the
-board this ask is about. ⚠ **The instruction used to be "set
-`C.DEBUG_SPAWN_KINDS`"; that constant was deleted with the schedule** — the
-difficulty question it answered is now `C.SPAWN_SCHEDULE`'s, and the six spawn
-keys `1`–`6` and the row key `0` are untouched and are still how one silhouette
-at a time is judged. ⚠ **The closing soak proved that board is STABLE, and
+which all six Classic enemies can be on one well at once. ⛔ **ANSWER THE HALF
+YOU CAN REACH: press `0`.** The row key stages one of each of the six Classic
+kinds on consecutive lanes at staggered depths, from the throat up to
+`C.SAFE_SPAWN_DEPTH` — six silhouettes side by side, at six sizes, which is the
+separability question and is most of this ask.
+
+⛔ **THE OTHER HALF IS PARKED, AND THE PREVIOUS INSTRUCTION HERE WAS IMPOSSIBLE.**
+This said "press `w` up to level 23". ⛔ **`w` cycles the well SHAPE and never the
+level** (see the maintenance note above), and the eligible set is a function of
+`state.level` — so a *played* six-kind board is reachable only by surviving to
+level 18, and a seven-kind one to 23, on three lives with no extra lives in the
+build yet. ⛔ **It unblocks at CS008**, when GDD §4.6's Start Depth makes odd
+levels to 81 selectable; 23 is odd and inside the cap. ⚠ Until then `0` is the
+honest instrument, and what it cannot tell you is whether six kinds **arriving,
+climbing and being triaged at once** is readable — only whether six shapes are
+distinguishable standing still.
+
+⚠ **An older instruction here said "set `C.DEBUG_SPAWN_KINDS`"; that constant was
+deleted with the schedule** — the difficulty question it answered is now
+`C.SPAWN_SCHEDULE`'s, and the six spawn keys `1`–`6` and the row key `0` are
+untouched and are still how one silhouette at a time is judged. ⚠ **The closing soak proved that board is STABLE, and
 that is a different claim from playable**: it ran 5,000 ticks on each of the six
 open wells with the concurrency knob raised to the readability ceiling, and
 proved no lane leaves the well, no NaN reaches a projected point and no array
@@ -105,8 +126,19 @@ actually answer.
 broken?** The dim band (GDD §3.6–3.7) draws levels 65–80 at `C.DIM_BAND_ALPHA`
 0.18, and CS006 P4 wired the lighting that is supposed to make it playable: a
 lane with an enemy in it, a shot travelling it, or a Surger charging it draws
-its two bounding spokes at `C.LANE_LIT_ALPHA` 0.9 instead. Press `w` to level 65
-(or start a run and cycle), then bring the board up with `0`. ⚠ **This is the
+its two bounding spokes at `C.LANE_LIT_ALPHA` 0.9 instead.
+
+⛔ **PARKED — THIS ASK IS NOT REACHABLE IN THE BUILD, AND THE INSTRUCTION IT USED
+TO CARRY WAS IMPOSSIBLE.** It said "press `w` to level 65". ⛔ **`w` cycles the
+well SHAPE and never the level** (see the maintenance note at the top), and
+`wellBandColor()` takes the **level** — so nothing in the build puts the dim band
+on screen short of surviving sixty-four wells on three lives. ⛔ **It unblocks at
+CS008**: GDD §4.6's Start Depth makes odd levels to 81 selectable, and 65 is odd
+and inside the cap. ⚠ **Do not spend a sitting trying** — read the rest of this
+ask when you can select the depth, and answer it then, with `0` to bring the
+board up once you are there.
+
+⚠ **This is the
 only band in the game where the well is not the brightest thing on screen**, and
 the failure mode is not "too dark" — it is *the player reads the dim spokes as a
 rendering fault and stops trusting the well as information*. Two things only the
