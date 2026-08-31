@@ -362,6 +362,23 @@ H.eq(probes % 5, 0, "the NaN walk probed five depths per lane (non-vacuous)");
 //    hash at seed 20260830, taken from the CS006 P1 build.
 // ---------------------------------------------------------------------------
 
+// ⛔ RED SINCE CS006 P3, DELIBERATELY, AND P5 OWNS THE SINGLE RE-RECORD.
+// P3 landed GDD §5's Dive, which replaced the one-second between-wells hold
+// with a 2.6 s sequence and changed what the soak below mixes into its hash.
+// The constant is therefore unreachable by any build after P3 — ⛔ do not
+// re-record it here to make the suite green: this assertion's CLAIM is "P2's
+// throatOffset moved no simulation", and a constant taken from a later build
+// asserts nothing about P2 at all.
+//
+// ⛔ THE CAUSE IS PROVEN, NOT ASSUMED. Driven tick by tick against the build at
+// 40044ee over the fields both builds share, the two are bit-identical for
+// 1,112 ticks and diverge on EXACTLY the tick wellCleared() first returns true
+// — in one field, shots.length, which is startDive() clearing the player's
+// in-flight shots (GDD §5, ⚠ SETTLED). Nothing else moved.
+//
+// ⚠ CS006 P3's prompt predicted this red would land on test-cs004-p1.js's
+// GOLDEN_LANES instead. It did not — that sequence is unmoved, measured — and
+// this is the one baseline that did move. See STATUS.md.
 const P1_DETERMINISM_HASH = 1743051713;
 
 const child = execFileSync(process.execPath,

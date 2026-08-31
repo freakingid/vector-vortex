@@ -42,12 +42,22 @@ const PURGE_KEY = "x";
 // A quiet, known board on a chosen well: quota spent, nothing alive, a craft on
 // the rim that can actually die. ⛔ G.reset() first — it is the only thing that
 // clears a hit-stop a previous case left behind.
+//
+// ⛔ ONE UNSPENT QUOTA SLOT, NOT ZERO, AND CS006 P3 IS WHY. A cleared well now
+// enters the DIVE on the very next step (GDD 5), and startDive() (11-dive.js)
+// clears the shots and filters the board — so a board holding nothing but a
+// Thorn, which is every chip case below, IS a cleared well and would lose its
+// shots before a single chip landed. `remaining = 1` is half of
+// wellCleared()'s two conditions and holds the well open by itself, and it puts
+// no extra entity on the board for a length assertion to count. The two cases
+// that assert wellCleared() itself set the quota by hand and run no step.
 function useWell(index) {
   G.reset();
   X.startGame(SEED);
   state.wellIndex = index === undefined ? 0 : index;
   X.enterWell();
-  state.spawn.remaining = 0;
+  state.spawn.remaining = 1;
+  state.spawn.timer = 0;
   state.shots = [];
   state.shotCooldown = C.SHOT_COOLDOWN;
   state.purgeUses = 0;
@@ -264,6 +274,9 @@ G.input.keyDown(FIRE_KEY);
 let chips = 0, steps = 0, oddChip = null;
 let len = camped.depth;
 while (!camped.dead && steps < 4000) {
+  // ⛔ The quota is re-pinned every step: this loop outruns C.SPAWN_INTERVAL,
+  // and a Vaulter arriving in lane 5 would eat shots meant for the tip.
+  state.spawn.timer = 0;
   G.update(DT);
   if (camped.depth < len) {
     chips++;

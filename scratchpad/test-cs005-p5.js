@@ -198,7 +198,12 @@ function hashRun(gameSeed) {
     h = mix(h, st.purgeUses);
     h = mix(h, st.spawn.timer);
     h = mix(h, st.spawn.remaining);
-    h = mix(h, st.clearHold);
+    // ⛔ CS006 P3: state.clearHold was DELETED and the Dive replaced it, so the
+    // between-wells beat is hashed through the field that carries it now.
+    // Dropping it instead would have silently stopped covering the one part of
+    // a run this soak spends the most consecutive ticks in.
+    h = mix(h, st.dive.timer);
+    h = mix(h, st.dive.depth);
     h = mix(h, st.skimmer ? st.skimmer.lane : -1);
     h = mix(h, st.skimmer && st.skimmer.dead ? 1 : 0);
 

@@ -9,10 +9,12 @@
 //  1. The recorded input list must never press "r". That named action calls
 //     startGame() with NO argument, which takes a time-derived seed — one press
 //     turns the determinism case into a coin flip that usually passes.
-//  2. A run reaches the game-over stop long before 10,000 ticks, after which
-//     update() returns early and the remaining ticks hash nothing new. The
-//     determinism run restarts through the real startGame() with a seed derived
-//     from its own, so every tick is a live one.
+//  2. A run reaches the game-over stop inside the window, after which update()
+//     returns early and the remaining ticks hash nothing new. The determinism
+//     run restarts through the real startGame() with a seed derived from its
+//     own, so every tick is a live one. ⛔ CS006 P3 MOVED THAT WINDOW: the Dive
+//     is ~1,100 ticks of safe time per 10,000, which pushed this run's first
+//     stop from inside 10,000 ticks to tick 10,091 — see TICKS below.
 //  3. The open-well soak tops up `spawn.remaining` and `lives` every tick.
 //     Both are fixtures to hold the well open, not weakened assertions: a
 //     cleared well advances to the next shape and the stop freezes the board,
@@ -30,7 +32,14 @@ const { COUNTS } = require("./test-registry.js");
 
 const ROOT = path.join(__dirname, "..");
 const SEED = 20260830;
-const TICKS = 10000;        // GDD 17 item 1
+// ⛔ TWELVE THOUSAND, AND GDD 17 ITEM 1 ASKS FOR TEN. The extra two thousand are
+// not slack: item 1's claim is a MINIMUM and a longer run only strengthens it,
+// but trap 2's non-vacuity guard below — "the restart path is in the hash" —
+// needs the run to actually reach the stop, and CS006 P3's Dive spends ~1,100
+// of every 10,000 ticks in a beat where nothing can kill the player. That moved
+// this seed's first game-over to tick 10,091, ninety-one ticks outside the old
+// window. ⛔ Raise this, never lower the guard.
+const TICKS = 12000;        // GDD 17 item 1 (which asks for 10,000)
 const SOAK_TICKS = 5000;    // GDD 17 item 3
 const RUNS = 20;
 const RUN_CAP = 20000;      // ticks before a run is declared stuck
@@ -116,7 +125,12 @@ function hashRun(gameSeed) {
     h = mix(h, st.purgeUses);
     h = mix(h, st.spawn.timer);
     h = mix(h, st.spawn.remaining);
-    h = mix(h, st.clearHold);
+    // ⛔ CS006 P3: state.clearHold was DELETED and the Dive replaced it, so the
+    // between-wells beat is hashed through the field that carries it now.
+    // Dropping it instead would have silently stopped covering the one part of
+    // a run this soak spends the most consecutive ticks in.
+    h = mix(h, st.dive.timer);
+    h = mix(h, st.dive.depth);
     h = mix(h, st.skimmer ? st.skimmer.lane : -1);
     h = mix(h, st.skimmer && st.skimmer.dead ? 1 : 0);
 

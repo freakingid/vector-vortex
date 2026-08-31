@@ -8,9 +8,10 @@
 // ⛔ FOUR TRAPS IN THE FIXTURES.
 //  1. Boot calls startGame(), so the live state at load is a run already going.
 //     Every case here starts from an explicit startGame(SEED).
-//  2. The spawner keeps releasing Vaulters, and a cleared well ADVANCES after
-//     C.WELL_CLEAR_HOLD. Cases that need a known board drain the quota
-//     (spawn.remaining = 0) and empty state.enemies by hand BEFORE building it.
+//  2. The spawner keeps releasing Vaulters, and a cleared well ENTERS THE DIVE
+//     on the very next step (GDD 5) — which clears the shots and filters the
+//     board. Cases that need a known board pin the quota OPEN (see quietWell)
+//     and empty state.enemies by hand BEFORE building it.
 //  3. Collision is driven through Game.update(), the real loop — never by
 //     calling the pass with a hand-made state. The end-of-frame filters are
 //     part of what is under test.
@@ -32,13 +33,24 @@ const G = X.Game;
 const DT = C.FIXED_DT;
 const state = X.state;
 
-// A quiet, known board: the well is entered, then the quota is drained and the
-// array emptied so nothing spawns and nothing advances the level under us.
-// ⛔ The quota is drained rather than the spawner stubbed — wellCleared() also
-// needs a survivor to stay false, which every case here supplies.
+// A quiet, known board: the well is entered, then the array is emptied and the
+// spawner pinned so nothing spawns and nothing advances the level under us.
+//
+// ⛔ ONE UNSPENT QUOTA SLOT, NOT ZERO, AND CS006 P3 IS WHY. This fixture used to
+// drain the quota to zero and rely on each case keeping a `blocksClear`
+// survivor alive. A cleared well now enters the DIVE on the very next step
+// (GDD 5), and startDive() clears the shots and filters the board down to
+// `anchored` survivors — so the Purge cases below, whose whole job is emptying
+// the board, lost their own board before they could assert on it.
+// `remaining = 1` is half of wellCleared()'s two conditions and holds the well
+// open by itself, whatever the case does to the array, and ⛔ it puts no extra
+// entity on the board for a length assertion to count. The spawner still
+// releases nothing: the timer is re-armed here and no case in this file runs
+// the C.SPAWN_INTERVAL (96 ticks) one would need.
 function quietWell(seed) {
   X.startGame(seed === undefined ? SEED : seed);
-  state.spawn.remaining = 0;
+  state.spawn.remaining = 1;
+  state.spawn.timer = 0;
   state.enemies = [];
   state.shots = [];
   return X.WELLS[state.wellIndex];
@@ -353,7 +365,10 @@ X.startGame(SEED);
 for (let i = 0; i < 4; i++) X.nextWell();
 H.eq(state.purgeUses, 0, "⛔ four unspent wells still leave exactly one charge");
 if (canDriveKeys) {
-  state.spawn.remaining = 0;
+  // ⛔ Pinned open, not drained — quietWell()'s reasoning, applied by hand here
+  // because this case walked four wells to get where it is.
+  state.spawn.remaining = 1;
+  state.spawn.timer = 0;
   state.enemies = [];
   well = X.WELLS[state.wellIndex];
   put(2, 0.3);

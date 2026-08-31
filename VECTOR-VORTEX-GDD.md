@@ -311,7 +311,9 @@ The complete list. No chip damage, no health bar.
 
 **Shipped, CS005 P3 — condition 3, as a MUTATED `killDepth` and still no new collision code.** The Surger's `killDepth` is the rim band while it climbs and through its whole telegraph, and exactly `0` for the `SURGE_DISCHARGE` window — at which point `e.depth >= e.killDepth` is unconditionally true and the only remaining term in the pass is `laneHit()`, which is this item's wording verbatim. ⛔ **That is the contract paying out, not a loophole in it:** the field was always "the depth at or past which contact in your lane is lethal", and a discharge is that depth being the whole lane for a moment. `Game.update()` runs the entity pass before the collision pass, so a Surger that enters its discharge on step *n* is lethal on step *n*. ⚠ **Zero is wrong on the Drifter and right here**, and both for the same reason: there it would be a permanent property of a climbing enemy, here it is a window the player was given a 0.45 s fuse to leave. ⛔ **The lane is never lethal during the telegraph** (§6.3), and the Surger keeps the rim band the rest of the time — so it is the roster's only entity that kills by **two** of these five conditions.
 
-⛔ **Condition 5 is still unwired, and it is not a `killDepth`. The Thorn's stays `null` forever**: §4.5 item 5 is "a Thorn *during the Dive*", and the Dive is its own sequence with its own rule — CS006's — not a band at the rim. A future session that "finishes" the Thorn by giving it a `killDepth` makes standing still in a thorned lane fatal, which is not the rule this line describes.
+**Shipped, CS006 P3 — condition 5, and ⛔ IT IS A DIVE-PHASE STRIKE TEST AND NOT A `killDepth`. The Thorn's stays `null` forever.** Item 5 is "a Thorn *during the Dive*", and the Dive is its own sequence with its own rule (§5), not a band at the rim: a future session that "finishes" the Thorn by giving it a `killDepth` makes standing still in a thorned lane fatal, which is not the rule this line describes. The two quantities are different kinds of number, which is exactly what §6.5's `anchored` field records — a Thorn's `depth` is a **length**, the extent `[0, depth]` rooted at the throat, and the dive's `depth` is a **position** running 1 → 0. So the strike is `dive.depth <= thorn.depth && laneHit(well, thorn.lane, dive.lane)`, ⛔ **the only two-depth comparison in the build**, which is why it lives in `11-dive.js` and not in the one collision pass. A long Thorn is struck early in the descent and a short one late — thorn length *is* the hazard, exactly as §8 intends. It still routes through `killSkimmer()`, so item 5 inherited the invulnerability guard, the life, the freeze and the stop without writing any of them.
+
+⛔ **All five death conditions are now live.**
 
 ### 4.6 Start Depth
 
@@ -345,6 +347,35 @@ Camera widens, music drops to its foundation layer (§11.5), a rising doppler sw
 
 In Overdrive the Dive becomes a ring-flight — §14.5.
 
+**Shipped, CS006 P3 — and it REPLACED the placeholder rather than joining it.** CS003 P2's one-second between-wells hold, its constant and its `state` field are all deleted; `src/11-dive.js` is the whole feature. ⛔ **The Dive short-circuits the gameplay pass**: while it runs there is no spawner, no entity pass, no Purge, no collision pass and no well-clear check. Only the respawn aftermath, the invulnerability clock, the craft's own rotation, the beat and the strike step. `Game.update()`'s branch sits **below** the game-over stop, so a dive death that ends a run stops the dive too and the frozen board stays on screen (§4.4).
+
+⛔ **The Dive reads the OUTGOING well.** `enterWell()` clears `state.enemies` and mints a craft for the new well's lane count, so `nextWell()` is called at the dive's **end**, never before it. A dive that ran afterwards would thread an empty new well.
+
+**Two beats, and `dive.timer` counts UP through both (§16.3).**
+
+| Beat | Length | Behaviour |
+|---|---|---|
+| Grace | `DIVE_GRACE` 0.35 s | `dive.depth` holds at 1. Rotation live. ⛔ No strike test. |
+| Descent | `DIVE_TIME - DIVE_GRACE` (2.25 s) | `dive.depth` falls 1 → 0 linearly. Rotation live. Strike test live. |
+
+⛔ **The grace beat is a §1.1 P2 requirement, not polish.** `THORN_MAX` is 1.00 and a full-length Thorn's tip sits *at the rim*, deliberately — so without a beat at depth 1 a dive beginning in that lane is a death on step one with no input opportunity, which is a threat lethal before it is legible.
+
+⛔ **Snap assist stays live.** `HIT_LANE_TOL` is 0.5, so safety is lane-granular — "thread between the Thorns" means "be in a lane that has none" — and snapping to a lane centre is what makes that unambiguous. Snapping is aligned with the hazard rather than against it. §1.1 P1 does not get suspended for a set piece.
+
+⛔ **Dive start clears `state.shots` AND filters `state.enemies` down to `anchored` entities**, read off §6.5's contract field and never a class name. The shot half is the ⚠ SETTLED rule above; the entity half is its companion and is **not** redundant with "a cleared well only has Thorns in it". A `WeaverBolt` ships `blocksClear = false` on purpose, so a well clears with one travelling — and it carries the rim-band `killDepth` and is climbing toward the rim the player is leaving. `anchored` is the honest read because it means "`depth` is a length", and the Dive's hazard *is* the lane extent: what survives a dive and what threatens it are one set.
+
+**The strike is §4.5 item 5, and ⛔ it is not a `killDepth`** — see that section.
+
+**⛔ The dive-respawn rule, and why it exists.** The naive version does not terminate: strike → `killSkimmer()` → respawn *in the lane it died in* (§4.4) → the Thorn is still there, correctly, because the rim-push clamp skips `anchored` entities → the strike is true again the instant `RESPAWN_INVULN` expires. A full-length Thorn burns a life every 1.5 s until the run ends.
+
+- ⛔ **A dive respawn lands in the nearest Thorn-free lane**, chosen deterministically: lowest `|laneDelta|` from the lane it died in, **ties toward increasing lane**. ⛔ **No RNG** — a dive spends zero draws from the run's one stream.
+- ⛔ **If every lane holds a Thorn, the struck Thorn dies instead.** That is the termination guarantee, and it is ⛔ **the only path in the build by which a Thorn is destroyed by something other than a shot** (§6.1 says "Shots only", and this is the one exception). Killing it frees the died lane, so every repeat either lands somewhere safe or removes one Thorn, and there are finitely many.
+- The dive then repeats **from the grace beat**. ⛔ `state.level` does not advance — it repeats the dive, not the well — and the outgoing well's other Thorns are untouched.
+
+⚠ **The descent depth lives on `state.dive`, not on the Skimmer**, and `05-skimmer.js` was not touched. A `skimmer.depth` that is 1 except for 2.6 s is a field two systems can disagree about. It is also what keeps §4.5's "there is no term here for where the Skimmer is" literally true: `collideSkimmer()` does not run during a dive at all. ⛔ **§14.2's Jump is the moment that reopens that**, not this.
+
+⚠ **The Dive has no visual yet.** Camera widen, doppler and the descent's own rendering are presentation and are not CS006 P3's; the beat is simulation only, so a dive currently reads on screen as 2.6 s of a still board.
+
 ---
 
 ## 6. Enemies
@@ -356,9 +387,11 @@ In Overdrive the Dive becomes a ring-flight — §14.5.
 | **Vaulter** | Flattened X | L1 | Climbs; vaults lanes from L2; hunts at rim | Contact / grab | Any shot, Purge | 150 |
 | **Carrier** | Hollow diamond + cargo glyph | L3 | Slow, one lane, never hops | Contact | Any shot — **splits** | 100 |
 | **Weaver** | Open spiral | L5 | Climbs partway laying a Thorn, retreats; fires down-lane | Its projectiles | Any shot, Purge | 50 |
-| **Thorn** | Bright lane segment | L5 | Static | Only during the Dive | ⛔ Shots only | 5/chip |
+| **Thorn** | Bright lane segment | L5 | Static | Only during the Dive | ⛔ Shots only, ⚠ one exception | 5/chip |
 | **Drifter** | Tumbling spark cluster | L9 | Rides lane *boundaries* (invulnerable); crosses lanes (vulnerable); homes near rim | Contact, any depth, instant | Shots only while crossing; Purge anywhere | 250/500/750 by depth |
 | **Surger** | Zigzag bar | L13 | Climbs; periodically electrifies its whole lane | Discharge in your lane | Any shot, Purge | 200 |
+
+⚠ **The Thorn's one exception, CS006 P3.** "Shots only" holds everywhere except §5's termination guarantee: on a dive where *every* lane holds a Thorn, the struck one is destroyed so the respawn has a free lane to land in. That is the only path in the build by which a Thorn dies to something other than a shot, and it exists because the alternative is a dive death that loops one life every `RESPAWN_INVULN` forever. The Purge still does not touch one.
 
 **Shipped, CS003 P1, CS004 and CS005. ⛔ All six: the Vaulter, the Carrier, the Weaver, the Thorn, the Drifter and — CS005 P3 — the Surger. The Classic roster is complete.** The other two Carrier variants (§6.2) are CS005 P4's, and they are cargo rows rather than roster rows.
 
@@ -532,7 +565,9 @@ The discharge is `SURGE_DISCHARGE` (0.30 s), and the fuse reaching the rim and t
 
 ⛔ Matching Orbital Overhaul: every entity is a **class** with `constructor` / `update(dt)` / `draw()` / `dead`. Kill by setting `dead = true`; remove with an end-of-frame `.filter()`. **Never splice mid-loop.**
 
-⛔ **New enemies wire into six places:** `startGame` reset, `update()` entity pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order, and the well-clear condition. **Decide explicitly whether the new hazard can be destroyed by the Purge.**
+⛔ **New enemies wire into seven places:** `startGame` reset, `update()` entity pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order, the well-clear condition, and — CS006 P3 — **the Dive**. **Decide explicitly whether the new hazard can be destroyed by the Purge.**
+
+⛔ **The seventh point, in full: an entity that is `blocksClear: false` and NOT `anchored` must decide explicitly whether it survives a dive.** Those two flags together are what let an entity be on the board at the moment a well counts as clear, and `startDive()` (§5) filters the board down to `anchored` survivors — so today the answer for the one entity in that position, the `WeaverBolt`, is *no*. A new one that wants a different answer is changing §5's hazard set, not adding a flag.
 
 **Shipped, CS003 P1–P3 — read this before adding an enemy.** `07-enemies.js` holds the base class `Enemy`, and ⛔ **it is fields and signatures only: no movement, no AI, no draw code.** It exists so the ninth enemy cannot silently forget a field; the value is the field list, not the inheritance. ⚠ **That is a slope.** The first time a climb rate or a hop timer lands in the base, five enemies that do not climb inherit one and the bug is invisible until one of them is given a reason to read it. If the base ever acquires behaviour, that is the signal to flatten it back to independent classes — not to add a second field to switch the behaviour off.
 

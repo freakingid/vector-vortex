@@ -151,3 +151,56 @@ explicit and this went against it, so the record has to outlive the changeset �
 **What would change it.** A `throatOffset` semantic that was not a translation
 of the throat polygon, which would make CS001 P2's line wrong rather than
 incomplete. It is a translation, so the line was only ever incomplete.
+
+---
+
+## 2026-08-31 — CS006 P3: the permitted red landed on the other baseline, and three closed fixtures were repaired
+
+**The question.** P3's prompt authorised ⛔ *exactly one* red — `GOLDEN_LANES`
+in `test-cs004-p1.js` — and ⛔ scoped *four* closed test files. Both predictions
+were wrong in the same direction: the Dive moved a different baseline and broke
+three more fixtures than the prompt anticipated.
+
+**`GOLDEN_LANES` is green and owes no re-record.** Measured, not assumed: its
+3,000-tick window does cross one well clear (level reaches 2), but the extra
+1.6 s of beat costs it no spawn, so the lane sequence is bit-identical. What went
+red is `test-cs006-p2.js`'s `P1_DETERMINISM_HASH`, unreachable by any post-P3
+build for two independent reasons — the between-wells beat is 2.6 s rather than
+1.0 s, and the soak's hash now mixes `dive.timer`/`dive.depth` where it mixed the
+deleted field.
+
+**The call: leave it red, and P5 owns the single re-record. Paul's, 2026-08-31.**
+That assertion's CLAIM is *"CS006 P2's `throatOffset` moved no simulation"*, and a
+constant taken from a later build asserts nothing about P2 — re-recording it here
+would retire the claim while looking like a fix. ⛔ The cause is **proven**, not
+inferred: driven tick by tick against the build at `40044ee` over the fields both
+builds share, the two are bit-identical for **1,112 ticks** and diverge on
+**exactly the tick `wellCleared()` first returns true**, in one field —
+`shots.length`, which is `startDive()` clearing the player's in-flight shots
+(GDD §5, ⚠ SETTLED). Nothing else moved. A re-record is the one moment a stray
+RNG draw can be laundered into a new baseline, so it happens once, deliberately,
+with that cause named.
+
+**And three closed fixtures were repaired, beyond the four the prompt scoped.
+Paul's, 2026-08-31.** `test-cs003-p3.js`, `test-cs003-p4.js`, `test-cs004-p3.js`
+and `test-cs004-p4.js` all built quiet boards by draining the quota to zero — and
+a drained quota with no `blocksClear` survivor is now a **cleared well**, so the
+Dive filtered the case's own board away on the next step before it could assert
+on it. ⛔ These are **fixtures, not assertions**: every repair is the same line,
+`spawn.remaining = 1` instead of `0`, which is half of `wellCleared()`'s two
+conditions, holds the well open by itself, and adds no entity for a length
+assertion to count. It is the trap `test-cs003-p2.js`'s own header already
+documents. `test-cs003-p5.js` needed one more — its soak's first game-over moved
+from inside 10,000 ticks to tick **10,091**, because the Dive is ~1,100 safe
+ticks per 10,000 — so its `TICKS` is 12,000, which strengthens GDD §17 item 1
+rather than relaxing it. ⛔ **No assertion was weakened or deleted.**
+`CLAUDE.md`'s test rules gained the fixture half of the closed-test rule in the
+same commit.
+
+**Why it needed an entry rather than a `STATUS.md` line.** Both went against an
+explicit ⛔ in the phase prompt, and `STATUS.md` resets at the changeset close.
+
+**What would change it.** For the red: a way to isolate P2's `throatOffset` claim
+that does not depend on a whole-run hash — then the pinned constant could retire
+honestly instead of being re-recorded. For the fixtures: nothing; a cleared well
+entering a dive is the feature.

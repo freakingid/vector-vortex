@@ -138,6 +138,9 @@ function buildGame(opts = {}) {
     "updatePurge", "purgeTarget",
     // death, lives and respawn (05/23, CS003 P4)
     "spawnSkimmer", "respawnSkimmer", "skimmerBlinkVisible",
+    // the Dive (11-dive.js, CS006 P3)
+    "resetDive", "startDive", "updateDive", "diveHazard", "diveLaneBlocked",
+    "diveStrike", "diveRespawnLane", "diveRespawn",
     // the interval spawner's kind source (08, CS004 P1) — ⚠ TEMPORARY, it goes
     // with C.DEBUG_SPAWN_KINDS when GDD 8.1's introduction schedule lands
     "pickSpawnKind",

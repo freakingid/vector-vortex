@@ -8,8 +8,10 @@
 // A field added "because CS003 will want it" is a field CS003 cannot see the
 // reasoning for, and it reads as shipped truth to a session that finds it.
 // CS002 landed the first eight; CS003 P1 added `seed` and `rng`, P2 added
-// `enemies`, `spawn` and `clearHold`, P3 added `purgeUses` and `purgeLatched`,
-// and P4 adds `lives` and `invulnTime`. CS006 P1 adds `bandRoll`.
+// `enemies`, `spawn` and the between-wells hold, P3 added `purgeUses` and
+// `purgeLatched`,
+// and P4 added `lives` and `invulnTime`. CS006 P1 adds `bandRoll`, and P3 adds
+// `dive` — which DELETED CS003 P2's hold field rather than joining it (GDD 5).
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -153,11 +155,26 @@ function newState() {
     // CS003 P4 forces it true on death; 09-collision.js explains why.
     purgeLatched: false,
 
-    // ⚠ TEMPORARY (C.WELL_CLEAR_HOLD). Counts UP while the well is clear and
-    // resets whenever it is not, so a kill that lands during the hold cannot
-    // leave a half-spent pause behind. CS006's Dive replaces this field, the
-    // constant, and the branch in Game.update() that reads it.
-    clearHold: 0,
+    // ⛔ THE DIVE (GDD 5, 4.5 item 5; 11-dive.js). It replaced CS003 P2's
+    // CS003 P2's hold outright — that one-second pause was the Dive's placeholder and
+    // was deleted with its constant and its branch, not left beside it.
+    //
+    // ⛔ THE DIVE OWNS ITS OWN DEPTH, AND IT IS DELIBERATELY NOT A Skimmer
+    // FIELD. A `skimmer.depth` that is 1 except for 2.6 s is a field two
+    // systems can disagree about; a `state.dive.depth` that only means anything
+    // while `active` is one that cannot. It is also what keeps
+    // 09-collision.js's "there is no term here for where the Skimmer is"
+    // LITERALLY true — collideSkimmer() does not run during a dive at all.
+    // GDD 14.2's Jump is the thing that reopens that, and it is not this.
+    //
+    //   active  the whole gameplay pass is short-circuited while true
+    //   phase   "grace" | "descent" — GDD 5's two beats
+    //   timer   counts UP through the whole dive toward C.DIVE_TIME (GDD 16.3)
+    //   depth   a POSITION, 1 at the rim falling to 0 at the throat. ⛔ Not the
+    //           same quantity as an anchored entity's `depth`, which is a
+    //           LENGTH — comparing the two is the strike test and it is the
+    //           only two-depth comparison in the build (11-dive.js).
+    dive: { active: false, phase: "grace", timer: 0, depth: 1 },
   };
 }
 

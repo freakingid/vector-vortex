@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.2 · Changeset: CS006 (P2 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.2 · Changeset: CS006 (P3 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS006
 
@@ -78,6 +78,62 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   `test-cs006-p2.js` for all sixteen wells, so no coverage rests on the edit.
   Full record, because `STATUS.md` resets at the close: `DECISIONS.md`,
   2026-08-30.
+
+- **P3 — the Dive, GDD §4.5 item 5, and the death-loop guard.** `src/11-dive.js`
+  is the whole feature and it **replaced** CS003 P2's one-second hold: the
+  constant, the `state` field and the branch are deleted, and
+  ⛔ **neither name survives anywhere in the built file** (asserted). The Dive
+  short-circuits — during one there is no spawner, no entity pass, no Purge, no
+  collision pass and no clear check, all four proved by counting proxies — and
+  its branch sits below the game-over stop. ⛔ **`startDive()` filters the board
+  to `anchored`, not to Thorns**, and the case that proves it has a live
+  `WeaverBolt` on the board at clear. Beats: grace `C.DIVE_GRACE` 0.35 s at
+  depth 1 with ⛔ no strike test, then a 2.25 s descent 1 → 0. The strike is
+  `dive.depth <= thorn.depth` — the build's only two-depth comparison — routed
+  through `killSkimmer()`. ⛔ **A dive respawn lands in the nearest Thorn-free
+  lane** by a deterministic outward walk, ties toward increasing lane, and if
+  every lane is thorned **the struck Thorn dies** — the termination guarantee,
+  and the only non-shot path to a Thorn's death. `respawnSkimmer()` gained an
+  optional `lane`; its default is unchanged and asserted. A fully thorned Fan
+  terminates at the cost of exactly one life and one Thorn. ⛔ A dive spends
+  **zero** RNG draws, transition included. `test-cs006-p3.js`: 201 assertions.
+
+  ⚠ **THE PROMPT'S ONE PERMITTED RED LANDED ON THE OTHER BASELINE, AND THE
+  PREDICTION WAS INVERTED — PAUL'S CALL TO CONFIRM.** `test-cs004-p1.js`'s
+  `GOLDEN_LANES` is ⛔ **green**, measured: its 3,000-tick window does cross one
+  well clear (level reaches 2), but the extra 1.6 s costs it no spawn, so the
+  sequence is identical and no re-record is owed. What went red instead is
+  ⛔ **`test-cs006-p2.js`'s `P1_DETERMINISM_HASH`**, and it is unreachable by any
+  post-P3 build for two independent reasons: the between-wells beat is 2.6 s
+  rather than 1.0 s, and the soak's hash now mixes `dive.timer`/`dive.depth`
+  where it mixed the deleted field. ⛔ **Left red, and P5 owns the single
+  re-record** — re-recording it here would make P2's claim ("`throatOffset`
+  moved no simulation") assert nothing about P2. ⛔ **The cause is proven, not
+  assumed:** driven tick by tick against the build at `40044ee` over the fields
+  both builds share, the two are **bit-identical for 1,112 ticks and diverge on
+  exactly the tick `wellCleared()` first returns true**, in one field —
+  `shots.length`, which is `startDive()` clearing the player's shots. Nothing
+  else moved. The alternative is re-recording it now with that cause named; it
+  is Paul's call which. ✅ **Settled 2026-08-31: leave it red, P5 re-records.**
+  Full record, because `STATUS.md` resets at the close: `DECISIONS.md`.
+
+  ⚠ **SEVEN CLOSED TEST FILES WERE TOUCHED, NOT FOUR, AND THE PROMPT SCOPED
+  FOUR.** The four it named were edited as instructed (`test-cs003-p2.js`'s
+  assertions rewritten to the Dive; the three soak hashes' deleted field
+  replaced by `dive.timer` + `dive.depth`, not dropped). The other three are
+  ⛔ **fixtures, not assertions**: `test-cs003-p3.js`, `test-cs003-p4.js`,
+  `test-cs004-p3.js` and `test-cs004-p4.js` all built quiet boards by draining
+  the quota to zero, and a drained quota with no `blocksClear` survivor is now
+  a **cleared well** — so the Dive ate the board on the next step, before the
+  case could assert on it. Every repair is the same one line, `spawn.remaining =
+  1` instead of `0`, which is half of `wellCleared()`'s two conditions, adds no
+  entity for a length assertion to count, and is the trap `test-cs003-p2.js`
+  already documents. ⛔ **No assertion was weakened or deleted.**
+  `test-cs003-p5.js` needed one more: its soak's first game-over moved from
+  inside 10,000 ticks to tick **10,091**, because the Dive is ~1,100 safe ticks
+  per 10,000 — `TICKS` is 12,000 now, which strengthens GDD §17 item 1 rather
+  than relaxing it. Suite: **27 files, one red, zero skips.** ✅ **Confirmed by
+  Paul, 2026-08-31** — record in `DECISIONS.md`.
 
 ## Working / verified
 
@@ -174,6 +230,17 @@ One line per phase here; reasoning goes to `log/CS006.md`.
      hunts and the Drifter homes; those two will come to you. Fixed in the soak
      *fixture*, never in the build. This is the same design call seen from the
      other side and it is CS007's.
+- **The Dive has no visual, and a dive currently reads as 2.6 s of a still
+  board.** `Game.draw()` paints the well, the surviving Thorns and a Skimmer
+  still drawn at the rim; nothing shows the descent. ⛔ Deliberate — GDD §5's
+  camera widen, doppler and the descent's own rendering are presentation and
+  `PLANNED-FEATURES-CS006.md` scopes them out of P3 — but it is the largest
+  gap between the simulation and what a player sees, and nothing in CS006 owns
+  it. `state.dive.depth` is the value a renderer wants and it is already there.
+- ⚠ **`C.DIVE_TIME` is the WHOLE dive, grace included** — the descent is
+  `DIVE_TIME - DIVE_GRACE` = 2.25 s, not 2.6. Written down because it is easy to
+  read the two constants as additive, and CS014's `DIVE_TIME_OD` 4.0 inherits the
+  same reading.
 - **`drawWell()`'s `laneState` parameter is still unwired.** Lane occupancy
   lighting (GDD §3.7) belongs with the dim band, in CS006. ⛔ The Surger's
   telegraph shipped as an **entity draw** (`drawSurgeLane`) and must not be
@@ -229,8 +296,6 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   with the seven stats keys, before any submission is attempted.
 - Backport `kit-input` (`src/04-input.js`, all four devices, v0.3.0) to
   coinless-kit — a separate manual step, verified against that repo's own suite.
-- ⚠ `C.WELL_CLEAR_HOLD`, `state.clearHold` and the branch in `Game.update()`
-  that reads them are TEMPORARY and are CS006's to delete when the Dive lands.
 - ⚠ `C.DEBUG_SPAWN_KINDS`, `pickSpawnKind()` (`08-spawner.js`) and the six debug
   spawn actions in `23-main.js` are TEMPORARY. GDD §8.1's introduction schedule
   replaces all of them, and that is CS007's. ⛔ The list is a bench, never a
@@ -251,42 +316,41 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   `enemyKinds` is 9** (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo.
 
-## Next up — CS006 P3
+## Next up — CS006 P4
 
-**The Dive — the phase, the strike, the death loop guard.** GDD §5, §4.5 item 5.
-⛔ It deletes `C.WELL_CLEAR_HOLD` and `state.clearHold`, and it edits four closed
-test files under a rule `CLAUDE.md` gains in the same phase — see
-`PLANNED-FEATURES-CS006.md` assumption #15, which P2 already had to invoke once.
+**`laneState` and the dim band.** GDD §3.6–3.7. `drawWell()`'s fifth-from-last
+`laneState` parameter has been unwired since CS001 P3 and this is what wires it.
+⛔ **It legitimately breaks `test-cs005-p3.js`'s narrowed source pin** (`null` →
+`lit`), which is what P1 recorded as the assertion's retirement moment. ⛔ **The
+Surger's telegraph must NOT move onto `laneState`**: `isLaneLit()` is a boolean
+over spokes and cannot express a progressive fill (`drawSurgeLane` stays an
+entity draw).
 
 ⛔ CS006's scope was split at P0 and it is four systems, not five: past-99 well
 progression and the colour-band roll (**P1, done**), `throatOffset` and the two
-degenerate wells (Flat and Stair, **P2, done**), the Dive, and `laneState` with
-the dim band —
-GDD §3.3, §3.6–3.7, §5, §4.5 item 5. `PLANNED-FEATURES-CS006.md` and
-`IMPLEMENTATION-PHASES-CS006.md` are written and are the authority on the phase
-order.
+degenerate wells (**P2, done**), the Dive (**P3, done**), and `laneState` with
+the dim band — GDD §3.3, §3.6–3.7, §5, §4.5 item 5.
+`PLANNED-FEATURES-CS006.md` and `IMPLEMENTATION-PHASES-CS006.md` are written and
+are the authority on the phase order.
+
+⛔ **P5 OWNS EXACTLY ONE BASELINE RE-RECORD AND IT IS NOT THE ONE ANYBODY
+PREDICTED.** It is `test-cs006-p2.js`'s `P1_DETERMINISM_HASH`, red since P3,
+cause proven and written at the assertion itself and in P3's ledger entry above.
+`test-cs004-p1.js`'s `GOLDEN_LANES` is **green and owes nothing** — measured,
+not assumed. ⛔ A re-record is the one moment a stray RNG draw can be laundered
+into a new baseline, so it happens once, deliberately, with the cause named. If
+P4 moves `GOLDEN_LANES` (it should not — `laneState` is a draw-path change and
+⛔ nothing in the draw path may call `state.rng()`), that is a **second**
+nameable cause and gets its own line.
 
 ⛔ **The heat clock, GDD §8.1's introduction schedule, the spawner-stall call and
-telemetry are the NEW CS007** and are not this changeset's. Three of the four
-things this file said CS006 inherited moved with them:
+telemetry are the NEW CS007** and are not this changeset's:
 
 1. ⛔ **The introduction schedule is what makes the spawner stall live** — and
    both are CS007's. CS006 does not delete `C.DEBUG_SPAWN_KINDS` and must not
    answer the "threats or entities?" design call ahead of it.
 2. ⛔ **The heat clock is what breaks `SURGE_DISCHARGE < RESPAWN_INVULN`** —
    CS007's, asserted from the constants in `test-cs005-p3.js`.
-3. `C.WELL_CLEAR_HOLD` and `state.clearHold` are the Dive's placeholder and are
-   deleted, not kept. **Still CS006's** — the Dive stays here.
-4. `laneState` and the dim band land together. **Still CS006's.**
-
-⛔ **Both halves move `test-cs004-p1.js`'s `GOLDEN_LANES`, and that is the point
-of the split.** ⚠ **P1 did not move it and could not** — its two draws are spent
-only past level 99 and the golden sequence is recorded from level 1, which is
-exactly what "the stream below 100 is bit-identical" means. CS006 re-records it
-once, alone, with the cause named in `log/CS006.md`; CS007 re-records it again
-for its own, separate cause. A
-re-record is the one moment a stray RNG draw can be laundered into a new
-baseline, so one nameable cause per re-record is worth two commits.
 
 ⚠ **One clock: `game.level`** (`CLAUDE.md`, Config; `DIFFICULTY-NOTES.md`). Every
 heat-derived value comes off it, in CS007. No parallel clocks.

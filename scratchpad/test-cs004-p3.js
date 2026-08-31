@@ -39,12 +39,22 @@ const DT = C.FIXED_DT;
 // A quiet, known board on a chosen well: quota spent, nothing alive, a craft on
 // the rim that can actually die. ⛔ G.reset() first — it is the only thing that
 // clears a hit-stop a previous case left behind.
+//
+// ⛔ ONE UNSPENT QUOTA SLOT, NOT ZERO, AND CS006 P3 IS WHY. A cleared well now
+// enters the DIVE on the very next step, and startDive() (11-dive.js) filters
+// the board down to `anchored` survivors — which a WeaverBolt is not, on
+// purpose: it ships `blocksClear = false`, so a board holding nothing but a
+// bolt IS a cleared well and the bolt is the one entity the Dive exists to
+// remove. `remaining = 1` is half of wellCleared()'s two conditions and holds
+// the well open by itself, and it puts no extra entity on the board for a
+// length assertion to count. Nothing spawns: the timer is re-armed here.
 function useWell(index) {
   G.reset();
   X.startGame(SEED);
   state.wellIndex = index === undefined ? 0 : index;
   X.enterWell();
-  state.spawn.remaining = 0;
+  state.spawn.remaining = 1;
+  state.spawn.timer = 0;
   state.shots = [];
   state.purgeUses = 0;
   state.purgeLatched = true;
@@ -337,7 +347,14 @@ state.skimmer.lane = 7;
 const runner = X.spawnEnemy("weaverBolt", 7, 0.80);
 H.assert(runner !== null, "the bolt is on the board");
 let steps = 0;
-while (!state.skimmer.dead && steps < 600) { G.update(DT); steps++; }
+// ⛔ The quota is re-pinned every step: this loop can outrun C.SPAWN_INTERVAL,
+// and a Vaulter arriving mid-case would be a second thing that could kill the
+// craft, which is exactly the claim under test.
+while (!state.skimmer.dead && steps < 600) {
+  state.spawn.timer = 0;
+  G.update(DT);
+  steps++;
+}
 H.eq(state.skimmer.dead, true,
      "⛔ a bolt climbing into the craft's lane kills it through the real loop");
 
@@ -347,6 +364,11 @@ H.eq(state.skimmer.dead, true,
 
 well = useWell(0);
 state.skimmer.lane = 0;
+// ⛔ THE ONE CASE THAT DRAINS THE QUOTA, because it asserts wellCleared() ===
+// true and that is one of its two conditions. Safe here where useWell()'s pin
+// is not: nothing below runs a simulation step, so the Dive this board would
+// enter never starts (GDD 5).
+state.spawn.remaining = 0;
 const blocker = X.spawnEnemy("weaver", 4, 0.2);
 H.eq(X.wellCleared(state), false,
      "⛔ a well does not clear with a Weaver alive — blocksClear is true");

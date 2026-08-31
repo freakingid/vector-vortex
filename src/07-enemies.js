@@ -62,8 +62,12 @@ class Enemy {
     // kills them on the spawn step having travelled nowhere. See the Drifter's
     // constructor at the foot of this file for the whole reading of GDD 4.5
     // item 2. ⚠ Zero becomes honest AS A RESTING VALUE the moment the craft can
-    // leave the rim (GDD 5's Dive, GDD 14.2's Jump) and this pass has two depths
-    // to compare; it is then a one-line change and not this changeset's.
+    // leave the rim WHILE THE COLLISION PASS IS RUNNING, and ⛔ that is GDD
+    // 14.2's Jump ALONE. CS006 P3 shipped GDD 5's Dive and it is NOT that
+    // moment: Game.update() short-circuits the whole gameplay pass while
+    // state.dive.active, so collideSkimmer() never sees a diving craft, the
+    // descent depth lives on state.dive rather than here (02-state.js), and
+    // GDD 4.5 item 5 is a strike test in 11-dive.js rather than a killDepth.
     //
     // ⛔ ONE ENTITY MUTATES THIS FIELD, AND THAT IS THE OTHER HALF OF THE RULE.
     // CS005 P3's Surger holds the rim band while it climbs and through its whole
@@ -646,6 +650,13 @@ class Weaver extends Enemy {
 //                the Weaver that fired it is already dead in that scenario, and
 //                a well that waited for its last projectile would end on a
 //                pause the player cannot shorten (they cannot shoot it).
+//                ⛔ WHICH MAKES IT THE ONE ENTITY THAT CAN BE AIRBORNE WHEN A
+//                DIVE STARTS, and CS006 P3 answered GDD 6.5's seventh wiring
+//                point for it: startDive() (11-dive.js) filters the board down
+//                to `anchored` entities, so a bolt does NOT survive into a
+//                dive. It would otherwise be climbing, lethal, toward the rim
+//                the player is leaving, in a sequence whose only stated hazard
+//                is the Thorn.
 //   purgeable    true. The panic button saves you from it, which is what a
 //                panic button is for (GDD 4.3).
 //   anchored     false, inherited. Its depth is a POSITION.
@@ -731,6 +742,14 @@ class WeaverBolt extends Enemy {
 //                     stops where the Thorn starts. Move the extent to a second
 //                     field and that pass grows a Thorn branch — which is the
 //                     thing the contract exists to prevent.
+//
+// ⛔ IT IS NOT SHOT-ONLY ANY MORE, AND THERE IS EXACTLY ONE EXCEPTION. GDD 6.1
+// says "⛔ Shots only" and CS006 P3 added the second path: on a dive where
+// EVERY lane holds a Thorn, the struck one dies so the respawn has a free lane
+// to land in (diveRespawn, 11-dive.js). That is a termination guarantee, not a
+// way to destroy Thorns — without it a dive death loops one life every
+// C.RESPAWN_INVULN until the run ends. ⛔ The Purge still does not touch one
+// (`purgeable` false, below), and nothing else in the build does either.
 //
 // ⚠ SETTLED — GDD 4.2's RAPID CHIP-AWAY IS EMERGENT AND IS NOT A BUG. onShot
 // CONSUMES the shot, and Game.update()'s end-of-frame filter frees that shot's

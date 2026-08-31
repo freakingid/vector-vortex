@@ -9,9 +9,10 @@
 // ⛔ THREE TRAPS IN THE FIXTURES.
 //  1. Boot calls startGame(), so the live state at load is a run with a
 //     time-derived seed. Every case here starts from an explicit startGame(SEED).
-//  2. A cleared well ADVANCES on its own after C.WELL_CLEAR_HOLD. A case that
-//     wants the quota to run dry without the level moving has to keep one
-//     blocksClear enemy alive.
+//  2. A cleared well ADVANCES on its own after a beat — C.WELL_CLEAR_HOLD when
+//     this file was written, GDD 5's Dive since CS006 P3. A case that wants the
+//     quota to run dry without the level moving has to keep one blocksClear
+//     enemy alive.
 //  3. Enemies are killed the way the game kills them — `dead = true`, removed
 //     by the loop's own end-of-frame filter — never spliced out here.
 "use strict";
@@ -48,7 +49,16 @@ hasKnob(X, "SPAWN_INTERVAL", { def: 1.60 }, H);
 hasKnob(X, "SPAWN_QUOTA", { def: 10 }, H);
 hasKnob(X, "ENEMY_CONCURRENT", { def: 3 }, H);
 hasKnob(X, "SPAWN_LANE_TRIES", { def: 4 }, H);
-hasKnob(X, "WELL_CLEAR_HOLD", { def: 1.00 }, H);
+// ⛔ CS006 P3 REPLACED THE HOLD WITH THE DIVE (GDD 5), AND THIS FILE STILL OWNS
+// "a cleared well advances on its own after a beat". The beat's MECHANISM
+// changed; the ownership did not — so the four cases below are rewritten in
+// place to the replacement behaviour rather than deleted, and the Dive's own
+// coverage lives in test-cs006-p3.js and not here (CLAUDE.md, Test rules).
+H.assert(!("WELL_CLEAR_HOLD" in C),
+  "⛔ C.WELL_CLEAR_HOLD is GONE — the Dive replaced it, it does not sit beside it");
+H.assert(!("clearHold" in state),
+  "⛔ and state.clearHold with it");
+hasKnob(X, "DIVE_TIME", { def: 2.6 }, H);
 // ⛔ SPAWN_MIN is a floor on a HEAT-derived interval, and heat is CS007's.
 H.assert(!("SPAWN_MIN" in C), "C carries no SPAWN_MIN — the heat floor is CS007's");
 
@@ -215,27 +225,46 @@ survivor.dead = true;
 H.assert(X.wellCleared(state) === true, "quota spent and nothing blocking: clear");
 
 // ---------------------------------------------------------------------------
-// the hold, then nextWell (⚠ temporary — CS006's Dive replaces it)
+// the beat, then nextWell — GDD 5's Dive since CS006 P3
 // ---------------------------------------------------------------------------
 
 X.startGame(SEED);
 state.spawn.remaining = 0;
 state.enemies = [];
 const before = state.level;
-const holdTicks = ticksFor(C.WELL_CLEAR_HOLD);
-for (let t = 0; t < holdTicks - 1; t++) step(false);
-H.eq(state.level, before, "the cleared well holds for WELL_CLEAR_HOLD before advancing");
-step(false);
-H.eq(state.level, before + 1, "and then advances exactly once");
+// ⛔ MEASURED, NOT COUNTED, and floating point is why. The dive's clock is a
+// float accumulating C.FIXED_DT, so 156 additions land a hair UNDER 2.6 and the
+// beat is 157 dive steps rather than the 156 ticksFor() names; a hard tick count
+// here would pin that artefact instead of the rule. What this file owns is that
+// a cleared well advances on its own after a beat of the stated length, and
+// both halves are asserted off the clock.
+//
+// ⛔ ONE STEP OF THE COUNT BELONGS TO THE CLEAR ITSELF: startDive() runs at the
+// FOOT of the step that clears the well, so that step is still a gameplay step
+// and the dive's own clock starts at zero on the one after it.
+const beatTicks = ticksFor(C.DIVE_TIME) + 4;      // a generous cap, not the answer
+let beatSteps = 0;
+while (state.level === before && beatSteps < beatTicks) { step(false); beatSteps++; }
+H.eq(state.level, before + 1, "the cleared well advances on its own, exactly once");
+H.close((beatSteps - 1) * DT, C.DIVE_TIME, DT + 1e-9,
+        "and the beat it held for is C.DIVE_TIME (GDD 5's Dive)");
 
-// A kill landing mid-hold resets it — no half-spent pause is carried over.
+// ⛔ THE REPLACEMENT FOR "a survivor mid-hold resets the hold to zero". There is
+// no reset any more, because there is nothing to reset: the Dive COMMITS on the
+// step the well clears (startDive() clears the shots and filters the board), so
+// a survivor can only hold the beat OFF, never half-spend it. What the old case
+// actually protected — that no partly-spent beat is ever carried into the next
+// one — is asserted here at the other end.
 X.startGame(SEED);
 state.spawn.remaining = 0;
 state.enemies = [];
-for (let t = 0; t < holdTicks - 2; t++) step(false);
-X.spawnEnemy("vaulter", 0, 0.2);
+const holder = X.spawnEnemy("vaulter", 0, 0.2);
+for (let t = 0; t < beatTicks; t++) step(false);
+H.eq(state.level, before, "a blocksClear survivor holds the well open past a whole beat");
+H.eq(state.dive.timer, 0, "and no beat is half-spent while it waits");
+holder.dead = true;
 step(false);
-H.eq(state.clearHold, 0, "a survivor mid-hold resets the hold to zero");
+H.eq(state.dive.timer, 0, "the beat that starts when it leaves starts from zero");
 
 // ---------------------------------------------------------------------------
 // nextWell — the level clock, GDD 3.4's shapeIndex, and the re-arm
@@ -254,7 +283,8 @@ H.eq(state.shots.length, 0, "nextWell clears shots in flight");
 H.eq(alive(), 0, "nextWell clears the enemies");
 H.eq(state.purgeUses, 0, "nextWell re-arms the Purge charge");
 H.eq(state.spawn.remaining, C.SPAWN_QUOTA, "nextWell re-arms the spawner");
-H.eq(state.clearHold, 0, "nextWell clears the hold");
+H.eq(state.dive.timer, 0, "nextWell clears the beat");
+H.eq(state.dive.active, false, "and leaves no dive running");
 
 // The shape wraps at the end of the roster, and the level clock does not.
 X.startGame(SEED);

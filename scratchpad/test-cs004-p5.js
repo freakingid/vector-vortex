@@ -165,7 +165,12 @@ function hashRun(gameSeed) {
     h = mix(h, st.purgeUses);
     h = mix(h, st.spawn.timer);
     h = mix(h, st.spawn.remaining);
-    h = mix(h, st.clearHold);
+    // ⛔ CS006 P3: state.clearHold was DELETED and the Dive replaced it, so the
+    // between-wells beat is hashed through the field that carries it now.
+    // Dropping it instead would have silently stopped covering the one part of
+    // a run this soak spends the most consecutive ticks in.
+    h = mix(h, st.dive.timer);
+    h = mix(h, st.dive.depth);
     h = mix(h, st.skimmer ? st.skimmer.lane : -1);
     h = mix(h, st.skimmer && st.skimmer.dead ? 1 : 0);
 
@@ -599,8 +604,16 @@ function quietBoard() {
   C.DEBUG_SPAWN_KINDS = MIXED.slice();
   state.enemies = [];
   state.shots = [];
-  state.spawn.remaining = 0;
-  state.clearHold = 0;
+  // ⛔ ONE UNSPENT QUOTA SLOT, NOT ZERO, AND CS006 P3 IS WHY. The first Purge
+  // below empties the board of everything purgeable and leaves a Thorn, which
+  // does not block the clear — so a drained quota would make that a CLEARED
+  // well, and a cleared well now enters the DIVE on the very next step (GDD 5),
+  // taking the weak second use with it. `remaining = 1` is half of
+  // wellCleared()'s two conditions and holds the well open by itself, and it
+  // adds no entity for the length assertions below to count. Nothing spawns:
+  // the timer is re-armed here and this case runs four steps.
+  state.spawn.remaining = 1;
+  state.spawn.timer = 0;
   state.purgeUses = 0;
   state.purgeLatched = false;
   G.input.reset();

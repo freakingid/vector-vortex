@@ -67,7 +67,14 @@ function enterWell() {
   state.purgeUses = 0;
 
   resetSpawner(state);
-  state.clearHold = 0;
+
+  // ⛔ Where CS003 P2's one-line hold reset sat, and for the same reason: a
+  // well being armed is by definition not a well being dived out of. It is
+  // also how the dive's END puts its own state back — updateDive() calls
+  // nextWell(), which lands here — so there is one writer of state.dive outside
+  // 11-dive.js's own step, and the `w` debug cycler gets the same treatment
+  // without knowing a Dive exists.
+  resetDive(state);
 
   // A craft for this well. ⛔ Minted rather than carried over: lane counts
   // differ between wells, so the outgoing craft's lane may not exist here.
@@ -91,10 +98,15 @@ function enterWell() {
 // ⛔ AND THE RIM PUSH HAPPENS HERE, NOT AT DEATH. Pushing at death teleports
 // the killing enemy away during the freeze the player is staring at, and the
 // freeze is there to show them what happened.
-function respawnSkimmer(state, well) {
-  // Read before the craft is replaced: GDD 4.4 respawns in the lane it died
-  // in, not at the well's default lane.
-  const lane = state.skimmer.lane;
+// ⛔ `lane` IS OPTIONAL AND THE DEFAULT IS GDD 4.4's RULE. Omitted, the craft
+// comes back in the lane it died in — read before the craft is replaced, and
+// not the well's default lane. The Dive is the one caller that passes it
+// (11-dive.js): a dive death respawns in the nearest THORN-FREE lane, because
+// the lane it died in still holds the Thorn that killed it and the naive
+// respawn burns a life every C.RESPAWN_INVULN until the run ends. That is a
+// different LANE, not a different respawn — everything below is shared.
+function respawnSkimmer(state, well, lane) {
+  if (lane === undefined) lane = state.skimmer.lane;
 
   // ⚠ SETTLED — Paul, 2026-08-30. This reads broader than GDD 4.4's wording and
   // is meant to. Do not narrow it to a rim band in the session you notice it.
@@ -372,6 +384,20 @@ const Game = (function () {
 
     const well = WELLS[state.wellIndex];
 
+    // ⛔ THE DIVE SHORT-CIRCUITS THE WHOLE GAMEPLAY PASS (GDD 5; 11-dive.js).
+    // During a dive there is no spawner, no entity pass, no Purge, no collision
+    // pass and no well-clear check — updateDive() runs the respawn aftermath,
+    // the craft's rotation, the beat and GDD 4.5 item 5's strike, and nothing
+    // else. This replaced CS003 P2's between-wells hold branch, which sat at the
+    // FOOT of this function and fell through everything above it; a dive that
+    // sat there would still be spawning enemies into a well the player has left.
+    //
+    // ⛔ BELOW THE GAME-OVER STOP, so a dive death that ends a run stops the
+    // dive too and the frozen board stays on screen (GDD 4.4).
+    // ⛔ And below `const well`, because the dive reads the OUTGOING well —
+    // nextWell() is called at its end, never before it.
+    if (state.dive.active) { updateDive(state, well, dt); return; }
+
     // ⛔ THE DEATH AFTERMATH, BEFORE ANYTHING MOVES. Reaching this line with a
     // dead craft means the freeze killSkimmer() started has ended (or a
     // headless caller never froze at all), so THIS is the first live step and
@@ -409,16 +435,12 @@ const Game = (function () {
     state.shots = state.shots.filter(s => !s.dead);
     updateSpawner(state, well, dt);
 
-    // ⚠ TEMPORARY (C.WELL_CLEAR_HOLD) — the beat between the last kill and the
-    // next well. CS006's Dive (GDD 5) replaces this whole branch. The hold
-    // counts UP and resets the moment the well stops being clear, so a spawn
-    // or a survivor cannot leave a half-spent pause behind.
-    if (wellCleared(state)) {
-      state.clearHold += dt;
-      if (state.clearHold >= C.WELL_CLEAR_HOLD) nextWell();
-    } else {
-      state.clearHold = 0;
-    }
+    // ⛔ A CLEARED WELL ENTERS THE DIVE (GDD 5). It does NOT call nextWell():
+    // startDive() clears the shots and filters the board down to `anchored`
+    // survivors, and nextWell() is reached only from the dive's END, in
+    // updateDive() (11-dive.js). One step of the dive runs on the NEXT step —
+    // the branch above — never a second pass through this function.
+    if (wellCleared(state)) startDive(state);
   }
 
   // ---- presentation --------------------------------------------------------

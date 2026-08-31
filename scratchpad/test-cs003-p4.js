@@ -13,9 +13,9 @@
 //     them — "the FIRST live step after the freeze" is not observable otherwise.
 //  3. Boot calls startGame(), so the live state at load is a run in progress.
 //     Every case starts from G.reset() + startGame(SEED).
-//  4. The spawner keeps releasing Vaulters and a cleared well advances after
-//     C.WELL_CLEAR_HOLD, so cases that need a known board drain the quota and
-//     empty the array first.
+//  4. The spawner keeps releasing Vaulters and a cleared well ENTERS THE DIVE
+//     on the very next step (GDD 5), so cases that need a known board pin the
+//     quota open and empty the array first — see quietWell().
 //  5. Game.update() ages state.invulnTime BEFORE the collision pass, so a
 //     boundary staged by writing the field is read one step later. The two
 //     boundary cases here write exactly 0 and exactly C.RESPAWN_INVULN, where
@@ -46,10 +46,19 @@ let clock = 0;
 // A quiet, known board with the loop's own clocks reset. ⛔ G.reset() first:
 // it is the only thing that clears a hit-stop left over from a previous case,
 // and startGame() deliberately cannot (hitStopLeft is private to the loop).
+// ⛔ ONE UNSPENT QUOTA SLOT, NOT ZERO, AND CS006 P3 IS WHY. A cleared well now
+// enters the DIVE on the very next step, and startDive() (11-dive.js) clears
+// the shots and filters the board down to `anchored` survivors — so a case that
+// empties the board (the Purge cases below do it on purpose) used to lose its
+// own fixture before it could assert on it. `remaining = 1` is half of
+// wellCleared()'s two conditions and holds the well open by itself, and it puts
+// no extra entity on the board for a length assertion to count. Nothing spawns:
+// the timer is re-armed here and no case runs the 96 ticks one would need.
 function quietWell(seed) {
   G.reset();
   X.startGame(seed === undefined ? SEED : seed);
-  state.spawn.remaining = 0;
+  state.spawn.remaining = 1;
+  state.spawn.timer = 0;
   state.enemies = [];
   state.shots = [];
   clock = 0;

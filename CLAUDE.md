@@ -209,9 +209,13 @@ physics bug. See `RATIONALE.md#draw-path-rng`.
 `dead`.** Kill by setting `dead = true`; remove with an end-of-frame `.filter()`.
 Never splice mid-loop.
 
-⛔ **New enemies wire into six places:** `startGame` reset, `update()` entity
+⛔ **New enemies wire into seven places:** `startGame` reset, `update()` entity
 pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order,
-and the well-clear condition. **Decide explicitly whether the Purge destroys it.**
+the well-clear condition, and **the Dive**. **Decide explicitly whether the
+Purge destroys it**, and — seventh point, GDD §6.5 — an entity that is
+`blocksClear: false` and **not** `anchored` must decide explicitly whether it
+survives a dive. `startDive()` filters the board down to `anchored` survivors,
+so today the answer for the one entity in that position is *no*.
 
 ⛔ **`anchored` says what `depth` MEANS on an entity, not whether it moves.**
 `false` is a position; `true` is a length — the tip of an extent rooted at the
@@ -432,6 +436,15 @@ state because the boundary felt inconvenient in one phase.
 ⛔ **A test asserts only what its own phase owns** — never a global count or
 inventory of something it did not build.
 
+⛔ **When a later changeset REPLACES behaviour a closed phase's test asserts, it
+rewrites those assertions IN PLACE to the replacement behaviour.** It does not
+delete them, does not weaken them, and does not add coverage of its own there —
+new coverage goes in the new changeset's own file. The closed phase still owns
+the *claim*; only the mechanism moved. ⚠ A closed test's **fixtures** get the
+same treatment: a fixture invalidated by the replacement is repaired to restore
+the precondition the assertion was always about, never relaxed to let a broken
+one pass.
+
 ⛔ **Global counts live in exactly one place: `scratchpad/test-registry.js`.**
 
 ⛔ **Seed before the first build.** `installSeed(n)` goes above everything — some
@@ -467,7 +480,8 @@ src/00-config.js       C — every tunable, nothing else
     08-spawner.js      spawnEnemy() — the ONE way in — cadence, quota, clear
     09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge
     10-powerups.js     Overdrive tokens
-    11-dive.js         12-scoring.js
+    11-dive.js         the Dive: the beat, the Thorn strike, the loop guard
+    12-scoring.js
     13-render-well.js  14-render-entities.js  15-render-hud.js
     16-audio-engine.js AudioSys + MusicSys: transport, voices, buses
     17-audio-tracks.js track tables (DATA, ported from music-lab)

@@ -80,7 +80,18 @@ const C = {
   INVULN_BLINK_HZ:      6,      // on/off cycles per second while invulnerable
 
   // ---- Dive (GDD 5) -------------------------------------------------------
-  DIVE_TIME:            2.6,    // s, Classic
+  // ⛔ DIVE_GRACE IS A PILLAR P2 REQUIREMENT, NOT POLISH. THORN_MAX is 1.00 and
+  // a full-length Thorn's tip sits AT THE RIM (see the Thorn block below) — so
+  // without a beat at depth 1 before the descent starts, a dive that begins in
+  // that lane is a death on step one with no input opportunity: a threat that
+  // is lethal before it is legible. 0.35 s is enough to read the board and
+  // start moving, and the worst case fits inside it with room — eight lanes on
+  // a Ring at KEY_SPEED_MAX 14 lane/s is 0.57 s, well inside the 2.25 s
+  // descent that follows.
+  //
+  // ⛔ Counted UP toward, like every timer in the build (GDD 16.3).
+  DIVE_GRACE:           0.35,   // s at depth 1 before the descent begins
+  DIVE_TIME:            2.6,    // s, Classic. ⛔ the WHOLE dive, grace included
   DIVE_TIME_OD:         4.0,    // s, Overdrive ring-flight. ⛔ hard cap.
   DIVE_RINGS_MAX:       6,      // ⛔ hard cap.
 
@@ -304,12 +315,13 @@ const C = {
   SPAWN_QUOTA:          10,     // enemies released per well
   ENEMY_CONCURRENT:     3,      // ⛔ alive at once — the difficulty knob
   SPAWN_LANE_TRIES:     4,      // deterministic lane redraws before settling
-  // ⚠ TEMPORARY — the pause between the last kill and the next well. CS006's
-  // Dive (GDD 5) replaces it entirely and this constant goes with it.
-  WELL_CLEAR_HOLD:      1.00,   // s held on a cleared well before nextWell()
 
-  // ⚠ TEMPORARY, the same standing as WELL_CLEAR_HOLD above. What the interval
-  // spawner picks a kind from (pickSpawnKind, 08-spawner.js). It ships as one
+  // ⚠ TEMPORARY — what the interval spawner picks a kind from (pickSpawnKind,
+  // 08-spawner.js). ⛔ CS003 P2's between-wells hold used to stand above this with
+  // the same ⚠ standing and CS006 P3 DELETED it: the Dive (GDD 5, DIVE_GRACE /
+  // DIVE_TIME above) is what a cleared well does now, and a placeholder that
+  // survives beside its replacement is the thing this file is worst at. It
+  // ships as one
   // entry, so the game plays exactly as it did before this list existed;
   // editing it to ["vaulter", "carrier", "weaver"] gives a mixed well with no
   // code change, which is the whole point while GDD 8.1's introduction

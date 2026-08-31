@@ -128,6 +128,16 @@ function collideShots(state, well) {
 // unaccountable death, and GDD 6.3 names that as the most common complaint
 // about games in this genre.
 //
+// ⛔ CS006 P3 SETTLED WHICH OF THOSE TWO MOMENTS IT IS, AND IT IS THE JUMP
+// ALONE. The Dive shipped and is NOT that moment: Game.update() short-circuits
+// the whole gameplay pass while state.dive.active, so this function does not
+// run during a dive at all, and the sentence above stays literally true. GDD 5's
+// descent depth lives on state.dive and never on the craft (02-state.js,
+// 11-dive.js), and GDD 4.5 item 5 is a strike test in that module rather than a
+// killDepth here. GDD 14.2's Jump is the thing that puts a craft off the rim
+// WHILE THIS PASS IS RUNNING, and it is the one that gives this pass a second
+// depth to compare.
+//
 // ⚠ WHICH IS WHY THE SURGER'S ZERO IS RIGHT AND THE DRIFTER'S WOULD NOT BE, and
 // it is the same number both times. The Surger's lasts C.SURGE_DISCHARGE and is
 // preceded by C.SURGE_TELEGRAPH of visible fuse in which the lane is NOT lethal
