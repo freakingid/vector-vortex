@@ -26,8 +26,8 @@ on every one of them.
 
 ## The ⛔ asks — readability rules the suite cannot check
 
-Five asks whose failure mode is *a death, or a wrong move, the player cannot
-account for*. Everything else in this file is tuning; these five are
+Six asks whose failure mode is *a death, or a wrong move, the player cannot
+account for*. Everything else in this file is tuning; these six are
 correctness. One per phase that shipped something judgeable.
 
 **⛔ Are the two Drifter states separable at a GLANCE, on a busy well?** Press
@@ -71,6 +71,25 @@ bolt, a fuse and a discharging lane are separable by eye. Knobs:
 readability ceiling — this ask is exactly the one that would move it). The real
 answer is GDD §8.1's introduction schedule, which is CS007's: if six at once is
 noise, the schedule is what has to keep them apart.
+
+**⛔ At level 65, does an occupied lane read as LIT, or does the band just look
+broken?** The dim band (GDD §3.6–3.7) draws levels 65–80 at `C.DIM_BAND_ALPHA`
+0.18, and CS006 P4 wired the lighting that is supposed to make it playable: a
+lane with an enemy in it, a shot travelling it, or a Surger charging it draws
+its two bounding spokes at `C.LANE_LIT_ALPHA` 0.9 instead. Press `w` to level 65
+(or start a run and cycle), then bring the board up with `0`. ⚠ **This is the
+only band in the game where the well is not the brightest thing on screen**, and
+the failure mode is not "too dark" — it is *the player reads the dim spokes as a
+rendering fault and stops trusting the well as information*. Two things only the
+eye can answer: whether a lit lane reads as **this lane has something in it**
+rather than as flicker, and whether an unlit well at 0.18 still reads as a well
+at all on a bright screen. ⛔ Knobs: `C.LANE_LIT_ALPHA` first — it is the one
+number in the pair that is **not** ⚠ SETTLED. `C.DIM_BAND_ALPHA`, `DIM_BAND_LO`
+and `DIM_BAND_HI` are settled per GDD §3.7 and `DECISIONS.md`, and moving one is
+a design call, not an answer to this ask. ⚠ Note the arithmetic before you
+judge: outside 65–80 the producer does not run at all, because a lit spoke and
+an unlit one both draw at 1.0 there — so there is nothing to look at on any
+other level, and that is not a bug.
 
 **⛔ Do the Flat (11) and the Stair (9) READ as wells now?** CS006 P2 gave both
 a `throatOffset` — the Flat `{x: 0, y: -0.50}`, the Stair `{x: 0, y: -0.35}` —

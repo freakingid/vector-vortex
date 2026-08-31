@@ -590,18 +590,24 @@ H.assert(!/\[\s*_/.test(fuseCode),
          "⛔ and the point PAIR is preallocated too — drawPoly(ctx, [a, b]) allocates an " +
          "array literal every call, in a path with up to C.ENEMY_CAP entities in it");
 
-// ⛔ THE TELEGRAPH IS NOT drawWell()'s laneState. Game.draw() still passes null,
-// and isLaneLit() is a boolean over spokes that could not express a progressive
-// fill anyway. Wiring it is CS006's, with the dim band.
+// ⛔ THE TELEGRAPH IS NOT drawWell()'s laneState — isLaneLit() is a boolean over
+// SPOKES and could not express a progressive fill.
 //
-// ⚠ NARROWED BY CS006 P1, Paul's call, and it is the ONLY edit that phase made
-// to a closed file. The regex used to pin the fifth argument too (`, 0)`), which
-// is GDD 3.6's past-99 band roll and was never CS005 P3's to own — P1 replaced
-// that literal with state.bandRoll and the assertion went red for a reason
-// unrelated to anything it claims. The laneState claim is unchanged and is the
-// whole claim; CS006 P4 is what legitimately retires it.
-H.assert(/drawWell\(ctx, well, state\.level, null,/.test(SCRIPT),
-         "⛔ drawWell's laneState parameter is still unwired");
+// ⚠ REWRITTEN IN PLACE BY CS006 P4, which is the moment P1 named as this
+// assertion's retirement (CLAUDE.md, Test rules: a later changeset that
+// REPLACES the behaviour a closed phase's test asserts rewrites the assertion
+// to the replacement, and does not delete it). The claim is unchanged and it
+// was never "laneState is unwired" — it is "the telegraph did not move onto
+// it". P4 wired the parameter, so the mechanism moved: the pin is now on the
+// producer's body, which sets a boolean and never reads the fuse's length.
+// ⛔ Do not widen this to cover buildLaneState()'s own behaviour — that is
+// test-cs006-p4.js's, and this file owns the Surger.
+H.assert(/drawWell\(ctx, well, state\.level, lit,/.test(SCRIPT),
+         "CS006 P4 wired drawWell's laneState parameter");
+const producerCode = codeOf("function buildLaneState(");
+H.assert(!/chargeTip|SURGE_TELEGRAPH|drawSurgeLane/.test(producerCode),
+         "⛔ and the telegraph did NOT move onto it — the producer never reads the fuse's " +
+         "length, so drawSurgeLane() is still the only thing that paints it");
 
 // The entity's own draw: the lane goes down first, then the bar on top of it.
 well = useWell(0);

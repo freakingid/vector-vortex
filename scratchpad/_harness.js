@@ -111,6 +111,8 @@ function buildGame(opts = {}) {
     "laneBoundaryLo", "laneBoundaryHi", "boundaryFrom",
     // the well renderer (13-render-well.js, CS001 P3)
     "drawPoly", "glowStroke", "laneLineWidth", "wellBandColor", "wellBaseAlpha", "drawWell",
+    // the lane-lighting producer (23-main.js, CS006 P4)
+    "buildLaneState",
     // state, input and the loop (02/04/23, CS002 P1)
     "newState", "createInput", "INPUT_KEYS_DEFAULT", "Game",
     // the Skimmer (05-skimmer.js, CS002 P2)

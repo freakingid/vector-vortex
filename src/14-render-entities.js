@@ -526,11 +526,13 @@ function drawDrifter(ctx, well, lane, depth, riding) {
 // lane rather than a silhouette AT a point.
 // ---------------------------------------------------------------------------
 //
-// ⛔ THE TELEGRAPH IS AN ENTITY DRAW AND NOT drawWell()'s laneState. Game.draw()
-// passes `null` for that parameter and no caller passes one; wiring it is
-// CS006's, with the dim band. It could not express this anyway — isLaneLit() is
-// a BOOLEAN over spokes, and GDD 6.3 asks for a lane that brightens throat→rim
-// across C.SURGE_TELEGRAPH, which is a progressive fill.
+// ⛔ THE TELEGRAPH IS AN ENTITY DRAW AND NOT drawWell()'s laneState. CS006 P4
+// wired that parameter — buildLaneState() (23-main.js) sets a `surgeCharge`
+// flag for a charging Surger's lane — and the telegraph deliberately did NOT
+// move onto it. It could not express this: isLaneLit() is a BOOLEAN over
+// SPOKES, and GDD 6.3 asks for a lane that brightens throat→rim across
+// C.SURGE_TELEGRAPH, which is a progressive fill. Two marks, not one: the
+// spokes light, and this creeps up between them.
 //
 // ⛔ ITS OWN SCRATCH POINTS, NOT THE THORN'S. A Thorn and a Surger can be live
 // in the same lane in the same frame, and sharing module scratch between two

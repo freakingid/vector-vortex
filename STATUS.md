@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.2 · Changeset: CS006 (P3 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.2 · Changeset: CS006 (P4 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS006
 
@@ -135,11 +135,39 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   than relaxing it. Suite: **27 files, one red, zero skips.** ✅ **Confirmed by
   Paul, 2026-08-31** — record in `DECISIONS.md`.
 
+- **P4 — `laneState` wired, and ⛔ gated to the dim band.** Confirmed the alpha
+  arithmetic before building: a lit spoke draws at `max(baseAlpha,
+  C.LANE_LIT_ALPHA)`, and outside 65–80 that is `max(1.0, 0.9)` = 1.0, ⛔
+  **identical to unlit** — so `Game.draw()` calls the producer only when
+  `wellBaseAlpha(state.level) < 1`, reading the renderer's own predicate so the
+  two cannot disagree. ⛔ **The renderer is unchanged** (comments only): this
+  phase is `buildLaneState(state, well)` in `23-main.js` and a new
+  `C.LANE_LIT_MAX_LANES` 16. Three flags per GDD §3.7, containment `|laneDelta|
+  < 1` so a boundary rider lights both lanes and a closed well wraps. ⛔ **Every
+  slot is cleared, not just `well.lanes`** — `drawWell` indexes
+  `laneState[lanes]` on an open well's last spoke, and preallocation turns that
+  from `undefined` into a stale entry. ⛔ **The Surger's telegraph did not
+  move**: `surgeCharge` is a `Surger` instanceof test, not a `phase` duck-type,
+  and a Weaver posed with `phase = "telegraph"` sets nothing. ⛔ Zero RNG draws
+  across 600 in-band draws on a populated board. `test-cs006-p4.js`: 71
+  assertions, all seven mutation checks red. Suite: **28 files, one red, zero
+  skips.**
+
+  ⚠ **One closed test rewritten in place, and it is the one P1 scheduled.**
+  `test-cs005-p3.js`'s source pin (`drawWell(ctx, well, state.level, null,`) is
+  now on `lit,` plus a pin on the producer's body proving the telegraph did not
+  move onto it. ⛔ The claim is unchanged — it was never "laneState is unwired",
+  it was "the telegraph is not laneState". ⛔ **`test-cs006-p2.js`'s
+  `P1_DETERMINISM_HASH` is unmoved by P4**: measured at 2063617640 both with and
+  without this phase's changes, so no second cause was added and P5 still owns
+  exactly one re-record. `GOLDEN_LANES` is green.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes: 26 test files, zero skips, ~9 s.
+- `node scratchpad/run-all.js`: 28 test files, **one red** (`test-cs006-p2.js`'s
+  `P1_DETERMINISM_HASH`, P5's to re-record), zero skips.
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -241,11 +269,6 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   `DIVE_TIME - DIVE_GRACE` = 2.25 s, not 2.6. Written down because it is easy to
   read the two constants as additive, and CS014's `DIVE_TIME_OD` 4.0 inherits the
   same reading.
-- **`drawWell()`'s `laneState` parameter is still unwired.** Lane occupancy
-  lighting (GDD §3.7) belongs with the dim band, in CS006. ⛔ The Surger's
-  telegraph shipped as an **entity draw** (`drawSurgeLane`) and must not be
-  moved onto `laneState` when that lands: `isLaneLit()` is a boolean over spokes
-  and cannot express a progressive fill.
 - **`tools/glow-lab.html` does not exist and has no owner.** It is the
   instrument for the **global** glow constants, which CS005 did not touch — both
   new entities read as per-entity multipliers on `laneLineWidth` only. What
@@ -316,32 +339,27 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   `enemyKinds` is 9** (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo.
 
-## Next up — CS006 P4
+## Next up — CS006 P5, the close
 
-**`laneState` and the dim band.** GDD §3.6–3.7. `drawWell()`'s fifth-from-last
-`laneState` parameter has been unwired since CS001 P3 and this is what wires it.
-⛔ **It legitimately breaks `test-cs005-p3.js`'s narrowed source pin** (`null` →
-`lit`), which is what P1 recorded as the assertion's retirement moment. ⛔ **The
-Surger's telegraph must NOT move onto `laneState`**: `isLaneLit()` is a boolean
-over spokes and cannot express a progressive fill (`drawSurgeLane` stays an
-entity draw).
+**The soak, the re-record, and the reset.** ⛔ CS006's four systems are all in:
+past-99 well progression and the colour-band roll (**P1**), `throatOffset` and
+the two degenerate wells (**P2**), the Dive (**P3**), and `laneState` with the
+dim band (**P4**). `PLANNED-FEATURES-CS006.md` and
+`IMPLEMENTATION-PHASES-CS006.md` are the authority on what closing means.
 
-⛔ CS006's scope was split at P0 and it is four systems, not five: past-99 well
-progression and the colour-band roll (**P1, done**), `throatOffset` and the two
-degenerate wells (**P2, done**), the Dive (**P3, done**), and `laneState` with
-the dim band — GDD §3.3, §3.6–3.7, §5, §4.5 item 5.
-`PLANNED-FEATURES-CS006.md` and `IMPLEMENTATION-PHASES-CS006.md` are written and
-are the authority on the phase order.
+⛔ **P4 left the suite one red and it is the same red P3 left** — no new cause.
+It also left `C.LANE_LIT_ALPHA` 0.9 as the one lighting number that is **not**
+⚠ SETTLED, and the ask that would move it is in `PLAYTEST.md`.
 
 ⛔ **P5 OWNS EXACTLY ONE BASELINE RE-RECORD AND IT IS NOT THE ONE ANYBODY
 PREDICTED.** It is `test-cs006-p2.js`'s `P1_DETERMINISM_HASH`, red since P3,
 cause proven and written at the assertion itself and in P3's ledger entry above.
 `test-cs004-p1.js`'s `GOLDEN_LANES` is **green and owes nothing** — measured,
 not assumed. ⛔ A re-record is the one moment a stray RNG draw can be laundered
-into a new baseline, so it happens once, deliberately, with the cause named. If
-P4 moves `GOLDEN_LANES` (it should not — `laneState` is a draw-path change and
-⛔ nothing in the draw path may call `state.rng()`), that is a **second**
-nameable cause and gets its own line.
+into a new baseline, so it happens once, deliberately, with the cause named.
+⛔ **P4 added no second cause, measured:** the hash reads 2063617640 both with
+and without P4's changes, and `GOLDEN_LANES` is green — a draw-path change that
+spends nothing cannot move either.
 
 ⛔ **The heat clock, GDD §8.1's introduction schedule, the spawner-stall call and
 telemetry are the NEW CS007** and are not this changeset's:

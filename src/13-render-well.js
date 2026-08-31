@@ -7,9 +7,12 @@
 // strokes composited with `lighter`, wide-and-dim then thin-and-bright). GDD
 // 10.2: no per-entity pipelines, no fills, no sprites, no textures.
 //
-// Occupancy/shot/charge lighting (laneState) is wired through drawWell now so
-// callers arriving later (shots, enemies, Surger) need no renderer change —
-// it does nothing until a caller ever passes a lit lane, since none exists yet.
+// Occupancy/shot/charge lighting (laneState) is CONSUMED here and produced
+// somewhere else: buildLaneState() (23-main.js, CS006 P4) reads state.enemies
+// and state.shots and hands this function a filled array. ⛔ That producer is
+// gated to the dim band, because outside levels 65-80 a lit spoke and an unlit
+// one draw at the same alpha — see wellBaseAlpha() and the spoke loop below.
+// `null` is still a supported argument and is what every other level passes.
 
 // Build a canvas 2D path from a point array. `closed` draws the final
 // rim[n-1] -> rim[0] edge; open strips omit it (GDD 3.3's loop/strip split).
@@ -108,7 +111,8 @@ function projectPoly(points) {
 //              `{ occupied, shotTravel, surgeCharge }` or falsy. Any truthy
 //              flag lights that lane at LANE_LIT_ALPHA regardless of the dim
 //              band — GDD 3.7's "lanes light on occupancy, shot travel, and
-//              Surger charge" escape hatch. No caller supplies this yet.
+//              Surger charge" escape hatch. Supplied by buildLaneState()
+//              (23-main.js) inside the dim band, and null everywhere else.
 //   rng        0..1 value for the past-99 palette (wellBandColor); unused at or
 //              below C.BAND_RNG_LEVEL. ⛔ A NUMBER, NOT A STREAM — the caller
 //              passes state.bandRoll, which nextWell() drew during a simulation
@@ -150,8 +154,11 @@ function drawWell(ctx, well, level, laneState, rng) {
   }
 }
 
-// laneState is a sparse array; an out-of-range index (open-well end spokes)
-// reads undefined, which this treats as unlit.
+// An out-of-range index (an open well's end spokes read laneState[-1] and
+// laneState[lanes]) must be falsy or unlit. ⛔ buildLaneState() (23-main.js) is
+// PREALLOCATED to C.LANE_LIT_MAX_LANES, so `laneState[lanes]` is a real entry
+// rather than undefined — which is why that producer clears every slot it owns
+// and not just the current well's lanes.
 function isLaneLit(s) {
   return !!s && (s.occupied || s.shotTravel || s.surgeCharge);
 }

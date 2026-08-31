@@ -441,6 +441,13 @@ const C = {
   DIM_BAND_LO:          65,     // ⚠ SETTLED — GDD 3.7, do not tune
   DIM_BAND_HI:          80,     // ⚠ SETTLED — GDD 3.7, do not tune
   LANE_LIT_ALPHA:       0.9,    // occupied / shot-travel / Surger-charge lane
+  // ⛔ THE SIZE OF buildLaneState()'s ONE PREALLOCATED ARRAY (23-main.js), and
+  // it is the widest well in WELLS, not a tuning target. GDD 17's perf budget
+  // forbids per-frame allocation in the hot path, so the producer owns a single
+  // module-level array it clears and refills; this is how long it is. A well
+  // wider than this would silently lose lighting on its extra lanes, which is
+  // why test-cs006-p4.js asserts no well exceeds it.
+  LANE_LIT_MAX_LANES:   16,
   LINE_W_THROAT:        1.0,    // px, depth 0 — GDD 10.1, thinner far away
   LINE_W_RIM:           3.0,    // px, depth 1 — thicker near the player
   GLOW_WIDE_W:          6.0,    // px, outer glow pass width multiplier base

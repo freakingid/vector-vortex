@@ -190,6 +190,95 @@ function startGame(seed) {
   enterWell();
 }
 
+// ---------------------------------------------------------------------------
+// THE LANE-LIGHTING PRODUCER (GDD 3.7, 10.2, 17). CS006 P4.
+// ---------------------------------------------------------------------------
+//
+// drawWell()'s `laneState` parameter has existed unwired since CS001 P3; this
+// is what fills it. ⛔ THE RENDERER IS UNCHANGED — the consumer already handles
+// all three flags, the closed-wrap and open-end spoke neighbours, and a `null`
+// argument. This file is the producer and nothing else.
+//
+// ⛔ AND THE PRODUCER IS GATED TO THE DIM BAND. Read the alpha arithmetic in
+// 13-render-well.js before removing the gate: a lit spoke draws at
+// `Math.max(baseAlpha, C.LANE_LIT_ALPHA)`, and outside levels 65-80 baseAlpha
+// is 1.0 against a LANE_LIT_ALPHA of 0.9 — `max(1.0, 0.9)` is 1.0, which is
+// EXACTLY the unlit alpha. Lane lighting is visible in sixteen levels out of
+// ninety-nine, GDD 3.7 is ⚠ SETTLED that no tuning time is spent on that band,
+// and an unconditional per-frame per-lane pass would spend the perf budget on
+// a provable no-op for the other eighty-three. The gate is `wellBaseAlpha(...)
+// < 1` — derived from the same function the renderer uses, so the two can
+// never disagree about where the band is.
+//
+// ⛔ NOTHING HERE SPENDS AN RNG DRAW (CLAUDE.md, Math and lifecycle;
+// RATIONALE.md#draw-path-rng). It reads state.enemies and state.shots and
+// computes; draw() runs on a frame clock and update() does not.
+//
+// ⛔ NO PER-FRAME ALLOCATION (GDD 17's perf budget). One module-level array of
+// C.LANE_LIT_MAX_LANES entry objects, cleared and refilled in place. It is
+// returned by reference, so a caller that wants to keep a frame's lighting
+// must copy it — drawWell reads it within the call and does not.
+const _laneState = (function () {
+  const a = new Array(C.LANE_LIT_MAX_LANES);
+  for (let i = 0; i < a.length; i++) {
+    a[i] = { occupied: false, shotTravel: false, surgeCharge: false };
+  }
+  return a;
+})();
+
+// ⛔ EVERY SLOT IS CLEARED, NOT JUST THE CURRENT WELL'S LANES, and that is a
+// correctness rule rather than tidiness. 13-render-well.js's spoke loop indexes
+// `laneState[lanes]` on an OPEN well — its last spoke starts no lane — and
+// relies on that read being falsy. With a sparse array it read `undefined`; with
+// a preallocated one it reads a real entry, so a stale `true` left there by a
+// wider well would light an end spoke on a narrower one, intermittently.
+function buildLaneState(state, well) {
+  for (let i = 0; i < _laneState.length; i++) {
+    const s = _laneState[i];
+    s.occupied = false;
+    s.shotTravel = false;
+    s.surgeCharge = false;
+  }
+
+  const lanes = well.lanes < _laneState.length ? well.lanes : _laneState.length;
+  const enemies = state.enemies;
+  const shots = state.shots;
+
+  // ⛔ CONTAINMENT IS `|laneDelta| < 1`, VIA THE WRAP-AWARE HELPER (GDD 3.2,
+  // 3.5) — never a bare `lane - i`, which is off by the whole well across the
+  // seam of a closed one. Strict `< 1` means an entity sitting on a lane centre
+  // lights that lane alone, while one on the boundary LATTICE (a riding
+  // Drifter, at lane 0.5) lights both lanes it is between, which is what the
+  // player sees.
+  for (let i = 0; i < lanes; i++) {
+    const s = _laneState[i];
+
+    for (let j = 0; j < enemies.length; j++) {
+      const e = enemies[j];
+      if (e.dead) continue;
+      if (Math.abs(laneDelta(well, i, e.lane)) >= 1) continue;
+      s.occupied = true;
+      // ⛔ THE TELEGRAPH DOES NOT MOVE HERE — this sets the SPOKES, and
+      // drawSurgeLane() (14-render-entities.js) still paints the progressive
+      // throat->rim fill inside them. They are two marks, and isLaneLit() is a
+      // boolean that could not express the second one. GDD 6.3.
+      if (e instanceof Surger && (e.phase === "telegraph" || e.phase === "discharge")) {
+        s.surgeCharge = true;
+      }
+    }
+
+    for (let j = 0; j < shots.length; j++) {
+      const sh = shots[j];
+      if (sh.dead) continue;
+      if (Math.abs(laneDelta(well, i, sh.lane)) >= 1) continue;
+      s.shotTravel = true;
+      break;
+    }
+  }
+
+  return _laneState;
+}
+
 const Game = (function () {
 
   let canvas = null;
@@ -454,7 +543,11 @@ const Game = (function () {
     // draw() runs once per FRAME while update() runs zero to
     // C.MAX_CATCHUP_STEPS times, and during hit-stop it runs zero, so a draw
     // here would make the run's stream a function of refresh rate.
-    drawWell(ctx, well, state.level, null, state.bandRoll);
+    // ⛔ GATED TO THE DIM BAND (GDD 3.7). Outside levels 65-80 a lit spoke and
+    // an unlit one draw at the same alpha — see buildLaneState() above — so the
+    // producer would be a per-frame no-op. drawWell() already handles null.
+    const lit = wellBaseAlpha(state.level) < 1 ? buildLaneState(state, well) : null;
+    drawWell(ctx, well, state.level, lit, state.bandRoll);
     // Z-order: the well is the backdrop, enemies climb over it, shots travel
     // over them, and the Skimmer — always at depth 1, the rim — rides on top
     // of everything. Shots above enemies so a shot is never lost behind the
