@@ -190,7 +190,30 @@ const CARRIER_POLY = [
 // reading the glyph fast is the skill that separates competent from good, so
 // the design rule for a new row is legibility at THROAT depth, not detail at
 // the rim: two or three points, one unmistakable gesture, and no feature that
-// survives only at full size. CS005's rows are drifter and surger.
+// survives only at full size.
+//
+// ⛔ THE DESIGN RULE, WRITTEN DOWN SO THE NINTH ENEMY INHERITS IT: A GLYPH IS A
+// MINIATURE OF ITS CARGO'S OWN GESTURE. The Vaulter's is a chevron, which is
+// its arm; the Surger's is a zigzag with square corners, which is its bar; the
+// Drifter's is a jagged scatter with no dominant axis, which is its cluster.
+// That is what makes cargo-reading LEARNABLE rather than memorised — a player
+// who has met the enemy has already met its glyph — and learnable is GDD 6.2's
+// stated point. A new cargo takes the silhouette its entity already has and
+// reduces it to the fewest points that keep the gesture.
+//
+// ⛔ AND THE STAKES ARE REAL, WHICH IS WHY THE TWO CONSEQUENTIAL ROWS ARE THE
+// TWO THAT LOOK LEAST ALIKE. GDD 6.2's correct responses are opposite — Drifter
+// cargo: shoot, MOVE AWAY; Surger cargo: shoot, HOLD STILL — so a player who
+// reads the glyph wrong does the exact opposite of the right thing. The Surger
+// and the Vaulter both span the full width; the Drifter is the compact tangle,
+// and compact-versus-wide is the channel that carries the costly half of the
+// read at the depth where the glyph is smallest.
+//
+// ⛔ EVERY GLYPH IS A PLAIN ARRAY OF POINTS AND EVERY GLYPH IS AN OPEN PATH.
+// drawCarrier() below calls drawPoly(..., false) for all of them, with no
+// per-cargo branch and no {poly, closed} row shape: a closed glyph reads as a
+// second outline nested in the hull, and a reshaped table breaks the loops
+// CS004 P2 and P5 wrote over it.
 //
 // The Vaulter's is a chevron aimed at the player — an OPEN path, so it never
 // reads as a second closed outline nested in the hull, and angled rather than
@@ -207,6 +230,33 @@ const CARGO_GLYPHS = {
     { l: -1.00, d: -0.36 },
     { l:  0.00, d:  0.36 },
     { l:  1.00, d: -0.36 },
+  ],
+
+  // The Drifter's cluster (DRIFTER_POLY_RIDE / _CROSS below): a scatter that
+  // doubles back. ⛔ `l` goes right, then LEFT, then right, so there is no
+  // dominant axis and no monotonic run — which is the whole difference from the
+  // surger row, and the difference the player pays for getting wrong. It
+  // crosses itself once, which is what says "cluster" rather than "line", and
+  // it spans ~62% of the glyph box's width so it reads COMPACT against the two
+  // full-width rows at the depth where all three are smallest.
+  drifter: [
+    { l: -0.62, d: -0.14 },
+    { l:  0.34, d:  0.36 },
+    { l: -0.16, d: -0.36 },
+    { l:  0.62, d:  0.08 },
+  ],
+
+  // The Surger's bar (SURGER_POLY below), reduced to ONE square cycle. ⛔ The
+  // corners are square, exactly as the silhouette's are, because that is what
+  // stops the bar reading as a lightning bolt and it is the half of the gesture
+  // worth keeping at glyph size. Two flat runs across the lanes joined by one
+  // step: full width, so it can never be the compact drifter row, and flat,
+  // so it can never be the vaulter's angled chevron.
+  surger: [
+    { l: -1.00, d: -0.36 },
+    { l:  0.00, d: -0.36 },
+    { l:  0.00, d:  0.36 },
+    { l:  1.00, d:  0.36 },
   ],
 };
 

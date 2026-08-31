@@ -27,10 +27,17 @@ const ENEMY_KINDS = {
   // ⛔ ONE ROW PER CARRIER VARIANT, not one row for "a Carrier". The cargo is
   // half of what the entity IS (GDD 6.2 — reading the glyph is the skill), so
   // it belongs in the string, exactly as the class it becomes belongs in this
-  // table. CS005's two rows are carrierDrifter and carrierSurger, alongside
-  // their CARGO entries (07-enemies.js). `dir` is ignored: a Carrier never
-  // hops, and the draw for it is still spent (see spawnEnemy below).
+  // table. `dir` is ignored by all three: a Carrier never hops, and the draw
+  // for it is still spent (see spawnEnemy below).
+  //
+  // ⛔ THREE ROWS, ONE CLASS, NO BRANCH. The cargo is a CARGO key handed to the
+  // same constructor — Carrier.onShot() and splitLanes() serve all three rows
+  // and neither takes a cargo. CS005 P4 completed GDD 6.2's table by adding the
+  // two rows below and nothing else; a fourth cargo is the same three lines
+  // (a CARGO entry, a row here, a glyph) in three files.
   carrierVaulter: (lane, depth) => new Carrier(lane, depth, "vaulter"),
+  carrierDrifter: (lane, depth) => new Carrier(lane, depth, "drifter"),
+  carrierSurger:  (lane, depth) => new Carrier(lane, depth, "surger"),
   // `dir` is ignored by both of these too: a Weaver never hops and a bolt
   // travels the lane it was fired in. The draw is still spent — see spawnEnemy.
   weaver: (lane, depth) => new Weaver(lane, depth),

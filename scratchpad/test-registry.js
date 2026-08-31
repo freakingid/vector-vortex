@@ -18,12 +18,14 @@ const COUNTS = {
   // `enemies` counts GDD 6.1's ROSTER ROWS; this counts ENEMY_KINDS rows
   // (08-spawner.js), and the two stopped coinciding twice over:
   //   - one row per CARRIER VARIANT, so GDD 6.2's three cargoes are three rows
-  //     behind one roster entry (CS005 adds carrierDrifter and carrierSurger);
+  //     behind one roster entry (CS005 P4 landed carrierDrifter and
+  //     carrierSurger, and moved this number alone);
   //   - the Weaver's BOLT is a kind and is not an enemy on the roster.
   // Keeping them as two numbers is what lets a phase say which one it moved.
-  enemyKinds: 7,    // vaulter, carrierVaulter, weaver, weaverBolt, thorn,
-                    // drifter, surger. ⛔ CS005 P4's two carrier variants raise
-                    // it again, to 9, without touching `enemies`.
+  enemyKinds: 9,    // vaulter, carrierVaulter, carrierDrifter, carrierSurger,
+                    // weaver, weaverBolt, thorn, drifter, surger. ⛔ GDD 6.2's
+                    // variant table is complete, so the next mover is an
+                    // Overdrive enemy (GDD 6.4) and not a cargo.
 };
 
 // ⛔ THE state FIELD INVENTORY (02-state.js). An exhaustive list is a global

@@ -2266,12 +2266,18 @@ class Vaulter extends Enemy {
 // cargo becomes a string.
 //
 // ⛔ THE SPLIT IS TABLE-DRIVEN AND STAYS THAT WAY. There is no branch on cargo
-// anywhere — not in onShot, not in splitLanes, not in the draw path. GDD 6.2
-// has three rows and only this one is buildable: the Drifter (L18) and the
-// Surger (L23) cannot be cargo before they are enemies, and they are CS005's.
-// Adding a row is: an entry here, an ENEMY_KINDS row for the carrier variant,
-// and a glyph in CARGO_GLYPHS — the same three-file shape every enemy already
-// has (behaviour, spawn string, silhouette). Nothing else.
+// anywhere — not in onShot, not in splitLanes, not in the draw path. Adding a
+// row is: an entry here, an ENEMY_KINDS row for the carrier variant, and a
+// glyph in CARGO_GLYPHS — the same three-file shape every enemy already has
+// (behaviour, spawn string, silhouette). Nothing else.
+//
+// ⛔ CS005 P4 COMPLETED GDD 6.2's TABLE and added no code path. The Drifter and
+// the Surger could not be cargo before they were enemies (CS005 P2 and P3), so
+// their rows waited a phase; landing them cost two lines here, two ENEMY_KINDS
+// rows and two glyphs, because CS004 P2 wrote onShot() and splitLanes() to
+// serve every row of this table rather than the one row it could build. ⚠ It
+// is still NOT a weighted draw — GDD 8's "cargo weights shift toward
+// Drifter/Surger" is heat, and heat is CS006's.
 //
 // ⛔ GDD 6.2's "adjacent" (Vaulter cargo) and "flanking" (Surger cargo) are THE
 // SAME GEOMETRY. The distinction that section draws is between the correct
@@ -2281,6 +2287,8 @@ class Vaulter extends Enemy {
 // difference the player cannot see.
 const CARGO = {
   vaulter: { kind: "vaulter" },
+  drifter: { kind: "drifter" },
+  surger: { kind: "surger" },
 };
 
 // ---------------------------------------------------------------------------
@@ -3256,10 +3264,17 @@ const ENEMY_KINDS = {
   // ⛔ ONE ROW PER CARRIER VARIANT, not one row for "a Carrier". The cargo is
   // half of what the entity IS (GDD 6.2 — reading the glyph is the skill), so
   // it belongs in the string, exactly as the class it becomes belongs in this
-  // table. CS005's two rows are carrierDrifter and carrierSurger, alongside
-  // their CARGO entries (07-enemies.js). `dir` is ignored: a Carrier never
-  // hops, and the draw for it is still spent (see spawnEnemy below).
+  // table. `dir` is ignored by all three: a Carrier never hops, and the draw
+  // for it is still spent (see spawnEnemy below).
+  //
+  // ⛔ THREE ROWS, ONE CLASS, NO BRANCH. The cargo is a CARGO key handed to the
+  // same constructor — Carrier.onShot() and splitLanes() serve all three rows
+  // and neither takes a cargo. CS005 P4 completed GDD 6.2's table by adding the
+  // two rows below and nothing else; a fourth cargo is the same three lines
+  // (a CARGO entry, a row here, a glyph) in three files.
   carrierVaulter: (lane, depth) => new Carrier(lane, depth, "vaulter"),
+  carrierDrifter: (lane, depth) => new Carrier(lane, depth, "drifter"),
+  carrierSurger:  (lane, depth) => new Carrier(lane, depth, "surger"),
   // `dir` is ignored by both of these too: a Weaver never hops and a bolt
   // travels the lane it was fired in. The draw is still spent — see spawnEnemy.
   weaver: (lane, depth) => new Weaver(lane, depth),
@@ -4139,7 +4154,30 @@ const CARRIER_POLY = [
 // reading the glyph fast is the skill that separates competent from good, so
 // the design rule for a new row is legibility at THROAT depth, not detail at
 // the rim: two or three points, one unmistakable gesture, and no feature that
-// survives only at full size. CS005's rows are drifter and surger.
+// survives only at full size.
+//
+// ⛔ THE DESIGN RULE, WRITTEN DOWN SO THE NINTH ENEMY INHERITS IT: A GLYPH IS A
+// MINIATURE OF ITS CARGO'S OWN GESTURE. The Vaulter's is a chevron, which is
+// its arm; the Surger's is a zigzag with square corners, which is its bar; the
+// Drifter's is a jagged scatter with no dominant axis, which is its cluster.
+// That is what makes cargo-reading LEARNABLE rather than memorised — a player
+// who has met the enemy has already met its glyph — and learnable is GDD 6.2's
+// stated point. A new cargo takes the silhouette its entity already has and
+// reduces it to the fewest points that keep the gesture.
+//
+// ⛔ AND THE STAKES ARE REAL, WHICH IS WHY THE TWO CONSEQUENTIAL ROWS ARE THE
+// TWO THAT LOOK LEAST ALIKE. GDD 6.2's correct responses are opposite — Drifter
+// cargo: shoot, MOVE AWAY; Surger cargo: shoot, HOLD STILL — so a player who
+// reads the glyph wrong does the exact opposite of the right thing. The Surger
+// and the Vaulter both span the full width; the Drifter is the compact tangle,
+// and compact-versus-wide is the channel that carries the costly half of the
+// read at the depth where the glyph is smallest.
+//
+// ⛔ EVERY GLYPH IS A PLAIN ARRAY OF POINTS AND EVERY GLYPH IS AN OPEN PATH.
+// drawCarrier() below calls drawPoly(..., false) for all of them, with no
+// per-cargo branch and no {poly, closed} row shape: a closed glyph reads as a
+// second outline nested in the hull, and a reshaped table breaks the loops
+// CS004 P2 and P5 wrote over it.
 //
 // The Vaulter's is a chevron aimed at the player — an OPEN path, so it never
 // reads as a second closed outline nested in the hull, and angled rather than
@@ -4156,6 +4194,33 @@ const CARGO_GLYPHS = {
     { l: -1.00, d: -0.36 },
     { l:  0.00, d:  0.36 },
     { l:  1.00, d: -0.36 },
+  ],
+
+  // The Drifter's cluster (DRIFTER_POLY_RIDE / _CROSS below): a scatter that
+  // doubles back. ⛔ `l` goes right, then LEFT, then right, so there is no
+  // dominant axis and no monotonic run — which is the whole difference from the
+  // surger row, and the difference the player pays for getting wrong. It
+  // crosses itself once, which is what says "cluster" rather than "line", and
+  // it spans ~62% of the glyph box's width so it reads COMPACT against the two
+  // full-width rows at the depth where all three are smallest.
+  drifter: [
+    { l: -0.62, d: -0.14 },
+    { l:  0.34, d:  0.36 },
+    { l: -0.16, d: -0.36 },
+    { l:  0.62, d:  0.08 },
+  ],
+
+  // The Surger's bar (SURGER_POLY below), reduced to ONE square cycle. ⛔ The
+  // corners are square, exactly as the silhouette's are, because that is what
+  // stops the bar reading as a lightning bolt and it is the half of the gesture
+  // worth keeping at glyph size. Two flat runs across the lanes joined by one
+  // step: full width, so it can never be the compact drifter row, and flat,
+  // so it can never be the vaulter's angled chevron.
+  surger: [
+    { l: -1.00, d: -0.36 },
+    { l:  0.00, d: -0.36 },
+    { l:  0.00, d:  0.36 },
+    { l:  1.00, d:  0.36 },
   ],
 };
 

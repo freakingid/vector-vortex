@@ -310,12 +310,18 @@ class Vaulter extends Enemy {
 // cargo becomes a string.
 //
 // ⛔ THE SPLIT IS TABLE-DRIVEN AND STAYS THAT WAY. There is no branch on cargo
-// anywhere — not in onShot, not in splitLanes, not in the draw path. GDD 6.2
-// has three rows and only this one is buildable: the Drifter (L18) and the
-// Surger (L23) cannot be cargo before they are enemies, and they are CS005's.
-// Adding a row is: an entry here, an ENEMY_KINDS row for the carrier variant,
-// and a glyph in CARGO_GLYPHS — the same three-file shape every enemy already
-// has (behaviour, spawn string, silhouette). Nothing else.
+// anywhere — not in onShot, not in splitLanes, not in the draw path. Adding a
+// row is: an entry here, an ENEMY_KINDS row for the carrier variant, and a
+// glyph in CARGO_GLYPHS — the same three-file shape every enemy already has
+// (behaviour, spawn string, silhouette). Nothing else.
+//
+// ⛔ CS005 P4 COMPLETED GDD 6.2's TABLE and added no code path. The Drifter and
+// the Surger could not be cargo before they were enemies (CS005 P2 and P3), so
+// their rows waited a phase; landing them cost two lines here, two ENEMY_KINDS
+// rows and two glyphs, because CS004 P2 wrote onShot() and splitLanes() to
+// serve every row of this table rather than the one row it could build. ⚠ It
+// is still NOT a weighted draw — GDD 8's "cargo weights shift toward
+// Drifter/Surger" is heat, and heat is CS006's.
 //
 // ⛔ GDD 6.2's "adjacent" (Vaulter cargo) and "flanking" (Surger cargo) are THE
 // SAME GEOMETRY. The distinction that section draws is between the correct
@@ -325,6 +331,8 @@ class Vaulter extends Enemy {
 // difference the player cannot see.
 const CARGO = {
   vaulter: { kind: "vaulter" },
+  drifter: { kind: "drifter" },
+  surger: { kind: "surger" },
 };
 
 // ---------------------------------------------------------------------------

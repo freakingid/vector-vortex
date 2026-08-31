@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS005 (P3 of 5 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS005 (P4 of 5 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS005
 
@@ -78,11 +78,45 @@ armed, a written `lane`, `shotAlpha()` on the fuse, the live lane losing its
 width multiplier, the fuse borrowing the Thorn's scratch, and `SURGE_DISCHARGE`
 raised past `RESPAWN_INVULN` — each turns `test-cs005-p3.js` red.
 
+- **P4 — the two cargo rows.** ✅ `CARGO.drifter` / `CARGO.surger`
+  (`07-enemies.js`), `carrierDrifter` / `carrierSurger` in `ENEMY_KINDS`
+  (`08-spawner.js`), `CARGO_GLYPHS.drifter` / `.surger`
+  (`14-render-entities.js`), `scratchpad/test-cs005-p4.js`. Registry
+  `enemyKinds` 7 → 9; `enemies` **untouched at 6**. ⛔ **GDD §6.2's variant
+  table is complete.**
+
+⛔ **Three table rows and two glyphs, and NO CODE PATH.** `Carrier.onShot()`,
+`splitLanes()` and `drawCarrier()` are unchanged and serve all three rows; there
+is no branch on cargo anywhere, asserted against the built text. All three
+variants build the same `Carrier` with `killDepth = 1 - C.RIM_CONTACT_DEPTH` —
+a Carrier is a Carrier, and the cargo only matters after it dies.
+
+⛔ **The glyph design rule is now WRITTEN DOWN at `CARGO_GLYPHS` and in GDD
+§6.2: a glyph is a miniature of its cargo's own gesture** — chevron/arm,
+zigzag/bar, scatter/cluster — which is what makes the read learnable. ⛔ The two
+**opposite** responses (Drifter: move away; Surger: hold still) are carried by
+**compact versus full-width**, the channel that survives at throat depth.
+
+⛔ **`test-cs005-p4.js` is deliberately short.** CS004's `CARGO` loops now cover
+three rows instead of one, so the split, the two draws, the child kind, the
+child depth and `splitLanes`' lanes are asserted three times over without an
+edit; this file confirms that coverage arrived and adds the rest: a rim split
+yields two children at the parent's exact depth that begin their own birth
+crosses (Drifter) or their own fuses (Surger) **independently** — stepping one
+never advances the other — plus the two glyph-shape ⛔s (plain arrays, one
+`closePath` per Carrier) stated here so a reshape fails with a clear message
+rather than in CS004's file with a confusing one.
+
+**Mutation-checked, seven:** a `{poly, closed}` glyph row, a closed glyph, a
+cargo branch in the build, a variant with a `0` or absent `killDepth`, a
+full-width drifter glyph, a drifter glyph that stops doubling back, and a bench
+key per variant — each turns `test-cs005-p4.js` red.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes: 22 test files, zero skips, ~6 s.
+- `node scratchpad/run-all.js` passes: 23 test files, zero skips, ~6 s.
 - CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer.
 - CS002 closed 2026-08-30 — the loop, the Skimmer, shots, and all four input
   devices (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -289,21 +323,21 @@ than history and are kept here:
   `PTS_THORN` and `PURGE_SAVED_BONUS` are deliberately unread until `addScore()`
   lands in CS007, which is the one entry point (`CLAUDE.md`, Scoring).
 - ⛔ `scratchpad/test-registry.js` carries TWO counts and they are not the same
-  number. After P3, `enemies` is **6** (GDD §6.1 roster rows, now complete) and
-  `enemyKinds` is **7** (`ENEMY_KINDS` rows). ⛔ **P4 raises only the second, by
-  two** — its Carrier variants are kinds and not roster rows — so the changeset
-  ends at **6** and **9**.
+  number. ✅ **Settled for CS005: `enemies` is 6** (GDD §6.1 roster rows,
+  complete) **and `enemyKinds` is 9** (`ENEMY_KINDS` rows). P4 raised only the
+  second, by two, because a Carrier variant is a kind and not a roster row. ⛔
+  The next mover of either is an Overdrive enemy (GDD §6.4), not a cargo.
 
-## Still to come this changeset — the two cargo rows and the soak
+## Still to come this changeset — the soak and the close
 
 `PLANNED-FEATURES-CS005.md` and `IMPLEMENTATION-PHASES-CS005.md` are both in
-flight. P1–P3 are spent; what is left is P4 and P5. Everything the ✅ entries
+flight. P1–P4 are spent; what is left is P5. Everything the ✅ entries
 here used to carry is in the phase ledger above.
 
-- ⛔ **Two cargo rows, and they add no test.** `test-cs004-p5.js`'s §17 item 6
-  case is a loop over the `CARGO` table that discovers each cargo's carrier from
-  `ENEMY_KINDS`, so P4 adds `carrierDrifter` and `carrierSurger` rows, their two
-  glyphs, and nothing else.
+- ✅ **The two cargo rows are done** (P4). `test-cs004-p5.js`'s §17 item 6 case
+  is a loop over the `CARGO` table that discovers each cargo's carrier from
+  `ENEMY_KINDS`, so it grew from one row to three and cost no edit, exactly as
+  CS004 wrote it to.
 - ⛔ **`MAX_LANE_STEP` is per-entity in CS005's OWN tests and neither closed
   soak is edited** (`PLANNED-FEATURES-CS005.md` finding 7 — the earlier note
   here that both needed editing was wrong; neither soak's board can contain a
