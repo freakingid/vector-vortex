@@ -114,6 +114,7 @@ happen here, in Claude Code, including planning — `DECISIONS.md`, 2026-08-31.
 | `RATIONALE.md` | Why the rules here exist. | On demand only |
 | `DECISIONS.md` | Judgment calls made outside the phase flow. | On demand only |
 | `ROADMAP.md` | Changeset sequence to ship. | On demand only |
+| `NEXT-STEPS.md` | Specified but unscheduled work — a defect or a call written up for a future session. | ⛔ **Only when a prompt names it** |
 | `PLAYTEST.md` | Open questions only the eye can answer. | **Never by default** |
 | `log/CS0##.md` | Per-changeset narrative log + version history. | **Never by default** |
 | `archive/` | Spent planning docs. | **Never by default** |

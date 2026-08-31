@@ -245,6 +245,16 @@ question that only becomes reachable when the introduction schedule lands, which
 is why it is named against CS007 rather than left unowned. The last is the
 module seam, named against CS012 for the same reason.
 
+- ⛔ **THE RIM HIT-WINDOW DEFECT IS SPECIFIED AND UNSCHEDULED, AND IT IS THE ONLY
+  ITEM HERE THAT IS A BUG RATHER THAN A DESIGN CALL.** An enemy parked at depth
+  1.000 is hittable on 1 tick in 4 where every other depth gets 3 in 4, and
+  **62 % of player deaths are to one** — GDD §6.1's *"Killed by: any shot"* is
+  false at the rim. ⛔ **The write-up, the measured option table and the three
+  calls that are Paul's live in `NEXT-STEPS.md`**, not here and not in
+  `STATUS.md`. ⚠ The recommendation there is to land it as **CS008 P1** rather
+  than renumber a third time — ⛔ **that placement is Paul's call**, and it is the
+  reason this note is on this list at all rather than simply inside CS008's row.
+
 - ✅ **CLOSED by CS006 P2 — GDD §3.3's `throatOffset` is defined.** It is a
   translation of the throat polygon in normalized rim space, applied **after**
   the centroid scale, DATA and never written at runtime. GDD §3.3 carries the

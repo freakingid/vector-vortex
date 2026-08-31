@@ -156,6 +156,21 @@ compression authorizations to work around; it should not recur.
   to change.** `test-cs005-p3.js` pinned all five `drawWell` arguments to assert
   one of them. Source-text assertions are the right tool for "this is still
   unwired", but ⛔ **pin only the argument the claim is about**.
+- ⛔ **AN ENEMY PARKED AT THE RIM IS HITTABLE ON 1 TICK IN 4, AND 62 % OF ALL
+  PLAYER DEATHS ARE TO ONE.** Found by Paul playing the build after the CS007
+  close; measured at `9cf1320`. Two off-by-ones meet at depth 1.000: a shot is
+  aged on the tick it is fired, so its first *tested* depth is 0.968 and a shot
+  never exists at the rim; and four enemies (Vaulter, Carrier, Drifter, Surger)
+  clamp their climb at 1.000, which is 0.05 **past** their own `killDepth` of
+  0.95. `HIT_DEPTH_TOL` is a point sample, so depth 1.000 gets **one** shot
+  sample where every other depth gets three, against a 4-tick fire cadence.
+  ⛔ **GDD §6.1's "Killed by: any shot" is false at the rim**, and the decision is
+  a coin flip on the cooldown's phase, which the player cannot see. ⚠ **No soak
+  catches it** — every one asks whether the run terminates, and it does; the
+  enemy costs a life and dies afterwards. ⛔ **The full write-up, the measured
+  option table and the three calls that are Paul's are in `NEXT-STEPS.md`** — not
+  restated here. ⛔ **It blocks `PLAYTEST.md`'s CS007 ask**: a player does not
+  reach level 5 through it.
 - ⛔ **NO KEY IN THE BUILD REACHES A CHOSEN LEVEL.** `w` (`cycleWell`) advances
   `state.wellIndex` and never `state.level`, and both `eligibleKinds()` and
   `wellBandColor(level, …)` are functions of the level. ⚠ Found at the CS007
@@ -226,6 +241,14 @@ title → mode → Start Depth → play → game over → restart.** GDD §4.6, 
 `IMPLEMENTATION-PHASES-CS008.md` are unwritten; CS007's are spent and archived
 (`archive/`). A planning session writes them, writes **no code**, and marks every
 claim MEASURED or PREDICTED.
+
+⛔ **AND ONE THING THAT IS NOT CS008's ROW BUT PROBABLY BELONGS AT ITS FRONT.**
+The rim hit-window defect (Known issues) is specified and unscheduled;
+`NEXT-STEPS.md` carries it in full and the recommendation there is **CS008 P1**,
+before any front-of-house work, because you cannot judge scoring, extra lives or
+a HUD in a game where 62 % of deaths are a lottery. ⛔ **Where it lands is Paul's
+call, not a planning session's** — the alternative is a third +1 renumber, and
+the two on record cost pointer sweeps of 17 and 73.
 
 ⛔ **What CS008 inherits, and each of these is a thing the plan must place:**
 
