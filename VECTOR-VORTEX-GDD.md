@@ -187,6 +187,14 @@ Clamping the player but leaving enemy AI wrapping produces enemies that teleport
 
 Past 99 the counter holds and shapes come from the seeded RNG. Heat also holds — a marathon, not an impossibility. Same shape as Orbital Overhaul's escalating-waves-forever model: there is **no win condition**, which matters for the leaderboard `outcome` enum (§15.4).
 
+**Shipped CS006 P1 — where the past-99 draw happens, and where it must not.** The boundary is `C.BAND_RNG_LEVEL` (99), which is the last `BAND_COLORS` row's ceiling and not a tuning target. ⛔ **The two draws — the shape index and `state.bandRoll` — are spent in `nextWell()` (`23-main.js`) and nowhere else**, and only when `state.level > C.BAND_RNG_LEVEL`; below the boundary the branch spends exactly what the old modulo line did, which is nothing. That matters because the run has ONE stream (§16.1): a draw spent here moves every spawn lane in every run, including §17 item 1's replay hash and `test-cs004-p1.js`'s golden lane sequence.
+
+⛔ **Not in `enterWell()`.** That function has three callers — a new run, the next level, and the `w` debug key — and the third is not simulation. A draw there would let a keypress shift the run's stream, which is why `"w"` is on the FORBIDDEN key list of three closed soaks. ⚠ `startGame()` deliberately spends nothing either; §4.6's Start Depth is not built, and the changeset that lands it owns what a run *starting* past 99 rolls.
+
+⛔ **And the value is drawn in the simulation, never in the renderer.** `Game.draw()` passes `state.bandRoll`; `wellBandColor` takes a **number**, not a stream. `Game.frame()` runs zero to `C.MAX_CATCHUP_STEPS` updates and exactly one `draw()`, and during hit-stop it runs zero updates and still draws — `C.HIT_STOP_DEATH` 1.20 s is ~72 draws against no simulation — so a `state.rng()` in the draw path would make the run's stream a function of frame rate. `CLAUDE.md` carries the rule; `RATIONALE.md#draw-path-rng` carries the reasoning.
+
+⚠ **`state.level` itself does not hold.** What holds past 99 is the *derived* band table (and, in CS007, the heat curve). The clock is unbounded and has to be — telemetry samples it and `C.PTS_WELL_PER_LEVEL` multiplies by it. A reader that must not rise past 99 clamps its own input. ⛔ The consequence for CS007 is recorded at the field in `02-state.js`: §17 item 7's `heat(n+1) > heat(n)` for n in 1..200 stays literally true only if `heat()` never plateaus.
+
 ### 3.7 The dim band
 
 Levels 65–80 render at 18% alpha; lanes light when occupied, when a shot travels them, and when a Surger charges. Full invisibility on unknown browser gamma is a P2 catastrophe. **⚠ SETTLED 2026-08-30** — the band stays at levels 65–80 and `DIM_BAND_ALPHA` 0.18 as specced; no tuning time is spent on it. Revisit only if telemetry shows a player past level 65. See §21 and `DECISIONS.md`.

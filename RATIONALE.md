@@ -179,3 +179,51 @@ the cross duration scales with the cross distance — a wrapped cross is not
 faster, only longer. The lattice assertion is what went red. ⛔ On a boundary
 rider the lattice is not a nicety on top of §17 item 3; it is where item 3
 actually stands.
+
+---
+
+## #draw-path-rng
+
+`CLAUDE.md` forbids the draw path from calling `state.rng()`. The rule exists
+because the obvious wiring of GDD §3.6's past-99 palette is the bug.
+
+**The two clocks are not the same clock.** `Game.frame()` (23-main.js) runs zero
+to `C.MAX_CATCHUP_STEPS` updates and then exactly **one** `draw()`. How many
+updates a frame runs is a function of the machine: a 144 Hz display usually runs
+zero or one, a stalled tab runs the cap and drops the surplus, and during
+hit-stop the loop runs **zero** updates and still draws — `C.HIT_STOP_DEATH` is
+1.20 s, which at `C.FIXED_DT` is about seventy-two draws against no simulation
+at all. So a `state.rng()` inside `draw()` is a draw count nobody controls.
+
+**And the run has ONE stream** (01-rng.js). The next two things that read it are
+`spawnEnemy()`'s heading and `pickSpawnLane()`'s lane, so a draw spent in the
+renderer does not corrupt the renderer — it moves every spawn in the run. GDD
+§17 item 1's replay guarantee dies, and it dies *silently*: two runs of the same
+seed on the same machine at the same refresh rate still agree, so the hash
+comparisons stay green and the only visible symptom is that a recorded run
+diverges when the frame rate changes. ⛔ **That symptom reads as a physics bug**
+— enemies arriving in the wrong lanes after a stutter — and a session hunting it
+will look at the spawner, the accumulator and the fixed timestep before it looks
+at the renderer.
+
+⛔ **It is also invisible headless, which is why the rule is written down rather
+than tested for once.** The suite drives `update()` directly and calls `draw()`
+rarely or never, so the ratio that causes the bug is one the tests do not
+reproduce by accident. `scratchpad/test-cs006-p1.js` reproduces it deliberately
+— 600 `draw()` calls against zero `update()` calls, counted through a proxy over
+`state.rng` — and that assertion is the rule's only mechanical guard.
+
+**What the rule costs, and why it is cheap.** One field. `state.bandRoll`
+(02-state.js) is drawn in `nextWell()`, which runs inside a simulation step, and
+`Game.draw()` hands the value to `drawWell()`. `wellBandColor` takes a **number**
+rather than a function precisely so the renderer cannot spend a draw even if a
+later session wants one.
+
+**Why the draw is in `nextWell()` and not in `enterWell()`.** `enterWell()` has
+three callers — a new run, the next level, and the `w` debug key — and the third
+is not simulation. A draw there would let a keypress move the run's stream,
+which is the same class of bug seen from the other side; it is why `"w"` is on
+the FORBIDDEN key list of three closed soaks. ⚠ `startGame()` is the third
+caller and deliberately spends nothing either: GDD §4.6's Start Depth is not
+built, and when it is, the changeset that lands it owns the question of what a
+run *starting* past level 99 rolls.

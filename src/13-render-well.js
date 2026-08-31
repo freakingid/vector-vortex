@@ -57,11 +57,16 @@ function laneLineWidth(depth) {
   return C.LINE_W_THROAT + (C.LINE_W_RIM - C.LINE_W_THROAT) * d;
 }
 
-// GDD 3.6 band colour for a level. Past 99 the shape and heat hold and colour
-// comes from the seeded RNG — `rng` is a 0..1 draw the caller supplies
-// (mulberry32, per GDD 16.1); the RNG itself is never owned by this module.
+// GDD 3.6 band colour for a level. Past C.BAND_RNG_LEVEL the band table has no
+// row left, and colour comes from the seeded RNG — `rng` is a 0..1 draw the
+// caller supplies (mulberry32, per GDD 16.1); the RNG itself is never owned by
+// this module. ⛔ And the caller hands over a value it drew in the SIMULATION
+// (state.bandRoll, 02-state.js), never a live stream this could call: nothing
+// in the draw path may spend a draw (CLAUDE.md, Math and lifecycle;
+// RATIONALE.md#draw-path-rng). Taking a number rather than a function is what
+// makes that unavailable from here.
 function wellBandColor(level, rng) {
-  if (level > 99) {
+  if (level > C.BAND_RNG_LEVEL) {
     const palette = C.BAND_RNG_COLORS;
     const r = rng === undefined ? 0 : rng;
     const i = Math.min(palette.length - 1, Math.floor(r * palette.length));
@@ -104,8 +109,10 @@ function projectPoly(points) {
 //              flag lights that lane at LANE_LIT_ALPHA regardless of the dim
 //              band — GDD 3.7's "lanes light on occupancy, shot travel, and
 //              Surger charge" escape hatch. No caller supplies this yet.
-//   rng        0..1 draw for the past-99 palette (wellBandColor); unused
-//              otherwise.
+//   rng        0..1 value for the past-99 palette (wellBandColor); unused at or
+//              below C.BAND_RNG_LEVEL. ⛔ A NUMBER, NOT A STREAM — the caller
+//              passes state.bandRoll, which nextWell() drew during a simulation
+//              step (CLAUDE.md, Math and lifecycle).
 function drawWell(ctx, well, level, laneState, rng) {
   const color = wellBandColor(level, rng);
   const baseAlpha = wellBaseAlpha(level);

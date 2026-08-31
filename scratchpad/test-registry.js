@@ -40,6 +40,11 @@ const STATE_FIELDS = {
   CS002: ["screen", "wellIndex", "level", "time", "input", "skimmer", "shots", "shotCooldown"],
   CS003: ["seed", "rng", "enemies", "spawn", "clearHold", "purgeUses", "purgeLatched",
           "lives", "invulnTime"],
+  // ⛔ ONE FIELD, AND `dive` IS NOT IN IT YET. CS006 P3 lands the Dive and its
+  // state; the SUM guard in test-cs002-p1.js is exactly what catches a field
+  // built ahead of the phase that can explain it, so listing it here early
+  // would disarm the guard rather than satisfy it.
+  CS006: ["bandRoll"],
 };
 
 function stateFields() {

@@ -199,6 +199,12 @@ second silhouette on top of a first. A rider is born at a lane centre and
 crosses onto the lattice through `boundaryFrom()`, which does **not** go through
 `laneHop`. See `RATIONALE.md#boundary-lattice`.
 
+⛔ **Nothing in the draw path may call `state.rng()`.** A random value the
+renderer needs is drawn in the simulation, stored on `state`, and read by
+`draw()`. `draw()` runs on a frame clock and `update()` does not — a draw there
+makes the run's stream a function of frame rate, and the symptom reads as a
+physics bug. See `RATIONALE.md#draw-path-rng`.
+
 ⛔ **Entity lifecycle: class with `constructor` / `update(dt)` / `draw()` /
 `dead`.** Kill by setting `dead = true`; remove with an end-of-frame `.filter()`.
 Never splice mid-loop.

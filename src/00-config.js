@@ -412,6 +412,12 @@ const C = {
     { hi: 99, color: "#FFFFFF" },   // White
   ],
   BAND_RNG_COLORS: ["#3FE0FF", "#FF4FD8", "#FFB020", "#9B6BFF", "#4FFF7A", "#FFFFFF"], // past 99, GDD 3.6
+  // ⛔ GDD 3.6's boundary and NOT A TUNING TARGET. It is where the band table
+  // stops having a row: BAND_COLORS' last entry is `hi: 99`, so level 100 is
+  // the first level with no band of its own and the first that draws its
+  // colour and its shape from the run's stream (nextWell, 23-main.js).
+  // Lowering it would not make the game harder, it would delete shipped bands.
+  BAND_RNG_LEVEL:       99,
   DIM_BAND_LO:          65,     // ⚠ SETTLED — GDD 3.7, do not tune
   DIM_BAND_HI:          80,     // ⚠ SETTLED — GDD 3.7, do not tune
   LANE_LIT_ALPHA:       0.9,    // occupied / shot-travel / Surger-charge lane

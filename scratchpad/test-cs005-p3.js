@@ -593,7 +593,14 @@ H.assert(!/\[\s*_/.test(fuseCode),
 // ⛔ THE TELEGRAPH IS NOT drawWell()'s laneState. Game.draw() still passes null,
 // and isLaneLit() is a boolean over spokes that could not express a progressive
 // fill anyway. Wiring it is CS006's, with the dim band.
-H.assert(/drawWell\(ctx, well, state\.level, null, 0\)/.test(SCRIPT),
+//
+// ⚠ NARROWED BY CS006 P1, Paul's call, and it is the ONLY edit that phase made
+// to a closed file. The regex used to pin the fifth argument too (`, 0)`), which
+// is GDD 3.6's past-99 band roll and was never CS005 P3's to own — P1 replaced
+// that literal with state.bandRoll and the assertion went red for a reason
+// unrelated to anything it claims. The laneState claim is unchanged and is the
+// whole claim; CS006 P4 is what legitimately retires it.
+H.assert(/drawWell\(ctx, well, state\.level, null,/.test(SCRIPT),
          "⛔ drawWell's laneState parameter is still unwired");
 
 // The entity's own draw: the lane goes down first, then the bar on top of it.

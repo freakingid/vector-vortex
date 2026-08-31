@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.2 · Changeset: CS006 (P0 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.2 · Changeset: CS006 (P1 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS006
 
@@ -19,6 +19,29 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   falsifies it. They were read and deliberately left. No code changed: all 52
   differing lines in `dist/` are comment text, and the suite is green at 24
   files, zero skips.
+
+- **P1 — past-99 progression, `state.bandRoll`, and the draw-path rule.**
+  Confirmed the trap before building: a counting proxy over `state.rng` shows
+  `Game.draw()` spends **zero** draws today, and `Game.frame()` runs 0–5 updates
+  against exactly one draw (hit-stop: ~72 draws, zero updates). ⛔ **Nothing in
+  the draw path may call `state.rng()`** is now an invariant in `CLAUDE.md` under
+  Math and lifecycle, reasoned in `RATIONALE.md#draw-path-rng`. `nextWell()`
+  gained the `state.level > C.BAND_RNG_LEVEL` branch — two draws, shape then
+  `state.bandRoll` — and ⛔ **nothing was added to `enterWell()`**, whose third
+  caller is the `w` debug key. `Game.draw()` passes `state.bandRoll`;
+  `wellBandColor` now reads `C.BAND_RNG_LEVEL` instead of a second literal 99.
+  `state.level` carries a ⚠ SETTLED note saying the clock does *not* hold and
+  naming CS007's §17 item 7 consequence. `test-cs006-p1.js`: 29 assertions,
+  including 600 draws against zero updates and 100 `w` presses, both proved
+  non-vacuous. ⛔ The stream below 100 is unmoved — `GOLDEN_LANES` is still
+  green. Suite green at 25 files, zero skips.
+
+  ⚠ **One closed test was edited, and it is the only one.** `test-cs005-p3.js`
+  pinned the literal `drawWell(ctx, well, state.level, null, 0)`, including the
+  fifth argument, which was never CS005 P3's to own. Narrowed to
+  `.../drawWell\(ctx, well, state\.level, null,/` — the laneState claim is
+  unchanged. Paul's call, asked and answered. ⛔ **CS006 P4 breaks the same
+  assertion again** (`null` → `lit`) and is what legitimately retires it.
 
 ## Working / verified
 
@@ -140,6 +163,19 @@ One line per phase here; reasoning goes to `log/CS006.md`.
 - **The Flat well (11) is geometrically degenerate**: its rim is a straight
   line, so it renders with zero depth. Same underlying question as
   `throatOffset`. Design call for Paul before CS006.
+- ⚠ **A run that STARTS past level 99 gets the modulo well and a `bandRoll` of
+  0.** `startGame()` still does `wellIndex = (level - 1) % WELLS.length` and
+  `newState()` ships `bandRoll: 0`, so GDD §3.6's roll only ever happens on a
+  level *transition*. Unreachable today — every run starts at level 1 — and it
+  goes live with GDD §4.6's Start Depth, which caps at 81 and so may never reach
+  it. ⛔ Not fixed: the changeset that lands Start Depth owns what a run starting
+  past the boundary rolls, and the fix is one branch shared with `nextWell()`.
+- ⚠ **A closed test may pin the literal text of a line a later phase is
+  scheduled to change.** `test-cs005-p3.js` pinned all five `drawWell` arguments
+  to assert one of them. Source-text assertions are the right tool for "this is
+  still unwired", but ⛔ **pin only the argument the claim is about** — a regex
+  over the whole call turns every future edit to that line into a red with a
+  misleading message.
 - ⛔ **Playtest asks live in `PLAYTEST.md`**, twenty-eight of them, four marked
   ⛔. Not session context — pull it up at the machine with a build in front of
   you, never during a build phase.
@@ -176,12 +212,15 @@ One line per phase here; reasoning goes to `log/CS006.md`.
   `enemyKinds` is 9** (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo.
 
-## Next up — CS006 P1
+## Next up — CS006 P2
 
-**The well ends.** ⛔ CS006's scope was split at P0 and it is now four systems,
-not five: past-99 well progression and the colour-band roll, `laneState` and the
-dim band, `throatOffset` and the two degenerate wells (Flat and Stair), and the
-Dive — GDD §3.3, §3.6–3.7, §5, §4.5 item 5. `PLANNED-FEATURES-CS006.md` and
+**`throatOffset`, the two degenerate wells, and the legibility gate.** No entity
+and no simulation change: geometry and data only. GDD §3.2–§3.4, §10.1.
+
+⛔ CS006's scope was split at P0 and it is four systems, not five: past-99 well
+progression and the colour-band roll (**P1, done**), `throatOffset` and the two
+degenerate wells (Flat and Stair), the Dive, and `laneState` with the dim band —
+GDD §3.3, §3.6–3.7, §5, §4.5 item 5. `PLANNED-FEATURES-CS006.md` and
 `IMPLEMENTATION-PHASES-CS006.md` are written and are the authority on the phase
 order.
 
@@ -199,8 +238,11 @@ things this file said CS006 inherited moved with them:
 4. `laneState` and the dim band land together. **Still CS006's.**
 
 ⛔ **Both halves move `test-cs004-p1.js`'s `GOLDEN_LANES`, and that is the point
-of the split.** CS006 re-records it once, alone, with the cause named in
-`log/CS006.md`; CS007 re-records it again for its own, separate cause. A
+of the split.** ⚠ **P1 did not move it and could not** — its two draws are spent
+only past level 99 and the golden sequence is recorded from level 1, which is
+exactly what "the stream below 100 is bit-identical" means. CS006 re-records it
+once, alone, with the cause named in `log/CS006.md`; CS007 re-records it again
+for its own, separate cause. A
 re-record is the one moment a stray RNG draw can be laundered into a new
 baseline, so one nameable cause per re-record is worth two commits.
 

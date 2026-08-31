@@ -9,7 +9,7 @@
 // reasoning for, and it reads as shipped truth to a session that finds it.
 // CS002 landed the first eight; CS003 P1 added `seed` and `rng`, P2 added
 // `enemies`, `spawn` and `clearHold`, P3 added `purgeUses` and `purgeLatched`,
-// and P4 adds `lives` and `invulnTime`.
+// and P4 adds `lives` and `invulnTime`. CS006 P1 adds `bandRoll`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -43,7 +43,40 @@ function newState() {
 
     // ⛔ THE ONE CLOCK (GDD 8, CLAUDE.md Config). All difficulty scaling derives
     // from level. No parallel clocks. Drives band colour today (GDD 3.6).
+    //
+    // ⚠ SETTLED — IT KEEPS COUNTING PAST 99, AND GDD 3.6's "the counter holds"
+    // IS NOT ABOUT THIS FIELD. What holds past 99 is the DERIVED band table —
+    // there is no BAND_COLORS row above `hi: 99`, so colour comes from
+    // `bandRoll` below instead — and, in CS007, the heat curve. The clock
+    // itself is unbounded, and has to be: telemetry samples it and
+    // C.PTS_WELL_PER_LEVEL multiplies by it, so a level that stopped rising
+    // would freeze the well bonus at 9,900 for the rest of a marathon run.
+    //
+    // ⛔ THE HOLD BELONGS IN THE CALLER, NEVER HERE. A reader that must not
+    // rise past 99 clamps its own input; nothing clamps `state.level`.
+    // ⚠ The consequence is CS007's and is cheaper to write down here than to
+    // rediscover: GDD 17 item 7 asserts `heat(n+1) > heat(n)` for n in 1..200,
+    // which stays literally true only if `heat()` itself never plateaus. A
+    // heat curve that holds past 99 fails that test at n = 99 — so CS007 owns
+    // the choice of which of the two moves, and it is a design call, not a
+    // test to relax.
     level: 1,
+
+    // ⛔ GDD 3.6's past-99 band colour, DRAWN IN THE SIMULATION AND READ BY THE
+    // RENDERER. Levels 1..99 have a band row apiece and ignore this field
+    // entirely; past 99 `nextWell()` (23-main.js) spends one draw from the
+    // run's ONE stream into it and Game.draw() hands it to drawWell().
+    //
+    // ⛔ IT IS A FIELD RATHER THAN A `state.rng()` AT THE CALL SITE, AND THAT
+    // IS THE WHOLE POINT (CLAUDE.md, Math and lifecycle;
+    // RATIONALE.md#draw-path-rng). draw() runs on a frame clock and update()
+    // does not — a draw in the renderer would make the run's stream a function
+    // of refresh rate, and hit-stop draws ~72 frames against zero simulation.
+    //
+    // The shipped default is 0, which is exactly the literal Game.draw() passed
+    // before this field existed, so a run that never reaches level 100 is
+    // bit-identical to the build before it.
+    bandRoll: 0,
 
     // ⛔ Counts UP, in seconds of SIMULATION time — not wall clock. It advances
     // only inside Game.update(), so hit-stop freezes it (GDD 16.3: count-up

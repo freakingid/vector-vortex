@@ -134,9 +134,32 @@ function respawnSkimmer(state, well) {
 // The next level. ⛔ GDD 3.4's shapeIndex — the well is derived from the level
 // clock and is never advanced independently, so there is exactly one clock
 // (CLAUDE.md, Config) and level 17 is the Ring again.
+//
+// ⛔ PAST C.BAND_RNG_LEVEL THE SHAPE AND THE COLOUR COME FROM THE RUN'S STREAM
+// (GDD 3.6). The band table has no row above 99 and the modulo walk has nothing
+// left to teach after six trips round sixteen shapes, so level 100 onward draws
+// both. ⚠ `state.level` itself does NOT hold — see 02-state.js; what holds is
+// the derived table.
+//
+// ⛔ EXACTLY TWO DRAWS, AND ONLY PAST THE BOUNDARY. state.rng is the run's ONE
+// stream (01-rng.js), so a draw spent below level 100 would move every spawn
+// lane in every run — including test-cs004-p1.js's golden sequence and GDD 17
+// item 1's replay hash. The `else` branch spends nothing, exactly as it did
+// before this branch existed.
+//
+// ⛔ HERE, AND NOT IN enterWell(). enterWell() has three callers and one of them
+// is the `w` debug key (runAction below); a draw there would let a keypress move
+// the run's stream, which is precisely why "w" is on the FORBIDDEN list of three
+// closed soaks. A stream that a debug key can shift is a determinism bug whose
+// symptom reads as a physics bug.
 function nextWell() {
   state.level += 1;
-  state.wellIndex = (state.level - 1) % WELLS.length;
+  if (state.level > C.BAND_RNG_LEVEL) {
+    state.wellIndex = rngInt(state.rng, WELLS.length);
+    state.bandRoll  = state.rng();
+  } else {
+    state.wellIndex = (state.level - 1) % WELLS.length;
+  }
   enterWell();
 }
 
@@ -404,7 +427,12 @@ const Game = (function () {
     if (!ctx) return;
     ctx.clearRect(0, 0, C.WORLD_W, C.WORLD_H);
     const well = WELLS[state.wellIndex];
-    drawWell(ctx, well, state.level, null, 0);
+    // ⛔ state.bandRoll, NEVER state.rng(). The renderer is handed a value the
+    // simulation already drew (02-state.js; CLAUDE.md, Math and lifecycle) —
+    // draw() runs once per FRAME while update() runs zero to
+    // C.MAX_CATCHUP_STEPS times, and during hit-stop it runs zero, so a draw
+    // here would make the run's stream a function of refresh rate.
+    drawWell(ctx, well, state.level, null, state.bandRoll);
     // Z-order: the well is the backdrop, enemies climb over it, shots travel
     // over them, and the Skimmer — always at depth 1, the rim — rides on top
     // of everything. Shots above enemies so a shot is never lost behind the

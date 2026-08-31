@@ -461,6 +461,12 @@ const C = {
     { hi: 99, color: "#FFFFFF" },   // White
   ],
   BAND_RNG_COLORS: ["#3FE0FF", "#FF4FD8", "#FFB020", "#9B6BFF", "#4FFF7A", "#FFFFFF"], // past 99, GDD 3.6
+  // ⛔ GDD 3.6's boundary and NOT A TUNING TARGET. It is where the band table
+  // stops having a row: BAND_COLORS' last entry is `hi: 99`, so level 100 is
+  // the first level with no band of its own and the first that draws its
+  // colour and its shape from the run's stream (nextWell, 23-main.js).
+  // Lowering it would not make the game harder, it would delete shipped bands.
+  BAND_RNG_LEVEL:       99,
   DIM_BAND_LO:          65,     // ⚠ SETTLED — GDD 3.7, do not tune
   DIM_BAND_HI:          80,     // ⚠ SETTLED — GDD 3.7, do not tune
   LANE_LIT_ALPHA:       0.9,    // occupied / shot-travel / Surger-charge lane
@@ -551,7 +557,7 @@ function rngPick(rng, arr) {
 // reasoning for, and it reads as shipped truth to a session that finds it.
 // CS002 landed the first eight; CS003 P1 added `seed` and `rng`, P2 added
 // `enemies`, `spawn` and `clearHold`, P3 added `purgeUses` and `purgeLatched`,
-// and P4 adds `lives` and `invulnTime`.
+// and P4 adds `lives` and `invulnTime`. CS006 P1 adds `bandRoll`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -585,7 +591,40 @@ function newState() {
 
     // ⛔ THE ONE CLOCK (GDD 8, CLAUDE.md Config). All difficulty scaling derives
     // from level. No parallel clocks. Drives band colour today (GDD 3.6).
+    //
+    // ⚠ SETTLED — IT KEEPS COUNTING PAST 99, AND GDD 3.6's "the counter holds"
+    // IS NOT ABOUT THIS FIELD. What holds past 99 is the DERIVED band table —
+    // there is no BAND_COLORS row above `hi: 99`, so colour comes from
+    // `bandRoll` below instead — and, in CS007, the heat curve. The clock
+    // itself is unbounded, and has to be: telemetry samples it and
+    // C.PTS_WELL_PER_LEVEL multiplies by it, so a level that stopped rising
+    // would freeze the well bonus at 9,900 for the rest of a marathon run.
+    //
+    // ⛔ THE HOLD BELONGS IN THE CALLER, NEVER HERE. A reader that must not
+    // rise past 99 clamps its own input; nothing clamps `state.level`.
+    // ⚠ The consequence is CS007's and is cheaper to write down here than to
+    // rediscover: GDD 17 item 7 asserts `heat(n+1) > heat(n)` for n in 1..200,
+    // which stays literally true only if `heat()` itself never plateaus. A
+    // heat curve that holds past 99 fails that test at n = 99 — so CS007 owns
+    // the choice of which of the two moves, and it is a design call, not a
+    // test to relax.
     level: 1,
+
+    // ⛔ GDD 3.6's past-99 band colour, DRAWN IN THE SIMULATION AND READ BY THE
+    // RENDERER. Levels 1..99 have a band row apiece and ignore this field
+    // entirely; past 99 `nextWell()` (23-main.js) spends one draw from the
+    // run's ONE stream into it and Game.draw() hands it to drawWell().
+    //
+    // ⛔ IT IS A FIELD RATHER THAN A `state.rng()` AT THE CALL SITE, AND THAT
+    // IS THE WHOLE POINT (CLAUDE.md, Math and lifecycle;
+    // RATIONALE.md#draw-path-rng). draw() runs on a frame clock and update()
+    // does not — a draw in the renderer would make the run's stream a function
+    // of refresh rate, and hit-stop draws ~72 frames against zero simulation.
+    //
+    // The shipped default is 0, which is exactly the literal Game.draw() passed
+    // before this field existed, so a run that never reaches level 100 is
+    // bit-identical to the build before it.
+    bandRoll: 0,
 
     // ⛔ Counts UP, in seconds of SIMULATION time — not wall clock. It advances
     // only inside Game.update(), so hit-stop freezes it (GDD 16.3: count-up
@@ -3867,11 +3906,16 @@ function laneLineWidth(depth) {
   return C.LINE_W_THROAT + (C.LINE_W_RIM - C.LINE_W_THROAT) * d;
 }
 
-// GDD 3.6 band colour for a level. Past 99 the shape and heat hold and colour
-// comes from the seeded RNG — `rng` is a 0..1 draw the caller supplies
-// (mulberry32, per GDD 16.1); the RNG itself is never owned by this module.
+// GDD 3.6 band colour for a level. Past C.BAND_RNG_LEVEL the band table has no
+// row left, and colour comes from the seeded RNG — `rng` is a 0..1 draw the
+// caller supplies (mulberry32, per GDD 16.1); the RNG itself is never owned by
+// this module. ⛔ And the caller hands over a value it drew in the SIMULATION
+// (state.bandRoll, 02-state.js), never a live stream this could call: nothing
+// in the draw path may spend a draw (CLAUDE.md, Math and lifecycle;
+// RATIONALE.md#draw-path-rng). Taking a number rather than a function is what
+// makes that unavailable from here.
 function wellBandColor(level, rng) {
-  if (level > 99) {
+  if (level > C.BAND_RNG_LEVEL) {
     const palette = C.BAND_RNG_COLORS;
     const r = rng === undefined ? 0 : rng;
     const i = Math.min(palette.length - 1, Math.floor(r * palette.length));
@@ -3914,8 +3958,10 @@ function projectPoly(points) {
 //              flag lights that lane at LANE_LIT_ALPHA regardless of the dim
 //              band — GDD 3.7's "lanes light on occupancy, shot travel, and
 //              Surger charge" escape hatch. No caller supplies this yet.
-//   rng        0..1 draw for the past-99 palette (wellBandColor); unused
-//              otherwise.
+//   rng        0..1 value for the past-99 palette (wellBandColor); unused at or
+//              below C.BAND_RNG_LEVEL. ⛔ A NUMBER, NOT A STREAM — the caller
+//              passes state.bandRoll, which nextWell() drew during a simulation
+//              step (CLAUDE.md, Math and lifecycle).
 function drawWell(ctx, well, level, laneState, rng) {
   const color = wellBandColor(level, rng);
   const baseAlpha = wellBaseAlpha(level);
@@ -4778,9 +4824,32 @@ function respawnSkimmer(state, well) {
 // The next level. ⛔ GDD 3.4's shapeIndex — the well is derived from the level
 // clock and is never advanced independently, so there is exactly one clock
 // (CLAUDE.md, Config) and level 17 is the Ring again.
+//
+// ⛔ PAST C.BAND_RNG_LEVEL THE SHAPE AND THE COLOUR COME FROM THE RUN'S STREAM
+// (GDD 3.6). The band table has no row above 99 and the modulo walk has nothing
+// left to teach after six trips round sixteen shapes, so level 100 onward draws
+// both. ⚠ `state.level` itself does NOT hold — see 02-state.js; what holds is
+// the derived table.
+//
+// ⛔ EXACTLY TWO DRAWS, AND ONLY PAST THE BOUNDARY. state.rng is the run's ONE
+// stream (01-rng.js), so a draw spent below level 100 would move every spawn
+// lane in every run — including test-cs004-p1.js's golden sequence and GDD 17
+// item 1's replay hash. The `else` branch spends nothing, exactly as it did
+// before this branch existed.
+//
+// ⛔ HERE, AND NOT IN enterWell(). enterWell() has three callers and one of them
+// is the `w` debug key (runAction below); a draw there would let a keypress move
+// the run's stream, which is precisely why "w" is on the FORBIDDEN list of three
+// closed soaks. A stream that a debug key can shift is a determinism bug whose
+// symptom reads as a physics bug.
 function nextWell() {
   state.level += 1;
-  state.wellIndex = (state.level - 1) % WELLS.length;
+  if (state.level > C.BAND_RNG_LEVEL) {
+    state.wellIndex = rngInt(state.rng, WELLS.length);
+    state.bandRoll  = state.rng();
+  } else {
+    state.wellIndex = (state.level - 1) % WELLS.length;
+  }
   enterWell();
 }
 
@@ -5048,7 +5117,12 @@ const Game = (function () {
     if (!ctx) return;
     ctx.clearRect(0, 0, C.WORLD_W, C.WORLD_H);
     const well = WELLS[state.wellIndex];
-    drawWell(ctx, well, state.level, null, 0);
+    // ⛔ state.bandRoll, NEVER state.rng(). The renderer is handed a value the
+    // simulation already drew (02-state.js; CLAUDE.md, Math and lifecycle) —
+    // draw() runs once per FRAME while update() runs zero to
+    // C.MAX_CATCHUP_STEPS times, and during hit-stop it runs zero, so a draw
+    // here would make the run's stream a function of refresh rate.
+    drawWell(ctx, well, state.level, null, state.bandRoll);
     // Z-order: the well is the backdrop, enemies climb over it, shots travel
     // over them, and the Skimmer — always at depth 1, the rim — rides on top
     // of everything. Shots above enemies so a shot is never lost behind the
