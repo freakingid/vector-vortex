@@ -64,7 +64,7 @@ happen here, in Claude Code, including planning — `DECISIONS.md`, 2026-08-31.
 | Kind | Writes | Ends in |
 |---|---|---|
 | **Planning** | `PLANNED-FEATURES-CS0##.md`, `IMPLEMENTATION-PHASES-CS0##.md` | those two docs, committed |
-| **Build phase** | `src/`, `scratchpad/`, the docs its phase names | one phase, committed |
+| **Build phase** | `src/`, `scratchpad/`, `log/CS0##.md`, the docs its phase names | one phase, committed |
 | **Close** | `log/CS0##.md`, `STATUS.md`, `ROADMAP.md`, `PLAYTEST.md` | the changeset closed |
 
 1. **Read `STATUS.md` first.** Update it at the end of the session.
@@ -129,12 +129,24 @@ a question genuinely needs project history, and say that you did.
 ⛔ **Version history is per-changeset, in `log/`.** There is no central
 changelog. A closing phase appends its entry to `log/CS0##.md`.
 
+⛔ **A BUILD PHASE APPENDS ITS REASONING TO `log/CS0##.md` AS IT GOES** — it does
+not wait for the close, and it does not pile narrative into `STATUS.md` for want
+of a destination. ⚠ This file used to send a phase's reasoning to `log/` and
+simultaneously deny a build phase the file; CS007's three entries came to **1,551
+words against a 600 budget** because of it. ⛔ **The split is by KIND, not by
+volume:** hazards, moved baselines, fixture preconditions and anything the NEXT
+phase must act on stay in `STATUS.md`; how a call was reasoned, what was measured
+against what was predicted, and mutation records go to `log/`. ⛔ **A hazard
+buried in `log/` is a hazard nobody loads** — that file is not session context.
+
 ---
 
 ## STATUS.md format
 
-⛔ **Current changeset only, under ~400 lines.** The closing phase moves the
-whole thing to `log/CS0##.md` and resets it.
+⛔ **Current changeset only, under ~400 lines.** The closing phase REVIEWS and
+compresses `log/CS0##.md`, moves what is left here into it, and resets this file.
+⚠ The review is the point: it is the one pass that reads every phase together and
+catches what two phases said differently.
 
 ⛔ **A phase entry is one line in the ledger, ~200 words maximum in the body.**
 Reasoning goes in `log/CS0##.md`.

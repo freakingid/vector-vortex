@@ -153,6 +153,19 @@ P3's own entry, and every measured figure in it exists **only** here until P5
 moves it to `log/CS007.md`; cutting further would lose one.
 
 
+⛔ **WHAT P5 ALSO OWES THIS FILE — a re-file, not a cut** (Paul, 2026-08-31).
+The `## Next up — CS007` section is 78 lines and ~58 of them duplicate
+`PLANNED-FEATURES-CS007.md` and `IMPLEMENTATION-PHASES-CS007.md`, which a phase
+already reads when in flight; those become a pointer. ⛔ **The other ~20 are
+load-bearing and MOVE rather than go**: the four-row baseline re-record ledger
+(⛔ STATUS's corrected version is the authoritative one — the planning doc's is
+stale) belongs with the operational state, and the planning corrections under
+*"Other measured corrections"* are carried tasks and belong under Carried tasks.
+⚠ **Do this at the close, not before** — P4 should not have a second hand in this
+file mid-changeset. ⛔ And CS008's phases append reasoning to `log/CS008.md` as
+they go (`CLAUDE.md`, Session rules, changed 2026-08-31), so the ~400-line
+squeeze that cost CS007 two compression authorizations should not recur.
+
 ⛔ **WHAT P5 OWES `DIFFICULTY-NOTES.md`** (not touched this phase, by instruction).
 Made true by P2: the heat formula block; *spawn interval falls*, *concurrent
 enemies rises*, *enemy climb speed rises*, *vault interval falls*, *surge
