@@ -10,14 +10,15 @@ the prompt names it.
 ⛔ **`ultrathink` appears inside the prompt text where it is wanted.** It is a
 per-turn lever, not a session setting, so it has to be in the pasted message.
 
-**Baseline:** CS006 closed at `1d64329`. `node build.js` green (24 modules,
-290.5 KB), `node scratchpad/run-all.js` green — **29 files, zero skips.**
+**Baseline:** CS006 closed at `1d64329`; CS007 P1 is `adb0bd7`. `node build.js`
+green (24 modules, 293.2 KB), `node scratchpad/run-all.js` green — **30 files,
+zero skips.**
 `test-registry.js` reads `wells: 16`, `openWells: 6`, `tracks: 0`, `enemies: 6`,
 `enemyKinds: 9`. `C.HEAT_BASE` / `HEAT_RISE` / `HEAT_KNEE` / `HEAT_LINEAR` and
 every `C.PTS_*` exist and are unread. `src/12-scoring.js`, `src/15-render-hud.js`
 and `src/16`–`22` are placeholders. `test-cs004-p1.js`'s `GOLDEN_LANES` is on its
 original `9ebd27b` recording; `test-cs006-p2.js`'s `P1_DETERMINISM_HASH` is
-`2063617640`, recorded at the CS006 P5 close.
+`571388570`, re-recorded at CS007 P1 (`adb0bd7`).
 
 ✅ **All three design calls are answered — Paul, 2026-08-31, `DECISIONS.md`.**
 No phase below is blocked.
@@ -389,7 +390,34 @@ respawn is unchanged at every level.
 > untouched and green.** Heat touches no geometry constant and no well datum; if a
 > geometry golden moves, stop.
 >
-> **7. ⛔ Do NOT touch `DIFFICULTY-NOTES.md` yet.** It is corrected in place, and
+> **7. ⛔ MEASURE THE CLOSED SOAKS' PRECONDITIONS FIRST — before you wire a single
+> accessor, and certainly before you re-record anything.**
+>
+> P1 moved three closed files red without touching one assertion. Those soaks
+> assert *preconditions* as well as behaviour — "the hashed run reached the
+> game-over stop", "and cleared at least one well", "a dive COMPLETED inside the
+> window", "every run reached the stop inside `RUN_CAP`" — and every one of them
+> depends on where a scripted run happens to go. P1's split changed that, so they
+> stopped being true. ⛔ **Heat moves every one of those runs again, and in the
+> OPPOSITE direction from P1's:** a harder run dies sooner, and
+> `test-cs006-p5.js`'s dive preconditions are the exposed ones, because a dive
+> needs a well to have cleared first.
+>
+> ⛔ **A PRECONDITION IS REPAIRED BY RESTORING IT, NEVER BY RELAXING IT.** Raising
+> `RUN_CAP` or `TICKS`, or moving a seed, turns a genuine stall green in one
+> character — and would do it at the end of the longest session in this
+> changeset, which is exactly when it looks reasonable. P1's three repairs are the
+> shape to copy: snapshot the run the assertion was always about, and give a
+> driver the reach to meet a parked enemy. Caps, seeds and assertions all stayed
+> put. `STATUS.md`'s P1 entry has the three and their causes.
+>
+> ⚠ **`test-cs004-p5.js` is the likeliest next false red**: it carries the same
+> `lastRun`-overwritten-by-`hashRun(SEED + 1)` defect the two closing soaks had,
+> and it is green today only because its `SEED + 1` run still dies. If it goes
+> red on a "the hashed run …" line, that is the defect and not your heat curve —
+> the repair is P1's snapshot, three lines.
+>
+> **8. ⛔ Do NOT touch `DIFFICULTY-NOTES.md` yet.** It is corrected in place, and
 > that is P5's — after the schedule lands, so the document is corrected once
 > against a finished build rather than twice. Record in `STATUS.md` which rows this
 > phase made true.
