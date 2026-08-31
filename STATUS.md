@@ -215,9 +215,9 @@ on:
 
 | | |
 |---|---|
-| **H1** | ⛔ Heat breaks the respawn guarantee. The fix is a **derived push**, not a clamp on the multiplier, and §17's assertion becomes a property over levels 1..200 |
+| **H1** | ⛔ Heat breaks the respawn guarantee. The fix is a **derived push**, not a clamp on the multiplier, and §17's assertion becomes a property over levels 1..200. ⛔ **PAUL'S CALL, OPEN — see below** |
 | **H2** | `SURGE_DISCHARGE < RESPAWN_INVULN` survives if heat is disciplined: ⛔ **heat scales intervals, climb rates and the Weaver's apex — never a crossing or hop duration.** That discipline is what protects three closed soaks' derived lane bounds for free |
-| **H3** | `DIFFICULTY-NOTES.md` survives in shape and fails in detail — four rows are missing a clamp, and two of its rows are one knob |
+| **H3** | `DIFFICULTY-NOTES.md` survives in shape and fails in detail — four rows are missing a clamp, and two of its rows are one knob. ⛔ **PAUL'S CALL, OPEN — see below** |
 | **H4** | ✅ **ANSWERED 2026-08-31 — threats, not entities** (see Known issues). CS007 builds it; it is no longer a call to make |
 | **H5** | ⛔ The debug **keys** survive the constant and stop being TEMPORARY |
 | **H6** | The golden's guard role — ✅ **done at CS006 P5**, in `test-cs006-p5.js` |
@@ -226,3 +226,53 @@ on:
 by the introduction schedule changing the draw count per spawn. Re-record it
 once, with the cause named, and check it against `test-cs006-p5.js`'s
 draws-per-spawn count rather than against the old sequence alone.
+
+### ⛔ TWO DESIGN CALLS THE PLANNING SESSION MUST SURFACE, NOT ANSWER
+
+`CLAUDE.md` session rule 3 binds a planning session as well as a build phase:
+being able to read the code is not authority to decide what the game does. These
+two are Paul's, they are open as of 2026-08-31, and ⛔ **CS007's spec is not
+finished until both are answered.** Neither blocks *starting* the planning
+session — measure the options, present them, stop.
+
+**1. ⛔ H1 — how the respawn guarantee survives heat.** `RESPAWN_PUSH_DEPTH` 0.55
+is chosen so a pushed enemy cannot climb back into contact before
+`RESPAWN_INVULN` expires: `(1 - 0.05 - 0.55) / 0.18 = 2.22 s > 1.5 s` at
+`VAULT_CLIMB`. The margin is 0.72 s and a climb multiplier of **1.48×** spends
+it. The binding entity is the Vaulter.
+
+- **H1's recommendation** is a **derived push** — `respawnPush()` computes the
+  push from the guarantee rather than clamping the multiplier, so the guarantee
+  is the spec and the number falls out of it. Monotone-safe, inert until level
+  ~90 at `CLIMB_MULT_MAX` 1.40, and §17 item 7's assertion becomes a property
+  over levels 1..200 rather than a constant pair.
+- **The alternative** is a hard `CLIMB_MULT_MAX` low enough that 0.55 always
+  holds — simpler, one constant, and it caps how fast the game can ever get.
+- ⛔ **The call is which of those two the game wants**, and it is a difficulty
+  question, not an engineering one. Measure both curves before presenting them.
+
+**2. ⛔ H3 — `DIFFICULTY-NOTES.md`'s four missing clamps, and one that does not
+exist.** The document's curve matches `00-config.js`'s four constants exactly and
+`heat(1) = 0`, so that half is right and is kept. Four rows need a clamp they do
+not have:
+
+| Row | Doc says | Needs |
+|---|---|---|
+| Spawn interval | floor `SPAWN_MIN` | ⚠ **that constant does not exist** — H3 proposes naming it `SPAWN_INTERVAL_MIN` |
+| Enemy climb speed | — | ⛔ `CLIMB_MULT_MAX` — this is H1 |
+| Vault interval | — | a floor, and ⛔ `VAULT_RIM_INTERVAL` must stay ≥ `VAULT_HOP_TIME` or hops overlap |
+| Surge frequency | — | a floor; interval → 0 is a permanently live lane |
+| Weaver thorn length | lane length | ⛔ an apex ceiling **below** the rim — GDD §6.1 says a Weaver climbs *partway* |
+
+⛔ **And two of its rows are one knob.** `Weaver.layThorn()` writes the Thorn's
+tip to the Weaver's own depth, so *thorn length IS apex*. `WEAVER_APEX` carries a
+⚠ note promising a heat-derived value and the doc asks for a second, separate
+one. There is only one. **The call is the five floor/ceiling VALUES**, which are
+difficulty numbers, plus whether `DIFFICULTY-NOTES.md` is corrected in place or
+rewritten against what CS007 actually ships.
+
+⛔ **H2 is not a call — it is a constraint the spec must carry.** Heat scales
+intervals, climb rates and the Weaver's apex, and ⛔ **never a crossing or hop
+duration**. `VAULT_HOP_TIME`, `DRIFT_CROSS_TIME` and `DRIFT_RIDE_TIME` are
+untouched by the clock. That discipline is what keeps three closed soaks' derived
+lane bounds valid without re-deriving them through a multiplier.
