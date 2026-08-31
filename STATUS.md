@@ -29,7 +29,7 @@ One line per phase here; reasoning goes to `log/CS007.md`. Nothing yet.
   live.** ⛔ **The between-wells hold is DELETED, not joined** — neither
   `C.WELL_CLEAR_HOLD` nor `state.clearHold` survives in the built file. Full
   narrative, the shipped constants, every judgment call, the seven closed-file
-  edits, the acceptance-criteria verdicts and the ten-row mutation record are in
+  edits, the acceptance-criteria verdicts and the eleven-row mutation record are in
   `log/CS006.md`.
 - ⛔ **Read GDD §6.5 before adding an enemy.** Seven contract fields, six wiring
   points, the one array / one spawn entry / one well entry / one collision pass
@@ -79,15 +79,21 @@ One line per phase here; reasoning goes to `log/CS007.md`. Nothing yet.
 
   ⚠ **Unreachable in a played build today**, and only because
   `C.DEBUG_SPAWN_KINDS` ships as `["vaulter"]`. It goes **live the moment
-  CS007's introduction schedule puts Weavers at L5.** ⛔ Not fixed: the answer is
-  a design call — *does the concurrency budget count threats or entities? does
-  the clear condition change? does a Thorn expire?* — and it belongs to the
-  changeset that makes it reachable. **Three** closing soaks now work around it
-  with the same documented fixture (`C.ENEMY_CONCURRENT` raised to
-  `C.ENEMY_CAP`, put back afterwards and asserted back). ⛔ `C.ENEMY_CAP` is
-  untouched; it is a readability ceiling, not a difficulty knob.
+  CS007's introduction schedule puts Weavers at L5.** **Three** closing soaks
+  work around it with the same documented fixture (`C.ENEMY_CONCURRENT` raised to
+  `C.ENEMY_CAP`, put back afterwards and asserted back).
 
-  ⚠ **CS005 gave that design call two inputs and answered neither.**
+  ✅ **THE DESIGN CALL IS SETTLED AND CS007 BUILDS IT. Paul's, 2026-08-31.**
+  ⛔ **The concurrency budget counts THREATS; the readability ceiling keeps
+  counting ENTITIES.** `updateSpawner()`'s block counts entities where
+  `blocksClear && !dead`; `spawnEnemy()`'s `C.ENEMY_CAP` check stays raw
+  `state.enemies.length`. ⛔ Three follow-ons are settled with it and are **no
+  change**: no Thorn expires (GDD §5's lesson depends on it persisting),
+  `wellCleared()` is untouched, and `C.ENEMY_CAP` is not raised — it is a
+  readability ceiling, not a difficulty knob. Full record in `DECISIONS.md`.
+
+  ⚠ **The two inputs CS005 gave that call, kept because they are why it went the
+  way it did.**
   1. A **riding Drifter** is temporarily neither a threat the player can remove
      nor a slot they can free — but it is **self-resolving where a Thorn is
      not**: it crosses on a fixed cadence, so the window is bounded by
@@ -100,12 +106,14 @@ One line per phase here; reasoning goes to `log/CS007.md`. Nothing yet.
      than hunt** — Carrier, Weaver, Surger. Fixed in the soak *fixture*, never in
      the build.
 
-  ⛔ **`PLANNED-FEATURES-CS006.md`'s H4 carries a recommended default and it is a
-  recommendation, not a decision** — the concurrency budget counts *threats*
-  (`blocksClear && !dead`), the readability ceiling keeps counting *entities*;
-  and the rim-parked Carrier is read as **the Purge's textbook case** rather than
-  a bug, so: no code change, record the reading. That document is in `archive/`;
-  see "Next up".
+  ⚠ **The rim-parked Carrier is a separate reading and it is NOT the same bug.**
+  H4 traces it: a player cannot shoot it without entering its lane, and entering
+  its lane is contact death — so it looks like a life tax and is not. **The
+  player's answer is the Purge**, unspent on a well that did not need it,
+  recharged on entry, and specified as *"the enemy nearest the rim,
+  deterministically"* (GDD §4.3). It stalls a soak that never presses Purge; it
+  does not stall a played build. ⛔ **No code change — the reading is the
+  record.**
 
 - ⛔ **The Dive has no visual, and a dive reads as 2.6 s of a still board.**
   `Game.draw()` paints the well, the surviving Thorns and a Skimmer still drawn
@@ -210,7 +218,7 @@ on:
 | **H1** | ⛔ Heat breaks the respawn guarantee. The fix is a **derived push**, not a clamp on the multiplier, and §17's assertion becomes a property over levels 1..200 |
 | **H2** | `SURGE_DISCHARGE < RESPAWN_INVULN` survives if heat is disciplined: ⛔ **heat scales intervals, climb rates and the Weaver's apex — never a crossing or hop duration.** That discipline is what protects three closed soaks' derived lane bounds for free |
 | **H3** | `DIFFICULTY-NOTES.md` survives in shape and fails in detail — four rows are missing a clamp, and two of its rows are one knob |
-| **H4** | The spawner stall, with a recommended default (see Known issues) |
+| **H4** | ✅ **ANSWERED 2026-08-31 — threats, not entities** (see Known issues). CS007 builds it; it is no longer a call to make |
 | **H5** | ⛔ The debug **keys** survive the constant and stop being TEMPORARY |
 | **H6** | The golden's guard role — ✅ **done at CS006 P5**, in `test-cs006-p5.js` |
 

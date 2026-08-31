@@ -204,3 +204,86 @@ explicit ⛔ in the phase prompt, and `STATUS.md` resets at the changeset close.
 that does not depend on a whole-run hash — then the pinned constant could retire
 honestly instead of being re-recorded. For the fixtures: nothing; a cleared well
 entering a dive is the feature.
+
+---
+
+## 2026-08-31 — the spawner-stall call, and where the work happens
+
+**The concurrency budget counts THREATS; the readability ceiling keeps counting
+ENTITIES. Paul's call, 2026-08-31.** `updateSpawner()` and `spawnEnemy()` read
+the same `state.enemies.length` for two different questions, and `00-config.js`
+already claims they are different numbers. Split them:
+
+- `spawnEnemy()`'s `C.ENEMY_CAP` check: **unchanged**, raw `state.enemies.length`.
+  A Thorn is drawn, so a readability ceiling counts it.
+- `updateSpawner()`'s block: counts entities where `blocksClear && !dead`. A
+  Thorn does not block the clear, so it does not hold a release slot.
+
+⛔ **Three follow-ons resolve to "no change" and are settled with it:** no Thorn
+expires (GDD §5's lesson — *clear thorns before the last enemy* — depends on it
+persisting), `wellCleared()` is untouched, and `C.ENEMY_CAP` is not raised.
+
+**Why it needed an entry.** The stall was found by CS004 P5's soak, measured, and
+deliberately left unfixed by CS004, CS005 and CS006 because the answer is a design
+call rather than a bug fix — and it blocked CS007's spec, which cannot scope GDD
+§8.1's introduction schedule without it. Three closing soaks work around it today
+with the same documented fixture (`C.ENEMY_CONCURRENT` raised to `C.ENEMY_CAP`,
+put back and asserted back).
+
+**What would change it.** Evidence that a Thorn-free release budget makes a well
+with standing Thorns *too* busy to read — which is a playtest answer, not an
+argument, and `PLAYTEST.md`'s six-kind ask is where it would surface.
+
+⚠ **And the previous entry's "what would change it" condition was met.** It asked
+for *a way to isolate P2's `throatOffset` claim that does not depend on a
+whole-run hash*. CS006 P5 found one: every `.throatOffset` in the built file lies
+inside `wellThroat()`'s own source, so the offset cannot reach a simulation value
+by any path, on any seed, for any number of ticks. The whole-run hash was
+re-recorded and the claim it used to carry is now carried by something stronger.
+
+---
+
+## 2026-08-31 — planning moves into Claude Code, and what stays in claude.ai
+
+**All Vector Vortex work happens in Claude Code, including
+`PLANNED-FEATURES-CS0##.md` and `IMPLEMENTATION-PHASES-CS0##.md`. Paul's call,
+2026-08-31.** The previous split — design in claude.ai, implementation here — was
+adopted on general advice rather than on evidence from this repo. The evidence
+now says otherwise.
+
+**The real dividing line is not planning versus implementation. It is CHECKABLE
+CLAIMS versus JUDGMENT**, and this project's planning docs are overwhelmingly the
+first. `PLANNED-FEATURES-CS006.md` made three claims that a session with the repo
+could have checked in seconds and a session without it could only predict:
+
+| Predicted | Actual | Cost |
+|---|---|---|
+| the Dive moves `test-cs004-p1.js`'s `GOLDEN_LANES` | it does not — the extra 1.6 s costs the golden's window no spawn | P3 shipped on an inverted prompt; P5 spent a step correcting it |
+| a renumber touches ~12 in-repo pointers | CS004 found 41, CS006 P0 found 73 | scoping, twice |
+| P2 can land `throatOffset` editing no closed test | unsatisfiable — `test-cs001-p2.js` derived the throat with no offset term | an explicit ⛔ had to be broken; see the 2026-08-30 entry |
+
+Two of the three produced `DECISIONS.md` entries of their own.
+
+⛔ **What is kept, because it was the real benefit and it is not about venue.**
+Planning elsewhere meant the planner could not cheat and the builder came to the
+plan as a stranger. That gap is preserved by three rules, now in `CLAUDE.md`
+under Session rules: a planning session writes no code, every claim in a plan is
+marked **measured** or **predicted**, and a build phase is a fresh session that
+reads the document rather than the conversation that produced it.
+
+**What stays in claude.ai.** Greenfield concept work before an artifact exists
+(a new game's GDD, its pillars, an Overdrive-scale feature argument);
+outside-world research (the Atari/TxK legal reading, itch.io packaging, browser
+audio behaviour across devices); and long exploratory conversation that should
+not end in a commit. Plus anywhere Paul is not at this machine.
+
+⚠ **Cross-project work is NOT in that list, and that is the part that changed.**
+`ADD-Orbital-Overhaul`, `coinless-kit` and five other games are siblings of this
+repo on disk. "What did Orbital Overhaul's layering failure actually look like"
+and "will this kit module backport cleanly" are **better** here, against both
+repos, than in a chat working from a summary of them.
+
+**What would change it.** A planning session that starts inventing design because
+it can see the code — the failure mode this trades for. `CLAUDE.md`'s "stop and
+surface it" rule now applies to planning sessions as well as build phases, and
+this entry is the reason.

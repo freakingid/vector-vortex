@@ -198,14 +198,14 @@ module seam, named against CS012 for the same reason.
   translation of the throat polygon in normalized rim space, applied **after**
   the centroid scale, DATA and never written at runtime. GDD §3.3 carries the
   definition; `test-cs006-p2.js` asserts it on all sixteen wells.
-- ⚠ **A standing Thorn holds a spawner slot** (CS004 P5). `updateSpawner()`
-  blocks on `state.enemies.length >= min(ENEMY_CONCURRENT, ENEMY_CAP)`, a count
-  of *everything* in the one array — so three Thorns nobody shoots hold the
-  spawner shut and the well never clears. Unreachable in a played build today
-  (⚠ `C.DEBUG_SPAWN_KINDS` ships as `["vaulter"]`, so no Weaver ever spawns);
-  **live the moment CS007's introduction schedule lands Weavers at L5**, which
-  makes it CS007's to answer rather than a standing task. Measured repro and the
-  numbers are in `STATUS.md`.
+- ✅ **ANSWERED 2026-08-31 — a standing Thorn holds a spawner slot, and the
+  budget will count THREATS** (found CS004 P5, settled by Paul before CS007's
+  spec). `updateSpawner()` blocks on `state.enemies.length >=
+  min(ENEMY_CONCURRENT, ENEMY_CAP)`, a count of *everything* in the one array —
+  so three Thorns nobody shoots hold the spawner shut and the well never clears.
+  ⛔ **CS007 builds the split**: the release budget counts `blocksClear && !dead`,
+  `C.ENEMY_CAP` keeps counting entities, no Thorn expires and `wellCleared()` is
+  untouched. Reasoning in `DECISIONS.md`; measured repro in `STATUS.md`.
 - ✅ **CLOSED by CS006 P2 — the Flat (11) and the Stair (9) are offset.** The
   Flat's shortest lane-centre spoke went 23.6 → 151.8 px, the Stair's 30.4 →
   79.6 px, both past `C.MIN_LANE_SPOKE_PX` 60. ⚠ **The numbers are settled and

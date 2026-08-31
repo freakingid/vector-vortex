@@ -58,13 +58,37 @@ problem. Never use "Tempest" or a `T-####` naming pattern in any file.
 
 ## Session rules
 
+⛔ **Three kinds of session, and a session is exactly one of them.** All three
+happen here, in Claude Code, including planning — `DECISIONS.md`, 2026-08-31.
+
+| Kind | Writes | Ends in |
+|---|---|---|
+| **Planning** | `PLANNED-FEATURES-CS0##.md`, `IMPLEMENTATION-PHASES-CS0##.md` | those two docs, committed |
+| **Build phase** | `src/`, `scratchpad/`, the docs its phase names | one phase, committed |
+| **Close** | `log/CS0##.md`, `STATUS.md`, `ROADMAP.md`, `PLAYTEST.md` | the changeset closed |
+
 1. **Read `STATUS.md` first.** Update it at the end of the session.
 2. **One phase per session.** Build only what the phase prompt scopes. Do not
    build ahead. If a later phase would be easier because of a small choice now,
    note it — don't take it.
-3. **Implementation only.** You execute an already-reviewed plan. If a genuine
-   design decision surfaces that `PLANNED-FEATURES-CS0##.md` doesn't cover,
-   **stop and surface it.** Do not invent design; do not quietly pick a reading.
+3. ⛔ **A build phase executes an already-reviewed plan and invents no design.**
+   If a genuine design decision surfaces that `PLANNED-FEATURES-CS0##.md` doesn't
+   cover, **stop and surface it.** Do not invent design; do not quietly pick a
+   reading. ⛔ **This applies to a PLANNING session too** — being able to read the
+   code is not authority to decide what the game does. A plan that needs a design
+   call names it and stops; it does not answer it.
+3a. ⛔ **A planning session writes NO code.** Not `src/`, not a test, not a
+   fixture. It may *run* anything — a probe, a grep, the suite — and should.
+3b. ⛔ **Every claim in a planning doc is marked MEASURED or PREDICTED.** A
+   measured claim names the command and the commit it was measured at; a
+   predicted one says so. Mixing them silently is what made
+   `PLANNED-FEATURES-CS006.md`'s three false predictions expensive — see
+   `DECISIONS.md`, 2026-08-31. ⛔ **Measure anything measurable.** "How many
+   pointers does this renumber touch", "does this move that baseline", "does that
+   closed test already assert the opposite" are all one command.
+3c. **A build phase reads the DOC, not the conversation that produced it.** The
+   plan and the build are separate sessions, and the gap between them is a check,
+   not an inconvenience.
 4. **Commit per phase, on `main`.** Code and doc updates in the same commit.
    **Never push** — pushing is Paul's.
 5. **Edit docs in place.** "Update the GDD" means edit the file on disk, as part
