@@ -226,6 +226,28 @@ derived push. ⛔ **Raising `CLIMB_MULT_MAX` means re-deriving the guarantee**, 
 `C.CLIMB_MAX_BASE` — the fastest contact-killing climb, named once — is what the
 assertion reads so a future faster entity cannot escape it silently.
 
+⛔ **The OTHER thing `game.level` decides is WHICH KINDS a well may release, and
+it is `C.SPAWN_SCHEDULE`** — seven `{ level, kind }` rows, cumulative and sorted.
+`eligibleKinds(level)` (`08-spawner.js`) is the whole mechanism: the rows at or
+below the level, in schedule order. ⛔ **It is a function of the level and
+nothing else** — no board state, no heat, no draw. ⛔ **`thorn` and `weaverBolt`
+are NEVER rows**; they enter through `Weaver.layThorn()` and `Weaver.fire()`, and
+a row for either puts a parentless entity in the throat.
+
+⛔ **A one-entry eligible set spends NO draw; two or more spend exactly ONE.**
+`rngPick()` on a single-element array still advances the run's one stream, and
+that stream is shared with every spawn lane — so a draw spent at levels 1–2 moves
+`test-cs004-p1.js`'s `GOLDEN_LANES`, whose whole window lives there. ⛔ **Never
+rename `pickSpawnKind(state)`:** `_harness.js`'s `EXPORTS` and four closed test
+files call it by name.
+
+⚠ **SETTLED — the kind pick is UNIFORM and there is NO cargo weight table.**
+Paul, 2026-08-31. GDD §8's *"cargo weights shift toward Drifter/Surger"* is
+delivered by arithmetic — the three Carrier variants are three schedule rows, so
+cargo is 100 % Vaulter at L3–17, 50/50 at L18–22, 33/33/33 from L23. **Do not add
+weights and do not add a second draw.** The missing table is a decision, not a
+gap; GDD §6.2 and §8.1 carry the reasoning.
+
 ### Math and lifecycle
 
 ⛔ **Every entity position is `(lane, depth)`, never a screen coordinate.**
