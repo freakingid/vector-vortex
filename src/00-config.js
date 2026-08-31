@@ -78,6 +78,11 @@ const C = {
 
   // ---- Enemies (GDD 6) ----------------------------------------------------
   SAFE_SPAWN_DEPTH:     0.75,   // never spawn above this in the player's lane
+  // ⛔ GDD 6.3's "fair difficulty is a visible fuse", as seconds. It has sat
+  // here unread since CS001 and CS005 P3 is its first reader; ⛔ it stays in
+  // this shared group rather than moving down to the Surger block, because
+  // moving a shipped key is a diff nobody can review against a value nobody
+  // changed. See the Surger block below, which names it.
   SURGE_TELEGRAPH:      0.45,   // s of visible fuse before discharge
   ENEMY_CAP:            16,     // ⛔ READABILITY constraint, not difficulty.
   // ⛔ An entity's drawn depth half-extent, as a fraction of its OWN
@@ -221,6 +226,52 @@ const C = {
   DRIFT_RIDE_WIDTH:     0.70,   // ⛔ x laneLineWidth while riding — tight, hard-edged
   DRIFT_CROSS_WIDTH:    1.60,   // ⛔ …and while crossing — bloomed open
   DRIFT_RIDE_ALPHA:     0.55,   // ⛔ the dim half of the read. Crossing is 1.0
+
+  // ---- Surger (GDD 6.1, 6.3, 4.5 item 3) ----------------------------------
+  // The cycle, and it is meant to be readable as a THREAT THAT ANNOUNCES
+  // ITSELF: it climbs, the lane arms from the throat upward, and then the whole
+  // lane is live for a moment. ⛔ SURGE_TELEGRAPH (0.45 s) is the fuse and it
+  // lives in the shared Enemies group above, where CS001 put it — it is not
+  // re-declared here.
+  //
+  // ⛔ SURGE_DISCHARGE MUST STAY STRICTLY BELOW RESPAWN_INVULN (1.5 s), and the
+  // relationship is an INVARIANT rather than a coincidence. During the
+  // discharge the Surger's killDepth is 0, so GDD 4.4's rim push — which only
+  // ever LOWERS an enemy's depth, to RESPAWN_PUSH_DEPTH — cannot protect a
+  // respawning player from it: 0.55 is still above 0. The invulnerability
+  // window is the ONLY thing standing between a respawn and a discharge that
+  // was already running, so a discharge that outlasted it would kill the player
+  // on the step the blink stopped, in the lane they had no way to leave.
+  // scratchpad/test-cs005-p3.js asserts it from these two constants, and
+  // CS006's heat curve is exactly what would break it.
+  //
+  // ⚠ SURGE_INTERVAL IS FLAT HERE AND BECOMES HEAT-DERIVED IN CS006, the same
+  // standing WEAVER_APEX has: this is the level-1 base, not the shape of the
+  // rule.
+  //
+  // ⛔ DEPTH RISES IN THE CLIMB PHASE ONLY — the Drifter's DRIFT_CLIMB is the
+  // one that runs in every phase, and it says so. So the honest throat→rim time
+  // is not 1 / SURGE_CLIMB: the climb owns SURGE_INTERVAL out of every
+  // SURGE_INTERVAL + SURGE_TELEGRAPH + SURGE_DISCHARGE (2.60 of 3.35 s), which
+  // makes it ≈ 8.6 s rather than 6.7 s. The pause IS part of the read — the bar
+  // stops moving at the instant its lane starts arming.
+  //
+  // ⛔ SURGER_SIZE IS A LANE WIDTH, like CARRIER_SIZE, WEAVER_SIZE and
+  // DRIFTER_SIZE: entityPoints() scales a poly's `l` by size/2 and its `d` by
+  // C.ENEMY_DEPTH_SCALE alone.
+  //
+  // ⛔ SURGE_LIT_WIDTH IS A PER-ENTITY MULTIPLIER ON laneLineWidth() and never a
+  // global glow constant, the same rule DRIFT_RIDE_WIDTH carries: GLOW_WIDE_W,
+  // GLOW_WIDE_ALPHA and GLOW_THIN_ALPHA are shared with the well and every
+  // other entity. It applies to the DISCHARGE only — the fuse creeps up at
+  // plain lane weight and the live lane slams to 2.20x, which is what makes the
+  // moment the fuse reaches the rim a step the player can see rather than a
+  // number they have to have counted.
+  SURGER_SIZE:          0.85,   // lane widths spanned by the zigzag bar
+  SURGE_CLIMB:          0.15,   // depth/s, ⛔ in the CLIMB phase only. See above
+  SURGE_INTERVAL:       2.60,   // s of climb between discharges. ⚠ CS006 makes this heat-derived
+  SURGE_DISCHARGE:      0.30,   // s the whole lane is live. ⛔ must stay < RESPAWN_INVULN
+  SURGE_LIT_WIDTH:      2.20,   // ⛔ x laneLineWidth for the LIVE lane (not the fuse)
 
   // ---- Spawner / well lifecycle (GDD 2, 6.3, 12) --------------------------
   // ⛔ SPAWN_INTERVAL is what state.spawn.timer counts UP toward, and

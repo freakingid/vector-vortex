@@ -210,6 +210,7 @@ const Game = (function () {
       spawnWeaver:  ["3"],
       spawnThorn:   ["4"],
       spawnDrifter: ["5"],
+      spawnSurger:  ["6"],
       spawnRow:     ["0"],
     },
     onAction:         runAction,
@@ -224,9 +225,10 @@ const Game = (function () {
   // them.
   //
   // ⛔ A kind that is not in ENEMY_KINDS yet is a NO-OP, not a throw:
-  // spawnEnemy() returns null for an unknown kind, so a later phase lights one
-  // up by adding a row to that table and touching nothing here. CS005 P3's
-  // `6` / spawnSurger is the last one waiting.
+  // spawnEnemy() returns null for an unknown kind, so a later phase lit one up
+  // by adding a row to that table and touching nothing here. CS005 P3's `6` /
+  // spawnSurger was the last one waiting, and it is live — ⛔ the roster is now
+  // complete and no seventh digit is coming.
   //
   // ⛔ ONE KEY PER GDD 6.1 ROSTER ROW, and ⛔ THESE ARE ENEMY_KINDS STRINGS
   // RATHER THAN ROSTER NAMES — the Carrier is where the two stop coinciding.
@@ -243,12 +245,15 @@ const Game = (function () {
     spawnWeaver:  "weaver",
     spawnThorn:   "thorn",
     spawnDrifter: "drifter",
+    spawnSurger:  "surger",
   };
 
   // The Classic roster in GDD 6.1's order, which is also the order they are
   // introduced. `spawnRow` exists for exactly one job: putting the whole
   // palette on screen at once, so the six ⚠ provisional colours can be judged
-  // against each other and against the band in a single look.
+  // against each other and against the band in a single look. ⛔ It has listed
+  // all six since CS004 P1 and the stagger was always computed on n = 6, so
+  // CS005 grew the row from four kinds to six without an edit here.
   const DEBUG_ROW_KINDS = ["vaulter", "carrierVaulter", "weaver", "thorn", "drifter", "surger"];
 
   // One of every Classic kind, consecutive lanes, staggered depths.

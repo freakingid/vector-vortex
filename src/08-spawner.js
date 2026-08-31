@@ -60,6 +60,12 @@ const ENEMY_KINDS = {
   // the boundary lattice itself (07-enemies.js). This table stays a function of
   // (lane, depth, dir) and learns nothing about any entity's lattice.
   drifter: (lane, depth, dir) => new Drifter(lane, depth, dir),
+  // ⛔ `dir` is ignored — a Surger never hops, and `lane` is written once by its
+  // constructor. The draw spawnEnemy() spends below is STILL SPENT: a kind that
+  // skipped it would make the run's one stream depend on which kind came out of
+  // the throat, and GDD 17.1's replay guarantee is exactly that dependency not
+  // existing. The Weaver, the bolt and the Thorn are the same case.
+  surger: (lane, depth) => new Surger(lane, depth),
 };
 
 // How many enemies may be alive at once. ⛔ The MIN of the two, and they are

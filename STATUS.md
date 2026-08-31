@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS005 (P2 of 5 done) · Wells: 16/16 · Enemies: 5/6 Classic · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS005 (P3 of 5 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS005
 
@@ -54,11 +54,35 @@ constructor, one poly drawn always closed, the climb confined to the cross,
 `boundaryFrom` replaced by `laneHop`, homing removed, and `crossDur()` not
 derived — each turns `test-cs005-p2.js` red.
 
+- **P3 — the Surger.** ✅ `class Surger`, `SURGER_POLY`, `drawSurger` +
+  `drawSurgeLane`, the `surger` kind, debug key `6`, five `C` keys,
+  `scratchpad/test-cs005-p3.js`. Registry `enemies` 5 → 6, `enemyKinds` 6 → 7.
+  ⛔ **The Classic roster is complete.**
+
+⛔ **The discharge is `killDepth` MUTATED TO `0` AND RESTORED — no eighth
+contract field, and `collideSkimmer()` grew no branch.** With `0` the depth test
+is unconditionally true and the only term left is `laneHit()`, which is GDD §4.5
+item 3 verbatim. `setPhase()` is the one writer of both `phase` and `killDepth`.
+⚠ The same number is wrong on the Drifter and right here: there it would be
+permanent, here it is a 0.30 s window behind a 0.45 s fuse.
+
+⛔ **The lane is never lethal during the telegraph**, checked through the real
+`G.update()` rather than by inspection. ⛔ `C.SURGE_DISCHARGE <
+C.RESPAWN_INVULN` is asserted from the constants: §4.4's push only *lowers* a
+depth, so it does nothing against a zero. ⚠ Depth rises in the **climb phase
+only** — the opposite of the Drifter's rule, and stated.
+
+**Mutation-checked, ten:** a lethal telegraph, an unrestored `killDepth`, the
+timer not reset at a transition, the climb running in every phase, a Surger born
+armed, a written `lane`, `shotAlpha()` on the fuse, the live lane losing its
+width multiplier, the fuse borrowing the Thorn's scratch, and `SURGE_DISCHARGE`
+raised past `RESPAWN_INVULN` — each turns `test-cs005-p3.js` red.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes: 21 test files, zero skips, ~5 s.
+- `node scratchpad/run-all.js` passes: 22 test files, zero skips, ~6 s.
 - CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer.
 - CS002 closed 2026-08-30 — the loop, the Skimmer, shots, and all four input
   devices (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -67,9 +91,11 @@ derived — each turns `test-cs005-p2.js` red.
   lives, respawn and the game-over stop.
 - CS004 closed 2026-08-30 — the Carrier and `splitLanes()`, the Weaver and its
   bolt, the Thorn and the chip economy, the `anchored` contract field, the debug
-  bench, and the extended §17 soak. **Four of six Classic enemies; GDD §4.5
-  conditions 1 and 4 live.** Full narrative, shipped constants, every judgment
-  call and the seventeen-row mutation-check record are in `log/CS004.md`.
+  bench, and the extended §17 soak. Full narrative, shipped constants, every
+  judgment call and the seventeen-row mutation-check record are in
+  `log/CS004.md`. ⛔ **With CS005 P2 and P3 the Classic roster is complete and
+  four of GDD §4.5's five death conditions are live** — only item 5 (a Thorn
+  during the Dive) is unwired, and it is not a `killDepth`.
 - ⛔ **Read GDD §6.5 before adding an enemy.** It now carries seven contract
   fields, six wiring points, the one array / one spawn entry / one well entry /
   one collision pass rule, and — new in CS004 — why `Carrier.onShot()` may push
@@ -134,13 +160,16 @@ derived — each turns `test-cs005-p2.js` red.
   `SURGER_COLOR`) are all inference, not design — the GDD specifies no enemy
   palette. They were chosen **as one set** against the constraint recorded in
   `C`: an enemy colour must read against all seven band colours (§3.6), because
-  the well cycles and the enemies do not. Five are judgeable now — press `0` for
-  the staggered row, or `5` for a Drifter alone; only the Surger is not. ⚠ The
+  the well cycles and the enemies do not. ⛔ **All six are judgeable now** —
+  press `0` for the full staggered row, or `5` / `6` for a Drifter or a Surger
+  alone. ⚠ The
   Drifter's `#FF5AC8` and the Vaulter's `#FF4A4A` are the closest pair in the
   set and they are the two whose silhouettes span a comparable footprint.
-- **`drawWell()`'s `laneState` parameter is still unwired.** Lane occupancy
-  lighting (GDD §3.7) belongs with the dim band, in CS006. ⛔ The Surger's
-  telegraph is an entity draw and must **not** be built on `laneState`.
+- **`drawWell()`'s `laneState` parameter is still unwired**, and CS005 P3 did
+  not wire it. Lane occupancy lighting (GDD §3.7) belongs with the dim band, in
+  CS006. ⛔ The Surger's telegraph shipped as an **entity draw**
+  (`drawSurgeLane`) and must not be moved onto `laneState` when that lands:
+  `isLaneLit()` is a boolean over spokes and cannot express a progressive fill.
 - **GDD §12's four-second promise is not delivered.** A passive player does die
   on level 1, but not reliably within four seconds — it needs spawn lanes
   weighted toward the player's lane. Settled: that is onboarding and it is
@@ -155,6 +184,41 @@ derived — each turns `test-cs005-p2.js` red.
 - **The Flat well (11) is geometrically degenerate**: its rim is a straight line,
   so it renders with zero depth. Same underlying question as `throatOffset` (an
   offset throat is what would fix it). Design call for Paul before CS006.
+
+## Findings from CS005 P3 (hazards the phase prompt did not name)
+
+- ⛔ **THE PROMPT NAMED THE MUTATION AND NOT ITS RESTORE, AND THE RESTORE IS THE
+  HALF THAT FAILS SILENTLY.** A discharge that ended without putting the rim band
+  back leaves a permanently lane-lethal enemy, indistinguishable downstream from
+  a bug in `collideSkimmer` and reachable only after ~3 s of play. `setPhase()`
+  is therefore the **one writer of both `phase` and `killDepth`**.
+- ⚠ **THE PROMPT'S CYCLE TABLE DECIDED SOMETHING THE CONSTANT TABLE DID NOT.**
+  It attributes "depth rises at `C.SURGE_CLIMB`" to the `climb` line only, and
+  unlike the Drifter's spec it carries no "in both phases" ⛔ — so the climb is
+  the climb phase's, and shipped that way. ⚠ Which makes
+  `PLANNED-FEATURES-CS005.md`'s "throat→rim ≈ 6.7 s" (`1 / SURGE_CLIMB`) **not**
+  the shipped figure: the climb owns 2.60 of every 3.35 s cycle, so it is
+  ≈ 8.6 s. `00-config.js` and GDD §6.1 carry the honest number and the reason.
+  The pause was kept because it is a fourth channel on the fuse; ⛔ if CS006
+  wants 6.7 s it raises `SURGE_CLIMB`, it does not move the climb into the other
+  two phases.
+- ⛔ **THE STALE `killDepth` PREDICTIONS WERE IN TWO MORE PLACES — the two P2
+  had just rewritten.** `07-enemies.js`'s base class said "NOTHING IN THE ROSTER
+  IS ZERO" and `09-collision.js`'s `collideSkimmer` header said a zero here is
+  an unaccountable death. Both were true when written and both are now
+  half-true: a **resting** zero is still wrong, a **transient** one behind a fuse
+  is what item 3 is. Both corrected, and both now say which kind they mean. ⚠ P2
+  found the same shape one changeset ago — a comment that names a value rots the
+  moment a second entity means something else by it.
+- ⚠ **THE SURGER KILLS BY TWO OF §4.5's FIVE CONDITIONS**, the only entity that
+  does: its resting `killDepth` is the rim band, so item 1 applies to it exactly
+  as to a Vaulter, on top of item 3. Free, correct, and in none of the planning
+  docs; §4.5, §6.1 and the class now say it.
+- ⚠ **THE FUSE AND THE DISCHARGE ARE ONE DRAWER AND THE WIDTH IS THE ONLY
+  DIFFERENCE**, because the fuse reaching the rim and the lane going live are the
+  **same instant**. ⛔ `SURGE_LIT_WIDTH` is the discharge's only: if the fuse
+  proves too faint in traffic the fix is a second multiplier, since raising this
+  one costs the state change its whole read.
 
 ## Findings from CS005 P2 (hazards the phase prompt did not name)
 
@@ -185,40 +249,20 @@ derived — each turns `test-cs005-p2.js` red.
   not grow that filter into a general comment stripper (`_harness.js`'s header
   says why).
 
-## Findings from CS004 P5 (hazards the phase prompt did not name)
+## Findings from CS004 P5 — ⛔ moved to `log/CS004.md`
 
-- ⛔ **The spawner stall above.** It is the finding of the changeset and it was
-  found by the soak coming back nearly empty, not by reading the code.
-- ⚠ **GDD §6.5's field table was already seven fields.** The P5 prompt asked for
-  six → seven; CS004 P1 had done it when it added `anchored`. P5 confirmed it and
-  added the half that was genuinely missing: the row now says that the field is
-  **not** a narrowing of §4.4's settled rim push, and points at
-  `RATIONALE.md#thorn-depth`.
-- ⚠ **The P5 prompt's "raise `enemies` from 1 to 4" was stale.** P2, P3 and P4
-  each raised it as their enemy landed, and P3 created `enemyKinds` besides. P5
-  confirmed 4 and 5 rather than raising anything, and replaced the bare
-  comparison with a **derivation**: the roster is the distinct classes
-  `ENEMY_KINDS` can build, minus the projectiles. ⛔ CS005 adds two roster rows
-  and four kinds and needs no edit to that check.
-- ⚠ **`log/CS003.md`'s changeset numbers predate the +1 renumber.** CS004 P1
-  swept the live repo but left the closed log as written, which is right — a
-  historical record is not revised. P5 added a header note to it saying so, and
-  giving the translation. ⛔ The same will be true of `log/CS004.md` after the
-  next renumber; note, do not rewrite.
-- ⛔ **A LEGAL INVARIANT WAS BEING VIOLATED IN SHIPPED OUTPUT, and P5 fixed it.**
-  `src/14-render-entities.js` carried the homaged title in a comment — one word,
-  from CS002 P3 — and `src/` is concatenated into `dist/vector-vortex.html`, so it
-  was a string in the shipped artifact. `CLAUDE.md` and GDD §18 item 1 both say
-  the word appears in **no file**, comments included, and GDD §19's Quality
-  criteria say the same. The comment now cites GDD §10.3 for the reason instead
-  and carries a ⛔ note saying why it must not come back. ⚠ **The design docs keep
-  the word** — §18 has to name what it prohibits, and the GDD is not shipped.
-  `grep -rn` over `src/`, `tools/`, `build.js` and `README.md` is now zero.
-- **The recorded input list is now checked against the FUNCTION**, not trusted.
-  `test-cs004-p5.js` drives `replay()` into a recorder and asserts it never
-  presses `r`, `w` or any of the five debug digits — a debug spawn inside a
-  hashed run makes the hash depend on a key map, and that failure would look like
-  flaky determinism rather than like its cause.
+A closed changeset's findings are not this file's (`CLAUDE.md`, STATUS.md
+format). All six are in `log/CS004.md`'s P5 section verbatim; the spawner stall
+also stays in Known issues above, because it is still open. Two are rules rather
+than history and are kept here:
+
+- ⛔ **`log/CS003.md`'s changeset numbers predate the +1 renumber, and a closed
+  log is never revised** — CS004 P5 added a translation note to it instead. The
+  same will be true of `log/CS004.md` and `log/CS005.md`: **note, do not
+  rewrite.**
+- ⛔ **`test-cs004-p5.js`'s roster count is a DERIVATION** — the distinct classes
+  `ENEMY_KINDS` can build, minus the projectiles — which is why CS005's two
+  roster rows and four kinds cost it no edit.
 
 ## Open questions (blocking)
 
@@ -245,45 +289,54 @@ derived — each turns `test-cs005-p2.js` red.
   `PTS_THORN` and `PURGE_SAVED_BONUS` are deliberately unread until `addScore()`
   lands in CS007, which is the one entry point (`CLAUDE.md`, Scoring).
 - ⛔ `scratchpad/test-registry.js` carries TWO counts and they are not the same
-  number. After P2, `enemies` is **5** (GDD §6.1 roster rows) and `enemyKinds` is
-  **6** (`ENEMY_KINDS` rows). ⛔ **The rest of CS005 raises both again, by
-  different amounts** — P3's Surger is one row and one kind, P4's two Carrier
-  variants are two kinds and no rows, so the changeset ends at **6** and **9**.
+  number. After P3, `enemies` is **6** (GDD §6.1 roster rows, now complete) and
+  `enemyKinds` is **7** (`ENEMY_KINDS` rows). ⛔ **P4 raises only the second, by
+  two** — its Carrier variants are kinds and not roster rows — so the changeset
+  ends at **6** and **9**.
 
-## Still to come this changeset — the Drifter and the Surger
+## Still to come this changeset — the two cargo rows and the soak
 
 `PLANNED-FEATURES-CS005.md` and `IMPLEMENTATION-PHASES-CS005.md` are both in
-flight. What CS004 left on the table, minus what P1 has spent:
+flight. P1–P3 are spent; what is left is P4 and P5. Everything the ✅ entries
+here used to carry is in the phase ledger above.
 
-- ✅ **`laneHop()`'s half-lane fold point** — done in P1, as optional fold
-  bounds rather than a moved fold point. GDD §3.5 carries the lattice.
+- ⛔ **Two cargo rows, and they add no test.** `test-cs004-p5.js`'s §17 item 6
+  case is a loop over the `CARGO` table that discovers each cargo's carrier from
+  `ENEMY_KINDS`, so P4 adds `carrierDrifter` and `carrierSurger` rows, their two
+  glyphs, and nothing else.
 - ⛔ **`MAX_LANE_STEP` is per-entity in CS005's OWN tests and neither closed
   soak is edited** (`PLANNED-FEATURES-CS005.md` finding 7 — the earlier note
   here that both needed editing was wrong; neither soak's board can contain a
   CS005 entity). `test-cs005-p2.js` carries the Drifter's bound as the derived
-  `2 * DT / C.DRIFT_CROSS_TIME`; P5's soak inherits it and adds the Surger's
-  strong form.
-- ✅ **The armoured Drifter's `onShot` is the roster's first phase-dependent
-  one** — the bolt's non-consuming path while riding, the Thorn's consuming path
-  while crossing. ⚠ The shielding the bolt's header predicted is real and now
-  applies to **two** lanes at once, because a boundary is within `HIT_LANE_TOL`
-  of two lane centres.
-- ⛔ **Two cargo rows, and they add no test.** `test-cs004-p5.js`'s §17 item 6
-  case is a loop over the `CARGO` table that discovers each cargo's carrier from
-  `ENEMY_KINDS`, so CS005 adds `carrierDrifter` and `carrierSurger` rows and
-  nothing else.
-- ⛔ **The Surger owns its telegraph as an entity draw**, not on `laneState`.
-  `SURGE_TELEGRAPH` (0.45 s) already exists in `C` and is unread.
-- ✅ ⛔ **The Drifter's `killDepth` was recorded here as `0` and that was WRONG.**
-  P2 shipped `1 - C.RIM_CONTACT_DEPTH` and corrected the two build comments and
-  three GDD passages that said otherwise. Zero is not a stricter reading of §4.5
-  item 2 — `collideSkimmer` has no term for where the Skimmer is, so it would
-  kill from the throat on the spawn step. ⛔ Do not "restore" it. It becomes
-  honest only when the craft has a depth of its own (CS006's Dive, CS011's Jump)
-  and is a one-line change then.
+  `2 * DT / C.DRIFT_CROSS_TIME`; P5's soak inherits it, and the Surger joins the
+  **strong** `Object.is` form — `test-cs005-p3.js` already proves it on every
+  well, so P5 is extending coverage rather than establishing it.
+- ⛔ **The Drifter's `killDepth` was recorded here as `0` and that was WRONG**;
+  P2 shipped the rim band and corrected five passages. ⛔ Do not "restore" it —
+  and note that P3's Surger ships a `0` on purpose, transiently, which is not
+  the same claim. Both readings are written down at every site that carries one.
 
 ## Playtest asks (open only)
 
+- ⛔ **THE ASK THIS PHASE EXISTS FOR: is the fuse legible as a COUNTDOWN, in
+  traffic?** Press `6`. The read is meant to be *the charge is coming up the
+  lane at me and I have until it arrives*, not *that lane is bright*. ⛔
+  `C.SURGE_TELEGRAPH` (0.45 s) is the knob if it is too short to act on. ⚠ This
+  session is headless: the geometry is asserted, the legibility is not.
+- ⚠ **The fuse is the same shape as a Thorn, in nearly the band's own colour** —
+  `THORN_COLOR` `#A98CFF` against `SURGER_COLOR` `#9AF0FF`, and §8.1 puts the
+  Surger at L13, still inside the cyan band. Motion separates them: one grows
+  and vanishes, one is static and permanent. Both ⚠ provisional. Press `3`, let
+  a Weaver lay one, then press `6` in the same lane.
+- **Does the PAUSE read?** A Surger stops climbing the instant its lane arms. If
+  that reads as glitching rather than as bracing, say so — making the climb
+  continuous is one line.
+- ⚠ **Is a discharging lane obviously lethal END TO END?** It kills at any depth
+  for 0.30 s, including down in the throat where a lane has never been a threat
+  before. If it reads as "bright near the rim", that half is learned by dying.
+- **Does 2.60 s between discharges feel like a rhythm you can play around?**
+  ⚠ CS006 makes `C.SURGE_INTERVAL` heat-derived, so the level-1 base is what
+  that phase will scale from.
 - Does the flattened X read as a *threat* at throat depth, and is
   `VAULTER_SIZE` 0.70 enough silhouette to see it coming?
 - Does `SPAWN_INTERVAL` 1.60 with `ENEMY_CONCURRENT` 3 produce level-1 pressure

@@ -128,6 +128,8 @@ function buildGame(opts = {}) {
     "Thorn", "thornInLane", "drawThorn",
     // the Drifter and its two silhouettes (07/14, CS005 P2)
     "Drifter", "DRIFTER_POLY_RIDE", "DRIFTER_POLY_CROSS", "drawDrifter",
+    // the Surger, its bar and its lane fuse (07/14, CS005 P3)
+    "Surger", "SURGER_POLY", "drawSurger", "drawSurgeLane",
     // the spawner and the well lifecycle (08/23, CS003 P2)
     "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit", "ENEMY_KINDS",
     "enterWell", "nextWell", "startGame",

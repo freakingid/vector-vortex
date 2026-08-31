@@ -48,22 +48,33 @@ class Enemy {
     // ⛔ GDD 4.5's contact rule, as a number. Contact kills the Skimmer when
     // `depth >= killDepth` and the lanes match. `null` means contact NEVER
     // kills — the Weaver is null (its projectile kills, not its body); the
-    // Vaulter, the Carrier, the bolt and the Drifter all set the rim band,
-    // `1 - C.RIM_CONTACT_DEPTH`. A number covers three of the five death
-    // conditions and null covers the other two, which is why this is a field
-    // and not a per-enemy method.
+    // Vaulter, the Carrier, the bolt, the Drifter and the Surger all set the
+    // rim band, `1 - C.RIM_CONTACT_DEPTH`. A number covers four of the five
+    // death conditions and null covers the other one, which is why this is a
+    // field and not a per-enemy method.
     //
-    // ⛔ NOTHING IN THE ROSTER IS ZERO, AND THIS COMMENT USED TO PREDICT THAT
-    // THE DRIFTER WOULD BE (CS005 P2 corrected it, with collideSkimmer()'s
+    // ⛔ NO ENEMY'S RESTING VALUE IS ZERO, AND THIS COMMENT USED TO PREDICT THAT
+    // THE DRIFTER'S WOULD BE (CS005 P2 corrected it, with collideSkimmer()'s
     // header in 09-collision.js). There is no term here for where the SKIMMER
     // is, because the Skimmer is always at depth 1 — so `killDepth = 0` does
     // not mean "kills on contact at any depth", it means every legal depth is
     // a kill zone, and an enemy spawned at the throat in the player's lane
     // kills them on the spawn step having travelled nowhere. See the Drifter's
     // constructor at the foot of this file for the whole reading of GDD 4.5
-    // item 2. ⚠ Zero becomes honest the moment the craft can leave the rim
-    // (GDD 5's Dive, GDD 14.2's Jump) and this pass has two depths to compare;
-    // it is then a one-line change and not this changeset's.
+    // item 2. ⚠ Zero becomes honest AS A RESTING VALUE the moment the craft can
+    // leave the rim (GDD 5's Dive, GDD 14.2's Jump) and this pass has two depths
+    // to compare; it is then a one-line change and not this changeset's.
+    //
+    // ⛔ ONE ENTITY MUTATES THIS FIELD, AND THAT IS THE OTHER HALF OF THE RULE.
+    // CS005 P3's Surger holds the rim band while it climbs and through its whole
+    // telegraph, drops to 0 for C.SURGE_DISCHARGE, and restores the band on the
+    // way out — which is how GDD 4.5 item 3 ("being in a Surger's lane when it
+    // discharges") is expressed with NO EIGHTH FIELD and no branch in the
+    // collision pass. A transient zero the player was given C.SURGE_TELEGRAPH of
+    // visible fuse to walk out of is a discharge; a permanent one is an
+    // unaccountable death. ⛔ The RESTORE is as load-bearing as the mutation:
+    // one writer, the Surger's setPhase(), so `phase` and `killDepth` can never
+    // disagree.
     this.killDepth = null;
 
     // ⛔ WHAT `depth` MEANS ON THIS ENTITY — not whether it moves.
@@ -1084,6 +1095,174 @@ class Drifter extends Enemy {
   // by omission). A panic button that armour could refuse would not be one.
   onShot(shot) {
     if (this.riding()) return false;
+    this.dead = true;
+    return true;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The Surger (GDD 6.1, 6.3, 4.5 item 3) — a zigzag bar, first at L13, 200
+// points. Climbs; periodically electrifies its WHOLE LANE. Killed by any shot
+// or the Purge; kills by being in its lane when it discharges.
+// ---------------------------------------------------------------------------
+//
+// ⛔ THE ROSTER'S FIRST ENTITY WHOSE LETHALITY IS A PHASE OF ITS OWN CYCLE
+// RATHER THAN A DEPTH — and it is expressed in the SEVEN CONTRACT FIELDS THAT
+// ALREADY EXIST (GDD 6.5). There is no eighth field, and there is no branch for
+// it in the collision pass. That is the return the contract was designed to pay.
+//
+// ⛔ THE DISCHARGE IS killDepth MUTATED TO 0, AND RESTORED ON THE WAY OUT.
+// collideSkimmer() is `e.depth >= e.killDepth` plus a lane match
+// (09-collision.js). With killDepth = 0 the depth test is unconditionally true,
+// so the only remaining term is laneHit() — which is EXACTLY GDD 4.5 item 3,
+// "being in a Surger's lane when it discharges". Game.update() runs the entity
+// pass BEFORE the collision pass, so a Surger that enters the discharge on step
+// n is lethal on step n; there is no one-step lag to compensate for.
+//
+// ⚠ NOTE THE ASYMMETRY WITH THE DRIFTER, BECAUSE IT IS THE SAME NUMBER MEANING
+// TWO DIFFERENT THINGS. CS005 P2 corrected two shipped comments that predicted
+// killDepth = 0 for the Drifter, and this class ships the value they predicted.
+// Both are right. On the Drifter zero would be a PERMANENT property of a
+// climbing enemy — lethal from the throat on its spawn step, having travelled
+// nowhere, which is the unaccountable death GDD 6.3's ⛔ exists to prevent. Here
+// it is a C.SURGE_DISCHARGE window the player was given a C.SURGE_TELEGRAPH
+// fuse to walk out of. A permanent kill zone is not a discharge.
+//
+// ⛔ AND THE FUSE IS THE FAIRNESS (GDD 6.3). The lane is NEVER lethal during the
+// telegraph — killDepth stays on the rim band for the whole of it. A fuse that
+// kills is not a fuse, and that sentence is the whole of that section's rule.
+//
+// THE CYCLE, and a player watching one should be able to name it — it climbs,
+// its lane arms from the throat up, the lane goes live, it climbs again:
+//
+//   climb      depth rises at C.SURGE_CLIMB. surgeTimer counts UP toward
+//              C.SURGE_INTERVAL.  killDepth = the rim band.
+//   telegraph  C.SURGE_TELEGRAPH. The fuse grows throat -> rim in the lane
+//              (14-render-entities.js).  ⛔ killDepth = STILL the rim band.
+//   discharge  C.SURGE_DISCHARGE. ⛔ killDepth = 0; the whole lane is live.
+//   climb      …
+//
+// ⛔ IT STARTS IN climb WITH surgeTimer = 0 AND CAN NEVER DISCHARGE ON ITS FIRST
+// STEP, from any spawn depth. A Surger that arrived already discharging is the
+// same unaccountable death as a Drifter with a zero killDepth, and it is also
+// what keeps test-cs004-p1.js's spawnRow case green — that case drives one
+// G.update(DT) over a freshly spawned row with a Surger in it.
+//
+// ⛔ ONE LANE, NEVER HOPS. It touches no lane helper; `lane` is written once, by
+// the constructor. That is the Carrier's and the Weaver's absence of code, and
+// it is what lets CS005 P5's soak give this entity the STRONG lane assertion —
+// Object.is equality with its spawn lane — rather than a per-step speed bound.
+//
+// ⛔ THE PHASE IS THE WHOLE STATE MACHINE and the timer counts UP (GDD 16.3).
+// There is no second flag saying whether the lane is live: `killDepth` is
+// derived from the phase at each transition and nowhere else.
+class Surger extends Enemy {
+  // `dir` is ignored — a Surger never hops. The spawner still spends its draw
+  // on one (08-spawner.js), which is what keeps the run's ONE stream aligned
+  // regardless of which kind came out of the throat.
+  constructor(lane, depth) {
+    super(lane, depth);
+
+    // ⛔ THE RIM BAND, and it is the value this field spends most of its life
+    // holding — the same expression the Vaulter, the Carrier, the bolt and the
+    // Drifter use, so retuning C.RIM_CONTACT_DEPTH moves every rim-contact
+    // entity together. The discharge REPLACES it for C.SURGE_DISCHARGE and puts
+    // it back; see setPhase() below, which is the only writer.
+    //
+    // ⚠ SO THE SURGER KILLS BY TWO OF GDD 4.5's FIVE CONDITIONS, and it is the
+    // only entity in the roster that does. Item 3 is the discharge; item 1 —
+    // "an enemy reaching the rim in your lane and making contact" — is this
+    // resting value, which it carries exactly as the Vaulter does. A Surger
+    // that gets to the rim is dangerous for the ordinary reason as well as for
+    // its own; there is nothing to add for that, which is the point of a field.
+    this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
+
+    // "climb" | "telegraph" | "discharge". ⛔ Born in climb — see the header.
+    this.phase = "climb";
+
+    // ⛔ Counts UP, and it is RESET AT EVERY TRANSITION rather than compared
+    // against a running total (GDD 16.3 — no countdown clocks in this build).
+    // One timer for three phases is what makes "the phase decides what the
+    // number means" true; a per-phase timer would be three things to keep in
+    // step for no reader's benefit.
+    this.surgeTimer = 0;
+  }
+
+  // ⛔ THE ONE WRITER OF BOTH `phase` AND `killDepth`, which is the only reason
+  // the two can never disagree. A discharge that ended without restoring the
+  // band would leave a permanently lane-lethal enemy on the board and nothing
+  // downstream could tell it from a bug in the collision pass.
+  setPhase(phase) {
+    this.phase = phase;
+    this.surgeTimer = 0;
+    this.killDepth = phase === "discharge" ? 0 : 1 - C.RIM_CONTACT_DEPTH;
+  }
+
+  // How far the fuse has grown, as 0..1 of the lane, or 0 when the lane is not
+  // arming. The draw path's one input (14-render-entities.js) and a phase read
+  // rather than a fourth field.
+  chargeTip() {
+    if (this.phase === "discharge") return 1;
+    if (this.phase !== "telegraph") return 0;
+    const t = this.surgeTimer / C.SURGE_TELEGRAPH;
+    return t > 1 ? 1 : t;
+  }
+
+  // `well` and `state` are unused: a Surger has no topology and no AI. The
+  // signature is the contract's (GDD 6.5), not this entity's.
+  update(dt, well, state) {
+    this.surgeTimer += dt;
+
+    if (this.phase === "climb") {
+      // ⛔ Monotonic, and it STOPS at the rim rather than passing it — the
+      // Vaulter's rule for the Vaulter's reason: depth > 1 is not a legal
+      // position, and every downstream comparison (killDepth, the readability
+      // zone, the respawn push) would be reading a number no other system can
+      // produce.
+      //
+      // ⛔ AND IT RISES IN THIS PHASE ONLY. The Drifter is the entity whose
+      // climb runs in every phase, and it needs that because riding is
+      // unshootable and a parked unshootable entity is a concurrency squatter.
+      // A Surger is shootable in all three phases, so nothing forces it, and
+      // the pause is worth having: the bar stops moving at the instant its lane
+      // starts arming, which is a fourth channel on GDD 6.3's fuse for free.
+      if (this.depth < 1) {
+        this.depth += C.SURGE_CLIMB * dt;
+        if (this.depth > 1) this.depth = 1;
+      }
+      if (this.surgeTimer >= C.SURGE_INTERVAL) this.setPhase("telegraph");
+      return;
+    }
+
+    if (this.phase === "telegraph") {
+      // ⛔ NOTHING ELSE HAPPENS HERE, AND THAT IS THE FEATURE. killDepth is
+      // untouched, so the lane is exactly as lethal as it was a step ago: the
+      // rim band, like every other climbing enemy. The fuse is a drawing.
+      if (this.surgeTimer >= C.SURGE_TELEGRAPH) this.setPhase("discharge");
+      return;
+    }
+
+    // discharge — killDepth is 0 for this window and the whole lane is lethal.
+    // ⛔ The restore is unconditional and it happens BEFORE the collision pass
+    // of the step that ends the window, so the discharge is exactly
+    // C.SURGE_DISCHARGE of lethal steps and not one more.
+    if (this.surgeTimer >= C.SURGE_DISCHARGE) this.setPhase("climb");
+  }
+
+  // ⛔ drawPoly + glowStroke only (GDD 10.2). The silhouette AND the lane fuse
+  // live in 14-render-entities.js; the entity hands over its phase as a single
+  // 0..1 tip plus whether the lane is live, so the two states can never drift
+  // apart from the two behaviours.
+  draw(ctx, well) {
+    drawSurger(ctx, well, this.lane, this.depth, this.chargeTip(), this.phase === "discharge");
+  }
+
+  // Any shot kills it and the shot is spent (GDD 6.1) — 200 points, when CS007
+  // builds addScore(). ⛔ IN EVERY PHASE, THE DISCHARGE INCLUDED: the lane being
+  // live is a threat to the player standing in it, never armour for the thing
+  // making it. The answer to a Surger is to shoot it, and the fuse is the
+  // window the player is given to decide whether to shoot or to leave.
+  onShot(shot) {
     this.dead = true;
     return true;
   }

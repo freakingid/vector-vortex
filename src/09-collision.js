@@ -102,9 +102,18 @@ function collideShots(state, well) {
 // ⛔ `killDepth` is read off the entity, never a class name (07-enemies.js).
 // null means contact NEVER kills — the Weaver, whose projectile is the threat
 // and whose body is not. A number is the depth at or past which contact in the
-// Skimmer's lane is lethal, and every enemy that has one uses the same rim band
-// `1 - C.RIM_CONTACT_DEPTH`. Three of the five death conditions are that one
-// comparison, which is why it is a field.
+// Skimmer's lane is lethal, and every enemy that has one holds the same rim
+// band `1 - C.RIM_CONTACT_DEPTH` at rest. FOUR of the five death conditions are
+// that one comparison, which is why it is a field.
+//
+// ⛔ AND IT IS READ FRESH EVERY STEP BECAUSE ONE ENTITY MUTATES IT. CS005 P3's
+// Surger sets killDepth to 0 for its C.SURGE_DISCHARGE window and puts the rim
+// band back on the way out (07-enemies.js's setPhase). With 0 the depth test
+// below is unconditionally true and the only remaining term is laneHit(), which
+// is GDD 4.5 item 3 — "being in a Surger's lane when it discharges" — verbatim.
+// ⛔ That is the whole of item 3, and this pass has NO BRANCH for it: caching
+// the value, or reading it once per well, or special-casing a class here, would
+// each break a death condition that today costs zero lines.
 //
 // ⛔ THERE IS NO TERM HERE FOR WHERE THE SKIMMER IS, and that is what makes a
 // killDepth of 0 mean something other than it looks like. The craft is always
@@ -113,10 +122,17 @@ function collideShots(state, well) {
 // This header predicted 0 for the Drifter until CS005 P2; GDD 4.5 item 2's "any
 // depth" is about there being no safe PHASE — a Drifter kills you while it is
 // armoured, so you can neither shoot it nor touch it — and the Drifter ships on
-// the rim band with everything else. ⚠ Zero becomes honest the moment the craft
-// can leave the rim (GDD 5's Dive, GDD 14.2's Jump) and this pass has two
-// depths to compare. Until then, a zero here is an unaccountable death and GDD
-// 6.3 names that as the most common complaint about games in this genre.
+// the rim band with everything else. ⚠ Zero becomes honest as a RESTING value
+// the moment the craft can leave the rim (GDD 5's Dive, GDD 14.2's Jump) and
+// this pass has two depths to compare. Until then a PERMANENT zero is an
+// unaccountable death, and GDD 6.3 names that as the most common complaint
+// about games in this genre.
+//
+// ⚠ WHICH IS WHY THE SURGER'S ZERO IS RIGHT AND THE DRIFTER'S WOULD NOT BE, and
+// it is the same number both times. The Surger's lasts C.SURGE_DISCHARGE and is
+// preceded by C.SURGE_TELEGRAPH of visible fuse in which the lane is NOT lethal
+// (GDD 6.3): the player is told, and then given time. A permanent kill zone is
+// not a discharge, and a fuse that kills is not a fuse.
 function collideSkimmer(state, well) {
   const sk = state.skimmer;
   if (!sk || sk.dead) return;
@@ -153,8 +169,9 @@ function killSkimmer(state) {
 
   // ⛔ AN INVULNERABLE SKIMMER CANNOT DIE, and the guard is HERE rather than in
   // the collision pass so the four death conditions still to come get it for
-  // free: CS004 adds item 4 (the Weaver's bolt), CS005 adds items 2 and 3 (the
-  // Drifter and the Surger), and CS006 adds item 5 with the Dive. An
+  // free: CS004 added item 4 (the Weaver's bolt), CS005 added items 2 and 3 (the
+  // Drifter and the Surger, and neither cost this function a line), and CS006
+  // adds item 5 with the Dive. An
   // invulnerable craft can still fire and still move: invulnerability suspends
   // dying, not playing. state.invulnTime counts UP and is armed to zero by the
   // respawn (02-state.js), so "expired" is the at-or-past-threshold case.
