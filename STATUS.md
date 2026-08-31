@@ -1,16 +1,37 @@
 # Vector Vortex — STATUS
-Version: 0.0.1 · Changeset: CS005 (not started) · Wells: 16/16 · Enemies: 4/6 Classic · Tracks: 0/5
+Version: 0.0.1 · Changeset: CS005 (P1 of 5 done) · Wells: 16/16 · Enemies: 4/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS005
 
-- Not started. `PLANNED-FEATURES-CS005.md` and `IMPLEMENTATION-PHASES-CS005.md`
-  do not exist yet.
+- **P1 — the boundary lattice.** ✅ `laneHop`'s optional fold bounds,
+  `laneBoundaryLo/Hi()`, `boundaryFrom()`, `scratchpad/test-cs005-p1.js`. No
+  entity, no rendering, no new `C` key.
+
+`laneHop(well, lane, delta, dir, lo, hi)` folds about `lo`/`hi` instead of `0`
+and `lanes - 1`, which stay the defaults. ⛔ **The four-argument form is pinned
+bit-identical to the pre-change build** by a 16,856-case sweep (16 wells ×
+quarter-lane values two lanes past each end × seven deltas × both directions),
+hashed over raw float64 bytes; `GOLDEN_SWEEP` was recorded from `74fb50c`.
+
+⚠ **`laneBoundaryHi` is `lanes - 0.5` on a CLOSED well, not `lanes - 1.5`.** The
+prompt specified the open-well answer only. The closed value is forced, not
+chosen: the spec requires `boundaryFrom(Ring, 0, -1)` to give `15.5`, and P5
+asserts a settled rider's lane lies inside `[laneBoundaryLo, laneBoundaryHi]`.
+
+`boundaryFrom()` is the birth half-step and ⛔ **does not go through `laneHop`**
+— folding an off-lattice start overshoots to `1.5`. One reversal suffices,
+proven by exhaustion over every integer lane of every well, both directions;
+each open well reverses on exactly two of its births.
+
+**Mutation-checked, six:** either default bound moved, `boundaryFrom` never
+reversing, reversing twice, `laneBoundaryLo` at `0`, and `laneBoundaryHi`
+losing its closed branch each turn `test-cs005-p1.js` red.
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules); the manifest
   is checked both directions against `src/`.
-- `node scratchpad/run-all.js` passes: 19 test files, zero skips, ~4 s.
+- `node scratchpad/run-all.js` passes: 20 test files, zero skips, ~4 s.
 - CS001 closed 2026-08-30 — 16 wells, the depth model, the well renderer.
 - CS002 closed 2026-08-30 — the loop, the Skimmer, shots, and all four input
   devices (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -160,16 +181,13 @@ Version: 0.0.1 · Changeset: CS005 (not started) · Wells: 16/16 · Enemies: 4/6
   Drifter and the Surger are two roster rows but four kinds, because
   `carrierDrifter` and `carrierSurger` come with them.
 
-## Next up — CS005: the Drifter and the Surger
+## Still to come this changeset — the Drifter and the Surger
 
-No planning docs yet. What CS004 leaves on the table for it, from
-`ROADMAP.md` and the phases that found it:
+`PLANNED-FEATURES-CS005.md` and `IMPLEMENTATION-PHASES-CS005.md` are both in
+flight. What CS004 left on the table, minus what P1 has spent:
 
-- ⛔ **`laneHop()`'s half-lane fold point is CS005's**, and the Drifter is the
-  entity that makes it matter — it is the first thing in the build that rides
-  lane *boundaries* and moves continuously in lane space. ⛔ Do not change the
-  helper without the entity that exercises it; the Vaulter's behaviour on that
-  path is documented and correct.
+- ✅ **`laneHop()`'s half-lane fold point** — done in P1, as optional fold
+  bounds rather than a moved fold point. GDD §3.5 carries the lattice.
 - ⛔ **`MAX_LANE_STEP` has to become per-entity**, in `test-cs003-p5.js` and
   `test-cs004-p5.js` both. Today it is `2 * DT / C.VAULT_HOP_TIME` — the
   Vaulter's hop — and a continuously-moving Drifter will either trip it or force

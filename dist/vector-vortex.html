@@ -725,8 +725,7 @@ function laneDelta(well, a, b) {
 
 // ⛔ THE WALL HELPER (GDD 3.5, §17 test 3). A lane hop of `delta` from `lane`,
 // returning BOTH the resulting lane and the direction the hopper is now
-// travelling. Enemies do not exist yet; this is built now and correctly
-// because retrofitting it is where the well's two clocks desynchronize.
+// travelling.
 //
 // The returned `dir` is the whole point. An enemy that stores its own hop
 // direction and only asks this helper for a POSITION keeps a stale direction
@@ -735,29 +734,127 @@ function laneDelta(well, a, b) {
 // must write back the `dir` it gets here.
 //
 //   closed  wraps. dir is unchanged — there is no wall to turn at.
-//   open    mirror-folds into [0, lanes-1], reflecting as many times as the
-//           hop needs. dir flips once per reflection, so an even number of
+//   open    mirror-folds into [lo, hi], reflecting as many times as the hop
+//           needs. dir flips once per reflection, so an even number of
 //           bounces restores the original heading. This is NOT a clamp: a
 //           clamped hopper parks on the end lane, a reflected one turns
 //           around and comes back, which is the behaviour GDD 3.5 specifies.
 //
 // `dir` is passed through rather than inferred from delta's sign so a caller
 // hopping by 0 keeps its heading instead of silently resetting it.
-function laneHop(well, lane, delta, dir) {
+//
+// ⛔ `lo`/`hi` ARE THE FOLD BOUNDS, AND THEY ARE A PARAMETER BECAUSE TWO
+// LATTICES EXIST (GDD 3.5, the boundary lattice). They default to `0` and
+// `well.lanes - 1` — the extreme legal positions of a lane-CENTRE entity, so
+// every existing caller is untouched and the Vaulter's behaviour is unchanged
+// by construction. A boundary-RIDER's extreme legal positions are `0.5` and
+// `well.lanes - 1.5` (laneBoundaryLo/Hi below), and folding it about the
+// centre bounds makes a cross from `0.5` land back on `0.5` — a whole
+// vulnerable crossing window in which the entity announces itself as
+// shootable and then does not move.
+//
+// ⛔ Two entities want different fold BOUNDS, not a second helper. There is
+// exactly one mirror-fold in this build and it is here
+// (RATIONALE.md#depth-model). If a third lattice ever appears, that is the
+// moment to extract a `laneFold` and make this a wrapper — not before.
+//
+// ⚠ On a closed well `lo`/`hi` are inert: it wraps, and there is nothing to
+// fold about. A caller may pass them unconditionally.
+function laneHop(well, lane, delta, dir, lo, hi) {
   const d = (dir === undefined) ? (delta < 0 ? -1 : 1) : dir;
 
   if (well.closed) {
     return { lane: laneWrap(well, lane + delta), dir: d };
   }
 
-  const max = well.lanes - 1;
-  if (max <= 0) return { lane: 0, dir: d };
+  const a = (lo === undefined) ? 0 : lo;
+  const b = (hi === undefined) ? well.lanes - 1 : hi;
+  const span = b - a;
+  if (span <= 0) return { lane: a, dir: d };
 
-  const period = 2 * max;
-  let m = ((lane + delta) % period + period) % period;   // [0, 2*max)
+  const period = 2 * span;
+  let m = ((lane + delta - a) % period + period) % period;   // [0, 2*span)
   let flipped = false;
-  if (m > max) { m = period - m; flipped = true; }        // fold the far half back
-  return { lane: m, dir: flipped ? -d : d };
+  if (m > span) { m = period - m; flipped = true; }           // fold the far half back
+  return { lane: a + m, dir: flipped ? -d : d };
+}
+
+// ---- The boundary lattice (GDD 3.5) ---------------------------------------
+//
+// A lane BOUNDARY is the half-integer between two lane centres: lane `k + 0.5`
+// is the edge shared by lanes k and k+1. Vertex parameter is lane + 0.5, so a
+// boundary sits exactly on rim vertex k+1 — it is drawn, not interpolated.
+//
+// ⛔ AN OPEN WELL'S TWO OUTERMOST BOUNDARIES DO NOT EXIST, and the reason is
+// not only that laneClamp would refuse them. `polyAt` clamps an open well's
+// vertex parameter to [0.5, n - 0.5], which is lane [0, n-1] — so lane `-0.5`
+// and lane `n - 0.5` project to the SAME POINTS as the lane CENTRES `0` and
+// `n - 1`. The walls are not drawable, let alone ridable: an entity placed
+// there would be a second silhouette exactly on top of a first.
+//
+// So an open well's ridable boundaries are exactly its INTERIOR rim vertices —
+// vertices 1 … lanes-1 of a strip that has lanes+1 of them — which is
+// `lanes - 1` of them, at lane 0.5 … lanes-1.5. Count it on the 13-lane Vee
+// and it is TWELVE, not the fourteen its rim vertex count suggests.
+//
+// A closed well has no walls, so all `lanes` boundaries are legal and
+// drawable: lane `lanes - 0.5` resolves to rim vertex 0, reached the long way
+// round the seam.
+//
+// ⛔ Numbers, not an object. These are read on a per-frame path and `{lo, hi}`
+// would allocate every call, which §17's perf budget forbids. laneBoundaryLo
+// takes a `well` it does not read, so the pair has one signature and a caller
+// never has to remember which half is topology-dependent.
+function laneBoundaryLo(well) {
+  return 0.5;
+}
+
+function laneBoundaryHi(well) {
+  return well.closed ? well.lanes - 0.5 : well.lanes - 1.5;
+}
+
+// ⛔ THE BIRTH HELPER (GDD 3.5, 6.1). A boundary-riding entity is spawned at an
+// integer lane CENTRE — `spawnEnemy()` is a function of (kind, lane, depth) and
+// knows nothing about any entity's lattice — and crosses onto the lattice on
+// its first update. This answers where that half-cross lands and which heading
+// the entity keeps: { lane, dir }.
+//
+//   closed  the wrapped half-step. There is no wall, so dir never changes and
+//           lane 0 heading down gives `lanes - 0.5`, a legal boundary.
+//   open    the half-step, and if it leaves [lo, hi] the heading REVERSES ONCE
+//           and the other side is taken.
+//
+// ⛔ One reversal always suffices. From an integer lane centre only two births
+// in a whole well can fail — lane 0 heading down and lane `lanes-1` heading up
+// — and a strip of three lanes or more has a legal boundary on the other side
+// of both. Every shipped well has at least eleven lanes. Proven by exhaustion
+// in scratchpad/test-cs005-p1.js rather than asserted here.
+//
+// ⛔ THIS DOES NOT GO THROUGH laneHop, and that is not a duplication. laneHop
+// folds; folding an OFF-LATTICE start about the lattice bounds overshoots —
+// laneHop(Vee, 0, -0.5, -1, 0.5, 11.5) returns lane 1.5, a lane and a half in
+// one cross time, which a soak reads as a teleport. A half-step that reverses
+// is a different question from a hop that reflects.
+//
+// ⛔ This helper is where `well.closed` is read, so an entity riding the
+// lattice never learns the topology — the same property the Vaulter's header
+// claims, and the only reason it behaves on a Ring and on a Fan without a
+// branch.
+//
+// `lane` is expected to be a legal lane centre. It carries a fractional lane
+// through unchanged (the debug bench spawns in the Skimmer's continuous lane):
+// the result is still legal and still within half a lane, but it is only ON
+// the lattice when the input was an integer.
+function boundaryFrom(well, lane, dir) {
+  const d = dir < 0 ? -1 : 1;
+
+  if (well.closed) return { lane: laneWrap(well, lane + d * 0.5), dir: d };
+
+  const lo = laneBoundaryLo(well);
+  const hi = laneBoundaryHi(well);
+  const first = lane + d * 0.5;
+  if (first >= lo && first <= hi) return { lane: first, dir: d };
+  return { lane: lane - d * 0.5, dir: -d };
 }
 
 // Is this lane against a wall? Always false on a closed well — a closed well

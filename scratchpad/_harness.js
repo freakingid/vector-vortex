@@ -107,6 +107,8 @@ function buildGame(opts = {}) {
     "screenPos", "perspective", "wellThroat", "wellCentroid", "wellVertCount",
     "rimPoint", "throatPoint",
     "laneWrap", "laneClamp", "laneNormalize", "laneDelta", "laneHop", "laneAtWall",
+    // the boundary lattice (03-wells.js, CS005 P1)
+    "laneBoundaryLo", "laneBoundaryHi", "boundaryFrom",
     // the well renderer (13-render-well.js, CS001 P3)
     "drawPoly", "glowStroke", "laneLineWidth", "wellBandColor", "wellBaseAlpha", "drawWell",
     // state, input and the loop (02/04/23, CS002 P1)
