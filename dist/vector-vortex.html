@@ -4063,13 +4063,19 @@ function wellCleared(state) {
 // same target every time, and "whichever one the loop happened to reach first"
 // is only deterministic if the loop order is written down.
 //
+// ⛔ AND SINCE CS008 P1b THE SECOND HALF CAN KILL AN ENEMY, NOT ONLY THE
+// SKIMMER: the rim sweep in collideSkimmer() asks a touching rim enemy
+// onShot() while fire is held. It is still this pass and this order — shots
+// resolve first, so the sweep only ever meets what the shots left standing.
+//
 // ⛔ Called from Game.update() AFTER the entity pass and BEFORE the end-of-frame
 // filters. Nothing here removes an array element; hits set `dead = true` and
 // the caller's .filter() does the removal (GDD 6.5). Never splice mid-loop.
 //
-// ⛔ No scoring. addScore() is CS008's single entry point, and the way to keep
-// it single is to not build a temporary second one here. C.PTS_VAULTER and
-// C.PURGE_SAVED_BONUS are deliberately unread this changeset.
+// ⛔ No scoring yet. addScore() is CS008 P2's single entry point, and the way to
+// keep it single is to not build a temporary second one here. C.PTS_VAULTER and
+// C.PURGE_SAVED_BONUS are deliberately unread until then. ⛔ P2 awards at the
+// rim sweep's kill in collideSkimmer() too, not only in collideShots().
 
 // Are two lanes the same lane, to within the contact tolerance? ⛔ laneDelta,
 // never (a - b): on a 16-lane Ring the distance from lane 15.9 to lane 0 is
@@ -4198,6 +4204,44 @@ function collideShots(state, well) {
 // preceded by C.SURGE_TELEGRAPH of visible fuse in which the lane is NOT lethal
 // (GDD 6.3): the player is told, and then given time. A permanent kill zone is
 // not a discharge, and a fuse that kills is not a fuse.
+//
+// ⛔ THE RIM SWEEP, CS008 P1b (GDD 4.5; PLANNED-FEATURES-CS008.md §1.16, §2b;
+// Paul's K1-K4). With fire held, a rim enemy the Skimmer touches dies if a shot
+// could kill it — asked AFTER the lane match and BEFORE killSkimmer():
+//
+//   1. THE FIRE GATE IS state.input.fire, the level every device writes, so
+//      touch auto-fire counts. A player not holding fire still dies on contact.
+//   2. THE DEPTH GATE IS THE PARK EXPRESSION, `1 - C.RIM_CONTACT_DEPTH`, and no
+//      new constant. Its one job is a Surger discharging BELOW the rim, whose
+//      killDepth is 0 there: GDD 4.5 item 3 stands.
+//   3. ⛔ onShot(), NEVER `e.dead = true`. The enemy decides what a hit does
+//      (GDD 6.5): a riding Drifter's armour refuses (item 2 stands), a Weaver
+//      bolt declines (item 4 stands), and a Carrier splits through spawnEnemy()
+//      exactly as a shot kill does. That is the OPPOSITE of the Purge's
+//      ⚠ SETTLED omission below, for the same reason: the Purge is a statement,
+//      and this is a shot that never had to fly. `null` is safe — no onShot in
+//      the build reads its argument — and "consumed" is ignored, because there
+//      is no shot to consume. `kills` counts it; `shotsFired` does not.
+//   4. ⛔ `continue`, NEVER `return`. Every enemy touching this step is asked,
+//      stacked ones included, and a Carrier's children appended mid-loop are
+//      reached by the index-based walk, exactly as in collideShots().
+//
+// It sits above killSkimmer()'s invulnerability guard, so an invulnerable craft
+// that is firing still kills what it touches: invulnerability suspends dying,
+// not playing.
+//
+// ⛔ WHY CONTACT-SIDE AND NOT SHOT-SIDE — read this before "unifying" it into
+// updateShots(). It reads like a bypass of the fire economy, and every shot-
+// based alternative was MEASURED short of 24/24 on a full rack (plan §1.16):
+// re-arming the cooldown on a fire-lane change is 6/24, because SHOT_MAX
+// refuses the re-armed shot; letting that shot ignore SHOT_MAX still leaves C10
+// (a rim Vaulter hopping into a mover) at 0/24 and C13 (two Vaulters stacked)
+// at 0/24; also testing contact on the FIRE lane lifts C10 only to 18/24 — at
+// lane 1.257 the craft fires into lane 1 while the hopping Vaulter at 1.583 is
+// 0.326 from contact and 0.583 off the shot's lane — drops C11 to 6/24, and
+// leaves C13 at 0/24, because collideShots()' load-bearing `break` resolves one
+// enemy per shot per step. The sweep is 24/24 on all thirteen shootable shapes
+// and holds all three lethal ones (test-cs008-p1b.js).
 function collideSkimmer(state, well) {
   const sk = state.skimmer;
   if (!sk || sk.dead) return;
@@ -4208,6 +4252,11 @@ function collideSkimmer(state, well) {
     if (e.killDepth === null || e.killDepth === undefined) continue;
     if (e.depth < e.killDepth) continue;
     if (!laneHit(well, e.lane, sk.lane)) continue;
+    // ⛔ The rim sweep — the header above, and the four decisions in it.
+    if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
+      e.onShot(null);
+      if (e.dead) { state.tally.kills++; continue; }
+    }
     killSkimmer(state);
     return;   // one death per step, whatever else is touching
   }

@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (P1 done — ⛔ P1b, the crossing fix, planned and next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P1b done — ⛔ P2, scoring and extra lives, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
@@ -36,11 +36,21 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   residual deaths. No shot-based variant reaches 24/24 (plan §1.16). Built
   nothing; `NEXT-STEPS.md`'s entry deleted.
 
+- **P1b (2026-09-13) — the crossing fix, the rim sweep.** In
+  `collideSkimmer()`, a firing Skimmer asks a touching enemy at the park depth
+  `onShot(null)` before contact can kill — plan §2b, exactly. ⛔ **With fire
+  held, a rim enemy a shot could kill dies on contact**: `test-cs008-p1b.js`,
+  C1–C13 24/24 killed and N1–N3 24/24 died on a full rack, mutation-checked
+  (sweep, fire gate, depth gate, `dead = true` — all red; record in
+  `log/CS008.md`). The five closed-file failures and all three hash values
+  matched §1.16 to the digit. Four fixtures repaired in place, one re-record;
+  `GOLDEN_LANES` and `test-cs008-p1.js` green unedited.
+
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 340.9 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 344.0 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **35 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **36 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -95,7 +105,7 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   every retune**, which is what let all three of CS007's `P1_DETERMINISM_HASH`
   re-records be checked rather than merely recorded.
 - ⛔ **`test-cs004-p1.js`'s `GOLDEN_LANES` — its first SIXTEEN entries are STILL
-  the ORIGINAL recording from `9ebd27b`** — through CS006, CS007 and CS008 P1,
+  the ORIGINAL recording from `9ebd27b`** — through CS006, CS007, CS008 P1 and P1b,
   character for character, and a separate prefix assertion now holds them.
   ⛔ **THE ONE EXCEPTION: CS008 P1 APPENDED `2, 5`, and it has ONE cause — the
   climb stops at the kill band**, so held fire clears the window sooner and two
@@ -107,8 +117,10 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   not a baseline** — heat leaking into level 1, or a stray draw.
 - ⛔ **`test-cs006-p2.js`'s `P1_DETERMINISM_HASH` is the one baseline that moves,
   and it is a CROSS-FILE one** — it runs the closed `test-cs005-p5.js` in a child
-  process. It stands at **1862183225** (CS008 P1, the rim fix — the planned value,
-  matched to the digit before any test was edited). ⛔ Re-record it **once per change, with
+  process. It stands at **1229033515** (CS008 P1b, the crossing fix — two causes
+  measured apart and written at the assertion: the sweep alone 4203989832, the
+  soaks' first-run `lives = 1` alone 2859072280; the planned value, matched to
+  the digit before the re-record). ⛔ Re-record it **once per change, with
   one named cause written at the assertion**, and check the move against the
   draws-per-spawn count above.
 - ⛔ **On a boundary rider the LATTICE is where §17 item 3 stands, not the speed
@@ -193,12 +205,13 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   over a parked enemy.** `purgeTarget()` takes the highest depth, and enemies
   now park at 0.95 while a bolt spends ~9 steps above it. Plan §2 flagged it;
   not measured, and no phase owns it. P2 touches Purge scoring and should know.
-- ⛔ **CROSSING A RIM ENEMY KILLS THE PLAYER 18 TIMES IN 24 WITH FIRE HELD, and
-  level 1 is unplayable because of it.** Found by Paul playing P1; re-measured
-  at `0b41f55`. ✅ **Planned as P1b** (plan §1.16, §2b), and ⛔ **it blocks P2.**
-  ⚠ **P1b moves `P1_DETERMINISM_HASH` → 1229033515**, with two causes measured
-  apart. It edits four closed fixtures: three soaks' first-run lives and
-  `test-cs007-p4.js`'s `CAPTURE_TICKS`. `GOLDEN_LANES` does not move.
+- ⚠ **THE SCRIPTED SOAK PLAYER HOLDS FIRE, SO SINCE P1b IT BARELY DIES** — the
+  sweep kills what it crosses. Four closed fixtures were repaired for exactly
+  that: `st.lives = 1` on the FIRST run of three soaks' `hashRun()` (never after
+  a restart — that drops the respawn from the hash), and `test-cs007-p4.js`'s
+  `CAPTURE_TICKS` 7,300 (deaths at 7,028 and 7,574; ⛔ 8,000 stops inside the
+  window and goes red). ⛔ **A later fixture that needs a death or a game over
+  inside a window will hit the same wall** — and P8's sixth soak is one.
 - ⛔ **NO KEY IN THE BUILD REACHES A CHOSEN LEVEL.** `w` (`cycleWell`) advances
   `state.wellIndex` and never `state.level`, and both `eligibleKinds()` and
   `wellBandColor(level, …)` are functions of the level. ⚠ Found at the CS007
@@ -259,24 +272,24 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — ⛔ P1b, THE CROSSING FIX
+## Next up — ⛔ P2, SCORING AND EXTRA LIVES
 
-⛔ **Paste P1b's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
-session.** P2 follows it as planned. The plan is `PLANNED-FEATURES-CS008.md`;
+⛔ **Paste P2's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
+session.** The plan is `PLANNED-FEATURES-CS008.md`;
 ⛔ a build phase reads the document, not the planning conversation
 (`CLAUDE.md` rule 3c).
 
-**The sequence:** P1 the rim fix · **P1b the crossing fix** · P2 scoring and
-extra lives · P3 mode and Start Depth · P4 text, HUD, fragmentation · P5 the
+**The sequence:** P1 the rim fix · P1b the crossing fix · **P2 scoring and
+extra lives** · P3 mode and Start Depth · P4 text, HUD, fragmentation · P5 the
 screens · P6 pause and Options · P7 the Controls page · P8 the front-door soak
 and the close.
 
 ⛔ **What each phase must not lose, carried from before the plan:**
 
-1. ✅ **Both P1 re-records landed** — `P1_DETERMINISM_HASH` 1862183225 and
-   `GOLDEN_LANES` +2 appended entries, the first 16 unmoved. ⛔ **P1b re-records
-   the hash once more, to 1229033515** (plan §9). A baseline move in P2–P8 is
-   a defect.
+1. ✅ **All three re-records landed** — P1's `GOLDEN_LANES` +2 appended entries
+   (the first 16 unmoved) and `P1_DETERMINISM_HASH` 1862183225, then P1b's hash
+   **1229033515** (plan §9). ⛔ **A baseline move in P2–P8 is a defect.**
+   ⛔ P2 scores at the sweep's kill site as well as in `collideShots()` (plan §3).
 2. ⛔ **The past-99 `startGame()` defect stays unreachable** while Start Depth
    caps at 81 (plan §1.12) — P3 re-words it, does not fix it.
 3. ⛔ **Start Depth un-parks two `PLAYTEST.md` asks** (23 and 65) at P5.

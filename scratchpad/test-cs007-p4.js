@@ -33,7 +33,13 @@ const { installSeed } = require("./_seeded-random.js");
 
 const SEED = 20260831;
 const TICKS = 10000;        // GDD §17 item 1's window
-const CAPTURE_TICKS = 6000; // §7's no-restart capture
+// §7's no-restart capture. ⛔ 7,300, AND IT RESTORES A PRECONDITION, CS008 P1b —
+// "the recorded list dies". The scripted player holds fire, and under the rim
+// sweep (09-collision.js) it no longer dies inside 6,000 ticks. MEASURED: deaths
+// at tick 7,028 (inside, 272 of margin) and 7,574 (outside, 274). ⛔ Not 8,000:
+// the run stops at 7,780 inside that window, the last death is never sampled,
+// and "a column IS the counter" goes red (plan §1.16).
+const CAPTURE_TICKS = 7300;
 
 installSeed(SEED);
 const X = H.buildGame();

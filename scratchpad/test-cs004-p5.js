@@ -175,6 +175,14 @@ function hashRun(gameSeed) {
   G.reset();
   X.startGame(gameSeed);
   armMixed();
+  // ⛔ RESTORES A PRECONDITION, CS008 P1b — `restarts > 0` below. The scripted
+  // player holds fire, and under the rim sweep (09-collision.js) a firing
+  // Skimmer kills what it crosses, so it dies too rarely to spend three lives:
+  // MEASURED at L7, 7 deaths / 2 game overs -> 1 / 0 (plan §1.16). The claim is
+  // unchanged. ⛔ THE FIRST RUN ONLY, never after a restart: lives = 1 on every
+  // run drops respawnSkimmer() out of the hash, and lives = 2 never stops at L7.
+  // With this, the window holds 2 deaths, 1 game over AND 1 respawn.
+  st.lives = 1;
 
   let h = 2166136261 >>> 0;
   let restarts = 0;

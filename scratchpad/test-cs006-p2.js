@@ -502,7 +502,24 @@ H.eq(probes % 5, 0, "the NaN walk probed five depths per lane (non-vacuous)");
 // entries — its first sixteen are character-identical (the exception is written
 // at that assertion).
 // ---------------------------------------------------------------------------
-const P1_DETERMINISM_HASH = 1862183225;
+// ⛔ RE-RECORDED A SIXTH TIME, AT CS008 P1b — THE CROSSING FIX. 1862183225 ->
+// 1229033515. ⚠ TWO CAUSES IN ONE CHANGE, EACH MEASURED ALONE, P1's precedent:
+//
+//   the rim sweep alone (collideSkimmer, 09-collision.js)   4203989832
+//   the fixture alone (test-cs005-p5.js's first-run lives)   2859072280
+//   both — what P1b ships                                    1229033515
+//
+// A firing Skimmer's contact with a rim enemy now asks that enemy onShot()
+// before contact can kill; the scripted player holds fire, so it stopped
+// reaching the game-over stop, and hashRun()'s `st.lives = 1` on the FIRST run
+// restores that precondition (plan §1.16, §2b). ⛔ All three values are the
+// plan's, and all three were MEASURED again on the built code, equal to the digit.
+//
+// ⛔ GUARDED: test-cs004-p1.js's GOLDEN_LANES (all 18 entries), test-cs006-p5.js's
+// draws-per-spawn count, test-cs007-p2.js and test-cs008-p1.js are green with NO
+// edit. §4, §5 and §8 below are untouched.
+// ---------------------------------------------------------------------------
+const P1_DETERMINISM_HASH = 1229033515;
 
 const child = execFileSync(process.execPath,
   [path.join(__dirname, "test-cs005-p5.js"), "--hash-only"],
