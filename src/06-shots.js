@@ -47,13 +47,28 @@ class Shot {
   }
 }
 
-// Fires (subject to cooldown and the SHOT_MAX cap) and ages every shot in
-// flight, then retires whatever reached the throat this step. Called once per
+// Ages every shot already in flight and retires whatever reached the throat,
+// THEN fires (subject to cooldown and the SHOT_MAX cap). Called once per
 // simulation tick, from 23-main.js, directly below the Skimmer's own update —
 // that ordering is what lets a shot fired this step capture the Skimmer's
 // POST-MOVE lane, the same "nearest lane centre" Skimmer.snap() targets.
+//
+// ⛔ AGE, FILTER, THEN FIRE — CS008 P1, and the order is the fix. A shot fired
+// before the ageing loop was aged on its own fire tick, so its first TESTED
+// depth was 1 - FIXED_DT / SHOT_TIME ≈ 0.968 and no shot ever existed at the
+// rim: depth 1.000 got one shot sample where every other depth got three, and
+// an enemy parked there was hittable on one tick of the cadence in four. Fired
+// last, a shot is born at depth 1 and the collision pass tests it THERE on the
+// step it leaves the rim (GDD 4.2). ⛔ The C.SHOT_MAX check reads the length
+// AFTER retirement (plan A1, not A2): checking the cap before ageing lets a
+// fresh unaged shot count against it and the cap binds one tick in the cadence,
+// which was measured worse (PLANNED-FEATURES-CS008.md §1.1).
 function updateShots(state, well, dt) {
   if (state.shotCooldown < C.SHOT_COOLDOWN) state.shotCooldown += dt;
+
+  for (let i = 0; i < state.shots.length; i++) state.shots[i].update(dt);
+  // ⛔ end-of-frame filter; a shot is never spliced out mid-loop (GDD 6.5).
+  state.shots = state.shots.filter(s => !s.dead);
 
   if (state.input.fire &&
       state.shotCooldown >= C.SHOT_COOLDOWN &&
@@ -67,8 +82,4 @@ function updateShots(state, well, dt) {
     // reads it; GDD 4.2's economy is unchanged.
     state.tally.shotsFired++;
   }
-
-  for (let i = 0; i < state.shots.length; i++) state.shots[i].update(dt);
-  // ⛔ end-of-frame filter; a shot is never spliced out mid-loop (GDD 6.5).
-  state.shots = state.shots.filter(s => !s.dead);
 }

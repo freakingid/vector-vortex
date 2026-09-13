@@ -284,7 +284,16 @@ H.eq(state.level, 1, "the level is restored before the golden run");
 // one. The fixture holds `lives` up so the run never reaches the game-over
 // stop, which would end the sequence early and make the case weaker than it
 // looks; fire is held so enemies die, wells clear and the quota refreshes.
-const GOLDEN_LANES = [10, 10, 12, 0, 8, 14, 12, 12, 8, 14, 10, 0, 7, 7, 12, 3];
+//
+// ⛔ A MOVE HERE IS A DEFECT, WITH EXACTLY ONE EXCEPTION: CS008 P1, WHICH APPENDED
+// `2, 5`. ONE CAUSE — THE CLIMB STOPS AT THE KILL BAND. A Vaulter parked at
+// `1 - C.RIM_CONTACT_DEPTH` dies to held fire sooner than one parked at 1, so the
+// window clears sooner and fits two more spawns. ⛔ THE FIRST SIXTEEN ENTRIES ARE
+// THE 9ebd27b RECORDING, CHARACTER FOR CHARACTER, and the prefix assertion below
+// holds them on their own. The exception covers appends from that one cause
+// only; any other move — heat leaking into level 1, a stray draw — is a defect.
+const GOLDEN_PREFIX_9EBD27B = [10, 10, 12, 0, 8, 14, 12, 12, 8, 14, 10, 0, 7, 7, 12, 3];
+const GOLDEN_LANES = [10, 10, 12, 0, 8, 14, 12, 12, 8, 14, 10, 0, 7, 7, 12, 3, 2, 5];
 const GOLDEN_TICKS = 3000;
 
 function spawnLaneRun() {
@@ -307,8 +316,10 @@ function spawnLaneRun() {
 
 const lanes = spawnLaneRun();
 H.assert(lanes.length === GOLDEN_LANES.length && lanes.every((l, i) => l === GOLDEN_LANES[i]),
-         `⛔ the spawn-lane sequence over ${GOLDEN_TICKS} ticks is identical to the pre-change build ` +
+         `⛔ the spawn-lane sequence over ${GOLDEN_TICKS} ticks is identical to the recording ` +
          `(got [${lanes}])`);
+H.assert(GOLDEN_PREFIX_9EBD27B.every((l, i) => lanes[i] === l),
+         "⛔ and its first sixteen entries are the original 9ebd27b recording, unmoved");
 H.assert(lanes.length >= 8, "and the run was not vacuous — it actually spawned");
 
 H.report("test-cs004-p1.js");

@@ -485,7 +485,24 @@ H.eq(probes % 5, 0, "the NaN walk probed five depths per lane (non-vacuous)");
 // §4, §5 and the §8 source assertion below are untouched and still on their
 // original 8e0fb7c recordings.
 // ---------------------------------------------------------------------------
-const P1_DETERMINISM_HASH = 3661952239;
+// ⛔ RE-RECORDED A FIFTH TIME, AT CS008 P1, AND THE CAUSE IS ONE THING: THE RIM
+// FIX. 3661952239 -> 1862183225.
+//
+// Three parts, one change (PLANNED-FEATURES-CS008.md §2): updateShots() ages and
+// retires before it fires, so a shot is tested at depth 1 on its fire tick; the
+// Vaulter, Carrier, Drifter and Surger climbs stop at `1 - C.RIM_CONTACT_DEPTH`
+// with Vaulter.atRim() moved to match; and C.HIT_DEPTH_EPS absorbs the float
+// error in collideShots()'s band test. ⛔ The value is the plan's, predicted
+// from a mutation at b10d77e and MEASURED here on the built code — equal to the
+// digit. The plan decomposed it: ε alone leaves 3661952239 unmoved.
+//
+// ⛔ GUARDED: test-cs006-p5.js's draws-per-spawn count is green with no edit, so
+// no draw was added; §4, §5 and §8 below are untouched. ⚠ test-cs004-p1.js's
+// GOLDEN_LANES DOES move this time, for the same cause, and only by APPENDING two
+// entries — its first sixteen are character-identical (the exception is written
+// at that assertion).
+// ---------------------------------------------------------------------------
+const P1_DETERMINISM_HASH = 1862183225;
 
 const child = execFileSync(process.execPath,
   [path.join(__dirname, "test-cs005-p5.js"), "--hash-only"],

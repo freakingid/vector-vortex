@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (planned — P1 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P1 done — P2 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
@@ -13,11 +13,21 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   move `GOLDEN_LANES` but (B) appends two entries, and the rim death share is
   driver-dependent. Built nothing.
 
+- **P1 (2026-09-13) — the rim fix, (A) + (B) + ε.** Shots age, retire, then
+  fire, so a shot is tested at the rim on its fire tick; the four climbs park at
+  `1 - C.RIM_CONTACT_DEPTH` and `atRim()` moved with them; `C.HIT_DEPTH_EPS`
+  1e-9 in `collideShots()` only. ⛔ **An enemy arriving at the rim in a firing
+  lane is killed on every cooldown phase** — `test-cs008-p1.js`, 24/24 on S1, S2
+  and S4, Ring and Vee, mutation-checked (ε, (A), `atRim()` — all red; record in
+  `log/CS008.md`). Both planned re-records landed at the planned values; the 19
+  closed-file failures matched §1.5 line for line and were repaired in place.
+  ⛔ **`PLAYTEST.md`'s CS007 ask is unblocked.**
+
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 338.8 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 340.9 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **34 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **35 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -71,16 +81,21 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   counted directly on the shipped function. ⛔ **It needs no baseline and survives
   every retune**, which is what let all three of CS007's `P1_DETERMINISM_HASH`
   re-records be checked rather than merely recorded.
-- ⛔ **`test-cs004-p1.js`'s `GOLDEN_LANES` is STILL on its ORIGINAL recording from
-  `9ebd27b`** — through CS006 and the whole of CS007, all sixteen entries,
-  character for character, with no edit. ⚠ Five documents predicted a move (the
+- ⛔ **`test-cs004-p1.js`'s `GOLDEN_LANES` — its first SIXTEEN entries are STILL
+  the ORIGINAL recording from `9ebd27b`** — through CS006, CS007 and CS008 P1,
+  character for character, and a separate prefix assertion now holds them.
+  ⛔ **THE ONE EXCEPTION: CS008 P1 APPENDED `2, 5`, and it has ONE cause — the
+  climb stops at the kill band**, so held fire clears the window sooner and two
+  more spawns fit. Written at the assertion. It covers appends from that cause
+  only; the rule below is not weakened for anything else. ⚠ Five documents predicted a move (the
   Dive, then heat, then the schedule) and all three predictions are **measured
   false**: the golden's 3,000-tick window ends at level 2, `heat(1)` is 0 and the
   eligible set there is one entry, which spends no draw. ⛔ **A move is a defect,
   not a baseline** — heat leaking into level 1, or a stray draw.
 - ⛔ **`test-cs006-p2.js`'s `P1_DETERMINISM_HASH` is the one baseline that moves,
   and it is a CROSS-FILE one** — it runs the closed `test-cs005-p5.js` in a child
-  process. It stands at **3661952239**. ⛔ Re-record it **once per change, with
+  process. It stands at **1862183225** (CS008 P1, the rim fix — the planned value,
+  matched to the digit before any test was edited). ⛔ Re-record it **once per change, with
   one named cause written at the assertion**, and check the move against the
   draws-per-spawn count above.
 - ⛔ **On a boundary rider the LATTICE is where §17 item 3 stands, not the speed
@@ -161,20 +176,12 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   to change.** `test-cs005-p3.js` pinned all five `drawWell` arguments to assert
   one of them. Source-text assertions are the right tool for "this is still
   unwired", but ⛔ **pin only the argument the claim is about**.
-- ⛔ **AN ENEMY PARKED AT THE RIM IS HITTABLE ON 1 TICK IN 4, AND 62 % OF ALL
-  PLAYER DEATHS ARE TO ONE.** Found by Paul playing the build after the CS007
-  close; measured at `9cf1320`. Two off-by-ones meet at depth 1.000: a shot is
-  aged on the tick it is fired, so its first *tested* depth is 0.968 and a shot
-  never exists at the rim; and four enemies (Vaulter, Carrier, Drifter, Surger)
-  clamp their climb at 1.000, which is 0.05 **past** their own `killDepth` of
-  0.95. `HIT_DEPTH_TOL` is a point sample, so depth 1.000 gets **one** shot
-  sample where every other depth gets three, against a 4-tick fire cadence.
-  ⛔ **GDD §6.1's "Killed by: any shot" is false at the rim**, and the decision is
-  a coin flip on the cooldown's phase, which the player cannot see. ⚠ **No soak
-  catches it** — every one asks whether the run terminates, and it does; the
-  enemy costs a life and dies afterwards. ⛔ **CS008 P1 fixes it** — (A) + (B) + ε,
-  re-measured and specified in `PLANNED-FEATURES-CS008.md` §1–§2; `NEXT-STEPS.md`
-  is empty. ⛔ **It blocks `PLAYTEST.md`'s CS007 ask** until P1 ships.
+- ⚠ **PREDICTED, CS008 P1: a SECOND Purge now prefers a Weaver bolt above 0.95
+  over a parked enemy.** `purgeTarget()` takes the highest depth, and enemies
+  now park at 0.95 while a bolt spends ~9 steps above it. Plan §2 flagged it;
+  not measured, and no phase owns it. P2 touches Purge scoring and should know.
+- ⚠ **Rotating ONTO a rim-parked enemy is still a cooldown coin flip** (plan
+  §1.2, at most 6/24). Paul's R4: deferred to playtest; P8 writes the ask.
 - ⛔ **NO KEY IN THE BUILD REACHES A CHOSEN LEVEL.** `w` (`cycleWell`) advances
   `state.wellIndex` and never `state.level`, and both `eligibleKinds()` and
   `wellBandColor(level, …)` are functions of the level. ⚠ Found at the CS007
@@ -235,9 +242,9 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — CS008 P1, the rim fix
+## Next up — CS008 P2, scoring and extra lives
 
-**Paste P1's prompt from `IMPLEMENTATION-PHASES-CS008.md`** into a fresh
+**Paste P2's prompt from `IMPLEMENTATION-PHASES-CS008.md`** into a fresh
 session. The plan is `PLANNED-FEATURES-CS008.md`; ⛔ a build phase reads the
 document, not the planning conversation (`CLAUDE.md` rule 3c).
 
@@ -247,7 +254,7 @@ Options · P7 the Controls page · P8 the front-door soak and the close.
 
 ⛔ **What each phase must not lose, carried from before the plan:**
 
-1. ⛔ **Both CS008 re-records are P1's** — `P1_DETERMINISM_HASH` → 1862183225
+1. ✅ **Both CS008 re-records landed in P1** — `P1_DETERMINISM_HASH` 1862183225
    and `GOLDEN_LANES` +2 appended entries, the first 16 unmoved. ⛔ A baseline
    move in P2–P8 is a defect (plan §9).
 2. ⛔ **The past-99 `startGame()` defect stays unreachable** while Start Depth
@@ -257,7 +264,7 @@ Options · P7 the Controls page · P8 the front-door soak and the close.
    `14-render-entities.js` is `kit-fx`'s — both get a `.NOTES.md` in the phase
    that first touches them (P4, P5).
 5. ⚠ **Nothing has been tuned against GDD §8.2's targets.** The CS007 ask
-   *"can you NAME what changed at level 5, at 9, at 13"* becomes answerable
-   after P1; a sitting's answer belongs in `DECISIONS.md`.
+   *"can you NAME what changed at level 5, at 9, at 13"* is answerable now
+   that P1 has shipped; a sitting's answer belongs in `DECISIONS.md`.
 6. ⚠ **P7 must confirm the sensitivity slider range with Paul** — the plan's
    one flagged tuning number.

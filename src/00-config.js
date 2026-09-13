@@ -435,6 +435,13 @@ const C = {
   // a shot steps clean over an enemy between two frames. See 09-collision.js.
   HIT_LANE_TOL:         0.50,   // lane units, either side
   HIT_DEPTH_TOL:        0.05,   // depth units, shot <-> enemy overlap
+  // ⛔ REPRESENTATION ERROR, NOT A TUNING MARGIN (CS008 P1). An enemy parked at
+  // the kill band sits at `1 - RIM_CONTACT_DEPTH` = 0.95, and a shot on its fire
+  // tick sits at 1, but Math.abs(1 - 0.95) is 0.050000000000000044 — GREATER
+  // than HIT_DEPTH_TOL — so without this the one shot sample that exists at the
+  // rim misses the one enemy parked there. Read in exactly ONE comparison,
+  // collideShots()'s band test; nothing else takes it, and it never grows.
+  HIT_DEPTH_EPS:        1e-9,   // depth units, absorbs float error only
 
   // ---- Difficulty (GDD 8) — one clock: game.level -------------------------
   // The four shape constants of heat() itself, unchanged since CS001. ⛔ heat(1)

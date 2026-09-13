@@ -695,7 +695,10 @@ for (const well of OPEN) {
       if (e instanceof X.Drifter && (Object.is(e.lane, bLo) || Object.is(e.lane, bHi))) {
         sawLatticeEnd = true;
       }
-      if (e.depth >= 1) sawRim = true;
+      // ⛔ A CLIMBING ENEMY at the park depth, CS008 P1. Every climb now stops at
+      // `1 - C.RIM_CONTACT_DEPTH`; left at `>= 1` this passed VACUOUSLY, green
+      // only because a WeaverBolt (which self-terminates at 1) still gets there.
+      if (!(e instanceof X.WeaverBolt) && e.depth >= 1 - C.RIM_CONTACT_DEPTH) sawRim = true;
 
       if (hopless(e)) {
         // ⛔ TIER 1, THE STRONG FORM. Object.is, not a tolerance: the lane was

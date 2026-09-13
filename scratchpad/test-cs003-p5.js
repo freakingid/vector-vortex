@@ -357,7 +357,8 @@ for (const well of OPEN) {
       if (e.lane < 0 || e.lane > hi) laneOut = laneOut || `enemy at lane ${e.lane}`;
       if (e.depth < 0 || e.depth > 1) depthOut = depthOut || `enemy at depth ${e.depth}`;
       if (e.lane === 0 || e.lane === hi) sawEndLane = true;
-      if (e.depth >= 1) sawRim = true;
+      // ⛔ The park depth, not 1 — CS008 P1 stops every climb at the kill band.
+      if (e.depth >= 1 - C.RIM_CONTACT_DEPTH) sawRim = true;
 
       const wasLane = lanes.get(e);
       if (wasLane !== undefined && Math.abs(e.lane - wasLane) > MAX_LANE_STEP) {

@@ -83,7 +83,10 @@ function collideShots(state, well) {
     for (let j = 0; j < state.enemies.length; j++) {
       const e = state.enemies[j];
       if (e.dead) continue;
-      if (Math.abs(sd - e.depth) > C.HIT_DEPTH_TOL) continue;
+      // ⛔ + C.HIT_DEPTH_EPS, here and nowhere else: |1 - 0.95| is
+      // 0.050000000000000044 in IEEE-754, and a rim-parked enemy must not
+      // escape its fire-tick shot by 4.4e-17 (00-config.js, CS008 P1).
+      if (Math.abs(sd - e.depth) > C.HIT_DEPTH_TOL + C.HIT_DEPTH_EPS) continue;
       if (!laneHit(well, shot.lane, e.lane)) continue;
 
       // Consumed retires the shot; the caller's filter frees its slot against

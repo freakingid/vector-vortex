@@ -268,15 +268,18 @@ H.eq(k.killDepth, RIM_BAND,
 const moved = { climb: 0, telegraph: 0, discharge: 0 };
 const still = { climb: 0, telegraph: 0, discharge: 0 };
 let rateFail = null, boundFail = null;
+// ⛔ CS008 P1 moved the stop from 1 to the park depth `1 - C.RIM_CONTACT_DEPTH`;
+// the claim — the climb stops where it should — is unchanged.
+const PARK = 1 - C.RIM_CONTACT_DEPTH;
 const climber = loose(4, 0, 1);
 drive(climber, well, 3000, (before, d) => {
   const dz = d.depth - before.depth;
-  if (d.depth < 0 || d.depth > 1) boundFail = `depth left [0,1] at ${d.depth}`;
+  if (d.depth < 0 || d.depth > PARK) boundFail = `depth left [0,park] at ${d.depth}`;
   if (dz === 0) { still[before.phase]++; return; }
   moved[before.phase]++;
   // ⚠ Not Object.is: `depth += rate * dt` accumulates, so the difference of two
   // doubles near 1 carries the last-bit error of the sum, not of the increment.
-  if (d.depth !== 1 && Math.abs(dz - C.SURGE_CLIMB * DT) > 1e-14) {
+  if (d.depth !== PARK && Math.abs(dz - C.SURGE_CLIMB * DT) > 1e-14) {
     rateFail = `${before.phase}: moved ${dz}`;
   }
 });
@@ -285,13 +288,13 @@ H.eq(moved.telegraph, 0, "⛔ and NOT during the telegraph");
 H.eq(moved.discharge, 0, "⛔ nor during the discharge");
 H.assert(still.telegraph > 0 && still.discharge > 0, "both of those phases were observed");
 H.assert(rateFail === null, `every climbing step moves exactly C.SURGE_CLIMB * dt (${rateFail})`);
-H.assert(boundFail === null, `⛔ depth never leaves [0,1] (${boundFail})`);
-H.eq(climber.depth, 1, "⛔ and it STOPS at the rim — depth > 1 is not a legal position");
+H.assert(boundFail === null, `⛔ depth never leaves [0, park] (${boundFail})`);
+H.eq(climber.depth, PARK, "⛔ and it STOPS at the park depth, 1 - C.RIM_CONTACT_DEPTH");
 
 // ⛔ The cycle CONTINUES at the rim: a Surger that has arrived still discharges.
 const rimPhases = new Set();
 drive(climber, well, 600, (before, d) => rimPhases.add(d.phase));
-H.eq(climber.depth, 1, "still exactly at the rim");
+H.eq(climber.depth, PARK, "still exactly at the park depth");
 H.assert(rimPhases.has("climb") && rimPhases.has("telegraph") && rimPhases.has("discharge"),
          "⛔ and still cycling — the climb stopping does not stop the discharges");
 

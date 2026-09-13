@@ -222,19 +222,23 @@ H.close(crossRuns[0].steps * DT, C.DRIFT_CROSS_TIME * 0.5, 2 * DT,
         "⛔ and the BIRTH cross lasts half of it — half the distance over half the time");
 
 // ---------------------------------------------------------------------------
-// ⛔ DEPTH CLIMBS IN BOTH PHASES, and stops at 1
+// ⛔ DEPTH CLIMBS IN BOTH PHASES, and stops at the kill band
 // ---------------------------------------------------------------------------
+//
+// ⛔ CS008 P1 moved the stop from 1 to the park depth `1 - C.RIM_CONTACT_DEPTH`;
+// the claim — the climb stops where it should — is unchanged.
 //
 // This is not a flourish. An unshootable entity that never advances is a
 // permanent concurrency squatter — updateSpawner() counts every entity in the
 // one array against C.ENEMY_CONCURRENT — which is the shape of the Thorn stall
 // STATUS.md carries. The Drifter cannot have it, and the reason is this case.
 const climbs = { ride: 0, cross: 0, flat: 0, bad: 0 };
+const PARK = 1 - C.RIM_CONTACT_DEPTH;
 const climber = loose(4, 0, 1);
 drive(climber, well, 900, (before, d) => {
   const dz = d.depth - before.depth;
-  if (before.depth >= 1) { if (dz === 0) climbs.flat++; return; }
-  if (d.depth === 1) return;                // the step the climb clamps at the rim
+  if (before.depth >= PARK) { if (dz === 0) climbs.flat++; return; }
+  if (d.depth === PARK) return;             // the step the climb clamps at the band
   // ⚠ Not Object.is: `depth += rate * dt` accumulates, so the difference of two
   // doubles near 1 carries the last-bit error of the sum, not of the increment.
   if (Math.abs(dz - C.DRIFT_CLIMB * DT) > 1e-14) { climbs.bad++; return; }
@@ -243,14 +247,14 @@ drive(climber, well, 900, (before, d) => {
 H.assert(climbs.ride > 0, "⛔ depth rises on riding steps");
 H.assert(climbs.cross > 0, "⛔ and on crossing steps — a Drifter can never park");
 H.eq(climbs.bad, 0, "every climbing step moves exactly C.DRIFT_CLIMB * dt");
-H.eq(climber.depth, 1, "⛔ and it STOPS at the rim — depth > 1 is not a legal position");
-H.assert(climbs.flat > 0, "it sat at the rim for the rest of the run");
+H.eq(climber.depth, PARK, "⛔ and it STOPS at the park depth, 1 - C.RIM_CONTACT_DEPTH");
+H.assert(climbs.flat > 0, "it sat at the park depth for the rest of the run");
 
 // ⛔ The cycle CONTINUES at the rim, so a rim Drifter is a boundary-hopping
 // hunter rather than a parked one.
 const rimPhases = new Set();
 drive(climber, well, 300, (before, d) => rimPhases.add(d.phase));
-H.eq(climber.depth, 1, "still exactly at the rim");
+H.eq(climber.depth, PARK, "still exactly at the park depth");
 H.assert(rimPhases.has("ride") && rimPhases.has("cross"),
          "⛔ and still alternating — the climb stopping does not stop the cycle");
 

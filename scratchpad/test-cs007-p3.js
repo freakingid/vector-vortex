@@ -328,7 +328,11 @@ H.eq(JSON.stringify([...b17.cargo].sort()), JSON.stringify(["vaulter"]),
      "⛔ and cargo is STILL 100 % Vaulter at 17 — the Drifter is on the board but not " +
      "inside a hull yet");
 
-const b22 = bandRun(22, DT_TICKS);
+// ⚠ TWICE THE WINDOW, FOR THIS BAND ONLY — a window, not a claim (CS008 P1).
+// The first carrierDrifter arrived at tick 732 of 1,200 on the pre-fix build,
+// and at 1,355 once climbs stop at the kill band. The negative claim beside it
+// only gets stronger with the longer run.
+const b22 = bandRun(22, 2 * DT_TICKS);
 H.assert(b22.cargo.has("drifter"), "⛔ level 18-22: Drifter cargo arrived (GDD §6.2)");
 H.assert(!b22.cargo.has("surger"), "⛔ and Surger cargo has not");
 

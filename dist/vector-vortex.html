@@ -484,6 +484,13 @@ const C = {
   // a shot steps clean over an enemy between two frames. See 09-collision.js.
   HIT_LANE_TOL:         0.50,   // lane units, either side
   HIT_DEPTH_TOL:        0.05,   // depth units, shot <-> enemy overlap
+  // ⛔ REPRESENTATION ERROR, NOT A TUNING MARGIN (CS008 P1). An enemy parked at
+  // the kill band sits at `1 - RIM_CONTACT_DEPTH` = 0.95, and a shot on its fire
+  // tick sits at 1, but Math.abs(1 - 0.95) is 0.050000000000000044 — GREATER
+  // than HIT_DEPTH_TOL — so without this the one shot sample that exists at the
+  // rim misses the one enemy parked there. Read in exactly ONE comparison,
+  // collideShots()'s band test; nothing else takes it, and it never grows.
+  HIT_DEPTH_EPS:        1e-9,   // depth units, absorbs float error only
 
   // ---- Difficulty (GDD 8) — one clock: game.level -------------------------
   // The four shape constants of heat() itself, unchanged since CS001. ⛔ heat(1)
@@ -2343,13 +2350,28 @@ class Shot {
   }
 }
 
-// Fires (subject to cooldown and the SHOT_MAX cap) and ages every shot in
-// flight, then retires whatever reached the throat this step. Called once per
+// Ages every shot already in flight and retires whatever reached the throat,
+// THEN fires (subject to cooldown and the SHOT_MAX cap). Called once per
 // simulation tick, from 23-main.js, directly below the Skimmer's own update —
 // that ordering is what lets a shot fired this step capture the Skimmer's
 // POST-MOVE lane, the same "nearest lane centre" Skimmer.snap() targets.
+//
+// ⛔ AGE, FILTER, THEN FIRE — CS008 P1, and the order is the fix. A shot fired
+// before the ageing loop was aged on its own fire tick, so its first TESTED
+// depth was 1 - FIXED_DT / SHOT_TIME ≈ 0.968 and no shot ever existed at the
+// rim: depth 1.000 got one shot sample where every other depth got three, and
+// an enemy parked there was hittable on one tick of the cadence in four. Fired
+// last, a shot is born at depth 1 and the collision pass tests it THERE on the
+// step it leaves the rim (GDD 4.2). ⛔ The C.SHOT_MAX check reads the length
+// AFTER retirement (plan A1, not A2): checking the cap before ageing lets a
+// fresh unaged shot count against it and the cap binds one tick in the cadence,
+// which was measured worse (PLANNED-FEATURES-CS008.md §1.1).
 function updateShots(state, well, dt) {
   if (state.shotCooldown < C.SHOT_COOLDOWN) state.shotCooldown += dt;
+
+  for (let i = 0; i < state.shots.length; i++) state.shots[i].update(dt);
+  // ⛔ end-of-frame filter; a shot is never spliced out mid-loop (GDD 6.5).
+  state.shots = state.shots.filter(s => !s.dead);
 
   if (state.input.fire &&
       state.shotCooldown >= C.SHOT_COOLDOWN &&
@@ -2363,10 +2385,6 @@ function updateShots(state, well, dt) {
     // reads it; GDD 4.2's economy is unchanged.
     state.tally.shotsFired++;
   }
-
-  for (let i = 0; i < state.shots.length; i++) state.shots[i].update(dt);
-  // ⛔ end-of-frame filter; a shot is never spliced out mid-loop (GDD 6.5).
-  state.shots = state.shots.filter(s => !s.dead);
 }
 
 // ==========================================================================
@@ -2547,21 +2565,27 @@ class Vaulter extends Enemy {
     this.hopDelta = 0;   // signed lane distance of this hop, already short-way
   }
 
+  // ⛔ At the PARK depth, `1 - C.RIM_CONTACT_DEPTH` — the same expression the
+  // climb below stops at (CS008 P1). Left at `depth >= 1` it would never be
+  // true again and a Vaulter would never hunt.
   atRim() {
-    return this.depth >= 1;
+    return this.depth >= 1 - C.RIM_CONTACT_DEPTH;
   }
 
   update(dt, well, state) {
     const wasAtRim = this.atRim();
 
-    // ⛔ Monotonic, and it STOPS at the rim rather than passing it. Depth > 1
-    // is not a legal position: perspective() clamps it, so an unclamped climb
-    // would leave the craft drawn on the rim while its depth ran away and
-    // every depth comparison downstream (killDepth, the readability zone, the
-    // respawn push) read a number no other system could produce.
-    if (this.depth < 1) {
+    // ⛔ Monotonic, and it STOPS AT THE KILL BAND, `1 - C.RIM_CONTACT_DEPTH`,
+    // the depth at which it becomes lethal (CS008 P1, GDD 6.1). Parked at 1.000
+    // it sat 0.05 past its own killDepth, where GDD 4.2's shots sampled it once
+    // against a four-tick fire cadence, so "killed by any shot" was a coin flip
+    // on the cooldown's phase. ⛔ The expression and NEVER `this.killDepth`: the
+    // Surger mutates that field to 0. Depth > 1 is still not a legal position
+    // (perspective() clamps it); the band is simply reached first.
+    const park = 1 - C.RIM_CONTACT_DEPTH;
+    if (this.depth < park) {
       this.depth += C.VAULT_CLIMB * climbMult() * dt;
-      if (this.depth > 1) this.depth = 1;
+      if (this.depth > park) this.depth = park;
     }
     const atRim = this.atRim();
 
@@ -2742,18 +2766,18 @@ class Carrier extends Enemy {
     this.cargo = cargo;
   }
 
-  // ⛔ Monotonic, and it STOPS at the rim rather than passing it — the same
-  // rule the Vaulter's climb carries and for the same reason: depth > 1 is not
-  // a legal position, and every downstream comparison (killDepth, the
-  // readability zone, the respawn push) would be reading a number no other
-  // system can produce.
+  // ⛔ Monotonic, and it STOPS AT THE KILL BAND, `1 - C.RIM_CONTACT_DEPTH` —
+  // the rule the Vaulter's climb carries and for the same reason (CS008 P1):
+  // parked past its own killDepth it was hittable on one tick in four. The
+  // expression, never `this.killDepth`, so the four climbs stay one rule.
   //
   // `well` and `state` are unused: a Carrier has no topology and no AI. The
   // signature is the contract's (GDD 6.5), not this enemy's.
   update(dt, well, state) {
-    if (this.depth < 1) {
+    const park = 1 - C.RIM_CONTACT_DEPTH;
+    if (this.depth < park) {
       this.depth += C.CARRIER_CLIMB * climbMult() * dt;
-      if (this.depth > 1) this.depth = 1;
+      if (this.depth > park) this.depth = park;
     }
   }
 
@@ -3363,15 +3387,15 @@ class Drifter extends Enemy {
     // stall STATUS.md carries — and the Drifter does not have it, because it
     // reaches the rim on a fixed clock and forces a resolution either way.
     //
-    // ⛔ Monotonic, and it STOPS at 1 rather than passing it, the Vaulter's rule
-    // for the Vaulter's reason: depth > 1 is not a legal position, and letting
-    // it run would leave every downstream comparison (killDepth, the
-    // readability zone, the respawn push) reading a number no other system can
-    // produce. A rim Drifter keeps cycling, so it is a boundary-hopping hunter
-    // rather than a parked one.
-    if (this.depth < 1) {
+    // ⛔ Monotonic, and it STOPS AT THE KILL BAND, `1 - C.RIM_CONTACT_DEPTH`,
+    // the Vaulter's rule for the Vaulter's reason (CS008 P1): parked past its
+    // own killDepth it was hittable on one tick in four. The expression, never
+    // `this.killDepth`. A rim Drifter keeps cycling, so it is a boundary-hopping
+    // hunter rather than a parked one.
+    const park = 1 - C.RIM_CONTACT_DEPTH;
+    if (this.depth < park) {
       this.depth += C.DRIFT_CLIMB * climbMult() * dt;
-      if (this.depth > 1) this.depth = 1;
+      if (this.depth > park) this.depth = park;
     }
 
     if (this.phase === "birth") {
@@ -3626,11 +3650,11 @@ class Surger extends Enemy {
     this.surgeTimer += dt;
 
     if (this.phase === "climb") {
-      // ⛔ Monotonic, and it STOPS at the rim rather than passing it — the
-      // Vaulter's rule for the Vaulter's reason: depth > 1 is not a legal
-      // position, and every downstream comparison (killDepth, the readability
-      // zone, the respawn push) would be reading a number no other system can
-      // produce.
+      // ⛔ Monotonic, and it STOPS AT THE KILL BAND, `1 - C.RIM_CONTACT_DEPTH`
+      // — the Vaulter's rule for the Vaulter's reason (CS008 P1). ⛔ The
+      // expression and NEVER `this.killDepth`: setPhase() writes that to 0 for
+      // the discharge, and a climb clamped to it would park a Surger at the
+      // throat.
       //
       // ⛔ AND IT RISES IN THIS PHASE ONLY. The Drifter is the entity whose
       // climb runs in every phase, and it needs that because riding is
@@ -3638,9 +3662,10 @@ class Surger extends Enemy {
       // A Surger is shootable in all three phases, so nothing forces it, and
       // the pause is worth having: the bar stops moving at the instant its lane
       // starts arming, which is a fourth channel on GDD 6.3's fuse for free.
-      if (this.depth < 1) {
+      const park = 1 - C.RIM_CONTACT_DEPTH;
+      if (this.depth < park) {
         this.depth += C.SURGE_CLIMB * climbMult() * dt;
-        if (this.depth > 1) this.depth = 1;
+        if (this.depth > park) this.depth = park;
       }
       if (this.surgeTimer >= surgeInterval()) this.setPhase("telegraph");
       return;
@@ -4105,7 +4130,10 @@ function collideShots(state, well) {
     for (let j = 0; j < state.enemies.length; j++) {
       const e = state.enemies[j];
       if (e.dead) continue;
-      if (Math.abs(sd - e.depth) > C.HIT_DEPTH_TOL) continue;
+      // ⛔ + C.HIT_DEPTH_EPS, here and nowhere else: |1 - 0.95| is
+      // 0.050000000000000044 in IEEE-754, and a rim-parked enemy must not
+      // escape its fire-tick shot by 4.4e-17 (00-config.js, CS008 P1).
+      if (Math.abs(sd - e.depth) > C.HIT_DEPTH_TOL + C.HIT_DEPTH_EPS) continue;
       if (!laneHit(well, shot.lane, e.lane)) continue;
 
       // Consumed retires the shot; the caller's filter frees its slot against

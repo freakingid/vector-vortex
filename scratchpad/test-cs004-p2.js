@@ -126,15 +126,19 @@ H.eq(probe.blocksClear, true, "and a well cannot clear with one alive");
 H.eq(probe.anchored, false, "⛔ not anchored — its depth is a POSITION, not a length");
 
 // ---------------------------------------------------------------------------
-// the climb (GDD 6.1) — monotonic, one rate, stops at the rim
+// the climb (GDD 6.1) — monotonic, one rate, stops at the kill band
 // ---------------------------------------------------------------------------
+//
+// ⛔ CS008 P1 moved the stop from 1 to the park depth `1 - C.RIM_CONTACT_DEPTH`;
+// the claim — the climb stops where it should — is unchanged.
 
 well = useWell(0);
+const PARK = 1 - C.RIM_CONTACT_DEPTH;
 const climber = new X.Carrier(4, 0, "vaulter");
 let overshoot = false, wentBackwards = false, last = climber.depth;
 for (let i = 1; i <= 100; i++) {
   climber.update(DT, well, state);
-  if (climber.depth > 1) overshoot = true;
+  if (climber.depth > PARK) overshoot = true;
   if (climber.depth < last) wentBackwards = true;
   last = climber.depth;
 }
@@ -144,12 +148,12 @@ H.close(climber.depth, 100 * DT * C.CARRIER_CLIMB, 1e-9,
 // GDD 6.1's "slow": throat to rim in ~9 s, and it STOPS there.
 for (let i = 0; i < 3000; i++) {
   climber.update(DT, well, state);
-  if (climber.depth > 1) overshoot = true;
+  if (climber.depth > PARK) overshoot = true;
   if (climber.depth < last) wentBackwards = true;
   last = climber.depth;
 }
-H.eq(climber.depth, 1, "⛔ the climb stops AT the rim — depth 1 exactly, not past it");
-H.assert(!overshoot, "⛔ and never exceeds 1 on any tick — depth > 1 is not a legal position");
+H.eq(climber.depth, PARK, "⛔ the climb stops AT the kill band — the park depth exactly, not past it");
+H.assert(!overshoot, "⛔ and never exceeds the park depth on any tick");
 H.assert(!wentBackwards, "the climb is monotonic");
 H.assert(!climber.dead, "reaching the rim does not kill it — contact does (GDD 4.5)");
 

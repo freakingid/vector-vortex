@@ -150,26 +150,29 @@ H.assert(typeof X.drawVaulter === "function", "drawVaulter is in the build");
 }
 
 // ---------------------------------------------------------------------------
-// The climb: monotonic, at VAULT_CLIMB, and it STOPS at the rim.
+// The climb: monotonic, at VAULT_CLIMB, and it STOPS at the kill band.
+// ⛔ CS008 P1 moved the stop from 1 to the park depth `1 - C.RIM_CONTACT_DEPTH`
+// (GDD 6.1); the claim — the climb stops where it should — is unchanged.
 // ---------------------------------------------------------------------------
 {
   const st = driveState(1, X.WELLS.indexOf(RING), 8);
   const v = new X.Vaulter(4, 0);
+  const park = 1 - C.RIM_CONTACT_DEPTH;
   let monotonic = true, overRim = false, reachedAt = -1;
   let prev = v.depth;
   for (let i = 0; i < 600; i++) {
     v.update(DT, RING, st);
     if (v.depth < prev) monotonic = false;
-    if (v.depth > 1) overRim = true;
-    if (reachedAt < 0 && v.depth >= 1) reachedAt = i + 1;
+    if (v.depth > park) overRim = true;
+    if (reachedAt < 0 && v.depth >= park) reachedAt = i + 1;
     prev = v.depth;
   }
   H.assert(monotonic, "the climb is monotonic — depth never decreases");
-  H.assert(!overRim, "⛔ depth never passes the rim");
-  H.eq(v.depth, 1, "and it settles exactly at 1");
-  const expected = Math.ceil((1 / C.VAULT_CLIMB) / DT);
+  H.assert(!overRim, "⛔ depth never passes the park depth");
+  H.eq(v.depth, park, "and it settles exactly at the park depth, 1 - C.RIM_CONTACT_DEPTH");
+  const expected = Math.ceil((park / C.VAULT_CLIMB) / DT);
   H.assert(Math.abs(reachedAt - expected) <= 2,
-    `the rim is reached at VAULT_CLIMB (tick ${reachedAt}, expected ~${expected})`);
+    `the park depth is reached at VAULT_CLIMB (tick ${reachedAt}, expected ~${expected})`);
 }
 
 // ---------------------------------------------------------------------------
