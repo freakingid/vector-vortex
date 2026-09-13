@@ -20,7 +20,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS005** | The Drifter and the Surger: the boundary lattice and `laneHop`'s fold-bound parameter, the discharge telegraph, the remaining two cargo rows | §6.1–6.3, §3.5, §6.5 |
 | **CS006** | The well ends: the Dive, well progression and the colour-band roll, `laneState` and the dim band, `throatOffset` and the two degenerate wells, GDD §4.5 item 5 | §3.3, §3.6–3.7, §5, §4.5 |
 | **CS007** | The run escalates: the heat clock and every value derived from it, GDD §8.1's introduction schedule, the spawner-stall call, telemetry as the tuning instrument | §8, §8.1, §15.6 |
-| **CS008** | Front of house: scoring and extra lives, HUD, screen state machine, title → mode → Start Depth → play → game over | §4.6, §7, §10.4, §13 |
+| **CS008** | The rim hit-window fix (P1), then front of house: scoring and extra lives, Start Depth and the mode, the HUD and death fragmentation, title → mode → Start Depth → play → game over → restart, pause, Options with a Controls page and rebinding. ⚠ Eight phases — Paul's scope call, 2026-09-13 | §4.2, §4.4, §4.6, §6.1, §7, §9, §10.4–10.5, §13 |
 | **CS009** | Audio engine: `AudioSys` + `MusicSys`, per-frame lookahead scheduler, voices, `tools/music-lab.html` with the per-layer solo button, Classic SFX | §11.1–11.3, §11.7–11.8 |
 | **CS010** | The intensity director: live-danger signal, filter sweep, two or three earned layers, the solo audition | §11.4–11.6 |
 | **CS011** | Meta: kit profiles, local top-10 per mode, leaderboard wiring, achievements | §15.1–15.5 |
@@ -245,15 +245,11 @@ question that only becomes reachable when the introduction schedule lands, which
 is why it is named against CS007 rather than left unowned. The last is the
 module seam, named against CS012 for the same reason.
 
-- ⛔ **THE RIM HIT-WINDOW DEFECT IS SPECIFIED AND UNSCHEDULED, AND IT IS THE ONLY
-  ITEM HERE THAT IS A BUG RATHER THAN A DESIGN CALL.** An enemy parked at depth
-  1.000 is hittable on 1 tick in 4 where every other depth gets 3 in 4, and
-  **62 % of player deaths are to one** — GDD §6.1's *"Killed by: any shot"* is
-  false at the rim. ⛔ **The write-up, the measured option table and the three
-  calls that are Paul's live in `NEXT-STEPS.md`**, not here and not in
-  `STATUS.md`. ⚠ The recommendation there is to land it as **CS008 P1** rather
-  than renumber a third time — ⛔ **that placement is Paul's call**, and it is the
-  reason this note is on this list at all rather than simply inside CS008's row.
+- ✅ **SCHEDULED — the rim hit-window defect is CS008 P1** (Paul, 2026-09-13; no
+  renumber). An enemy parked at depth 1.000 was hittable on 1 tick in 4. ⚠
+  CS008's planning re-measured the handover and corrected it: (A)+(B) is 75 %,
+  not 100 %, until a float tolerance is added, and the "62 % of deaths" figure
+  depends on the driver. `PLANNED-FEATURES-CS008.md` §1–§2.
 
 - ✅ **CLOSED by CS006 P2 — GDD §3.3's `throatOffset` is defined.** It is a
   translation of the throat polygon in normalized rim space, applied **after**

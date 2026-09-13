@@ -1,12 +1,17 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (not started) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (planned — P1 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
-Nothing built yet. One line per phase here; ⛔ **reasoning goes to
-`log/CS008.md` as the phase goes**, not to this file (`CLAUDE.md`, Session
-rules, 2026-08-31). That rule is what the ~400-line squeeze cost CS007 two
-compression authorizations to work around; it should not recur.
+One line per phase here; ⛔ **reasoning goes to `log/CS008.md` as the phase
+goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
+
+- **Planning (2026-09-13)** — `PLANNED-FEATURES-CS008.md` +
+  `IMPLEMENTATION-PHASES-CS008.md`, **eight phases**, every call answered by
+  Paul (plan §0, `DECISIONS.md`). ⛔ Three handover claims measured false:
+  (A)+(B) is 75 % not 100 % (float — P1 adds `C.HIT_DEPTH_EPS`), (A) does not
+  move `GOLDEN_LANES` but (B) appends two entries, and the rim death share is
+  driver-dependent. Built nothing.
 
 ## Working / verified
 
@@ -167,10 +172,9 @@ compression authorizations to work around; it should not recur.
   ⛔ **GDD §6.1's "Killed by: any shot" is false at the rim**, and the decision is
   a coin flip on the cooldown's phase, which the player cannot see. ⚠ **No soak
   catches it** — every one asks whether the run terminates, and it does; the
-  enemy costs a life and dies afterwards. ⛔ **The full write-up, the measured
-  option table and the three calls that are Paul's are in `NEXT-STEPS.md`** — not
-  restated here. ⛔ **It blocks `PLAYTEST.md`'s CS007 ask**: a player does not
-  reach level 5 through it.
+  enemy costs a life and dies afterwards. ⛔ **CS008 P1 fixes it** — (A) + (B) + ε,
+  re-measured and specified in `PLANNED-FEATURES-CS008.md` §1–§2; `NEXT-STEPS.md`
+  is empty. ⛔ **It blocks `PLAYTEST.md`'s CS007 ask** until P1 ships.
 - ⛔ **NO KEY IN THE BUILD REACHES A CHOSEN LEVEL.** `w` (`cycleWell`) advances
   `state.wellIndex` and never `state.level`, and both `eligibleKinds()` and
   `wellBandColor(level, …)` are functions of the level. ⚠ Found at the CS007
@@ -189,8 +193,8 @@ compression authorizations to work around; it should not recur.
 ## Carried tasks (not blocking, no changeset owns them yet)
 
 - ⚠ **`C.TELEMETRY_PLACEHOLDER` IS A FOUR-KEY OBJECT THAT SHRINKS, and CS008
-  takes the first two bites.** `score` and `mode` are CS008's, GDD §4.6's Start
-  Depth deletes `startDepth`, GDD §14.4's combo deletes `maxCombo`. ⛔ A key left
+  takes THREE bites** (corrected at CS008 planning — it said two): `score` (P2),
+  `mode` and `startDepth` (P3). Only `maxCombo` survives, for GDD §14.4's combo. ⛔ A key left
   there after its column has a real source is a column silently reporting zero.
 - ⚠ **THE TELEMETRY COLUMN LIST IS FROZEN UNTIL A CHANGESET DELIBERATELY MOVES
   IT** (GDD §15.6). A column added in CS008 invalidates every CS007 log, which is
@@ -214,14 +218,14 @@ compression authorizations to work around; it should not recur.
 - Backport `kit-input` (`src/04-input.js`, all four devices, v0.3.0) to
   coinless-kit — a separate manual step, verified against that repo's own suite.
 - **`state.screen === "gameover"` is a STOP with nothing on screen** but the
-  frozen board. `r` restarts. CS008 owns the screen, the submission and the real
-  restart flow, and the `restart` debug action should be folded into it.
-- **No scoring anywhere.** `PTS_VAULTER`, `PTS_CARRIER`, `PTS_WEAVER`,
-  `PTS_THORN`, `PTS_WELL_PER_LEVEL`, `PTS_NO_DEATH_WELL` and
-  `PURGE_SAVED_BONUS` are deliberately unread until `addScore()` lands in CS008,
-  which is the one entry point. ⚠ The Drifter and the Surger shipped **no** points
-  constants at all — GDD §6.1 gives the Drifter 250/500/750 by depth and the
-  Surger 200, and CS008 lands both.
+  frozen board. `r` restarts. CS008 P5 owns the screen and the restart flow and
+  deletes the `restart` action; ⚠ the leaderboard **submission** is CS011's
+  (`ROADMAP.md`), and P5 builds only its seat.
+- **No scoring anywhere.** Every `C.PTS_*`, `PTS_WELL_PER_LEVEL`,
+  `PTS_NO_DEATH_WELL` and `PURGE_SAVED_BONUS` are unread until CS008 P2's
+  `addScore()`. ⚠ **Corrected at CS008 planning:** `PTS_DRIFTER` `[250,500,750]`
+  and `PTS_SURGER` 200 **do** exist, since CS001 P0 — two closed tests assert
+  them unread, and P2 rewrites those in place.
 - ⛔ **THE SEVEN DEBUG SPAWN ACTIONS SHIP UNTIL CS016** decides whether debug keys
   ship at all (Paul's H5 call, 2026-08-31). They are **not** ⚠ TEMPORARY, the
   ⚠ provisional palette still needs judging, and `PLAYTEST.md` is written around
@@ -231,49 +235,29 @@ compression authorizations to work around; it should not recur.
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — CS008, front of house
+## Next up — CS008 P1, the rim fix
 
-**Scoring and extra lives, the HUD, the screen state machine, and
-title → mode → Start Depth → play → game over → restart.** GDD §4.6, §7, §10.4,
-§13; `ROADMAP.md`'s row.
+**Paste P1's prompt from `IMPLEMENTATION-PHASES-CS008.md`** into a fresh
+session. The plan is `PLANNED-FEATURES-CS008.md`; ⛔ a build phase reads the
+document, not the planning conversation (`CLAUDE.md` rule 3c).
 
-⛔ **NO SPEC EXISTS YET.** `PLANNED-FEATURES-CS008.md` and
-`IMPLEMENTATION-PHASES-CS008.md` are unwritten; CS007's are spent and archived
-(`archive/`). A planning session writes them, writes **no code**, and marks every
-claim MEASURED or PREDICTED.
+**The sequence:** P1 the rim fix · P2 scoring and extra lives · P3 mode and
+Start Depth · P4 text, HUD, fragmentation · P5 the screens · P6 pause and
+Options · P7 the Controls page · P8 the front-door soak and the close.
 
-⛔ **AND ONE THING THAT IS NOT CS008's ROW BUT PROBABLY BELONGS AT ITS FRONT.**
-The rim hit-window defect (Known issues) is specified and unscheduled;
-`NEXT-STEPS.md` carries it in full and the recommendation there is **CS008 P1**,
-before any front-of-house work, because you cannot judge scoring, extra lives or
-a HUD in a game where 62 % of deaths are a lottery. ⛔ **Where it lands is Paul's
-call, not a planning session's** — the alternative is a third +1 renumber, and
-the two on record cost pointer sweeps of 17 and 73.
+⛔ **What each phase must not lose, carried from before the plan:**
 
-⛔ **What CS008 inherits, and each of these is a thing the plan must place:**
-
-1. ⛔ **The past-99 `startGame()` defect goes LIVE with Start Depth.** See Known
-   issues; the fix is one branch shared with `nextWell()`. ⚠ GDD §4.6 caps Start
-   Depth at 81, so it may still be unreachable — the plan should measure that
-   rather than assume it.
-2. ⛔ **`addScore()` is the ONE entry point** and it also owns extra-life
-   milestones (`CLAUDE.md`, Scoring). Seven `PTS_*` constants are waiting unread,
-   and **two enemies have none at all** — the Drifter's 250/500/750 by depth and
-   the Surger's 200 are GDD §6.1's and CS008 lands the constants with the reader.
-3. ⛔ **Two `C.TELEMETRY_PLACEHOLDER` keys are CS008's to delete** — `score` and
-   `mode` — in the same phase that gives each column a real source.
-4. ⛔ **The `restart` debug action folds into the real flow**, and `r` stops being
-   a debug key. ⚠ It is on three closed soaks' `FORBIDDEN` list because it
-   reseeds from the clock; that list stays right either way.
-5. ⚠ **The HUD's menu/screen-state portion is `kit-menu`'s draft** (`CLAUDE.md`,
-   Kit modules) — it obeys the boundary contract from its first commit and
-   carries a `.NOTES.md` beside it in `src/`.
-5a. ⛔ **START DEPTH UNBLOCKS TWO PARKED PLAYTEST ASKS**, and that is a reason to
-   land it early in the changeset rather than last. Nothing in the build reaches a
-   chosen level today (see Known issues), so the played six-kind board at 23 and
-   the dim band at 65 have never been looked at by anybody. Both are odd and
-   inside §4.6's cap of 81.
-6. ⚠ **Nothing has been tuned against GDD §8.2's targets.** CS007 built the
-   instrument and chose the curve from measured option tables; the ask is
-   `PLAYTEST.md`'s ⛔ *"can you NAME what changed at level 5, at 9, at 13"*. If a
-   sitting happens before CS008 is planned, its answer belongs in `DECISIONS.md`.
+1. ⛔ **Both CS008 re-records are P1's** — `P1_DETERMINISM_HASH` → 1862183225
+   and `GOLDEN_LANES` +2 appended entries, the first 16 unmoved. ⛔ A baseline
+   move in P2–P8 is a defect (plan §9).
+2. ⛔ **The past-99 `startGame()` defect stays unreachable** while Start Depth
+   caps at 81 (plan §1.12) — P3 re-words it, does not fix it.
+3. ⛔ **Start Depth un-parks two `PLAYTEST.md` asks** (23 and 65) at P5.
+4. ⚠ **The HUD's menu/screen portion is `kit-menu`'s draft** and
+   `14-render-entities.js` is `kit-fx`'s — both get a `.NOTES.md` in the phase
+   that first touches them (P4, P5).
+5. ⚠ **Nothing has been tuned against GDD §8.2's targets.** The CS007 ask
+   *"can you NAME what changed at level 5, at 9, at 13"* becomes answerable
+   after P1; a sitting's answer belongs in `DECISIONS.md`.
+6. ⚠ **P7 must confirm the sensitivity slider range with Paul** — the plan's
+   one flagged tuning number.

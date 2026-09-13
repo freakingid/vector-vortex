@@ -423,3 +423,43 @@ constant that has to land with the other clamps anyway and one property test, an
 a phase whose entire content is a test that a previous phase's constant satisfies
 an inequality is that phase's acceptance criterion, not a phase. ⛔ **Five phases,
 and P2 proves the guarantee before it wires a single accessor.**
+
+---
+
+## 2026-09-13 — CS008's calls: the rim fix, and front of house
+
+**Paul answered every design call CS008's planning session surfaced, in that
+session.** The full table — 27 answers and 7 flagged readings — is
+`PLANNED-FEATURES-CS008.md` §0, and ⛔ that table is the record. This entry
+carries only the calls that change something a later session would otherwise
+"fix".
+
+**The rim: (A) + (B), 100 % killable, as CS008 P1, and no renumber.** The session
+then measured that (A) + (B) is **75 %, not 100 %**: an enemy parked at `0.95`
+is `0.050000000000000044` from a shot at `1.0`, past `C.HIT_DEPTH_TOL`. So the
+fix ships with a third part, `C.HIT_DEPTH_EPS` 1e-9 in one comparison. ⛔ **That
+constant is representation error, not a tuning margin**; removing it drops the
+headline case from 24/24 to 18/24.
+
+**Rotating ONTO a rim-parked enemy is deferred to playtest, deliberately.** It
+stays a 1-in-4 save under every fix. Re-arming the cooldown on a lane change was
+measured (17/24) and not taken, because it lets mouse jitter fire every tick.
+
+**Scope grew by Paul's choice**: the Options screen (with a Controls sub-page and
+key/gamepad rebinding), pause, and the death fragmentation are all CS008's.
+Eight phases against `ROADMAP.md` assumption #1's 3–5; a split at P5/P6 would
+cost a 62-pointer renumber.
+
+**Four answers a future session could mistake for oversights.**
+- GDD §4.6's Start Depth **formula is canonical** and its table was wrong at 7,
+  17 and 33.
+- The **Start Depth bonus is paid on clearing the starting well**, not at run
+  start, so a deep start does not buy lives up front.
+- **Purge kills score.**
+- **Text goes through one sanctioned `fillText` path**, Orbital Overhaul's
+  precedent, with two-pass glow rather than `shadowBlur`.
+
+**What would change it.** A playtest that finds parked enemies 2–9 px inside the
+rim read as "not at the rim" (the fix would become draw-at-1, collide-at-0.95,
+its own call); or rotating onto rim enemies reading as unfair (R4 re-opens with
+the measurement already in hand).
