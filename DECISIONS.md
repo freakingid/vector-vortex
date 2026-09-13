@@ -463,3 +463,29 @@ cost a 62-pointer renumber.
 rim read as "not at the rim" (the fix would become draw-at-1, collide-at-0.95,
 its own call); or rotating onto rim enemies reading as unfair (R4 re-opens with
 the measurement already in hand).
+
+---
+
+## 2026-09-13 — R4 re-opened and answered: crossing a rim enemy with fire held always kills it
+
+**Paul, after playing the CS008 P1 build.** He could not survive ten seconds on
+level 1: once a Vaulter reaches the rim, moving across its lane kills him. Asked
+*"if you are holding fire and move across a lane with an enemy at the rim, should
+that enemy always die?"* — **yes**: *"To do otherwise would put the player in a
+situation where they have no way to control their fate, and that is not fun."*
+
+⛔ **This supersedes `PLANNED-FEATURES-CS008.md` §0 R4** ("defer to playtest").
+The playtest happened, and the deferral is what made level 1 unplayable.
+
+**MEASURED at `22c75b5`** (a throwaway probe, not the suite): Skimmer rotating
+right across a Vaulter parked at the park depth, 24 fire phases — fire held,
+**18/24 deaths**; no fire, 24/24. Re-arming the cooldown on a fire-lane change,
+in a copy: **17/24 kills**, not 24. ⛔ The obvious fix is not the whole fix.
+
+**The reading taken with it, and flagged:** a player **not** holding fire still
+dies on contact. The call is about a firing player having a way through, not
+about removing contact death.
+
+**What it changes.** CS008 P2 does not start until this is planned and built;
+the write-up is `NEXT-STEPS.md`. P8's R4 playtest ask is moot.
+

@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (P1 done — P2 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P1 done — ⛔ crossing fix before P2) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
@@ -180,8 +180,10 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   over a parked enemy.** `purgeTarget()` takes the highest depth, and enemies
   now park at 0.95 while a bolt spends ~9 steps above it. Plan §2 flagged it;
   not measured, and no phase owns it. P2 touches Purge scoring and should know.
-- ⚠ **Rotating ONTO a rim-parked enemy is still a cooldown coin flip** (plan
-  §1.2, at most 6/24). Paul's R4: deferred to playtest; P8 writes the ask.
+- ⛔ **CROSSING A RIM ENEMY KILLS THE PLAYER 18 TIMES IN 24 WITH FIRE HELD, and
+  level 1 is unplayable because of it.** Found by Paul playing P1. ✅ His call
+  (`DECISIONS.md` 2026-09-13, superseding R4): with fire held, it always dies.
+  Written up in `NEXT-STEPS.md`; ⛔ **blocks CS008 P2.**
 - ⛔ **NO KEY IN THE BUILD REACHES A CHOSEN LEVEL.** `w` (`cycleWell`) advances
   `state.wellIndex` and never `state.level`, and both `eligibleKinds()` and
   `wellBandColor(level, …)` are functions of the level. ⚠ Found at the CS007
@@ -242,10 +244,12 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — CS008 P2, scoring and extra lives
+## Next up — ⛔ PLAN THE CROSSING FIX, NOT P2
 
-**Paste P2's prompt from `IMPLEMENTATION-PHASES-CS008.md`** into a fresh
-session. The plan is `PLANNED-FEATURES-CS008.md`; ⛔ a build phase reads the
+⛔ **Do not start P2.** A fresh **planning** session reads `NEXT-STEPS.md`'s
+crossing entry, re-measures, and writes the fix as a phase before P2 (Paul's
+call, `DECISIONS.md` 2026-09-13). After it is built, P2's prompt from
+`IMPLEMENTATION-PHASES-CS008.md` goes into a fresh session as planned. The plan is `PLANNED-FEATURES-CS008.md`; ⛔ a build phase reads the
 document, not the planning conversation (`CLAUDE.md` rule 3c).
 
 **The sequence:** P1 the rim fix · P2 scoring and extra lives · P3 mode and

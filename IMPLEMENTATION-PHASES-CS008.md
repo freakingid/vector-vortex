@@ -583,7 +583,7 @@ extends the pattern with a sixth file rather than widening a closed one."
 > gets a verdict with the test that proves it.
 >
 > **3. `PLAYTEST.md`.**
-> - Add R4's ask: rotating onto a rim-parked enemy is still a 1-in-4 save —
+> - ⛔ MOOT — R4 superseded 2026-09-13 (`DECISIONS.md`); drop this ask. Add R4's ask: rotating onto a rim-parked enemy is still a 1-in-4 save —
 >   does that read as fair?
 > - Add: parked enemies sit 2–9 px inside the rim — do they read as "at the
 >   rim"?

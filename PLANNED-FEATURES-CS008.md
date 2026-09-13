@@ -30,7 +30,7 @@ re-open them.
 | R1 | Which rim fix | **(A) + (B)**, plus the float tolerance §1.1 proves (A)+(B) needs |
 | R2 | 100 % killable at the rim, or partly lethal | **100 % killable** — the danger is arriving in time, not the cooldown phase |
 | R3 | Where the fix lands | **CS008 P1**, before any front-of-house work. No renumber |
-| R4 | Rotating ONTO a rim-parked enemy (§1.2) | **Defer to playtest.** No change in CS008; a `PLAYTEST.md` ask |
+| R4 | Rotating ONTO a rim-parked enemy (§1.2) | ~~**Defer to playtest.**~~ ⛔ **SUPERSEDED 2026-09-13 after playing P1: with fire held, it always dies.** Lands before P2 — `DECISIONS.md`, `NEXT-STEPS.md` |
 | F1 | Session kind | This session plans; P1 is built in a fresh session from this document |
 | T1 | Text rendering | **One sanctioned `drawText()` path** (Orbital Overhaul's precedent); `CLAUDE.md` gets the exception |
 | S1 | Start Depth without profiles | **Expand in memory**; CS011 swaps the source to the profile store |
