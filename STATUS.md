@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (P1 done — ⛔ crossing fix before P2) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P1 done — ⛔ P1b, the crossing fix, planned and next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
@@ -22,6 +22,19 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `log/CS008.md`). Both planned re-records landed at the planned values; the 19
   closed-file failures matched §1.5 line for line and were repaired in place.
   ⛔ **`PLAYTEST.md`'s CS007 ask is unblocked.**
+
+- **Planning, P1b (2026-09-13, at `0b41f55`) — the crossing fix.** Paul
+  answered K1–K4 (plan §0, `DECISIONS.md`):
+  - K1: the **rim sweep** in `collideSkimmer()`;
+  - K2: accept that levels 1–4 are deathless for a fire-holder, with a P8
+    playtest ask;
+  - K3: armour, bolts and a discharge below the rim still kill;
+  - K4: P1b, no renumber.
+
+  ⛔ **Measured false in the handover:** the re-arm's 17/24 is a short
+  pre-fire. With a full rack it is 6/24, and the cap, not the hop, caused the
+  residual deaths. No shot-based variant reaches 24/24 (plan §1.16). Built
+  nothing; `NEXT-STEPS.md`'s entry deleted.
 
 ## Working / verified
 
@@ -181,9 +194,11 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   now park at 0.95 while a bolt spends ~9 steps above it. Plan §2 flagged it;
   not measured, and no phase owns it. P2 touches Purge scoring and should know.
 - ⛔ **CROSSING A RIM ENEMY KILLS THE PLAYER 18 TIMES IN 24 WITH FIRE HELD, and
-  level 1 is unplayable because of it.** Found by Paul playing P1. ✅ His call
-  (`DECISIONS.md` 2026-09-13, superseding R4): with fire held, it always dies.
-  Written up in `NEXT-STEPS.md`; ⛔ **blocks CS008 P2.**
+  level 1 is unplayable because of it.** Found by Paul playing P1; re-measured
+  at `0b41f55`. ✅ **Planned as P1b** (plan §1.16, §2b), and ⛔ **it blocks P2.**
+  ⚠ **P1b moves `P1_DETERMINISM_HASH` → 1229033515**, with two causes measured
+  apart. It edits four closed fixtures: three soaks' first-run lives and
+  `test-cs007-p4.js`'s `CAPTURE_TICKS`. `GOLDEN_LANES` does not move.
 - ⛔ **NO KEY IN THE BUILD REACHES A CHOSEN LEVEL.** `w` (`cycleWell`) advances
   `state.wellIndex` and never `state.level`, and both `eligibleKinds()` and
   `wellBandColor(level, …)` are functions of the level. ⚠ Found at the CS007
@@ -244,23 +259,24 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — ⛔ PLAN THE CROSSING FIX, NOT P2
+## Next up — ⛔ P1b, THE CROSSING FIX
 
-⛔ **Do not start P2.** A fresh **planning** session reads `NEXT-STEPS.md`'s
-crossing entry, re-measures, and writes the fix as a phase before P2 (Paul's
-call, `DECISIONS.md` 2026-09-13). After it is built, P2's prompt from
-`IMPLEMENTATION-PHASES-CS008.md` goes into a fresh session as planned. The plan is `PLANNED-FEATURES-CS008.md`; ⛔ a build phase reads the
-document, not the planning conversation (`CLAUDE.md` rule 3c).
+⛔ **Paste P1b's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
+session.** P2 follows it as planned. The plan is `PLANNED-FEATURES-CS008.md`;
+⛔ a build phase reads the document, not the planning conversation
+(`CLAUDE.md` rule 3c).
 
-**The sequence:** P1 the rim fix · P2 scoring and extra lives · P3 mode and
-Start Depth · P4 text, HUD, fragmentation · P5 the screens · P6 pause and
-Options · P7 the Controls page · P8 the front-door soak and the close.
+**The sequence:** P1 the rim fix · **P1b the crossing fix** · P2 scoring and
+extra lives · P3 mode and Start Depth · P4 text, HUD, fragmentation · P5 the
+screens · P6 pause and Options · P7 the Controls page · P8 the front-door soak
+and the close.
 
 ⛔ **What each phase must not lose, carried from before the plan:**
 
-1. ✅ **Both CS008 re-records landed in P1** — `P1_DETERMINISM_HASH` 1862183225
-   and `GOLDEN_LANES` +2 appended entries, the first 16 unmoved. ⛔ A baseline
-   move in P2–P8 is a defect (plan §9).
+1. ✅ **Both P1 re-records landed** — `P1_DETERMINISM_HASH` 1862183225 and
+   `GOLDEN_LANES` +2 appended entries, the first 16 unmoved. ⛔ **P1b re-records
+   the hash once more, to 1229033515** (plan §9). A baseline move in P2–P8 is
+   a defect.
 2. ⛔ **The past-99 `startGame()` defect stays unreachable** while Start Depth
    caps at 81 (plan §1.12) — P3 re-words it, does not fix it.
 3. ⛔ **Start Depth un-parks two `PLAYTEST.md` asks** (23 and 65) at P5.

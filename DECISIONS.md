@@ -489,3 +489,30 @@ about removing contact death.
 **What it changes.** CS008 P2 does not start until this is planned and built;
 the write-up is `NEXT-STEPS.md`. P8's R4 playtest ask is moot.
 
+---
+
+## 2026-09-13 — the crossing fix, planned as P1b: the rim sweep
+
+**Paul answered four calls in the planning session.** The record is
+`PLANNED-FEATURES-CS008.md` §0 K1–K4; the measurement is §1.16.
+
+- **K1 — the rim sweep.** In `collideSkimmer()`, a Skimmer holding fire asks a
+  touching rim enemy `onShot()` before contact can kill.
+  - ⛔ **A future session will want to move this into `updateShots()`. It was
+    measured.** The best shot-based build (re-arm on a lane change, plus that
+    shot ignoring `SHOT_MAX`, plus contact on the fire lane) still loses 24/24
+    to two stacked Vaulters and 18/24 to a Vaulter hopping into a slow mover.
+  - The handover's 17/24 for the re-arm was a short-pre-fire artefact. With the
+    8-shot rack full — the steady state for anyone holding fire — it is 6/24.
+- **K2 — accepted.** A fire-holding player has no death path on levels 1–4.
+  MEASURED 0 deaths in 20 × 60 s against 15 on the shipped build. P8 writes a
+  `PLAYTEST.md` ask; the answer is §8.2 tuning, not this rule.
+- **K3 — "always dies" means an enemy a shot could kill that step.** A riding
+  Drifter, a Weaver bolt and a Surger discharging below the rim still kill a
+  crossing player.
+- **K4 — P1b**, no renumber.
+
+**What would change it.** The K2 playtest saying levels 1–4 lost their tension
+belongs to tuning. Only a finding that the sweep itself reads wrong would
+re-open K1.
+

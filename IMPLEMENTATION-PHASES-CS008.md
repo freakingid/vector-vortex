@@ -26,6 +26,7 @@ one a phase must confirm before shipping is P7's sensitivity range.
 | Phase | Builds | Model | Effort |
 |---|---|---|---|
 | P1 | The rim fix — (A) + (B) + ε | Opus 5 | **high** |
+| **P1b** | **The crossing fix — the rim sweep** (planned 2026-09-13 at `0b41f55`, after P1) | Opus 5 | **high** |
 | P2 | Scoring and extra lives — `addScore()` | Opus 5 | **high** |
 | P3 | The run's parameters — mode and Start Depth | Opus 5 | medium |
 | P4 | Text, the HUD, and the death fragmentation | Opus 5 | medium |
@@ -65,13 +66,19 @@ renumber at 62 pointers.
 **P8 is the close and a sixth soak file** — `STATUS.md`: "a future changeset
 extends the pattern with a sixth file rather than widening a closed one."
 
-### ⛔ The re-records — both in P1, and nowhere else
+### ⛔ The re-records — in P1 and P1b, and nowhere else
 
 | Phase | Baseline | Cause |
 |---|---|---|
 | P1 | `test-cs006-p2.js` `P1_DETERMINISM_HASH` 3661952239 → **1862183225** | the rim fix. The plan measured the parts: ε alone 3661952239 (unchanged); (A) alone 3063940911; (B) alone 3924408609 |
 | P1 | `test-cs004-p1.js` `GOLDEN_LANES` → `[…,12,3,2,5]` | (B), the climb stops at the kill band. ⛔ **The first 16 entries do not move** |
+| **P1b** | `test-cs006-p2.js` `P1_DETERMINISM_HASH` 1862183225 → **1229033515** | ⚠ two, measured apart: the rim sweep alone 4203989832; the soaks' first-run `lives = 1` fixture alone 2859072280 (plan §1.16). ⛔ `GOLDEN_LANES` does not move |
 | P2–P8 | ⛔ none | — |
+
+**Why P1b sits between P1 and P2 (K4).** Paul played P1 and could not survive
+crossing a rim Vaulter. P2 onward is judged by playing, as P1 was, and P1b
+moves the hash. Landing it before scoring keeps that move to one phase whose
+causes are measured.
 
 ---
 
@@ -176,6 +183,107 @@ extends the pattern with a sixth file rather than widening a closed one."
 
 ---
 
+## P1b — the crossing fix: the rim sweep
+
+**Model: Opus 5 · Effort: high**
+
+> Read `CLAUDE.md`, `STATUS.md`, then `PLANNED-FEATURES-CS008.md` §0 (R4 and
+> K1–K4), §1.16, §2b, §9 and §10's P1b. Then `VECTOR-VORTEX-GDD.md` §0, §1,
+> §4.2, §4.5, §6.5, §17. Then read `src/09-collision.js` end to end, every
+> `onShot` in `src/07-enemies.js`, `scratchpad/test-cs008-p1.js` (your fixture
+> shapes are its shapes), and the `hashRun()` openings of `test-cs004-p5.js`,
+> `test-cs005-p5.js` and `test-cs006-p5.js`. ultrathink.
+>
+> ⛔ **THE DESIGN CALLS ARE MADE — Paul, 2026-09-13, K1–K4.** With fire held, a
+> rim enemy the Skimmer touches dies if a shot could kill it. The mechanism is
+> the rim sweep, and the plan measured every shot-based alternative short of
+> 24/24 (§1.16). ⛔ **Do not re-open it, and do not touch `updateShots()`, the
+> cooldown, `SHOT_MAX`, `HIT_LANE_TOL` or the contact geometry.** A riding
+> Drifter, a Weaver bolt and a Surger discharging below the rim still kill
+> (K3). A player not holding fire still dies on contact.
+>
+> **1. The fix** (plan §2b) — in `collideSkimmer()`, after the lane match and
+> before `killSkimmer()`:
+> ```js
+> if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
+>   e.onShot(null);
+>   if (e.dead) { state.tally.kills++; continue; }
+> }
+> ```
+> - ⛔ `onShot`, never `e.dead = true`: armour must refuse and a Carrier must
+>   split.
+> - ⛔ `continue`, never `return`: stacked enemies are each asked.
+> - ⛔ No new `C` constant: the depth gate is the park expression.
+> - Correct the file header, `collideSkimmer()`'s header and the "No scoring"
+>   note in place. The header carries §1.16's C10 and C13 numbers, so a later
+>   session sees why this is contact-side and not shot-side.
+>
+> **2. Your test, `scratchpad/test-cs008-p1b.js`** — §1.16's probe shape on the
+> real build, through `Game.update()`:
+> - Spawner held. Fire held through `G.input.keyDown(" ")`. **40 + p ticks of
+>   pre-fire, p = 0..23.** ⛔ Assert the rack is FULL (`C.SHOT_MAX`) at
+>   placement: a short pre-fire hides the shot cap, which is how
+>   `NEXT-STEPS.md`'s 17/24 happened.
+> - Enemy two lanes away at `1 - C.RIM_CONTACT_DEPTH`. Move to four lanes away
+>   and wait 20 ticks.
+> - **C1–C13 → 24/24 killed. N1–N3 → 24/24 died.** ⛔ A run that ends in
+>   neither is a failure, not a skip.
+> - ⛔ C4 asserts the Skimmer really reached exactly 6.5.
+> - ⛔ C7/C8 assert 3 kills: the split happened through `onShot`.
+> - ⛔ C13 asserts both stacked Vaulters died.
+> - **Mutation-sensitive, and prove it.** Confirm each turns your file red,
+>   then revert:
+>   - sweep removed → the shipped column;
+>   - fire gate removed → N1 killed;
+>   - depth gate removed → N3 killed;
+>   - `e.dead = true` for `onShot` → N2 killed.
+>
+>   Record all four in `log/CS008.md`.
+> - ⛔ `test-cs008-p1.js` stays green **unedited**. P1's arrival guarantee is
+>   not yours to restate.
+>
+> **3. ⛔ Closed files, IN PLACE — plan §1.16, measured.** Re-run the suite
+> after the fix and before any test edit. Expect exactly five failures:
+> - `test-cs004-p5.js:330`, `test-cs005-p5.js:360` and `test-cs006-p5.js:363`
+>   ("game-over stop");
+> - `test-cs007-p4.js:562` ("the recorded list dies");
+> - `test-cs006-p2.js`'s hash at **4203989832**.
+>
+> ⛔ **Any other red, or a different hash, is a NEW cause.** Stop and record it
+> in `STATUS.md` before editing anything.
+> - The three soaks: `st.lives = 1;` after the FIRST `armMixed()` in
+>   `hashRun()`, never after a restart. Measured: a game over AND a respawn
+>   stay in both hashed windows. `lives = 1` on every run drops the respawn
+>   path out of the hash, and `lives = 2` never stops at L7.
+> - `test-cs007-p4.js`: `CAPTURE_TICKS` 6000 → **7300**, with the measured
+>   deaths (7,028 in, 7,574 out) written at the constant. ⛔ 8,000 is red:
+>   the run stops inside the window.
+> - Each edit's comment says it **restores the precondition**: the scripted
+>   player holds fire, so under the sweep it dies too rarely. Never frame it as
+>   relaxing a check.
+>
+> **4. ⛔ The one re-record** — `P1_DETERMINISM_HASH` → expect
+> **1229033515**.
+> - Write all three at the assertion: 4203989832 (sweep alone), 2859072280
+>   (fixtures alone), 1229033515 (both).
+> - ⛔ A different value means your code is not §2b's. Find out why first.
+> - ⛔ Guards, green without edit: `GOLDEN_LANES` (all 18 entries), the
+>   draws-per-spawn count, `test-cs007-p2.js`, `test-cs008-p1.js`.
+>
+> **5. Docs.**
+> - GDD §4.5 ("Shipped, CS008 P1b"), §4.2 (the "rotating onto… deferred"
+>   sentence goes), §6.5 (`onShot` is also asked by the sweep), §17.
+> - `STATUS.md`: the ledger line; move the crossing entry out of Known issues;
+>   the hash value; test count 36.
+> - `log/CS008.md`: the reasoning and the four mutation results.
+> - `NEXT-STEPS.md` is already clear of this entry.
+> - `PLAYTEST.md` is P8's.
+>
+> ⛔ Run `node build.js` and `node scratchpad/run-all.js` before committing.
+> Nonzero exit means not done. ⛔ Edit docs in place. ⛔ Do not push.
+
+---
+
 ## P2 — scoring and extra lives
 
 **Model: Opus 5 · Effort: high**
@@ -196,8 +304,9 @@ extends the pattern with a sixth file rather than widening a closed one."
 >   the only life-awarder, through `state.nextLife`.
 > - `points()` is a fourth contract method: base 0, the table in §3. The Thorn
 >   scores per chip from its own `onShot`, and its `points()` is 0.
-> - The two kill sites award on the false→true `dead` transition. Both Purge
->   uses award. The dive termination awards nothing.
+> - The kill sites award on the false→true `dead` transition. **There are
+>   three:** `collideShots()`, `collideSkimmer()`'s rim sweep (P1b, plan §3),
+>   and both Purge uses. The dive termination awards nothing.
 > - The three clear bonuses at the clear edge, in a fixed order. The no-death
 >   flag is cleared in `enterWell()` and set in `killSkimmer()`.
 > - ⚠ An award past `LIVES_MAX` is lost silently in CS008. Leave one comment
@@ -583,8 +692,11 @@ extends the pattern with a sixth file rather than widening a closed one."
 > gets a verdict with the test that proves it.
 >
 > **3. `PLAYTEST.md`.**
-> - ⛔ MOOT — R4 superseded 2026-09-13 (`DECISIONS.md`); drop this ask. Add R4's ask: rotating onto a rim-parked enemy is still a 1-in-4 save —
->   does that read as fair?
+> - ⛔ No R4 ask: R4 was superseded and P1b built it.
+> - Add K2's ask (Paul, 2026-09-13): with the rim sweep, a player holding
+>   fire has no death path on levels 1–4. MEASURED: 0 deaths in 20 × 60 s
+>   (plan §1.16). **Do levels 1–4 still feel tense?** The answer feeds GDD
+>   §8.2 tuning, not the rule.
 > - Add: parked enemies sit 2–9 px inside the rim — do they read as "at the
 >   rim"?
 > - Add: the HUD on touch, the menu flow on each device, the fragmentation.
@@ -611,6 +723,6 @@ extends the pattern with a sixth file rather than widening a closed one."
 | # | Decision | What would change it |
 |---|---|---|
 | 1 | Eight phases in one changeset (Paul's U3 put the scope here) | P5 or P6 overrunning a session: split at P5/P6 (62-pointer renumber, plan §1.15) |
-| 2 | Both re-records land in P1 and nowhere else | A P2–P7 baseline move is a defect, not a re-record |
+| 2 | The re-records land in P1 and P1b and nowhere else | A P2–P8 baseline move is a defect, not a re-record |
 | 3 | kit-input takes two MINOR bumps (0.4.0 pause, 0.5.0 controls) rather than one | P6 and P7 merged, or a touch fix in P5 taking 0.4.0 first — then renumber the bumps in order |
 | 4 | P3 is medium effort | The session record's CS011 seam proving harder than one function |
