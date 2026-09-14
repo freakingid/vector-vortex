@@ -187,10 +187,28 @@ function nextWell() {
 //
 // ⛔ Run state is reset from newState(), 02-state.js's one field list, so a
 // field added there is reset here without this function being touched.
-function startGame(seed) {
+//
+// `opts` is the run's two parameters, `{ mode, startDepth }` (GDD 13, 4.6;
+// CS008 P3), and either may be omitted. ⛔ OMITTED, THE RUN IS BIT-IDENTICAL TO
+// THE BUILD BEFORE THEM: the defaults are newState()'s own "classic" and 1, and
+// level 1 is exactly the level this function always started at. Every closed
+// test calls startGame(seed).
+//
+// ⛔ THE LEVEL IS THE START DEPTH, AND THE WELL IS THE SAME MODULO nextWell()
+// USES BELOW THE BOUNDARY. No draw is spent, and `bandRoll` stays newState()'s
+// 0. ⚠ A start past C.BAND_RNG_LEVEL would get the modulo well and no colour
+// roll — unreachable while C.START_DEPTH_CAP is 81, so this is not a past-99
+// branch and must not grow one quietly (plan §1.12; STATUS.md).
+//
+// ⛔ NOTHING HERE VALIDATES opts. The list a player picks from is
+// startDepthOptions() (22-meta.js); this is the mechanism under it.
+function startGame(seed, opts) {
   Object.assign(state, newState());
   state.seed = (seed === undefined || seed === null) ? (Date.now() >>> 0) : (seed >>> 0);
   state.rng = mulberry32(state.seed);
+  if (opts && opts.mode !== undefined) state.mode = opts.mode;
+  if (opts && opts.startDepth !== undefined) state.startDepth = opts.startDepth;
+  state.level = state.startDepth;
   state.wellIndex = (state.level - 1) % WELLS.length;
   enterWell();
 }
@@ -592,9 +610,12 @@ const Game = (function () {
     // path calls again; a well cleared by play is the event both are about.
     // ⛔ The bonuses are paid BEFORE the dive (Paul, P4s), in clearBonuses()'s
     // fixed order (12-scoring.js).
+    // ⛔ AND THE SESSION'S HIGHEST LEVEL CLEARED IS WRITTEN AT THE SAME EDGE
+    // (GDD 4.6; 22-meta.js). Not in state: it has to outlive startGame().
     if (wellCleared(state)) {
       state.tally.wellsCleared++;
       clearBonuses(state);
+      levelRecord().noteCleared(state.level);
       startDive(state);
     }
   }

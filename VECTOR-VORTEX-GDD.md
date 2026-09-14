@@ -206,7 +206,7 @@ Past 99 the counter holds and shapes come from the seeded RNG. Heat also holds �
 
 **Shipped CS006 P1 — where the past-99 draw happens, and where it must not.** The boundary is `C.BAND_RNG_LEVEL` (99), which is the last `BAND_COLORS` row's ceiling and not a tuning target. ⛔ **The two draws — the shape index and `state.bandRoll` — are spent in `nextWell()` (`23-main.js`) and nowhere else**, and only when `state.level > C.BAND_RNG_LEVEL`; below the boundary the branch spends exactly what the old modulo line did, which is nothing. That matters because the run has ONE stream (§16.1): a draw spent here moves every spawn lane in every run, including §17 item 1's replay hash and `test-cs004-p1.js`'s golden lane sequence.
 
-⛔ **Not in `enterWell()`.** That function has three callers — a new run, the next level, and the `w` debug key — and the third is not simulation. A draw there would let a keypress shift the run's stream, which is why `"w"` is on the FORBIDDEN key list of three closed soaks. ⚠ `startGame()` deliberately spends nothing either; §4.6's Start Depth is not built, and the changeset that lands it owns what a run *starting* past 99 rolls.
+⛔ **Not in `enterWell()`.** That function has three callers — a new run, the next level, and the `w` debug key — and the third is not simulation. A draw there would let a keypress shift the run's stream, which is why `"w"` is on the FORBIDDEN key list of three closed soaks. ⚠ `startGame()` deliberately spends nothing either. §4.6's Start Depth shipped in CS008 P3 capped at 81, so no run *starts* past 99; what one would roll is unowned while that cap holds.
 
 ⛔ **And the value is drawn in the simulation, never in the renderer.** `Game.draw()` passes `state.bandRoll`; `wellBandColor` takes a **number**, not a stream. `Game.frame()` runs zero to `C.MAX_CATCHUP_STEPS` updates and exactly one `draw()`, and during hit-stop it runs zero updates and still draws — `C.HIT_STOP_DEATH` 1.20 s is ~72 draws against no simulation — so a `state.rng()` in the draw path would make the run's stream a function of frame rate. `CLAUDE.md` carries the rule; `RATIONALE.md#draw-path-rng` carries the reasoning.
 
@@ -343,15 +343,24 @@ Options 1, 3, 5, 7, 9 on a first run; thereafter the highest level ever cleared 
 startBonus(d) = round100( 800 * Math.pow(d - 1, 1.6) )
 ```
 
-| Depth | 1 | 3 | 5 | 7 | 9 | 17 | 33 |
-|---|---|---|---|---|---|---|---|
-| Bonus | 0 | 2,400 | 7,400 | 14,300 | 22,300 | 67,500 | 191,700 |
+| Depth | 1 | 3 | 5 | 7 | 9 | 17 | 33 | 81 |
+|---|---|---|---|---|---|---|---|---|
+| Bonus | 0 | 2,400 | 7,400 | 14,100 | 22,300 | 67,600 | 204,800 | 887,200 |
+
+⛔ **The formula is canonical** (Paul, CS008 S3). The table used to read 14,300 / 67,500 / 191,700 at 7 / 17 / 33, which the formula does not give; it was corrected to the formula, and `test-cs008-p3.js` asserts these literals.
 
 This is the original's SkillStep, credited as the first selectable difficulty in a commercial game. It solves onboarding by letting players trade safety for score legibly — doubly valuable for a browser player with no coin invested.
 
 ⛔ **No countdown timer on the Start Depth screen.** It waits. House rule.
 
 **RESOLVED 2026-08-30** — the Start Depth bonus counts toward the submitted score, and `start_depth` ships as a registered stats field. See §21 and `DECISIONS.md`.
+
+**Shipped, CS008 P3 — the mechanism, no screen.** The Start Depth *screen* is CS008 P5's.
+- **`startGame(seed, opts)`**, `opts` = `{ mode, startDepth }`. `state.mode` and `state.startDepth` are fields with defaults `"classic"` and 1, so ⛔ **`startGame(seed)` is bit-identical to `startGame(seed, { mode: "classic", startDepth: 1 })`** — every closed test calls the short form. `state.level` is the start depth, `wellIndex` is the same `(level − 1) mod 16`, no draw is spent and `bandRoll` stays 0.
+- **`startBonus(d)`** (`12-scoring.js`) reads `C.START_BONUS_SCALE` 800, `C.START_BONUS_EXP` 1.6 and `C.START_BONUS_ROUND` 100.
+- ⛔ **Paid on clearing the starting well** (Paul, S2), in `clearBonuses()` after §7's three, through `addScore()`, when `state.level === state.startDepth`. No "paid" flag: the level only rises, so the test is true on exactly one clear edge per run. A run that ends in its starting well is never paid. A clear on the game-over step pays it like the other three (§7's stopped-run rule: score, no life).
+- **The list** is `startDepthOptions()` (`22-meta.js`): `C.START_DEPTH_FIRST` `[1, 3, 5, 7, 9]`, extended by every odd depth up to the highest level cleared snapped down to odd, capped at `C.START_DEPTH_CAP` 81. ⚠ **"Ever cleared by that profile" is a SESSION record until CS011** (Paul, S1): in memory, written at the clear edge, and ⛔ **not in `state`**, because it must survive `startGame()`. `levelRecord()` is the one function CS011 re-points at the profile store.
+- ⚠ A run starting past 99 would get the modulo well and no colour roll (§3.6). Unreachable while the cap is 81, which lands in the Green band below `C.BAND_RNG_LEVEL`.
 
 ---
 
@@ -1152,7 +1161,7 @@ This is a tuning and debugging instrument. Because the simulation is determinist
 
 ⛔ **All eight heat-derived values are columns** — the seven accessors of §8 plus `heat()` itself. That is what makes the log a tuning instrument rather than a score log: a retune can be replotted against a recorded run.
 
-⛔ **Three columns ship with known-constant values from `C.TELEMETRY_PLACEHOLDER`** — `maxCombo` (0), `mode` (`"classic"`), `startDepth` (1) — because a column added later invalidates every log recorded before it. Each key is deleted from that object by the changeset that gives its column a real source: CS008 P3 for `mode` and `startDepth`, §14.4 for `maxCombo`. ⛔ **`score` was the fourth.** CS008 P2 deleted its key; the column reads `state.score` and keeps its place in the order.
+⛔ **One column ships with a known-constant value from `C.TELEMETRY_PLACEHOLDER`** — `maxCombo` (0) — because a column added later invalidates every log recorded before it. Its key is deleted from that object by §14.4's combo, which gives the column a real source. ⛔ **There were four.** CS008 P2 deleted `score` (the column reads `state.score`); CS008 P3 deleted `mode` and `startDepth` (the columns read `state.mode` and `state.startDepth`). None moved in the order.
 
 ⛔ **There is no per-kind kill column.** The roster grows (§6.4), so a column per kind guarantees the column list churns — which is what the rule above exists to prevent. `kills` is one number: enemies the player destroyed, by shot or by Purge.
 
@@ -1160,7 +1169,7 @@ This is a tuning and debugging instrument. Because the simulation is determinist
 
 **The ring and the surface.** `C.TELEMETRY_CAP` rows, sampled every `C.TELEMETRY_INTERVAL` seconds of **simulation** time from `update()` — never from `draw()`, which runs on a frame clock. ⛔ **The ring latches `wrapped` on the first row it drops and the export reports it in the header block**; a total read off a silently wrapped buffer is wrong and nothing else would say so. The surface until CS008's Options screen is the debug bench: `t` toggles capture, `e` exports. ⛔ **Export writes the CSV to `console.log`** — the only path that works on `file://` — with a `navigator.clipboard` attempt beside it inside a try/catch. Never an `<a download>`, never a `fetch`.
 
-⛔ **Nothing is persisted before CS011.** `kit-storage` owns the keyspace and `Profiles.keyFor(base)` is the one route to a key; `22-meta.js` is still a placeholder, so writing rows today would mean the game choosing a raw `localStorage` key name. CS011 owns persistence, the profile scope and `read()`'s envelope-version rejection above.
+⛔ **Nothing is persisted before CS011.** `kit-storage` owns the keyspace and `Profiles.keyFor(base)` is the one route to a key; `22-meta.js` has no keyspace and no `Profiles` yet (CS008 P3 put only the in-memory Start Depth record there), so writing rows today would mean the game choosing a raw `localStorage` key name. CS011 owns persistence, the profile scope and `read()`'s envelope-version rejection above.
 
 ---
 

@@ -13,7 +13,7 @@
 // and P4 added `lives` and `invulnTime`. CS006 P1 adds `bandRoll`, and P3 adds
 // `dive` — which DELETED CS003 P2's hold field rather than joining it (GDD 5).
 // CS007 P4 adds `tally`, the run's cumulative counters. CS008 P2 adds `score`,
-// `nextLife` and `diedThisWell`.
+// `nextLife` and `diedThisWell`; P3 adds `mode` and `startDepth`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -69,6 +69,18 @@ function newState() {
     // and C.HEAT_HOLD_LEVEL was not built. ⛔ The caller rule above still
     // stands — it is what a hold would have to obey if one were ever needed.
     level: 1,
+
+    // ⛔ THE RUN'S TWO PARAMETERS (GDD 13, 4.6; CS008 P3). Written once, by
+    // startGame(seed, opts), and read for the rest of the run: telemetry's two
+    // columns, and clearBonuses()'s Start Depth test (12-scoring.js). The
+    // shipped defaults ARE a run started with no opts, which is what keeps every
+    // closed test's startGame(seed) bit-identical.
+    //
+    // ⛔ NEITHER IS "WHERE THE PLAYER HAS BEEN". The highest level cleared must
+    // survive startGame(), which rewrites this whole object, so it lives in the
+    // session record behind levelRecord() (the meta module) and never here.
+    mode: "classic",
+    startDepth: 1,
 
     // ⛔ GDD 3.6's past-99 band colour, DRAWN IN THE SIMULATION AND READ BY THE
     // RENDERER. Levels 1..99 have a band row apiece and ignore this field

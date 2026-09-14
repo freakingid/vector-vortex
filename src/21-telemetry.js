@@ -21,9 +21,10 @@
 // ⛔ NO PERSISTENCE THIS CHANGESET, and the reason is a shipped rule rather than
 // a preference. kit-storage owns the keyspace and Profiles.keyFor(base) is the
 // one route from a store's base name to the key it reads (CLAUDE.md, Save
-// data); 22-meta.js is a placeholder, so there is no keyspace and no Profiles
-// in this build. Writing rows anywhere today would mean the game choosing a raw
-// localStorage key name, which is forbidden outright. ⛔ CS011 owns persistence,
+// data); 22-meta.js holds only CS008 P3's in-memory Start Depth record, so
+// there is no keyspace and no Profiles in this build. Writing rows anywhere
+// today would mean the game choosing a raw localStorage key name, which is
+// forbidden outright. ⛔ CS011 owns persistence,
 // the profile scope and GDD 15.6's read() envelope-version rejection — and it
 // is wiring rather than a rewrite, because the row shape and the export exist.
 // ⛔ THERE IS NO STORAGE CALL IN THIS FILE AND THERE MUST NOT BE ONE.
@@ -53,12 +54,13 @@
 //                  working, and a check that did not know which ones they were
 //                  would flag the two most useful stall columns in the file.
 //
-// ⛔ THREE COLUMNS SHIP WITH KNOWN-CONSTANT VALUES rather than being added when
-// their source lands: `maxCombo` (0), `mode` ("classic") and `startDepth` (1),
-// out of C.TELEMETRY_PLACEHOLDER. A column added in CS008 invalidates every log
-// recorded before it, which is the whole reason GDD 15.6 makes the column list
-// a thing you edit deliberately. ⛔ `score` was the fourth, and CS008 P2 moved
-// its SOURCE to state.score without moving its place in the order.
+// ⛔ ONE COLUMN SHIPS WITH A KNOWN-CONSTANT VALUE rather than being added when
+// its source lands: `maxCombo` (0), out of C.TELEMETRY_PLACEHOLDER. A column
+// added later invalidates every log recorded before it, which is the whole
+// reason GDD 15.6 makes the column list a thing you edit deliberately. ⛔ There
+// were four: CS008 P2 moved `score`'s SOURCE to state.score and P3 moved `mode`
+// and `startDepth` to state.mode and state.startDepth, none of them moving
+// place in the order.
 //
 // ⚠ CROSS-CHECKED AGAINST THE WORKER, which already registers seven statsFields
 // for `vector-vortex` in coinless-kit's services/leaderboard/src/registry.js
@@ -86,8 +88,8 @@ const TELEMETRY_FIELDS = [
   "t",                  // instantaneous — simulation seconds (state.time)
   "level",              // instantaneous — ⛔ THE ONE CLOCK (GDD 8)
   "seed",               // instantaneous — constant within a run; a restart moves it
-  "mode",               // instantaneous — ⚠ "classic" until CS008 (GDD 13)
-  "startDepth",         // instantaneous — ⚠ 1 until GDD 4.6's Start Depth
+  "mode",               // instantaneous — state.mode (GDD 13; CS008 P3)
+  "startDepth",         // instantaneous — state.startDepth (GDD 4.6; CS008 P3)
   // ---- the heat curve, sampled (GDD 8; 00-config.js) ----------------------
   "heat",               // instantaneous
   "spawnInterval",      // instantaneous
@@ -187,8 +189,8 @@ function telemetryRow(state) {
     t:                 state.time,
     level:             lvl,
     seed:              state.seed,
-    mode:              P.mode,
-    startDepth:        P.startDepth,
+    mode:              state.mode,
+    startDepth:        state.startDepth,
     heat:              heat(lvl),
     spawnInterval:     spawnInterval(lvl),
     enemyConcurrent:   enemyConcurrent(lvl),
@@ -219,7 +221,7 @@ function telemetryRow(state) {
 // One CSV cell. Integers plain, everything else to six decimals — enough to
 // replot the curve and short enough that a row is readable. ⛔ No quoting and no
 // escaping, because no column can contain a comma: every one is a number except
-// `mode`, which comes from C.TELEMETRY_PLACEHOLDER.
+// `mode`, which is state.mode — "classic" or "overdrive" (GDD 13).
 function telemetryCell(v) {
   if (typeof v === "number") {
     if (!isFinite(v)) return String(v);

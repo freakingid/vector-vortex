@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (P2 done — ⛔ P3, mode and Start Depth, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P3 done — ⛔ P4, text, HUD and fragmentation, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
@@ -58,11 +58,23 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   14 red (record in `log/CS008.md`). §1.8's 5 closed-file reds plus 5 from new
   causes (below), all repaired in place.
 
+- **P3 (2026-09-13) — mode and Start Depth, no screen.** `startGame(seed,
+  opts)`; `state.mode`/`startDepth`; `startBonus(d)` off `C.START_BONUS_*`,
+  paid in `clearBonuses()` fourth when `level === startDepth`;
+  `C.START_DEPTH_FIRST`/`_CAP`; `levelRecord()` + `startDepthOptions()` in
+  `22-meta.js`, written at the clear edge, outside `state`. Placeholder is
+  `maxCombo` only. ⛔ **No baseline moved** — hash and `GOLDEN_LANES` green
+  unedited. `test-cs008-p3.js`: defaults identical over 8,000 played steps, the
+  eight bonus literals, paid once, the list 1–9 → 13 → 81 across `startGame()`,
+  81 → `WELLS[0]`, `bandRoll` 0, no draw. Mutation-checked, 7 of 7 red (record
+  in `log/CS008.md`). Three planned reds repaired in place; one new-cause red was
+  my own comment, fixed in source (below). GDD §4.6 table corrected.
+
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 351.8 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 357.5 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **37 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **38 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -162,6 +174,16 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   All three are the replaced claim, repaired in place. ⛔ **Lesson for P3–P8:**
   an emulation that adds no export, method or key cannot see an assertion that
   pins one.
+- ⚠ **CS008 P3 — "dies in well 9" was built as the RUN ending there**, which is
+  what plan §4's mechanism gives (paid when `level === startDepth`, no death
+  test). A life lost in the starting well, then a clear, still pays the bonus
+  (not the no-death 1,000). ⛔ If S2's "survive the well you chose" meant any
+  death, that is Paul's call and a one-line change; `test-cs008-p3.js` asserts
+  only the run-ending case.
+- ⚠ **`test-cs007-p4.js` finds the telemetry module by the text
+  `// 22-meta.js`**, first occurrence. A comment line anywhere earlier in the
+  build that begins `// 22-meta.js` (P3 wrote one in `02-state.js`) blanks its
+  scan — 6 reds. ⛔ Never start a comment line with a module file name.
 - ✅ **A clear on the step that spends the last life — answered and built.**
   Paul, 2026-09-13: **score, no life**. The bonuses count toward the final score,
   and `addScore()` awards no life while `screen === "gameover"`, so `lives`
@@ -225,12 +247,12 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   either way, and GDD §6.1 says only "direction from `laneDelta`". ⚠ Flagged for
   CS007's tuning pass and **not taken — CS007 tuned nothing**, it built the
   instrument. Still open, still unowned.
-- ⚠ **A run that STARTS past level 99 gets the modulo well and a `bandRoll` of
-  0.** `startGame()` still does `wellIndex = (level - 1) % WELLS.length` and
-  `newState()` ships `bandRoll: 0`, so GDD §3.6's roll only ever happens on a
-  level *transition*. Unreachable today, and **it goes live with GDD §4.6's Start
-  Depth**, which is CS008's. ⛔ Not fixed: the changeset that lands Start Depth
-  owns it, and the fix is one branch shared with `nextWell()`.
+- ⚠ **A run that STARTS past level 99 would get the modulo well and a
+  `bandRoll` of 0** — `startGame()` does `wellIndex = (level - 1) % WELLS.length`
+  and never rolls. ⛔ **Unreachable while `C.START_DEPTH_CAP` is 81** (plan
+  §1.12; CS008 P3 shipped the cap). `startGame(seed, { startDepth })` itself does
+  not validate, so only a direct API caller can reach it. Raising the cap past
+  99 owns the fix: one branch shared with `nextWell()`.
 - ⚠ **A closed test may pin the literal text of a line a later phase is scheduled
   to change.** `test-cs005-p3.js` pinned all five `drawWell` arguments to assert
   one of them. Source-text assertions are the right tool for "this is still
@@ -264,10 +286,10 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 
 ## Carried tasks (not blocking, no changeset owns them yet)
 
-- ⚠ **`C.TELEMETRY_PLACEHOLDER` IS A THREE-KEY OBJECT THAT SHRINKS.** P2 took
-  `score`; P3 takes `mode` and `startDepth`. Only `maxCombo` survives, for GDD
-  §14.4's combo. ⛔ A key left there after its column has a real source is a
-  column silently reporting zero.
+- ✅ **`C.TELEMETRY_PLACEHOLDER` IS ONE KEY, `maxCombo`.** CS008 took three
+  bites, not two (plan §1.10): `score` in P2, `mode` and `startDepth` in P3.
+  `maxCombo` goes with GDD §14.4's combo. ⛔ A key left there after its column
+  has a real source is a column silently reporting a constant.
 - ⚠ **THE TELEMETRY COLUMN LIST IS FROZEN UNTIL A CHANGESET DELIBERATELY MOVES
   IT** (GDD §15.6). A column added in CS008 invalidates every CS007 log, which is
   why the four above already ship at known constants. ⛔ Adding or reordering one
@@ -307,15 +329,15 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — ⛔ P3, MODE AND START DEPTH
+## Next up — ⛔ P4, TEXT, THE HUD AND THE DEATH FRAGMENTATION
 
-⛔ **Paste P3's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
+⛔ **Paste P4's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
 session.** The plan is `PLANNED-FEATURES-CS008.md`;
 ⛔ a build phase reads the document, not the planning conversation
 (`CLAUDE.md` rule 3c).
 
 **The sequence:** P1 the rim fix · P1b the crossing fix · P2 scoring and
-extra lives · **P3 mode and Start Depth** · P4 text, HUD, fragmentation · P5 the
+extra lives · P3 mode and Start Depth · **P4 text, HUD, fragmentation** · P5 the
 screens · P6 pause and Options · P7 the Controls page · P8 the front-door soak
 and the close.
 
@@ -323,10 +345,10 @@ and the close.
 
 1. ✅ **All three re-records landed** — P1's `GOLDEN_LANES` +2 appended entries
    (the first 16 unmoved) and `P1_DETERMINISM_HASH` 1862183225, then P1b's hash
-   **1229033515** (plan §9). ⛔ **A baseline move in P3–P8 is a defect.** ✅ P2
-   moved none.
-2. ⛔ **The past-99 `startGame()` defect stays unreachable** while Start Depth
-   caps at 81 (plan §1.12) — P3 re-words it, does not fix it.
+   **1229033515** (plan §9). ⛔ **A baseline move in P4–P8 is a defect.** ✅ P2
+   and P3 moved none.
+2. ✅ **The past-99 `startGame()` defect is re-worded as unreachable** while
+   Start Depth caps at 81 (P3). ⛔ P5's screen offers only `startDepthOptions()`.
 3. ⛔ **Start Depth un-parks two `PLAYTEST.md` asks** (23 and 65) at P5.
 4. ⚠ **The HUD's menu/screen portion is `kit-menu`'s draft** and
    `14-render-entities.js` is `kit-fx`'s — both get a `.NOTES.md` in the phase
@@ -336,5 +358,6 @@ and the close.
    that P1 has shipped; a sitting's answer belongs in `DECISIONS.md`.
 6. ⚠ **P7 must confirm the sensitivity slider range with Paul** — the plan's
    one flagged tuning number.
-7. ⛔ **P3's Start Depth bonus goes in `clearBonuses()`** (`12-scoring.js`),
-   after the three it pays today, through `addScore()`.
+7. ✅ **P3's Start Depth bonus is in `clearBonuses()`**, fourth. ⛔ **P5's
+   RESTART must pass the run's `{ mode, startDepth }` back to `startGame()`** —
+   the `restart` debug action still calls `startGame()` bare (U2).

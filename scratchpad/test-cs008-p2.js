@@ -383,8 +383,9 @@ H.eq(clearStep(), 150 + 700 + 500, "⛔ a death in the well: no 1,000");
 // telemetry — the score column's source
 // ---------------------------------------------------------------------------
 
-H.eq(JSON.stringify(Object.keys(C.TELEMETRY_PLACEHOLDER)), JSON.stringify(["maxCombo", "mode", "startDepth"]),
-     "⛔ the placeholder is three keys, `score` gone");
+// ⛔ Rewritten in place by CS008 P3, which took `mode` and `startDepth` too.
+H.eq(JSON.stringify(Object.keys(C.TELEMETRY_PLACEHOLDER)), JSON.stringify(["maxCombo"]),
+     "⛔ the placeholder is one key, `score` gone");
 H.assert(state.score > 0, "fixture: a scored run");
 H.eq(X.telemetryRow(state).score, state.score, "⛔ the score column reads state.score");
 H.eq(X.TELEMETRY_FIELDS.indexOf("score"), 19, "and it kept its place in the order");

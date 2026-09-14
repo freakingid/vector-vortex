@@ -53,7 +53,7 @@ const STATE_FIELDS = {
   CS007: ["tally"],
   // GDD 7 and 4.4 — addScore()'s total and its next milestone, and the
   // per-well flag behind the "no death" clear bonus (12-scoring.js).
-  CS008: ["score", "nextLife", "diedThisWell"],
+  CS008: ["score", "nextLife", "diedThisWell", "mode", "startDepth"],
 };
 
 function stateFields() {

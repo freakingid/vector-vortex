@@ -546,6 +546,19 @@ const C = {
   PTS_WELL_PER_LEVEL:   100,
   PTS_NO_DEATH_WELL:    1000,
 
+  // ---- Start Depth (GDD 4.6) — CS008 P3 -----------------------------------
+  // ⛔ THE FORMULA IS CANONICAL (Paul, S3): round-to-ROUND of
+  // SCALE × (d − 1)^EXP, in startBonus() (12-scoring.js). GDD 4.6's old table
+  // disagreed with it at 7, 17 and 33 and was corrected to it.
+  START_BONUS_SCALE:    800,
+  START_BONUS_EXP:      1.6,
+  START_BONUS_ROUND:    100,
+  // The list a first session offers, and the ceiling the session record can
+  // extend it to (startDepthOptions(), 22-meta.js). ⛔ 81 keeps a run starting
+  // below C.BAND_RNG_LEVEL, so startGame() needs no past-99 roll (plan §1.12).
+  START_DEPTH_FIRST:    [1, 3, 5, 7, 9],
+  START_DEPTH_CAP:      81,
+
   // ---- Presentation (GDD 10, 12) ------------------------------------------
   HIT_STOP_DEATH:       1.20,   // s
   READABILITY_DEPTH:    0.25,   // ⛔ nothing opaque drawn below this depth
@@ -600,15 +613,14 @@ const C = {
                                 // is wrong, so the export says so in its header.
   TELEMETRY_INTERVAL:   0.50,   // s of SIMULATION time between samples (never
                                 // wall clock). 4096 rows is ~34 min of a run.
-  // ⛔ THREE COLUMNS THAT SHIP NOW WITH KNOWN-CONSTANT VALUES, and that is GDD
-  // 15.6's rule rather than laziness: a column added later invalidates every
-  // log recorded before it, so the ones whose SOURCE is scheduled get their
-  // place in the order now and their source later. `maxCombo` lands with GDD
-  // 14.4's combo; `mode` and `startDepth` with GDD 13's mode select and GDD
-  // 4.6's Start Depth (CS008 P3). ⛔ Each key is DELETED from here by the
-  // changeset that gives that column a real source — `score` went in CS008 P2,
-  // when addScore() gave it state.score.
-  TELEMETRY_PLACEHOLDER: { maxCombo: 0, mode: "classic", startDepth: 1 },
+  // ⛔ A COLUMN THAT SHIPS WITH A KNOWN-CONSTANT VALUE, and that is GDD 15.6's
+  // rule rather than laziness: a column added later invalidates every log
+  // recorded before it, so a column whose SOURCE is scheduled gets its place in
+  // the order now and its source later. `maxCombo` lands with GDD 14.4's combo.
+  // ⛔ Each key is DELETED from here by the changeset that gives that column a
+  // real source — `score` went in CS008 P2 (state.score), `mode` and
+  // `startDepth` in CS008 P3 (state.mode, state.startDepth).
+  TELEMETRY_PLACEHOLDER: { maxCombo: 0 },
 
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.4",   // ⚠ 0.0.2 was never written here — see log/CS006.md

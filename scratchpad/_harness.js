@@ -169,6 +169,8 @@ function buildGame(opts = {}) {
     "Telemetry",
     // scoring and extra lives (12-scoring.js, CS008 P2)
     "addScore", "clearBonuses",
+    // the run's parameters and Start Depth (12/22, CS008 P3)
+    "startBonus", "levelRecord", "startDepthOptions",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of

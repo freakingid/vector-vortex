@@ -54,7 +54,15 @@ function addScore(n) {
 // the step wellCleared() first says yes, before startDive() (Paul, P4s).
 //
 // ⛔ IN THIS ORDER, AND THE ORDER IS FIXED: the level bonus, the unspent Purge,
-// no death. P3 appends the Start Depth bonus here.
+// no death, and the Start Depth bonus (CS008 P3).
+//
+// ⛔ THE START DEPTH BONUS IS PAID ON CLEARING THE STARTING WELL (Paul, S2) — it
+// counts toward lives, but only for a player who survives the well they chose.
+// No "paid" flag: `state.level` only rises, through nextWell(), and the `w`
+// debug key moves wellIndex and never the level, so `level === startDepth` is
+// true on exactly one clear edge per run. Level 1 pays startBonus(1), which is
+// 0. ⚠ The game-over step's clear pays it like the other three — P2's rule, a
+// stopped run scores but gains no life (addScore() above).
 //
 // ⛔ "NO DEATH" IS state.diedThisWell, which enterWell() clears and killSkimmer()
 // sets. A dive death happens AFTER this edge and is cleared by nextWell() before
@@ -63,4 +71,15 @@ function clearBonuses(state) {
   addScore(C.PTS_WELL_PER_LEVEL * state.level);
   if (state.purgeUses === 0) addScore(C.PURGE_SAVED_BONUS);
   if (!state.diedThisWell) addScore(C.PTS_NO_DEATH_WELL);
+  if (state.level === state.startDepth) addScore(startBonus(state.startDepth));
+}
+
+// GDD 4.6's SkillStep bonus for starting at depth `d`. ⛔ THE FORMULA IS
+// CANONICAL (Paul, S3) and GDD 4.6's table was corrected to it:
+//   1 -> 0, 3 -> 2,400, 5 -> 7,400, 7 -> 14,100, 9 -> 22,300,
+//   17 -> 67,600, 33 -> 204,800, 81 -> 887,200.
+// A pure function of `d` — it reads no state, and spends no draw.
+function startBonus(d) {
+  const R = C.START_BONUS_ROUND;
+  return Math.round(C.START_BONUS_SCALE * Math.pow(d - 1, C.START_BONUS_EXP) / R) * R;
 }
