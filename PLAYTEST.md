@@ -27,9 +27,12 @@ on every one of them.
   the colour band (`wellBandColor(level, …)`) are functions of the **level**, so
   ⛔ **no key in the build reaches a chosen level.** Two asks below said "press
   `w` up to level 23" and "press `w` to level 65"; both were impossible and are
-  corrected in place. ⛔ **GDD §4.6's Start Depth is what makes a level
-  selectable** — odd depths to 81, and it is CS008's. Until it lands, an ask that
-  needs a specific level is **parked**, and says so.
+  corrected in place. ⛔ **The START DEPTH screen is what reaches a level
+  (CS008 P5)** — odd levels, and it lists only 1–9 until the session has cleared
+  deeper. ⛔ **To reach any odd level to 81 in one sitting:** open the browser
+  console after the page loads, run `levelRecord().noteCleared(81)`, then PLAY →
+  CLASSIC → the level. The record is in memory, so a reload needs it again. It
+  writes only the list the screen offers; the run itself is an ordinary run.
 - ⛔ **THE BENCH KEYS ARE PERMANENT NOW, AND THIS FILE DEPENDS ON THEM.**
   Paul's H5 call, 2026-08-31: CS004 shipped them ⚠ TEMPORARY, paired with a
   bench constant GDD §8.1's introduction schedule was going to delete. CS007 P3
@@ -91,16 +94,14 @@ kinds on consecutive lanes at staggered depths, from the throat up to
 `C.SAFE_SPAWN_DEPTH` — six silhouettes side by side, at six sizes, which is the
 separability question and is most of this ask.
 
-⛔ **THE OTHER HALF IS PARKED, AND THE PREVIOUS INSTRUCTION HERE WAS IMPOSSIBLE.**
-This said "press `w` up to level 23". ⛔ **`w` cycles the well SHAPE and never the
-level** (see the maintenance note above), and the eligible set is a function of
-`state.level` — so a *played* six-kind board is reachable only by surviving to
-level 18, and a seven-kind one to 23, on three lives with no extra lives in the
-build yet. ⛔ **It unblocks at CS008**, when GDD §4.6's Start Depth makes odd
-levels to 81 selectable; 23 is odd and inside the cap. ⚠ Until then `0` is the
-honest instrument, and what it cannot tell you is whether six kinds **arriving,
-climbing and being triaged at once** is readable — only whether six shapes are
-distinguishable standing still.
+⛔ **THE OTHER HALF — A PLAYED BOARD AT LEVEL 23 — IS REACHABLE NOW (CS008 P5).**
+In the console, `levelRecord().noteCleared(81)`; then PLAY → CLASSIC → **LEVEL
+23** (see the maintenance note above), the first level where all seven
+`C.SPAWN_SCHEDULE` rows are eligible. ⚠ The old instruction, "press `w` up to level 23",
+was impossible: `w` cycles the well shape and never the level. What `0` cannot
+tell you and this can is whether six kinds **arriving, climbing and being
+triaged at once** is readable, not only whether six shapes are distinguishable
+standing still.
 
 ⚠ **An older instruction here said "set `C.DEBUG_SPAWN_KINDS`"; that constant was
 deleted with the schedule** — the difficulty question it answered is now
@@ -128,15 +129,10 @@ broken?** The dim band (GDD §3.6–3.7) draws levels 65–80 at `C.DIM_BAND_ALP
 lane with an enemy in it, a shot travelling it, or a Surger charging it draws
 its two bounding spokes at `C.LANE_LIT_ALPHA` 0.9 instead.
 
-⛔ **PARKED — THIS ASK IS NOT REACHABLE IN THE BUILD, AND THE INSTRUCTION IT USED
-TO CARRY WAS IMPOSSIBLE.** It said "press `w` to level 65". ⛔ **`w` cycles the
-well SHAPE and never the level** (see the maintenance note at the top), and
-`wellBandColor()` takes the **level** — so nothing in the build puts the dim band
-on screen short of surviving sixty-four wells on three lives. ⛔ **It unblocks at
-CS008**: GDD §4.6's Start Depth makes odd levels to 81 selectable, and 65 is odd
-and inside the cap. ⚠ **Do not spend a sitting trying** — read the rest of this
-ask when you can select the depth, and answer it then, with `0` to bring the
-board up once you are there.
+⛔ **REACHABLE NOW (CS008 P5).** In the console, `levelRecord().noteCleared(81)`;
+then PLAY → CLASSIC → **LEVEL 65** (see the maintenance note at the top), and `0`
+to bring a board up. ⚠ The old instruction, "press `w` to level 65", was
+impossible: `w` cycles the well shape and `wellBandColor()` takes the level.
 
 ⚠ **This is the
 only band in the game where the well is not the brightest thing on screen**, and
@@ -329,3 +325,19 @@ for the **global** glow constants (`GLOW_WIDE_W`, `GLOW_WIDE_ALPHA`,
 If answering the palette asks above turns into retuning those rather than the
 per-entity multipliers, that is the signal the lab has become load-bearing and
 the art pass needs a changeset.
+## The screens — boot to game over and back (CS008 P5)
+
+⚠ **The menu palette is provisional** (`C.MENU_COLOR`, `MENU_IDLE_COLOR`,
+`MENU_LOCKED_COLOR`), and the menus were built headless.
+
+- **On a phone:** can you reach START DEPTH 9 and start it, then at game over
+  pick QUIT TO TITLE, without one wrong confirm? Drag in the lower 40 % moves
+  the cursor, a tap above it confirms, and the Purge button backs out (Paul,
+  2026-09-13). The failure to watch for is a tap landing in the drag zone and
+  doing nothing. Knob: `C.TOUCH_ZONE_FRAC`, but it is shared with play.
+- With a mouse, is `C.MENU_ROTATE_STEP` 1.0 (45 px a row at `MOUSE_SENS`) too
+  twitchy on the 41-row START DEPTH list? It is one number, and a keyboard tap
+  stays one row only while it is 1.0.
+- Game over appears when the death freeze ends and ignores anything pressed
+  during it. Does a player mashing Fire through the death read that as the menu
+  being unresponsive?

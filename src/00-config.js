@@ -588,6 +588,25 @@ const C = {
   // margin. The side is the mirror flag in the HUD view, never a detected device.
   HUD_TOUCH_INSET_R:    2.5,
 
+  // ---- Screens and menus (GDD 10.5) — CS008 P5 ----------------------------
+  // ⛔ ROTATE MOVES THE CURSOR IN WHOLE STEPS OF THIS, IN LANE UNITS. 1.0 is
+  // what makes a keyboard tap exactly one row (GDD 9.2's tap is exactly one
+  // lane, measured exact at every tap length) and a mouse flick several.
+  MENU_ROTATE_STEP:     1.0,
+  MENU_TITLE_SIZE:      56,     // px, a screen's title
+  MENU_TITLE_Y:         120,    // px, the title's top edge
+  MENU_TEXT_SIZE:       30,     // px, info lines and rows
+  MENU_TOP_Y:           240,    // px, the first info line's top edge
+  MENU_ROW_H:           46,     // px per info line and per row
+  MENU_COL_W:           420,    // px, a row's label (left) to its detail (right)
+  MENU_VISIBLE_ROWS:    7,      // rows drawn at once; the window follows the cursor
+  MENU_COLOR:           "#FFFFFF",  // ⚠ provisional — the selected row and the title
+  MENU_IDLE_COLOR:      "#7FA8C8",  // ⚠ provisional — an enabled row not selected
+  MENU_LOCKED_COLOR:    "#3A4652",  // ⚠ provisional — a row that cannot be chosen
+  MENU_CHEVRON_SIZE:    12,     // px, the cursor glyph's half-height
+  MENU_CHEVRON_GAP:     20,     // px between the glyph and the row's label
+  MENU_LINE_W:          2.0,    // px, the cursor glyph's stroke
+
   // ---- The death fragmentation (GDD 4.4) — CS008 P4 -----------------------
   // ⛔ drawFragments() (14-render-entities.js) is a function of hit-stop
   // progress and these, and nothing else: no RNG, no clock of its own.

@@ -26,8 +26,8 @@
 // THE WELL LIFECYCLE (GDD 2, 3.4, 4.3, 4.4). Five functions, one path.
 // ---------------------------------------------------------------------------
 //
-// ⛔ EVERY ENTRY INTO A WELL GOES THROUGH enterWell(). A new run, the next
-// level, the debug cycler, and the restart action all land here. In CS002 the
+// ⛔ EVERY ENTRY INTO A WELL GOES THROUGH enterWell(). A new run (the menus'
+// PLAY and RESTART rows), the next level and the debug cycler all land here. In CS002 the
 // debug cycler simply swapped a backdrop, which was harmless because nothing
 // but the Skimmer existed; with enemies alive, cycling a 16-lane well to an
 // 11-lane one strands craft on lanes the new well does not have.
@@ -341,17 +341,25 @@ const Game = (function () {
     inputMirror:      C.INPUT_MIRROR,
     worldW:           C.WORLD_W,
     worldH:           C.WORLD_H,
+    // ⛔ TAP-FIRE IS OFF AT CREATION, WHICH IS PLAY'S SETTING. syncScreen()
+    // below is what turns it on, with auto-fire off, on every menu screen.
+    touchTapFire:     false,
     // ⛔ NAMED ACTIONS, NEVER A SECOND LISTENER (GDD 9.5). See runAction().
     //
-    // ⛔ DIGITS, and that is not a style choice. "r" takes a time-derived seed
-    // and "w" cycles the well out from under the level clock, so
-    // test-cs003-p5.js's recorded input list deliberately presses neither; a
-    // new binding that collided with either would move the determinism hash
-    // and the failure would read as a physics bug. The digits collide with
-    // nothing in INPUT_KEYS_DEFAULT either (04-input.js).
+    // ⛔ DIGITS, and that is not a style choice. "w" cycles the well out from
+    // under the level clock, so the closed soaks' recorded input lists
+    // deliberately never press it; a new binding that collided with it would
+    // move the determinism hash and the failure would read as a physics bug.
+    // The digits collide with nothing in INPUT_KEYS_DEFAULT either (04-input.js).
+    // ⛔ "r" IS UNBOUND SINCE CS008 P5 (U2): its debug restart is deleted, and
+    // game over's RESTART row is the one way to start a run again.
     actionKeys:       {
+      // ⛔ THE MENUS' SECOND WAY BACK (U1; GDD 10.5). Purge is the first, read
+      // off the struct; Escape is a named action because it is not one of the
+      // four fields. It only QUEUES a back — the menu step consumes it, so an
+      // Escape during a freeze or in play acts on nothing.
+      back:         ["escape"],
       cycleWell:    ["w"],
-      restart:      ["r"],
       spawnVaulter: ["1"],
       spawnCarrier: ["2"],
       spawnWeaver:  ["3"],
@@ -364,8 +372,8 @@ const Game = (function () {
       // the debug bench is the only surface there is.
       //
       // ⛔ AND THESE ARE THE FIRST DEBUG KEYS THAT ARE SAFE INSIDE A HASHED RUN.
-      // "r", "w" and the seven digits are on three closed soaks' FORBIDDEN list
-      // because each moves the run's stream or its clock; neither of these
+      // "w", the seven digits and the "r" CS008 P5 deleted are on three closed
+      // soaks' FORBIDDEN list because each moved the run's stream or its clock; neither of these
       // touches the simulation at all — one flips a module-level boolean and one
       // reads the ring and writes to the console. That is the same claim
       // test-cs007-p4.js's headline assertion makes, from the other side, and it
@@ -375,6 +383,10 @@ const Game = (function () {
     },
     onAction:         runAction,
   });
+
+  // ⛔ THE MENU MODEL (15-render-hud.js), handed its one tunable here, from C,
+  // exactly as the input module is.
+  const menu = createMenu({ rotateStep: C.MENU_ROTATE_STEP });
 
   // THE DEBUG BENCH. ⛔ NOT ⚠ TEMPORARY, AND CS007 P3 IS WHERE IT STOPPED BEING
   // SO. It used to be paired with CS004's ⚠ TEMPORARY bench list in
@@ -459,23 +471,10 @@ const Game = (function () {
       // enemies on lanes the new well may not have.
       enterWell();
     }
-    if (name === "restart") {
-      // The game-over stop, undone (GDD 4.4). ⛔ THROUGH THE SAME NAMED-ACTION
-      // PATH as cycleWell, and for a sharper reason: a keydown listener of its
-      // own would be a second input path (GDD 9.5), and this action has to work
-      // on a screen where update() returns early and during a freeze where it
-      // does not run at all — precisely the cases a listener gets wrong. Named
-      // actions are dispatched from input.sample(), which runs in both.
-      //
-      // CS008 owns the real restart flow; this is the debug key that makes the
-      // stop observable and recoverable while there is no game-over screen.
-      startGame();
-      // ⛔ The player reaches for restart DURING the death freeze more often
-      // than after it. A fresh run must not inherit the remainder of the freeze
-      // that ended the previous one — startGame() cannot clear it (hitStopLeft
-      // is private to the loop), so it is cleared here, at the one call site.
-      hitStopLeft = 0;
-    }
+    // ⛔ QUEUED, NEVER ACTED ON HERE. Named actions are dispatched from
+    // input.sample(), which also runs inside a freeze, and the game-over menu
+    // must be inert during the death freeze (GDD 10.5).
+    if (name === "back") menu.back();
 
     // The debug bench. ⚠ THE ⚠ TEMPORARY MARKER THAT USED TO OPEN THIS LINE IS
     // GONE, and CS007 P3 is where it stopped being true — see DEBUG_SPAWN_ACTIONS
@@ -502,6 +501,105 @@ const Game = (function () {
     if (name === "telemetryExport") Telemetry.exportCsv();
   }
 
+  // ---- screens and menus (GDD 10.5; CS008 P5) -------------------------------
+  //
+  // ⛔ SCREENS ARE DATA, and the menu model never sees `state` (15-render-hud.js).
+  // The game owns this table and what each action name does; the model owns
+  // the cursor and the edges. `back` is the row Purge and Escape take.
+  const SCREENS = {
+    title: { title: "VECTOR VORTEX", lines: [], back: null, items: [
+      { label: "PLAY",    detail: "", enabled: true, action: "toMode" },
+      { label: "OPTIONS", detail: "", enabled: true, action: "toOptions" },
+    ] },
+    // ⛔ M1: OVERDRIVE is shown and cannot be chosen until CS012. GDD 13's
+    // "Overdrive is the default highlight" waits for it too — the cursor
+    // skips a disabled row, so CLASSIC is highlighted.
+    mode: { title: "MODE", lines: [], back: "toTitle", items: [
+      { label: "CLASSIC",   detail: "",       enabled: true,  action: "pickClassic" },
+      { label: "OVERDRIVE", detail: "LOCKED", enabled: false, action: "pickOverdrive" },
+    ] },
+    // Rows rebuilt on entry from startDepthOptions(). ⛔ NO COUNTDOWN (GDD 4.6).
+    depth: { title: "START DEPTH", lines: [], back: "toMode", items: [] },
+    // ⛔ P6 FILLS THIS IN (plan §7). P5 makes it reachable and leavable only.
+    options: { title: "OPTIONS", lines: [], back: "toTitle", items: [
+      { label: "BACK", detail: "", enabled: true, action: "toTitle" },
+    ] },
+    // Over the frozen board. Its two lines are filled per frame by draw().
+    gameover: { title: "GAME OVER", lines: ["", ""], back: "quitToTitle", items: [
+      { label: "RESTART",       detail: "", enabled: true, action: "restartRun" },
+      { label: "QUIT TO TITLE", detail: "", enabled: true, action: "quitToTitle" },
+    ] },
+  };
+
+  // The mode the MODE screen chose, carried to the depth screen's startGame().
+  // Not in state: no run exists yet, and startGame() rewrites state anyway.
+  let pendingMode = "classic";
+
+  function buildDepthRows() {
+    const list = startDepthOptions();
+    const rows = SCREENS.depth.items;
+    rows.length = 0;
+    for (let i = 0; i < list.length; i++) {
+      rows.push({ label: "LEVEL " + list[i], detail: "BONUS " + startBonus(list[i]),
+                  enabled: true, action: "startRun", value: list[i] });
+    }
+  }
+
+  // ⛔ THE ONE WAY OUT OF A RUN TO THE TITLE (GDD 15.4), and P6's pause menu
+  // calls it too. It overwrites the run with shipped defaults, so the title
+  // shows no stale board, and clears any freeze a quit from pause could land
+  // inside.
+  //
+  // ⛔ CS011 SEATS THE 'quit' SUBMISSION AT THE TOP OF THIS FUNCTION, AND THE
+  // ORDER IS THE RULE. Whether a run was actually PLAYING must be read BEFORE the
+  // overwrite below, because the overwrite destroys the answer. This is also
+  // game over's QUIT TO TITLE row: that run already ended as 'died', so the check
+  // is `screen === "play"` (and P6's pause), never "anything but title" — the
+  // double submit GDD 15.4 forbids. P5 submits nothing.
+  function quitToTitle() {
+    Object.assign(state, newState());
+    state.screen = "title";
+    hitStopLeft = 0;
+  }
+
+  function menuAction(name, screen) {
+    if (name === "toTitle")   state.screen = "title";
+    if (name === "toOptions") state.screen = "options";
+    if (name === "toMode")    state.screen = "mode";
+    if (name === "pickClassic") {
+      pendingMode = "classic";
+      buildDepthRows();
+      state.screen = "depth";
+    }
+    // ⛔ A TIME SEED, recorded in state.seed by startGame() (GDD 17.1).
+    if (name === "startRun") {
+      startGame(undefined, { mode: pendingMode, startDepth: screen.items[menu.cursor].value });
+    }
+    // ⛔ U2: SAME MODE AND START DEPTH, NEW SEED. The run's two parameters are
+    // still on state — nothing between the stop and this row rewrites them.
+    // ⛔ NO hitStopLeft WRITE, AND NONE IS NEEDED: update() runs only once the
+    // freeze has drained (frame()), so this row cannot be reached inside one.
+    if (name === "restartRun") {
+      startGame(undefined, { mode: state.mode, startDepth: state.startDepth });
+    }
+    if (name === "quitToTitle") quitToTitle();
+  }
+
+  // ⛔ ONE PLACE NOTICES THAT THE SCREEN CHANGED, whoever changed it — a menu
+  // row, killSkimmer()'s game over, startGame() from a test. It re-arms the
+  // menu's entry step and sets touch for the screen: in play, auto-fire as
+  // shipped and no tap-fire (kit-input 0.3.0's behaviour exactly); anywhere
+  // else, a drag must only move the cursor, so auto-fire is off and a tap above
+  // the rotation zone is the confirm (Paul, 2026-09-13).
+  let syncedScreen = null;
+  function syncScreen() {
+    if (state.screen === syncedScreen) return;
+    syncedScreen = state.screen;
+    const inPlay = state.screen === "play";
+    input.configure({ touchAutofire: inPlay ? C.TOUCH_AUTOFIRE : false, touchTapFire: !inPlay });
+    menu.reset();
+  }
+
   function nowMs() {
     if (typeof performance !== "undefined" && performance && performance.now) return performance.now();
     return Date.now();
@@ -511,26 +609,31 @@ const Game = (function () {
 
   // ⛔ Never touches the canvas. Runs headless, always.
   function update(dt) {
-    // ⛔ ABOVE THE STOP, DELIBERATELY. This is the one input path (GDD 9.5) and
-    // it is also where named actions are dispatched, so the `restart` key still
-    // reaches runAction() on a screen where everything below returns early.
+    syncScreen();
+    // ⛔ ABOVE THE STOP, DELIBERATELY. This is the one input path (GDD 9.5), and
+    // the menus below read the struct it writes.
     input.sample(dt, state.input);
 
-    // ⛔ THE GAME-OVER STOP (GDD 4.4). Lives at zero and the gameplay systems
-    // stop stepping: no simulation clock, no entity pass, no spawner, no
-    // collision, no level advance. This is a STOP, not a screen — CS008 owns
-    // the game-over UI, the score submission and the restart flow, and the
-    // build deliberately has nothing to show here yet. draw() is unaffected, so
-    // the frozen board and the craft that died on it stay on screen.
-    if (state.screen === "gameover") return;
+    // ⛔ THE STOP, ON EVERY SCREEN BUT PLAY (GDD 4.4, 10.5). Exactly where the
+    // game-over stop always was: no simulation clock, no entity pass, no
+    // spawner, no collision, no level advance. The menu step is the only thing
+    // that runs, and game over's menu sits over a board draw() still paints.
+    if (state.screen !== "play") {
+      const screen = SCREENS[state.screen];
+      if (screen) {
+        const action = menu.step(screen, state.input);
+        if (action) menuAction(action, screen);
+      }
+      return;
+    }
 
     state.time += dt;
 
     // reset() writes 02-state.js's shipped defaults, which put `skimmer` back
     // to null — no well has been entered. The first step after one enters the
     // current well, rather than minting a lone craft beside a well that was
-    // never armed. ⛔ Still the one path (enterWell); boot goes through
-    // startGame().
+    // never armed. ⛔ Still the one path (enterWell); a run begins through
+    // startGame(), from the START DEPTH screen.
     if (!state.skimmer) enterWell();
 
     // ⛔ THE TELEMETRY SAMPLE, AND THIS IS THE ONE PLACE IT IS TAKEN (GDD 15.6;
@@ -663,14 +766,34 @@ const Game = (function () {
     }
     // ⛔ THE HUD IS LAST and reads only this view (15-render-hud.js). The view
     // object is filled in place, never allocated per frame.
-    _hudView.score = state.score;
-    _hudView.lives = state.lives;
-    _hudView.level = state.level;
-    _hudView.levelColor = wellBandColor(state.level, state.bandRoll);
-    _hudView.purgeUses = state.purgeUses;
-    _hudView.mirror = C.INPUT_MIRROR;
-    drawHud(ctx, _hudView);
+    // ⛔ H4: IN PLAY (THE DIVE IS PLAY) AND OVER GAME OVER, NEVER ON TITLE, MODE,
+    // START DEPTH OR OPTIONS — no run exists there, so it would show a stale or
+    // default score. P6's pause joins the first list.
+    if (state.screen === "play" || state.screen === "gameover") {
+      _hudView.score = state.score;
+      _hudView.lives = state.lives;
+      _hudView.level = state.level;
+      _hudView.levelColor = wellBandColor(state.level, state.bandRoll);
+      _hudView.purgeUses = state.purgeUses;
+      _hudView.mirror = C.INPUT_MIRROR;
+      drawHud(ctx, _hudView);
+    }
+    // The menu over everything, on every screen but play.
+    const screen = state.screen === "play" ? null : SCREENS[state.screen];
+    if (screen) {
+      if (screen === SCREENS.gameover) {
+        screen.lines[0] = "SCORE " + state.score;
+        screen.lines[1] = "LEVEL " + state.level;
+      }
+      _menuView.title = screen.title;
+      _menuView.lines = screen.lines;
+      _menuView.items = screen.items;
+      _menuView.cursor = menu.cursor;
+      drawMenu(ctx, _menuView);
+    }
   }
+
+  const _menuView = { title: "", lines: null, items: null, cursor: 0 };
 
   const _hudView = {
     score: 0, lives: 0, level: 1, levelColor: "", purgeUses: 0,
@@ -763,13 +886,15 @@ const Game = (function () {
     accumulator = 0;
     lastMs = 0;
     hitStopLeft = 0;
+    syncedScreen = null;
     stats.frames = 0; stats.ticks = 0; stats.lastSteps = 0; stats.accumulator = 0;
   }
 
   const api = {
     init, start, stop, reset,
     frame, update, draw, hitStop,
-    input, stats,
+    quitToTitle,
+    input, menu, stats,
     get hitStopLeft() { return hitStopLeft; },
     get running() { return running; },
   };
@@ -781,9 +906,10 @@ const Game = (function () {
 // throwing for lack of a real canvas.
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   Game.init();
-  // ⛔ The run begins here, not lazily inside update(). No argument, so the
-  // seed is time-derived and recorded in state.seed. CS008's title screen is
-  // what will eventually own this call.
-  startGame();
+  // ⛔ THE FRONT DOOR (GDD 10.5; CS008 P5). Boot is the title, and no run exists
+  // until the START DEPTH screen calls startGame(). ⛔ newState().screen STAYS
+  // "play": every closed test starts a run through reset() and startGame(), and
+  // this line is the only place the title is the default.
+  state.screen = "title";
   Game.start();
 }

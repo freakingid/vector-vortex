@@ -569,3 +569,24 @@ into P5's prompt.
 
 **What would change it.** An attract mode (GDD §12) that plays a demo run
 behind the title.
+
+
+---
+
+## 2026-09-13 — CS008 P5: touch in menus is drag to move, tap above to confirm
+
+**The question.** Measured at `d02f8fa`: a tap above the rotation zone gave no
+`fire`, and a touch inside it gave `fire` on touch-down (auto-fire). Under U1's
+rising-edge Fire, every drag meant to move the cursor confirmed the highlighted
+row first. The prompt's pre-authorized fix, an upper tap that confirms, would
+still have left touch able to pick only default rows.
+
+**The call — Paul, on Claude's recommendation.** Outside play, auto-fire is off,
+a drag in the rotation zone moves the cursor, a tap above it confirms, and the
+Purge button backs out. In play both switches stay as shipped. This is kit-input
+0.4.0 (MINOR), and `src/04-input.NOTES.md` has the writeup. Rejected: tapping a
+row directly (more new surface than U1 describes), and deferring (touch would
+reach default rows only).
+
+**What would change it.** A phone sitting where taps land in the drag zone and
+do nothing (`PLAYTEST.md`, screens).

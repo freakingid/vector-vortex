@@ -2,7 +2,7 @@
 
 **Module:** `src/04-input.js`
 **Vendored from:** *originated here (Vector Vortex), destined for coinless-kit as `kit-input`*
-**Current version:** `0.3.0`
+**Current version:** `0.4.0`
 **Depends on:** nothing
 
 ---
@@ -45,6 +45,7 @@ read it as "one unit of its discrete axis".
 | `inputMirror` | yes (boolean) | Moves the Purge/Jump touch buttons to the left edge, for left-handed play. |
 | `worldW` / `worldH` | yes | World-space size the touch buttons and rotation zone live in — the same fixed space every entity uses, not the window's pixel size. |
 | `gamepadButtons` | no | `{ fire: [idx,...], jump: [idx,...], purge: [idx,...] }` override, wholesale, same pattern as `keys`. Default: `fire:[0]` (A), `jump:[4,6]` (LB/LT), `purge:[5,7]` (RB/RT). |
+| `touchTapFire` | no (default `false`) | A touch that lands outside the rotation zone and both buttons holds `fire` while it is down. Off, such a touch does nothing (0.3.0's behaviour). |
 | `pointerLockOffer` | no (default `true`) | Offer Pointer Lock on click. Never forced; refusal is a normal path. |
 | `keys` | no | Binding override, shape of `INPUT_KEYS_DEFAULT`. Matched case-insensitively. |
 | `actionKeys` | no | `{ actionName: ["key", …] }` — host-named actions (debug keys, screen toggles). |
@@ -66,6 +67,7 @@ const input = createInput({
 input.attach({ window, document, element: canvas });  // DOM adapter, optional
 input.sample(dt, hostStruct);   // writes {rotate,fire,purge,jump}, allocates nothing
 input.reset();                  // clears every held key and pending delta
+input.configure({ touchAutofire: false, touchTapFire: true });  // switches, at runtime
 input.detach();
 ```
 
@@ -192,3 +194,31 @@ and keep it host-configurable for a future settings screen.
 names, exactly as before.
 
 **Backport status.** `not yet` — same reasoning as above.
+
+### 2026-09-13 — a tap source and two runtime switches (`VERSION` 0.3.0 → 0.4.0)
+
+**What changed.** `configure(partial)` changes `touchAutofire` and a new
+`touchTapFire` after creation — those two keys only; any other key, or a
+non-boolean, throws before anything is written. `touchTapFire` is also a
+creation option, optional and **off by default**. A touch that lands outside
+the rotation zone and both buttons is now registered as a `"tap"` touch and
+holds `fire` while it is down **when `touchTapFire` is on**; off, it contributes
+nothing, exactly as 0.3.0 ignored it. Both switches are read in `sample()`, so a
+flip takes effect on the next step even with a finger already down. `reset()`
+does not restore them: they are settings, not held input. `touchEnd()` now
+names each touch kind explicitly rather than treating every non-button touch as
+a drag.
+
+**Why.** Vector Vortex CS008 P5, the menus. Measured at `d02f8fa`: a tap above
+the rotation zone produced no `fire`, and a touch inside it produced `fire` on
+touch-down because of auto-fire — so a host that confirms on a rising edge of
+`fire` had every cursor drag confirm the highlighted row first. The host now
+turns auto-fire off and tap-fire on outside play: drag moves, tap confirms, and
+the struct keeps its four fields. Paul's call, 2026-09-13.
+
+**Game-agnostic?** Yes. "Outside the zone and both buttons" is the module's own
+geometry, and `fire` is the same opaque struct field it always was. The module
+does not know what a menu is; the host decides when to flip the switches. No
+config object, no game object, no game function is referenced.
+
+**Backport status.** `not yet`.

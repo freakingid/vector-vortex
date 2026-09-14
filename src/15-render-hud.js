@@ -1,6 +1,7 @@
-// 15-render-hud.js — the in-play HUD (GDD 10.4; CS008 P4). CS008 P5 adds the
-// menu/screen-state half, which is kit-menu's draft (CLAUDE.md, Modules built
-// here); this half is built to the same boundary from its first commit.
+// 15-render-hud.js — the in-play HUD (GDD 10.4; CS008 P4) and the menu model
+// (GDD 10.5; CS008 P5). The menu half is kit-menu's draft (CLAUDE.md, Modules
+// built here; backport packet src/15-render-hud.NOTES.md); the HUD half is
+// built to the same boundary.
 //
 // ⛔ drawHud(ctx, view) READS NO GAME STATE. Everything it shows arrives on the
 // view Game.draw() fills — score, lives, level, the level's colour, purgeUses,
@@ -126,5 +127,155 @@ function drawHud(ctx, view) {
     }
     drawPoly(ctx, _purgePts, true);
     glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.purgeAlpha);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// THE MENU MODEL — kit-menu's draft (GDD 10.5; CS008 P5)
+// ---------------------------------------------------------------------------
+//
+// ⛔ createMenu() READS NO GAME GLOBAL — not `state`, not C, not a game
+// function. Its one tunable arrives as an option, and everything else crosses
+// as a parameter:
+//
+//   screen  DATA the host owns: { items: [{ label, detail, enabled, action }],
+//           back }. `back` is an action name or null (a root screen).
+//   input   the host's input snapshot for this step: { rotate, fire, purge }.
+//   return  an action NAME, or null. The host decides what a name does.
+//
+// ⛔ FIRE AND PURGE ARE RISING EDGES, against "held last step", so a held
+// button confirms once, not sixty times a second. The snapshot stays levels. Rotate ACCUMULATES, and each whole `rotateStep` moves the cursor one
+// enabled row: a keyboard tap (exactly one lane) is one row, a mouse flick
+// several. The cursor CLAMPS at the ends and SKIPS rows that are not enabled,
+// so a disabled row can be shown and never chosen.
+//
+// ⛔ reset() IS THE HOST'S "THE SCREEN CHANGED". The next step after it is an
+// ENTRY step: the cursor goes to the first enabled row, the accumulator
+// empties, whatever is held right now is latched as already held, a queued
+// back() is dropped, and the step returns null. That is what makes a press
+// that began before the screen appeared — during a death freeze, or the press
+// that opened it — do nothing until it is released and pressed again.
+
+const MENU_VERSION = "0.1.0";
+
+function createMenu(options) {
+  const opts = options || {};
+  const rotateStep = opts.rotateStep;
+  if (typeof rotateStep !== "number" || !isFinite(rotateStep) || rotateStep <= 0) {
+    throw new Error("createMenu: options.rotateStep must be a positive finite number");
+  }
+
+  let entry = true;
+  let cursor = 0;
+  let acc = 0;
+  let prevFire = false, prevPurge = false;
+  let backQueued = false;
+
+  function firstEnabled(items) {
+    for (let i = 0; i < items.length; i++) if (items[i].enabled) return i;
+    return 0;
+  }
+
+  // One enabled row per unit of `n`, never past either end. ⛔ Bounded by the
+  // row count, so a huge flick costs one pass over the list and no more.
+  function moveBy(items, n) {
+    const dir = n > 0 ? 1 : -1;
+    let left = Math.min(Math.abs(n), items.length);
+    while (left-- > 0) {
+      let i = cursor + dir;
+      while (i >= 0 && i < items.length && !items[i].enabled) i += dir;
+      if (i < 0 || i >= items.length) return;
+      cursor = i;
+    }
+  }
+
+  function step(screen, input) {
+    const items = screen.items;
+    const fire = !!input.fire, purge = !!input.purge;
+    if (entry) {
+      entry = false;
+      cursor = firstEnabled(items);
+      acc = 0;
+      prevFire = fire; prevPurge = purge;
+      backQueued = false;
+      return null;
+    }
+
+    acc += input.rotate;
+    const whole = Math.trunc(acc / rotateStep);
+    if (whole !== 0) { acc -= whole * rotateStep; moveBy(items, whole); }
+
+    const fireEdge = fire && !prevFire;
+    const purgeEdge = purge && !prevPurge;
+    prevFire = fire; prevPurge = purge;
+
+    if (purgeEdge || backQueued) {
+      backQueued = false;
+      if (screen.back) return screen.back;
+    }
+    if (fireEdge && items[cursor] && items[cursor].enabled) return items[cursor].action;
+    return null;
+  }
+
+  return {
+    VERSION: MENU_VERSION,
+    step,
+    reset() { entry = true; },
+    // A back request from outside the snapshot — a named key action. Consumed
+    // by the next step, and dropped by an entry step like any other press.
+    back() { backQueued = true; },
+    get cursor() { return cursor; },
+  };
+}
+
+// The first row the window shows: the cursor centred where it can be, pinned
+// to either end where it cannot.
+function menuWindowStart(count, cursor, visible) {
+  const max = count > visible ? count - visible : 0;
+  const first = cursor - Math.floor(visible / 2);
+  return first < 0 ? 0 : first > max ? max : first;
+}
+
+const _chevronPts = [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }];
+
+// A menu over whatever Game.draw() painted first. `view`:
+//   title, lines  strings shown above the rows (lines may be empty)
+//   items, cursor the screen's rows and the model's cursor
+// ⛔ Like drawHud it reads no game state, and like drawHud it reads C for
+// sizes and colours — the gap kit-menu's extraction owes an options argument
+// for (src/15-render-hud.NOTES.md).
+function drawMenu(ctx, view) {
+  const cx = C.WORLD_W / 2;
+  const size = C.MENU_TEXT_SIZE;
+  const rowH = C.MENU_ROW_H;
+
+  drawText(ctx, view.title, cx, C.MENU_TITLE_Y, C.MENU_TITLE_SIZE, C.MENU_COLOR, "center");
+
+  let y = C.MENU_TOP_Y;
+  for (let i = 0; i < view.lines.length; i++, y += rowH) {
+    drawText(ctx, view.lines[i], cx, y, size, C.MENU_COLOR, "center");
+  }
+  if (view.lines.length) y += rowH;
+
+  const items = view.items;
+  const first = menuWindowStart(items.length, view.cursor, C.MENU_VISIBLE_ROWS);
+  const last = Math.min(items.length, first + C.MENU_VISIBLE_ROWS);
+  const labelX = cx - C.MENU_COL_W / 2;
+  const detailX = cx + C.MENU_COL_W / 2;
+  for (let i = first; i < last; i++, y += rowH) {
+    const it = items[i];
+    const color = !it.enabled ? C.MENU_LOCKED_COLOR
+                : i === view.cursor ? C.MENU_COLOR : C.MENU_IDLE_COLOR;
+    drawText(ctx, it.label, labelX, y, size, color, "left");
+    if (it.detail) drawText(ctx, it.detail, detailX, y, size, color, "right");
+    if (i === view.cursor) {
+      const S = C.MENU_CHEVRON_SIZE;
+      const tipX = labelX - C.MENU_CHEVRON_GAP, midY = y + size / 2;
+      _chevronPts[0].x = tipX - S; _chevronPts[0].y = midY - S;
+      _chevronPts[1].x = tipX;     _chevronPts[1].y = midY;
+      _chevronPts[2].x = tipX - S; _chevronPts[2].y = midY + S;
+      drawPoly(ctx, _chevronPts, false);
+      glowStroke(ctx, C.MENU_COLOR, C.MENU_LINE_W, 1);
+    }
   }
 }

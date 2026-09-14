@@ -11,7 +11,7 @@
 //     alone never freezes at all, so every death here goes through frame().
 //  2. Frames advance by HALF a simulation step, so no frame can ever run two of
 //     them — "the FIRST live step after the freeze" is not observable otherwise.
-//  3. Boot calls startGame(), so the live state at load is a run in progress.
+//  3. Boot is the title since CS008 P5, so the live state at load is no run.
 //     Every case starts from G.reset() + startGame(SEED).
 //  4. The spawner keeps releasing Vaulters and a cleared well ENTERS THE DIVE
 //     on the very next step (GDD 5), so cases that need a known board pin the
@@ -443,29 +443,60 @@ H.eq(state.invulnTime, C.RESPAWN_INVULN,
 H.eq(state.level, 1, "the run restarts at level 1");
 H.eq(state.enemies.length, 0, "with an empty board");
 
-// ⛔ ONE INPUT PATH (GDD 9.5). "r" is a NAMED DEBUG ACTION dispatched by
-// input.sample(), not a device binding and not a listener of its own — which is
-// also why it works during a freeze, when update() never runs.
+// ⛔ ONE INPUT PATH (GDD 9.5). "r" is not a device binding; its debug restart
+// is deleted (CS008 P5, U2) and game over's RESTART row replaced it.
 H.assert(Object.keys(X.INPUT_KEYS_DEFAULT).every(
            k => X.INPUT_KEYS_DEFAULT[k].indexOf("r") === -1),
-         "⛔ 'r' is not a device binding — it is a named action");
+         "⛔ 'r' is not a device binding");
 
+// ⛔ REWRITTEN IN PLACE, CS008 P5 — the mechanism moved, the claims did not.
+// This block asserted that the "r" debug key restarted from inside the death
+// freeze. The replacement is game over's menu (U2), driven through the same
+// sink: RESTART starts a fresh run, the menu is INERT during the freeze (a
+// press there, and a press held across its end, do nothing), and the fresh run
+// inherits no freeze. The game over is staged at Start Depth 5 so "same Start
+// Depth" is visible. Menu coverage of its own is test-cs008-p5.js's.
 if (canDriveKeys) {
-  well = quietWell();
+  G.reset();
+  X.startGame(SEED, { startDepth: 5 });
+  state.spawn.remaining = 1;
+  state.spawn.timer = 0;
+  state.enemies = [];
+  state.shots = [];
+  clock = 0;
+  G.frame(0);
   state.skimmer.lane = 3;
-  state.level = 4;
+  state.lives = 1;                       // fixture: this death is the game over
   killer = lethal(3);
-  liveStep("the death before the restart key");
-  H.assert(G.hitStopLeft > 0, "the restart key is pressed mid-freeze");
-  // ⛔ TWO half-frames, because that is what spends ONE step, and named actions
-  // are dispatched from input.sample() — which the freeze branch calls and
-  // update() does not reach.
-  G.input.keyDown("r");
-  halfFrame();
-  halfFrame();
-  G.input.keyUp("r");
-  H.eq(state.lives, C.START_LIVES, "the restart action restarts from inside the freeze");
-  H.eq(state.level, 1, "and takes the run back to level 1");
+  liveStep("the death before the game-over menu");
+  H.eq(state.screen, "gameover", "fixture: the death is the game over");
+  H.assert(G.hitStopLeft > 0, "the menu is pressed mid-freeze");
+  // ⛔ TWO half-frames spend ONE step. Named actions (Escape) are dispatched
+  // from input.sample(), which the freeze branch calls and update() does not.
+  for (const k of [" ", "x", "Escape"]) {
+    G.input.keyDown(k);
+    halfFrame();
+    halfFrame();
+    G.input.keyUp(k);
+    halfFrame();
+    halfFrame();
+  }
+  H.assert(G.hitStopLeft > 0, "fixture: the presses all landed inside the freeze");
+  H.eq(state.screen, "gameover", "⛔ the game-over menu is inert during the death freeze");
+  H.eq(state.lives, 0, "and no press there started a run");
+  G.input.keyDown(" ");                  // held across the end of the freeze
+  runFreeze();
+  for (let n = 0; n < 4; n++) liveStep();
+  H.eq(state.screen, "gameover", "⛔ and a press held across the freeze's end does not confirm");
+  G.input.keyUp(" ");
+  liveStep();
+  G.input.keyDown(" ");
+  liveStep();
+  G.input.keyUp(" ");
+  H.eq(state.screen, "play", "RESTART from the game-over menu starts a run");
+  H.eq(state.lives, C.START_LIVES, "with START_LIVES");
+  H.eq(state.startDepth, 5, "at the same Start Depth");
+  H.eq(state.level, 5, "on that level");
   H.assert(state.skimmer.dead === false, "with a live craft");
   H.eq(G.hitStopLeft, 0,
        "⛔ and the fresh run does not inherit the remainder of the old freeze");

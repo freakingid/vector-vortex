@@ -82,7 +82,13 @@ function playedRun(opts) {
   const snapshot = JSON.stringify(st);
   let h = 2166136261 >>> 0;
   for (let i = 0; i < TICKS; i++) {
-    replay(G.input, i);
+    // ⛔ RESTORES A PRECONDITION, CS008 P5. Both runs reach game over at tick
+    // 7,938 (measured), and the stop used to be inert, so the tail was 62 steps
+    // of an unchanging state. Since P5 the stop is a menu: a scripted Space
+    // there is a rising edge that RESTARTS on a time seed. A player at the stop
+    // is at a menu, not replaying the run, so the driver stops pressing and the
+    // 62 stopped steps are still hashed.
+    if (st.screen === "play") replay(G.input, i);
     G.update(X.C.FIXED_DT);
     h = stateHash(h, st);
   }

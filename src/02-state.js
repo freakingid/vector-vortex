@@ -34,9 +34,11 @@ function newState() {
     seed: C.RNG_DEFAULT_SEED,
     rng: mulberry32(C.RNG_DEFAULT_SEED),
 
-    // Screen / state machine (GDD 2). CS002 has one screen and no menus; the
-    // enum this becomes is CS008's to define, so the value is a plain string
-    // rather than a constant nothing else reads yet.
+    // Screen / state machine (GDD 2, 10.5). CS008 P5's values: "title",
+    // "mode", "depth", "options", "play", "gameover" — plain strings, and
+    // Game.update() stops the simulation on every one but "play".
+    // ⛔ THE SHIPPED DEFAULT STAYS "play". Boot (23-main.js) is what sets the
+    // title; every closed test starts a run through reset() and startGame().
     screen: "play",
 
     // Which of the sixteen wells (03-wells.js) is being drawn. ⛔ GDD 3.4's
@@ -117,8 +119,8 @@ function newState() {
     skimmer: null,
 
     // ⛔ GDD 4.4 — the reserve, spent by killSkimmer() and by nothing else.
-    // Zero is the game-over stop (screen = "gameover"), not a screen; CS008
-    // owns the UI, the submission and the restart flow. ⛔ RAISED BY
+    // Zero is the game-over stop (screen = "gameover"), and since CS008 P5 its
+    // menu (RESTART / QUIT TO TITLE); the submission is CS011's. ⛔ RAISED BY
     // addScore() AND NOTHING ELSE (12-scoring.js, CS008 P2): an extra life at
     // each milestone, never past C.LIVES_MAX.
     lives: C.START_LIVES,

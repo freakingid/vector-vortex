@@ -1,98 +1,56 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (P4 done — ⛔ P5, the screens, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P5 done — ⛔ P6, pause and Options, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
 One line per phase here; ⛔ **reasoning goes to `log/CS008.md` as the phase
 goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 
-- **Planning (2026-09-13)** — `PLANNED-FEATURES-CS008.md` +
-  `IMPLEMENTATION-PHASES-CS008.md`, **eight phases**, every call answered by
-  Paul (plan §0, `DECISIONS.md`). ⛔ Three handover claims measured false:
-  (A)+(B) is 75 % not 100 % (float — P1 adds `C.HIT_DEPTH_EPS`), (A) does not
-  move `GOLDEN_LANES` but (B) appends two entries, and the rim death share is
-  driver-dependent. Built nothing.
+- **Planning (2026-09-13)** — the plan and phases docs, eight phases, every
+  call Paul's (plan §0). Three handover claims were measured false. Built nothing.
 
-- **P1 (2026-09-13) — the rim fix, (A) + (B) + ε.** Shots age, retire, then
-  fire, so a shot is tested at the rim on its fire tick; the four climbs park at
-  `1 - C.RIM_CONTACT_DEPTH` and `atRim()` moved with them; `C.HIT_DEPTH_EPS`
-  1e-9 in `collideShots()` only. ⛔ **An enemy arriving at the rim in a firing
-  lane is killed on every cooldown phase** — `test-cs008-p1.js`, 24/24 on S1, S2
-  and S4, Ring and Vee, mutation-checked (ε, (A), `atRim()` — all red; record in
-  `log/CS008.md`). Both planned re-records landed at the planned values; the 19
-  closed-file failures matched §1.5 line for line and were repaired in place.
-  ⛔ **`PLAYTEST.md`'s CS007 ask is unblocked.**
+- **P1 — the rim fix, (A) + (B) + ε.** An enemy arriving at the rim in a firing
+  lane is killed on every cooldown phase, 24/24. Both planned re-records landed
+  at the planned values. Mutation-checked (`log/CS008.md`).
 
-- **Planning, P1b (2026-09-13, at `0b41f55`) — the crossing fix.** Paul
-  answered K1–K4 (plan §0, `DECISIONS.md`):
-  - K1: the **rim sweep** in `collideSkimmer()`;
-  - K2: accept that levels 1–4 are deathless for a fire-holder, with a P8
-    playtest ask;
-  - K3: armour, bolts and a discharge below the rim still kill;
-  - K4: P1b, no renumber.
+- **Planning, P1b (at `0b41f55`)** — K1–K4 answered: the rim sweep, levels 1–4
+  deathless for a fire-holder (a P8 ask), and armour, bolts and a sub-rim
+  discharge still kill.
 
-  ⛔ **Measured false in the handover:** the re-arm's 17/24 is a short
-  pre-fire. With a full rack it is 6/24, and the cap, not the hop, caused the
-  residual deaths. No shot-based variant reaches 24/24 (plan §1.16). Built
-  nothing; `NEXT-STEPS.md`'s entry deleted.
+- **P1b — the crossing fix, the rim sweep.** With fire held, a rim enemy a shot
+  could kill dies on contact. C1–C13 and N1–N3 are 24/24, and the hash is
+  **1229033515**. Mutation-checked.
 
-- **P1b (2026-09-13) — the crossing fix, the rim sweep.** In
-  `collideSkimmer()`, a firing Skimmer asks a touching enemy at the park depth
-  `onShot(null)` before contact can kill — plan §2b, exactly. ⛔ **With fire
-  held, a rim enemy a shot could kill dies on contact**: `test-cs008-p1b.js`,
-  C1–C13 24/24 killed and N1–N3 24/24 died on a full rack, mutation-checked
-  (sweep, fire gate, depth gate, `dead = true` — all red; record in
-  `log/CS008.md`). The five closed-file failures and all three hash values
-  matched §1.16 to the digit. Four fixtures repaired in place, one re-record;
-  `GOLDEN_LANES` and `test-cs008-p1.js` green unedited.
+- **P2 — scoring and extra lives.** `addScore()`, `clearBonuses()`, `points()`;
+  lives at 20k then every 40k. No baseline moved. 14 of 14 mutations red.
 
-- **P2 (2026-09-13) — scoring and extra lives.** `addScore()` and
-  `clearBonuses()` in `12-scoring.js`. `points()` is the fourth contract
-  method. Three kill sites pay on the false → true `dead` transition. The clear
-  bonuses are paid on the clear step, and the dive termination pays nothing.
-  Lives come at 20k and then every 40k, lost past the cap. `state.score`,
-  `nextLife` and `diedThisWell` are new; `score` left the telemetry
-  placeholder. ⛔ **No baseline moved.** `test-cs008-p2.js` covers every GDD §7
-  row, lives, the bonuses, no-draw against a stubbed `addScore()`, and **§17
-  item 8 over 120,000 played steps with 0 mismatches**. Mutation-checked, 14 of
-  14 red (record in `log/CS008.md`). §1.8's 5 closed-file reds plus 5 from new
-  causes (below), all repaired in place.
+- **P3 — mode and Start Depth.** `startGame(seed, opts)`, `startBonus()`, the
+  session record behind `levelRecord()`, `startDepthOptions()`. No baseline
+  moved. 7 of 7 mutations red.
 
-- **P3 (2026-09-13) — mode and Start Depth, no screen.** `startGame(seed,
-  opts)`; `state.mode`/`startDepth`; `startBonus(d)` off `C.START_BONUS_*`,
-  paid in `clearBonuses()` fourth when `level === startDepth`;
-  `C.START_DEPTH_FIRST`/`_CAP`; `levelRecord()` + `startDepthOptions()` in
-  `22-meta.js`, written at the clear edge, outside `state`. Placeholder is
-  `maxCombo` only. ⛔ **No baseline moved** — hash and `GOLDEN_LANES` green
-  unedited. `test-cs008-p3.js`: defaults identical over 8,000 played steps, the
-  eight bonus literals, paid once, the list 1–9 → 13 → 81 across `startGame()`,
-  81 → `WELLS[0]`, `bandRoll` 0, no draw. Mutation-checked, 7 of 7 red (record
-  in `log/CS008.md`). Three planned reds repaired in place; one new-cause red was
-  my own comment, fixed in source (below). GDD §4.6 table corrected.
+- **P4 — text, the HUD, the fragmentation.** `drawText()` is the one text site;
+  also `drawHud(ctx, view)` + `hudLayout()`, and `drawFragments()` on hit-stop
+  progress. No baseline moved. 12 of 12 mutations red.
 
-- **P4 (2026-09-13) — text, the HUD and the fragmentation.** `drawText()` in
-  `13-render-well.js`, the one `fillText`/`strokeText` site (T1, `CLAUDE.md`
-  line added). `drawHud(ctx, view)` + `hudLayout(view)` in `15-render-hud.js`,
-  drawn last, reading only a view `Game.draw()` fills in place. The corners
-  follow GDD §10.4, H1–H3. `drawFragments()` + `fragmentT()` at the foot of
-  `14-render-entities.js`, drawn instead of a dead craft, `t` = hit-stop
-  progress, no RNG. `C.TEXT_*`, `HUD_*`, `FRAG_*`. `src/14-render-entities.NOTES.md`
-  created. ⛔ **No baseline moved** and **no closed file was edited** except
-  `_harness.js`'s export list. `test-cs008-p4.js`, 535 assertions:
-  - one text site, zero rectangles;
-  - rectangles clear of the throat on 16 wells and of the real touch hit test,
-    mirrored and not;
-  - icons `lives − 1`, glyph bright/dim/absent;
-  - fragments identical per `t`, and `t` 0 → 1 over the real freeze with
-    `state.rng` throwing.
-
-  Mutation-checked, 12 of 12 red (record in `log/CS008.md`).
+- **P5 (2026-09-13) — the screens.** Boot is the title. `update()`'s stop is
+  `screen !== "play"` and runs the menu step. `createMenu()` + `drawMenu()` are
+  kit-menu's draft (`src/15-render-hud.NOTES.md`). The screens are title, mode
+  (OVERDRIVE locked), START DEPTH (list + bonus), options (a stub) and game over
+  (RESTART same mode and depth, new seed / QUIT TO TITLE). `quitToTitle()` has
+  the CS011 note, and `r`/`restart` are deleted.
+  - ⛔ **Touch measured first. Paul's call: outside play, drag moves and a tap
+    above the zone confirms.** kit-input **0.4.0** adds `configure()` +
+    `touchTapFire`, flipped in `syncScreen()`.
+  - `test-cs008-p5.js`, 309 assertions: the whole flow on four devices, back,
+    one row per tap, the stop on every screen, H4. **11 of 11 mutations red.**
+  - **No baseline moved.** `test-cs003-p4.js` was rewritten in place; one new
+    cause below. GDD §10.5 + its §0 row; the two parked asks un-parked.
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 369.7 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 384.9 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **39 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **40 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -178,51 +136,31 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 
 ## Known issues
 
+- ⛔ **CS008 P5 — A CLOSED REPLAY THAT OUTLIVES ITS GAME OVER NOW MEETS A LIVE
+  MENU.** The stop used to be inert; now a scripted Fire there RESTARTS on a time
+  seed and a Purge quits. `test-cs008-p3.js` hit it (game over at tick 7,938 of
+  8,000) and its driver now stops pressing at the stop. ⛔ **P8's sixth soak and
+  any new replay must do the same**, or restart through `startGame(seed)` as the
+  soaks do. Same family as P2's lesson: an emulation that adds no export, method
+  or key cannot see an assertion that pins one.
 - ⛔ **CS008 P4 — `test-cs008-p4.js` scans the WHOLE built file, comments
-  included.** Any `fillRect` or `strokeRect` text, or a second `.fillText(` /
-  `.strokeText(`, turns it red. P5's screens draw every string through
-  `drawText()`; ⛔ never name those calls in a comment. `test-cs002-p3.js`
-  also bans the text `ctx.fill` anywhere in `14-render-entities.js`.
-- ⚠ **CS008 P4 — the HUD's mirror side reads `C.INPUT_MIRROR`**, via
-  `_hudView.mirror` in `Game.draw()`. P7 changes that one line to read the input
-  module. ✅ H4 (Paul): P5 draws the HUD in play, pause, the dive and game
-  over, not on title, mode or Start Depth.
-- ⚠ **CS008 P4 — a dead craft is not drawn once the freeze is spent.** After the
-  last life the game-over board has no craft on it. That is the fragmentation
-  finishing, not a missing draw.
-- ⚠ **CS008 P4 — `drawFragments` reads `C.FRAG_*` and `glowStroke` reads
-  `C.GLOW_*`.** kit-fx extraction owes an options argument
-  (`src/14-render-entities.NOTES.md`). A known gap, recorded rather than taken
-  this phase.
-
-- ⚠ **CS008 P2 — THREE NEW-CAUSE REDS the plan's §1.8 did not list**, recorded
-  before any edit. Code in, suite run, hash and `GOLDEN_LANES` green. Beside
-  §1.8's five, five assertions in four files went red:
-  1. `test-cs003-p3.js:88` and `test-cs003-p4.js:125`, *"no addScore exists
-     yet"*. Cause: `_harness.js` now exports `addScore` and `clearBonuses`.
-  2. `test-cs004-p1.js:77`, *"exactly the three signatures"*. Cause: `points()`
-     is the planned fourth method (plan §3), and the prototype list pins three.
-  3. `test-cs007-p4.js:149,153`, *"the score column is 0 until addScore()"* and
-     *"all four read C.TELEMETRY_PLACEHOLDER"*. Cause: the planned deletion of
-     `score` from the placeholder. §1.8's emulation never deleted the key.
-
-  All three are the replaced claim, repaired in place. ⛔ **Lesson for P3–P8:**
-  an emulation that adds no export, method or key cannot see an assertion that
-  pins one.
-- ✅ **A life lost in the starting well does not void the Start Depth bonus —
-  answered.** Paul, 2026-09-13: only the run ending there does; the death costs
-  the no-death 1,000. `DECISIONS.md` carries it; `test-cs008-p3.js` stages both.
+  included.** Any `fillRect`/`strokeRect` text, or a second `.fillText(` /
+  `.strokeText(`, turns it red. ⛔ Never name those calls in a comment.
+  `test-cs002-p3.js` also bans the text `ctx.fill` in `14-render-entities.js`.
+  `test-cs002-p1.js` bans `e.key`, `.touches`, `getGamepads`, `clientX` and
+  `addEventListener` outside `04-input.js`, and `C.`/`state.` inside it.
+- ⚠ **CS008 P4 — the HUD's mirror side reads `C.INPUT_MIRROR`** (`_hudView.mirror`
+  in `Game.draw()`). P7 re-points that one line at the input module.
+- ⚠ **CS008 P4 — a dead craft is not drawn once the freeze is spent**, so the
+  game-over board has no craft on it. That is the fragmentation finishing.
+- ⚠ **`drawFragments`, `drawHud` and `drawMenu` read `C` for sizes and colours.**
+  kit-fx and kit-menu extraction each owe an options argument (both `.NOTES.md`).
 - ⚠ **`test-cs007-p4.js` finds the telemetry module by the text
-  `// 22-meta.js`**, first occurrence. A comment line anywhere earlier in the
-  build that begins `// 22-meta.js` (P3 wrote one in `02-state.js`) blanks its
-  scan — 6 reds. ⛔ Never start a comment line with a module file name.
-- ✅ **A clear on the step that spends the last life — answered and built.**
-  Paul, 2026-09-13: **score, no life**. The bonuses count toward the final score,
-  and `addScore()` awards no life while `screen === "gameover"`, so `lives`
-  stays 0 on the stop. Staged in `test-cs008-p2.js`. `DECISIONS.md` carries it.
-- ⚠ **`_harness.js` has `buildGame({ stub: [names] })`** (CS008 P2). It
-  rebinds a top-level function to a no-op after evaluation, for "X changes
-  nothing else" claims. Only `test-cs008-p2.js` uses it.
+  `// 22-meta.js`**, first occurrence. ⛔ Never start a comment line with a
+  module file name.
+- ⚠ **`_harness.js` has `buildGame({ stub: [names] })`** (P2: rebind to a no-op)
+  **and `{ spy: [names] }`** (P5: count calls, pass through). Both act after
+  evaluation, so internal callers reach them.
 
 - ⚠ **THREE OF THE SIX ROSTER CLASSES PARK RATHER THAN HUNT — Carrier, Weaver,
   Surger — and that is what stalls a SOAK now that wells progress.** ⛔ Not a
@@ -301,16 +239,12 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `CAPTURE_TICKS` 7,300 (deaths at 7,028 and 7,574; ⛔ 8,000 stops inside the
   window and goes red). ⛔ **A later fixture that needs a death or a game over
   inside a window will hit the same wall** — and P8's sixth soak is one.
-- ⛔ **NO KEY IN THE BUILD REACHES A CHOSEN LEVEL.** `w` (`cycleWell`) advances
-  `state.wellIndex` and never `state.level`, and both `eligibleKinds()` and
-  `wellBandColor(level, …)` are functions of the level. ⚠ Found at the CS007
-  close: `PLAYTEST.md` carried "press `w` up to level 23" and "press `w` to level
-  65" for two asks and both were impossible. ⛔ **GDD §4.6's Start Depth is what
-  unblocks them** — odd depths to 81 — so **CS008 makes two parked playtest asks
-  answerable**, and the plan should say so.
-- ⛔ **Playtest asks live in `PLAYTEST.md`**, eight of them marked ⛔, two of them
-  ⛔ **PARKED until CS008's Start Depth**. Not session context — pull it up at the
-  machine with a build in front of you, never during a build phase.
+- ⛔ **A CHOSEN LEVEL IS REACHED FROM THE START DEPTH SCREEN**, not `w` (`w`
+  cycles the shape and never `state.level`). A fresh session lists 1–9 only; a
+  sitting runs `levelRecord().noteCleared(81)` in the console first
+  (`PLAYTEST.md`, maintenance notes). Both formerly parked asks now say so.
+- ⛔ **Playtest asks live in `PLAYTEST.md`**, not session context. Pull it up at
+  the machine with a build in front of you, never during a build phase.
 
 ## Open questions (blocking)
 
@@ -341,17 +275,12 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   system earns a rule in a 50 KB auto-loading file is Paul's call, not a build
   phase's. GDD §15.6 carries the shipped column table, the ring, the surface and
   the no-persistence rule; only the code-map line was updated.
-- Backport `kit-input` (`src/04-input.js`, all four devices, v0.3.0) to
-  coinless-kit — a separate manual step, verified against that repo's own suite.
-- **`state.screen === "gameover"` is a STOP with nothing on screen** but the
-  frozen board. `r` restarts. CS008 P5 owns the screen and the restart flow and
-  deletes the `restart` action; ⚠ the leaderboard **submission** is CS011's
-  (`ROADMAP.md`), and P5 builds only its seat.
-- ⚠ **Corrected (plan §1.10): the Drifter and the Surger DID ship points
-  constants** — `PTS_DRIFTER` `[250, 500, 750]` and `PTS_SURGER` 200, since
-  CS001 P0. Since CS008 P2 each has exactly one reader, its class's
-  `points()`. The Overdrive `PTS_REAVER`, `PTS_MIMIC` and `PTS_WARDEN` are still
-  unread, and CS012 owns them.
+- Backport `kit-input` (`src/04-input.js`, **v0.4.0**) and, after P7, `kit-menu`
+  (`src/15-render-hud.js`, v0.1.0) to coinless-kit. Each is a separate manual
+  step, verified against that repo's own suite.
+- ⚠ **The leaderboard submission is CS011's** (`ROADMAP.md`). P5 built its seat:
+  `quitToTitle()` carries GDD §15.4's ordering note, and nothing submits.
+- The Overdrive `PTS_REAVER`, `PTS_MIMIC` and `PTS_WARDEN` are unread; CS012's.
 - ⛔ **THE SEVEN DEBUG SPAWN ACTIONS SHIP UNTIL CS016** decides whether debug keys
   ship at all (Paul's H5 call, 2026-08-31). They are **not** ⚠ TEMPORARY, the
   ⚠ provisional palette still needs judging, and `PLAYTEST.md` is written around
@@ -361,36 +290,35 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — ⛔ P5, THE SCREENS
+## Next up — ⛔ P6, PAUSE AND OPTIONS
 
-⛔ **Paste P5's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
-session.** The plan is `PLANNED-FEATURES-CS008.md`;
-⛔ a build phase reads the document, not the planning conversation
+⛔ **Paste P6's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
+session.** A build phase reads the document, not the planning conversation
 (`CLAUDE.md` rule 3c).
 
-**The sequence:** P1 the rim fix · P1b the crossing fix · P2 scoring and
-extra lives · P3 mode and Start Depth · P4 text, HUD, fragmentation · **P5 the
-screens** · P6 pause and Options · P7 the Controls page · P8 the front-door soak
-and the close.
+**The sequence:** P1 · P1b · P2 · P3 · P4 · P5 the screens · **P6 pause and
+Options** · P7 the Controls page · P8 the front-door soak and the close.
 
-⛔ **What each phase must not lose, carried from before the plan:**
+⛔ **What P6–P8 must not lose:**
 
-1. ✅ **All three re-records landed** — P1's `GOLDEN_LANES` +2 appended entries
-   (the first 16 unmoved) and `P1_DETERMINISM_HASH` 1862183225, then P1b's hash
-   **1229033515** (plan §9). ⛔ **A baseline move in P4–P8 is a defect.** ✅ P2
-   and P3 moved none.
-2. ✅ **The past-99 `startGame()` defect is re-worded as unreachable** while
-   Start Depth caps at 81 (P3). ⛔ P5's screen offers only `startDepthOptions()`.
-3. ⛔ **Start Depth un-parks two `PLAYTEST.md` asks** (23 and 65) at P5.
-4. ⚠ **The HUD's menu/screen portion is `kit-menu`'s draft** and
-   `14-render-entities.js` is `kit-fx`'s — both get a `.NOTES.md` in the phase
-   that first touches them. ✅ P4 created kit-fx's; ⛔ P5 creates
-   `src/15-render-hud.NOTES.md`.
-5. ⚠ **Nothing has been tuned against GDD §8.2's targets.** The CS007 ask
-   *"can you NAME what changed at level 5, at 9, at 13"* is answerable now
-   that P1 has shipped; a sitting's answer belongs in `DECISIONS.md`.
-6. ⚠ **P7 must confirm the sensitivity slider range with Paul** — the plan's
-   one flagged tuning number.
-7. ✅ **P3's Start Depth bonus is in `clearBonuses()`**, fourth. ⛔ **P5's
-   RESTART must pass the run's `{ mode, startDepth }` back to `startGame()`** —
-   the `restart` debug action still calls `startGame()` bare (U2).
+1. ⛔ **A baseline move in P6–P8 is a defect.** The hash is 1229033515 and
+   `GOLDEN_LANES` has its P1 +2 appended entries.
+2. ⚠ **kit-input is already 0.4.0 (P5).** The plan's P6 0.4.0 and P7 0.5.0 are
+   now **0.5.0 and 0.6.0**. The criterion "bumped twice across P6 and P7" stands.
+3. ⚠ **Escape is bound to the named action `back`**, and a key maps to ONE named
+   action (`inputBuildBindings` is a `Map`). P6's `pause` on Escape cannot be a
+   second binding on the same key: one action has to mean pause in play and back
+   in a menu, or the plan's binding changes. `p` is free.
+4. ⚠ **`syncScreen()` (23-main.js) sets touch per screen on every change.** Pause
+   is "not play", so it gets the menu touch mode, the stop and a fresh entry step
+   for free. ⛔ **It writes `touchAutofire: C.TOUCH_AUTOFIRE` on entering play**:
+   P7's TOUCH AUTO-FIRE setting must be what it reads, or every screen change
+   resets the player's choice.
+5. ⚠ **The HUD predicate is `play || gameover`** in `Game.draw()`. P6 adds pause
+   (H4). **OPTIONS is a BACK-only stub whose back is the title**, and P6 must
+   return it to wherever it was opened from. `quitToTitle()` already clears
+   `hitStopLeft`, so a quit from a pause inside a freeze is safe. ⛔ The
+   hit-stop drain in `frame()` is still P6's (plan §7).
+6. ⚠ **Nothing has been tuned against GDD §8.2's targets**, and P8 writes K2's
+   levels-1–4 ask.
+7. ⚠ **P7 must confirm the sensitivity slider range with Paul.**

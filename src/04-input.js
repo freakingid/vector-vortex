@@ -39,15 +39,15 @@
 // lets a headless test replay a recorded event list with no DOM at all, which
 // is what makes the determinism guarantee (GDD 17.1) testable.
 
-const INPUT_VERSION = "0.3.0";
+const INPUT_VERSION = "0.4.0";
 
 // Default bindings, matched case-insensitively. These are NOT tunables — a
 // keymap is this module's own default and a host replaces it wholesale through
 // options.keys. Values are DOM `key` names, lowercased.
 //
-// "w" and "r" are deliberately unbound here: the game binds them as named debug
-// actions (see options.actionKeys), and a key doing two jobs is a bug waiting
-// for a player who rebinds.
+// "w" is deliberately unbound here: the game binds it as a named debug action
+// (see options.actionKeys), and a key doing two jobs is a bug waiting for a
+// player who rebinds.
 const INPUT_KEYS_DEFAULT = {
   left:  ["arrowleft", "a"],
   right: ["arrowright", "d"],
@@ -118,6 +118,7 @@ function inputBuildBindings(src) {
 //     worldW, worldH,       // required — world-space size touch buttons live in
 //     inputMirror,          // required — mirrors touch buttons for left-handed play
 //     pointerLockOffer,                                          // optional, default on
+//     touchTapFire,         // optional, default off — see touchStart (0.4.0)
 //     keys,        // optional binding override, shape of INPUT_KEYS_DEFAULT
 //     actionKeys,  // optional { actionName: ["key", ...] } for named actions
 //     onAction,    // optional (name) => void, called during sample()
@@ -136,7 +137,13 @@ function createInput(options) {
   const touchSens      = inputRequireNum(opts, "touchSens");
   const touchZoneFrac  = inputRequireNum(opts, "touchZoneFrac");
   const touchButtonR   = inputRequireNum(opts, "touchButtonR");
-  const touchAutofire  = inputRequireBool(opts, "touchAutofire");
+  // ⛔ `let`, NOT `const`, AND ONLY THESE TWO (0.4.0). configure() below is the
+  // one writer after creation. Everything else is still fixed at creation.
+  let touchAutofire    = inputRequireBool(opts, "touchAutofire");
+  // A touch that lands outside the rotation zone AND both buttons holds `fire`
+  // while this is on. Optional and OFF by default, so a host that never names
+  // it gets 0.3.0's behaviour exactly: such a touch does nothing.
+  let touchTapFire     = opts.touchTapFire === undefined ? false : inputRequireBool(opts, "touchTapFire");
   const gamepadDeadzone = inputRequireNum(opts, "gamepadDeadzone");
   const gamepadSens     = inputRequireNum(opts, "gamepadSens");
   const worldW = inputRequireNum(opts, "worldW");
@@ -178,9 +185,10 @@ function createInput(options) {
 
   // Touch: a relative drag, exactly like mouse but at TOUCH_SENS (GDD 9.3).
   // Not a virtual stick — there is no rest position, only Δx since last move.
-  const touches = new Map();   // touch id -> { kind: "drag"|"purge"|"jump", x }
+  const touches = new Map();   // touch id -> { kind: "drag"|"tap"|"purge"|"jump", x }
   let touchDx = 0;              // world-space px accumulated since the last sample
   let touchDragCount = 0;       // active drag touches; > 0 drives TOUCH_AUTOFIRE
+  let touchTapCount = 0;        // active tap touches; > 0 drives fire under touchTapFire
 
   // Gamepad: the stick is a held analog position, not a discrete press, so it
   // gets its own accumulator rather than routing through `axis` (GDD 9.4).
@@ -261,7 +269,14 @@ function createInput(options) {
     if (y >= worldH * (1 - touchZoneFrac)) {
       touches.set(id, { kind: "drag", x: x });
       touchDragCount++;
+      return;
     }
+    // ⛔ REGISTERED WHETHER OR NOT touchTapFire IS ON (0.4.0). The switch is read
+    // in sample(), exactly like touchAutofire, so a host that flips it while a
+    // finger is down gets the new answer on the next step rather than a finger
+    // that keeps the old one until it lifts.
+    touches.set(id, { kind: "tap" });
+    touchTapCount++;
   }
 
   function touchMove(id, x, y) {
@@ -277,6 +292,7 @@ function createInput(options) {
     touches.delete(id);
     if (t.kind === "purge") buttons.delete("purge");
     else if (t.kind === "jump") buttons.delete("jump");
+    else if (t.kind === "tap") touchTapCount--;
     else touchDragCount--;
   }
 
@@ -393,7 +409,8 @@ function createInput(options) {
     rotate += gamepadAxisDelta(gamepadAxisX, dt);
 
     s.rotate = rotate;
-    s.fire   = actionHeld("fire") || (touchAutofire && touchDragCount > 0);
+    s.fire   = actionHeld("fire") || (touchAutofire && touchDragCount > 0) ||
+               (touchTapFire && touchTapCount > 0);
     s.purge  = actionHeld("purge");
     s.jump   = actionHeld("jump");
 
@@ -405,6 +422,24 @@ function createInput(options) {
       queued.length = 0;
     }
     return s;
+  }
+
+  // configure(partial) — change a switch AFTER creation (0.4.0). ⛔ ONLY the keys
+  // below; any other key throws, and so does a non-boolean, BEFORE anything is
+  // written, so a bad call changes nothing. A host whose screens want different
+  // touch behaviour (a menu, where a drag must not also be a press) flips these
+  // on its own screen changes; the struct keeps its four fields either way.
+  // reset() does NOT restore them — they are settings, not held input.
+  const CONFIGURABLE = { touchAutofire: true, touchTapFire: true };
+  function configure(partial) {
+    const p = partial || {};
+    const keys = Object.keys(p);
+    for (let i = 0; i < keys.length; i++) {
+      if (!CONFIGURABLE[keys[i]]) throw new Error("configure: " + keys[i] + " is not configurable");
+      if (typeof p[keys[i]] !== "boolean") throw new Error("configure: " + keys[i] + " must be a boolean");
+    }
+    if (p.touchAutofire !== undefined) touchAutofire = p.touchAutofire;
+    if (p.touchTapFire !== undefined) touchTapFire = p.touchTapFire;
   }
 
   function reset() {
@@ -421,6 +456,7 @@ function createInput(options) {
     touches.clear();
     touchDx = 0;
     touchDragCount = 0;
+    touchTapCount = 0;
     gamepadAxisX = 0;
     gpDpadLeftDown = false;
     gpDpadRightDown = false;
@@ -542,7 +578,7 @@ function createInput(options) {
 
   return {
     VERSION: INPUT_VERSION,
-    sample, reset,
+    sample, reset, configure,
     keyDown, keyUp, mouseMove, setButton,
     touchStart, touchMove, touchEnd, pollGamepads,
     attach, detach,

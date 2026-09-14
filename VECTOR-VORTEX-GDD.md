@@ -27,6 +27,7 @@ Modelled on Orbital Overhaul's §0 read contract. A future session reads §0 + �
 | 8 | Difficulty | The heat clock, introduction schedule |
 | 9 | Controls | Any input path |
 | 10 | Visual design | Rendering, glow, HUD, readability |
+| 10.5 | Screens and menus | Title, mode, Start Depth, options, game over, pause; the screen state machine; the menu model; menu input on any device |
 | 11 | **Audio** | Music, SFX, the intensity director |
 | 12 | Onboarding | Prompts, attract mode, first-run |
 | 13 | Modes | Classic vs Overdrive gating |
@@ -304,6 +305,8 @@ Start 3. Extra life at 20,000 then every 40,000. Reserve cap 6; awards past the 
 ⛔ **Shipped, CS008 P4 — the fragmentation.** While `skimmer.dead`, `Game.draw()` draws `drawFragments()` (`14-render-entities.js`, a kit-fx primitive) **instead of** the craft: each segment of the craft's own outline drifts outward from its centroid by `FRAG_DRIFT × t`, turns by `±FRAG_SPIN × t` alternating by segment, and fades as `1 − t` (Paul, U9). ⛔ **`t` is hit-stop progress**, `fragmentT(hitStopLeft, HIT_STOP_DEATH)` — no RNG and no second clock, so identical progress draws identically and the freeze the player is watching is the animation. Every death goes through `killSkimmer()`'s freeze, so a Dive death fragments too. Once the freeze is spent the craft is not drawn until the respawn step, and after the last life it stays gone.
 
 Zero lives sets `screen = "gameover"`, which is a ⛔ **stop, not a screen**: `Game.update()` returns early above everything, so no clock, no spawner, no entity pass, no collision and no level advance run, while `draw()` is untouched and the board the player died on stays up. CS008 owns the game-over UI and the real restart flow; the submission is CS011's.
+
+⛔ **Shipped, CS008 P5 — the stop is still a stop, and now it has a menu.** The early return became `screen !== "play"`, in the same place, so every screen that is not play stops the simulation the same way. Game over's menu (RESTART / QUIT TO TITLE) is the only thing that steps there, over the frozen board, and it is inert during the death freeze (§10.5). The `r` debug restart is deleted. The submission is still CS011's.
 
 ⛔ **Shipped, CS008 P2 — extra lives.** `addScore()` (`12-scoring.js`, §7) is the **only** place a life is awarded. The next milestone is a field, `state.nextLife`, born at `EXTRA_LIFE_FIRST` (20,000); crossing it adds a life if `lives < LIVES_MAX` and advances it by `EXTRA_LIFE_EVERY` (40,000) **either way** — 20k, 60k, 100k, 140k … (Paul, P3s). A `while` pays one award that crosses two milestones twice. ⚠ **An award past the cap is lost, and in CS008 it is silent**: the milestone moves on and nothing is banked. The distinct sound above is CS009's, and the hook line is commented in `addScore()`. ⛔ **A stopped run scores but gains no life** (Paul, 2026-09-13). A clear edge on the step that spends the last life — only a Weaver bolt can kill on a clearing step, measured 0 times in 268 game overs — still pays its bonuses, because the edge runs after `killSkimmer()`. The points count toward the final score, but `addScore()` awards no life while `screen === "gameover"`, so `lives` stays 0 on the stop and the milestone is spent.
 
@@ -850,6 +853,41 @@ Score top-left, lives bottom-left, level and band top-right, Purge charge bottom
 | Bottom-right | the Purge glyph: bright at `purgeUses` 0, `HUD_PURGE_DIM_ALPHA` at 1, absent at 2 or more (§4.3) |
 
 ⛔ **The touch-button side insets** by `TOUCH_BUTTON_R × HUD_TOUCH_INSET_R` (2.5) at all times, not only on detected touch (H3) — the buttons sit on exactly the right-hand corners (`C.INPUT_MIRROR` moves them left). The side comes from `view.mirror`; CS008 P7 sources it from the input module. A text rectangle is sized by `TEXT_CHAR_W`, not `measureText()`, so `test-cs008-p4.js` asserts arithmetically that every rectangle clears the throat zone (§10.3) on all sixteen wells and every touch-button point, mirrored and not. Combo is Overdrive's and not built.
+
+⛔ **H4 (Paul, 2026-09-13; shipped CS008 P5): the HUD draws in play (the Dive included) and over game over, and not on title, mode, Start Depth or options** — no run exists there, so it would show a stale or default score. P6's pause joins the first list.
+
+### 10.5 Screens and menus
+
+**Shipped, CS008 P5.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"options"`, `"play"`, `"gameover"`. P6 adds pause and fills in options.
+
+```
+boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH ──row──► PLAY ──last life──► GAME OVER
+          │  ◄──back───  │  ◄────back────     │                  ▲                  │  │
+          └──OPTIONS──► OPTIONS                                  └────RESTART───────┘  │
+                          │ ◄─back                    TITLE ◄──QUIT TO TITLE / back────┘
+```
+
+| Screen | Rows | Back |
+|---|---|---|
+| Title | PLAY, OPTIONS | — |
+| Mode | CLASSIC; OVERDRIVE shown locked (M1) | Title |
+| Start Depth | `startDepthOptions()` (§4.6), each row with its `startBonus()`. ⛔ No countdown | Mode |
+| Options | BACK (P6 fills it) | Title |
+| Game over | SCORE and LEVEL lines, then RESTART and QUIT TO TITLE (U2) | Title, via `quitToTitle()` |
+
+- ⛔ **Every screen but play is a simulation stop** (§4.4). `Game.update()` samples input, runs the menu step and returns: no clock, no spawner, no entity pass.
+- ⛔ **Boot is the title, and no run exists until a Start Depth row calls `startGame(time seed, { mode, startDepth })`.** `newState().screen` stays `"play"`, because every closed test starts a run through `reset()` and `startGame()`.
+- **RESTART** is `startGame(time seed, { mode, startDepth })` with the run's own two parameters: same mode, same Start Depth, new seed (U2).
+- ⛔ **`quitToTitle()` overwrites the run with `newState()`**, so the title shows no stale board. CS011 adds the `'quit'` submit at its top, and §15.4's ordering is written at the function: whether the run was *playing* is read before the overwrite. Game over's QUIT row goes through it too, and must never submit `'quit'` for a run that already died.
+
+**Navigation (Paul, U1).** Rotate moves the cursor, Fire confirms, Purge backs out, and Escape also backs out (a named action, `back`). The menu model is `createMenu()` in `15-render-hud.js`, kit-menu's draft (`src/15-render-hud.NOTES.md`). ⛔ It reads no game state: a screen is data (rows with a label, a detail, an enabled flag and an action name, plus a back action), a step takes the input struct and returns an action name, and `23-main.js` decides what each name does.
+- ⛔ **Fire and Purge are rising edges** against the previous step. The struct stays four levels (§9.5).
+- **Rotate accumulates**, and each whole `MENU_ROTATE_STEP` (1.0 lane) moves one row. A keyboard tap is exactly one row at every tap length, and a mouse flick is several. The cursor clamps at the ends and skips disabled rows.
+- ⛔ **A screen change makes the next step an entry step**: the cursor goes to the first enabled row, whatever is held is latched as already held, and a queued Escape is dropped. `syncScreen()` notices every change, whoever made it, killSkimmer()'s game over included. That is what makes game over's menu **inert during the death freeze**: `update()` does not run inside the freeze, and a press made there, released or held across its end, does nothing. The fresh run a RESTART starts inherits no freeze, by construction.
+
+**Touch (Paul, 2026-09-13).** Measured at `d02f8fa`: a tap above the rotation zone gave no `fire`, and a touch inside it gave `fire` on touch-down (auto-fire, §9.3). So every drag meant to move the cursor would have confirmed the highlighted row first. ⛔ **Outside play, auto-fire is off and a tap above the rotation zone holds `fire`.** Drag moves the cursor, tap confirms, and the Purge button backs out. In play both switches are exactly as before. The switches are kit-input 0.4.0's `configure()` and its `touchTapFire` source (`src/04-input.NOTES.md`), flipped in `syncScreen()`.
+
+**Rendering.** `drawMenu(ctx, view)` is drawn last, over the well and, at game over, over the frozen board. It shows the title, the info lines and a window of `MENU_VISIBLE_ROWS` rows that follows the cursor, with a chevron on the cursor row. Every string goes through `drawText()` (§10.2) and the chevron goes through `drawPoly` + `glowStroke`. The menu palette (`MENU_COLOR`, `MENU_IDLE_COLOR`, `MENU_LOCKED_COLOR`) is ⚠ provisional.
 
 ---
 

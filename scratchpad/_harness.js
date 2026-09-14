@@ -173,6 +173,8 @@ function buildGame(opts = {}) {
     "startBonus", "levelRecord", "startDepthOptions",
     // text, the HUD and the death fragmentation (13/14/15, CS008 P4)
     "drawText", "drawHud", "hudLayout", "PURGE_GLYPH_POLY", "drawFragments", "fragmentT",
+    // the menu model and the screens (15/23, CS008 P5)
+    "createMenu", "drawMenu", "menuWindowStart",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of
@@ -182,7 +184,14 @@ function buildGame(opts = {}) {
   const stubs = (opts.stub || []).map(n =>
     `\n;if (typeof ${n} !== "function") throw new Error("stub: no function ${n}");` +
     `\n${n} = function () {};`).join("");
-  const tail = stubs + "\n;return {" +
+  // `opts.spy` wraps named top-level functions AFTER evaluation so every
+  // internal caller reaches the wrapper, which counts calls in `.calls` and
+  // otherwise passes through (test-cs008-p5.js: which screens draw the HUD).
+  const spies = (opts.spy || []).map(n =>
+    `\n;if (typeof ${n} !== "function") throw new Error("spy: no function ${n}");` +
+    `\n${n} = (function (f) { const w = function () { w.calls++; return f.apply(this, arguments); };` +
+    ` w.calls = 0; return w; })(${n});`).join("");
+  const tail = stubs + spies + "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +
     "};";
   const fn = new Function("window", "document", "navigator", "performance",

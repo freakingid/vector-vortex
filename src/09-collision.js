@@ -270,8 +270,8 @@ function killSkimmer(state) {
   // lets this forced value behave correctly on the way out.
   state.purgeLatched = true;
 
-  // ⛔ THE STOP, not a screen (GDD 4.4). CS008 owns the game-over UI, the score
-  // submission and the restart flow; all this changeset does is stop stepping
+  // ⛔ THE STOP (GDD 4.4). Its menu is CS008 P5's (23-main.js) and the score
+  // submission is CS011's; all this writes is the screen, which stops stepping
   // the gameplay systems, in Game.update(). The freeze below still runs — the
   // last death of a run reads exactly like the others.
   if (state.lives <= 0) {
