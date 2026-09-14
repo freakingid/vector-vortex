@@ -138,6 +138,41 @@ H.eq(state.screen, "play", "⛔ a Start held through the resume does not pause a
 START.up(); liveStep(); START.down(); liveStep(); START.up();
 H.eq(state.screen, "pause", "a fresh Start press pauses again");
 
+// ⛔ `p` and Start TOGGLE on the pause screen (Paul, 2026-09-13), instantly.
+for (const [label, src] of [["p", P], ["gamepad Start", START]]) {
+  toRun();
+  steps(10);
+  src.down(); liveStep(); src.up(); steps(5);
+  H.eq(state.screen, "pause", `fixture: ${label} paused`);
+  const t0 = state.time;
+  src.down(); liveStep(); src.up();
+  H.eq(state.screen, "play", `⛔ ${label} on the pause screen resumes`);
+  H.close(state.time, t0 + C.FIXED_DT, 1e-12, `${label}: ⛔ instant — the pressing step is already a play step`);
+}
+// ⛔ The page going hidden never resumes; `p` and Start do nothing on OPTIONS
+// opened from pause; the top touch on the pause menu is a confirm tap (RESUME).
+toRun();
+press(P);
+HIDE.down(); steps(5);
+H.eq(state.screen, "pause", "⛔ the page going hidden on the pause screen does not resume");
+tapRight(1); press(FIRE);
+H.eq(state.screen, "options", "fixture: OPTIONS from pause");
+press(P); press(START);
+H.eq(state.screen, "options", "⛔ `p` and Start do nothing on OPTIONS opened from pause");
+press(ESC);
+H.eq(state.screen, "pause", "fixture: back to pause");
+// ⛔ A Purge landing on the same step as the toggle spends nothing: the toggle
+// resumes inside sample(), so that very step simulates with Purge held.
+{
+  const u = state.purgeUses;
+  PURGE.down(); P.down(); liveStep(); P.up(); steps(3); PURGE.up(); liveStep();
+  H.eq(state.screen, "play", "fixture: the toggle resumed with Purge down");
+  H.eq(state.purgeUses, u, "⛔ a Purge pressed with the toggle spends no charge (the re-latch)");
+  press(P);
+}
+press(TOP);
+H.eq(state.screen, "play", "the top-edge touch on the pause menu confirms RESUME");
+
 // A Fire held in play does not confirm RESUME on the pausing step or after.
 toRun();
 FIRE.down(); steps(10);
@@ -384,8 +419,9 @@ const creditText = credits.join("\n");
 for (const w of WORDS.concat("atari")) {
   H.assert(!new RegExp(`\\b${w}\\b`, "i").test(creditText), `⛔ the credits never say "${w}"`);
 }
-for (const w of WORDS) {
-  H.assert(!new RegExp(`\\b${w}\\b`, "i").test(script), `⛔ the built file never says "${w}" (CLAUDE.md vocabulary)`);
+// "atari" too (GDD 18 item 1: no Atari marks in code or comments — Paul, 2026-09-13).
+for (const w of WORDS.concat("atari")) {
+  H.assert(!new RegExp(`\\b${w}\\b`, "i").test(script), `⛔ the built file never says "${w}" (CLAUDE.md vocabulary; GDD 18)`);
 }
 H.assert(!/\bT-\d{4}\b/.test(script), "⛔ no T-#### name in the built file");
 

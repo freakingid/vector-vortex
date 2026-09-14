@@ -126,7 +126,7 @@ function entityPoints(well, lane, depth, poly, size) {
 // bottom. Wider across the lanes than it is deep — the flattening — so it reads
 // as a wingspan blocking a lane rather than as a diamond.
 //
-// ⛔ GDD 18 item 3: this has to be OURS. The shape Atari's is remembered for is
+// ⛔ GDD 18 item 3: this has to be OURS. The shape the original's is remembered for is
 // a bowtie — two solid triangles meeting at a point, with nothing pinched and
 // no notch. The four notches are the difference, and they are load-bearing, not
 // decoration. Do not "simplify" this back to six points.
@@ -168,7 +168,7 @@ function drawVaulter(ctx, well, lane, depth) {
 // extra points on the hull's own path would join them with a stroke and turn
 // two shapes into one scribble.
 //
-// ⛔ GDD 18 item 3: ours, not Atari's. GDD 6.1 names the silhouette — a hollow
+// ⛔ GDD 18 item 3: ours, not the original's. GDD 6.1 names the silhouette — a hollow
 // diamond — and a rhombus outline is generic geometry, so the divergence has to
 // live somewhere else, and it does: the PROPORTION (this one is deep rather
 // than long, which is what makes it read as a container beside the Vaulter's
@@ -301,7 +301,7 @@ function drawCarrier(ctx, well, lane, depth, cargo) {
 // blocking a lane. A coil unwinding in place is the opposite gesture: busy,
 // occupied, indifferent to you.
 //
-// ⛔ GDD 18 item 3: ours, not Atari's. The shape that game's equivalent is
+// ⛔ GDD 18 item 3: ours, not the original's. The shape that game's equivalent is
 // remembered for is a rod with a wave running along it — a straight spine,
 // which this deliberately has none of.
 //

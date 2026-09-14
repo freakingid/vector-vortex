@@ -590,3 +590,30 @@ reach default rows only).
 
 **What would change it.** A phone sitting where taps land in the drag zone and
 do nothing (`PLAYTEST.md`, screens).
+
+
+---
+
+## 2026-09-13 — CS008 P6: pause toggles, the HUD over OPTIONS from pause, and no "Atari" in the build
+
+**The questions.** P6 built three readings and flagged them:
+- whether the HUD draws over OPTIONS opened from pause, a case H4's list does
+  not name;
+- whether `p`, gamepad Start and the touch target resume, where plan §7 applies
+  `pause` on play only;
+- whether the three "Atari" comments in `14-render-entities.js` stay, given GDD
+  §18.1's "no Atari marks anywhere — code, comments".
+
+**The calls — Paul, on Claude's recommendation.**
+- **The HUD draws.** A run exists there, and the board is still drawn behind the
+  menu.
+- **`p` and Start toggle, on the pause screen only.** Pressing Start to unpause
+  is the universal convention. On OPTIONS and its pages they do nothing. The
+  page going hidden only ever pauses, because a tab switched away twice must not
+  un-pause. The touch target stays off on menus.
+- **"Atari" is reworded out of the source**, and `test-cs008-p6.js` bans it in
+  the built file. `CLAUDE.md`'s word list is not extended.
+
+**What would change it.** A playtest where a toggle press un-pauses by accident,
+say a double-tapped Start.
+

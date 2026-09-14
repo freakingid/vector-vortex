@@ -58,9 +58,14 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   - `test-cs008-p6.js`, 208 assertions. **16 of 16 mutations red.** No
     baseline moved; `test-cs008-p5.js` has two claims rewritten in place.
 
+- **P6 follow-up (Paul's three calls).** `p` and Start toggle on the pause
+  screen, and the hidden tab is `autoPause`, which only pauses. The HUD over
+  OPTIONS-from-pause is confirmed. The three "Atari" comments are reworded, and
+  the built-file check now bans the word. 225 assertions; 5 of 5 mutations red.
+
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 395.1 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 395.8 KB); the
   manifest is checked both directions against `src/`.
 - `node scratchpad/run-all.js`: **41 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
@@ -171,9 +176,8 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   should drain a freeze has to be added there by name.
 - ⛔ **CS008 P6 — `Game.draw()` must not name `Telemetry`** (`test-cs007-p4.js`).
   The OPTIONS row's ON/OFF detail is written in `update()`'s menu stop instead.
-- ⚠ **CS008 P6 — the three "Atari" mentions in `14-render-entities.js`
-  comments.** GDD §18.1 says "no Atari marks anywhere — code, comments".
-  `CLAUDE.md`'s list does not name it, and P6 did not touch them. Paul's call.
+- ⛔ **`test-cs008-p6.js` bans "atari" in the WHOLE built file, comments
+  included** (GDD §18.1; Paul, 2026-09-13). Write "the original's" instead.
 - ⚠ **The touch buttons, and P6's top-centre pause target, are not drawn.**
   The target is live in play only.
 - ⚠ **CS008 P4 — the HUD's mirror side reads `C.INPUT_MIRROR`** (`_hudView.mirror`
@@ -338,6 +342,7 @@ Controls page** · P8 the front-door soak and the close.
 3. ⛔ **Reserved, and refused by P7's rebinding:** Escape (`back`, which pauses
    in play), `p` (`pause`), gamepad button 9 (`C.GAMEPAD_PAUSE_BUTTON`), the
    debug keys and the digits. `t` and `e` are bench keys; refuse them too.
+   The page going hidden is `autoPause` and has no key.
 4. ⚠ **`syncScreen()` writes three switches on every screen change.** It sets
    `touchAutofire: C.TOUCH_AUTOFIRE` on entering play, and P7's TOUCH AUTO-FIRE
    setting must be what it reads. It also sets `touchTapFire` and
@@ -346,11 +351,9 @@ Controls page** · P8 the front-door soak and the close.
    BUILT YET and a BACK row to OPTIONS. P7 replaces it. OPTIONS' BACK returns
    to `optionsFrom` (title or pause), and a page P7 adds under OPTIONS goes back
    with `backToOptions`.
-6. ⚠ **Two readings P6 took, flagged for Paul, and neither is built on:**
-   - the HUD draws over OPTIONS opened from pause (`runOnScreen()`), per H4's
-     reason: a run exists there;
-   - `p`, Start and the touch target pause but do not resume (plan §7:
-     `pause` applies on play only). RESUME, Purge and Escape resume.
+6. ✅ **Paul's P6 calls:** the HUD draws over OPTIONS opened from pause
+   (`runOnScreen()`), and `p` and Start toggle on the pause screen only.
+   `resumeRun()` is the one resume.
 7. ⚠ **Nothing has been tuned against GDD §8.2's targets**, and P8 writes K2's
    levels-1–4 ask.
 8. ⚠ **P7 must confirm the sensitivity slider range with Paul.**

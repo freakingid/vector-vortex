@@ -344,12 +344,14 @@ const Game = (function () {
     // ⛔ TAP-FIRE IS OFF AT CREATION, WHICH IS PLAY'S SETTING. syncScreen()
     // below is what turns it on, with auto-fire off, on every menu screen.
     touchTapFire:     false,
-    // ⛔ THE FOUR OTHER WAYS TO PAUSE (U4; CS008 P6), and every one is the same
-    // named action as `p`: gamepad Start, a touch target centred on the top
-    // edge, and the page going hidden. Escape is the fifth, through `back`.
+    // ⛔ THE FOUR OTHER WAYS TO PAUSE (U4; CS008 P6). Gamepad Start and the touch
+    // target centred on the top edge are the same named action as `p`, which
+    // TOGGLES (Paul, 2026-09-13). ⛔ The page going hidden is `autoPause` and
+    // only ever pauses: a tab switched away twice must not un-pause. Escape is
+    // the fifth, through `back`.
     gamepadActions:   { pause: [C.GAMEPAD_PAUSE_BUTTON] },
     touchTopAction:   "pause",
-    hiddenAction:     "pause",
+    hiddenAction:     "autoPause",
     // ⛔ NAMED ACTIONS, NEVER A SECOND LISTENER (GDD 9.5). See runAction().
     //
     // ⛔ DIGITS, and that is not a style choice. "w" cycles the well out from
@@ -368,8 +370,8 @@ const Game = (function () {
       back:         ["escape"],
       // ⛔ ESCAPE STAYS `back`, AND `back` IN PLAY IS A PAUSE (runAction). A key
       // maps to ONE action, and Escape has to mean pause in play and back in a
-      // menu. `pause` is everything that must NOT back out of a menu — above
-      // all the page going hidden on the START DEPTH screen.
+      // menu. `pause` and `autoPause` are what must NOT back out of a menu —
+      // above all the page going hidden on the START DEPTH screen.
       pause:        ["p"],
       cycleWell:    ["w"],
       spawnVaulter: ["1"],
@@ -492,7 +494,13 @@ const Game = (function () {
       if (state.screen === "play") pauseRun();
       else menu.back();
     }
-    if (name === "pause") pauseRun();
+    // ⛔ `p` AND START TOGGLE, ON THE PAUSE SCREEN ONLY (Paul, 2026-09-13). On
+    // OPTIONS or its pages they do nothing, so a press cannot jump out of one.
+    if (name === "pause") {
+      if (state.screen === "pause") resumeRun();
+      else pauseRun();
+    }
+    if (name === "autoPause") pauseRun();
 
     // The debug bench. ⚠ THE ⚠ TEMPORARY MARKER THAT USED TO OPEN THIS LINE IS
     // GONE, and CS007 P3 is where it stopped being true — see DEBUG_SPAWN_ACTIONS
@@ -529,6 +537,19 @@ const Game = (function () {
   // stops draining the freeze from the next step.
   function pauseRun() {
     if (state.screen === "play") state.screen = "pause";
+  }
+
+  // ⛔ THE ONE RESUME — the RESUME row, Purge and Escape (the pause screen's
+  // back) and the `p` / Start toggle. INSTANT (U4): the next play step runs.
+  // ⛔ AND THE PURGE IS RE-LATCHED, exactly as killSkimmer() re-latches it
+  // across a freeze: Purge is how the pause menu backs out, so without this the
+  // press that resumed would be a rising edge on the first play step and spend
+  // the well's charge. A toggle dispatched inside sample() resumes on that same
+  // step; the post-sample syncScreen() in update() sees it.
+  function resumeRun() {
+    if (state.screen !== "pause") return;
+    state.screen = "play";
+    state.purgeLatched = true;
   }
 
   // ---- screens and menus (GDD 10.5; CS008 P5) -------------------------------
@@ -593,7 +614,7 @@ const Game = (function () {
 
   // ⛔ A RUN IS ON SCREEN: play (the dive is play), pause, game over, and the
   // OPTIONS pages opened from pause. H4's HUD reads this, because a run exists
-  // there; on the title's OPTIONS none does.
+  // there; on the title's OPTIONS none does (Paul, 2026-09-13).
   function runOnScreen() {
     const s = state.screen;
     if (s === "play" || s === "pause" || s === "gameover") return true;
@@ -639,14 +660,7 @@ const Game = (function () {
     if (name === "toCredits") state.screen = "credits";
     if (name === "toggleTelemetry") toggleTelemetry();
     if (name === "exportTelemetry") exportTelemetry();
-    // ⛔ INSTANT (U4): the next step simulates. ⛔ AND THE PURGE IS RE-LATCHED,
-    // exactly as killSkimmer() re-latches it across a freeze: Purge is how the
-    // pause menu backs out, so without this the press that resumed would be a
-    // rising edge on the first play step and spend the well's charge.
-    if (name === "resume") {
-      state.screen = "play";
-      state.purgeLatched = true;
-    }
+    if (name === "resume") resumeRun();
     if (name === "toMode")    state.screen = "mode";
     if (name === "pickClassic") {
       pendingMode = "classic";

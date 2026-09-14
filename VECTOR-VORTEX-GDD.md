@@ -854,7 +854,7 @@ Score top-left, lives bottom-left, level and band top-right, Purge charge bottom
 
 ⛔ **The touch-button side insets** by `TOUCH_BUTTON_R × HUD_TOUCH_INSET_R` (2.5) at all times, not only on detected touch (H3) — the buttons sit on exactly the right-hand corners (`C.INPUT_MIRROR` moves them left). The side comes from `view.mirror`; CS008 P7 sources it from the input module. A text rectangle is sized by `TEXT_CHAR_W`, not `measureText()`, so `test-cs008-p4.js` asserts arithmetically that every rectangle clears the throat zone (§10.3) on all sixteen wells and every touch-button point, mirrored and not. Combo is Overdrive's and not built.
 
-⛔ **H4 (Paul, 2026-09-13; shipped CS008 P5, extended P6): the HUD draws wherever a run is on screen — play (the Dive included), pause, game over, and Options (with its sub-pages) opened from pause — and not on title, mode, Start Depth or the title's Options**, where no run exists, so it would show a stale or default score. `runOnScreen()` in `23-main.js` is the one predicate. ⚠ Options-from-pause is P6's reading of H4's reason, not a listed case.
+⛔ **H4 (Paul, 2026-09-13; shipped CS008 P5, extended P6): the HUD draws wherever a run is on screen — play (the Dive included), pause, game over, and Options (with its sub-pages) opened from pause — and not on title, mode, Start Depth or the title's Options**, where no run exists, so it would show a stale or default score. `runOnScreen()` in `23-main.js` is the one predicate. Options-from-pause is Paul's call (2026-09-13, after P6): a run exists there, and hiding the HUD over a still-drawn board would read as a different state.
 
 ### 10.5 Screens and menus
 
@@ -891,14 +891,15 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 
 **Pause (Paul, U4; shipped CS008 P6).** Five sources, all live in play only (the Dive and a death freeze are play):
 - **Escape.** It stays the named action `back`, and `back` in play pauses. A key maps to one action, and Escape has to mean pause in play and back on a menu.
-- **`p`, gamepad Start (`C.GAMEPAD_PAUSE_BUTTON`, standard index 9), a touch target centred on the top edge, and the page going hidden.** These are the named action `pause`, which does nothing off play. ⛔ That is why the page going hidden is not `back`: a hidden tab must never back a player out of Start Depth.
+- **`p`, gamepad Start (`C.GAMEPAD_PAUSE_BUTTON`, standard index 9) and a touch target centred on the top edge.** These are the named action `pause`. It pauses in play, resumes on the pause screen, and does nothing anywhere else, Options and its pages included.
+- **The page going hidden.** This is `autoPause`, which only ever pauses. ⛔ It is neither `back` (a hidden tab must never back a player out of Start Depth) nor `pause` (a tab switched away twice must not un-pause).
 - The sources are kit-input **0.5.0**: `gamepadActions` (a press edge), `touchTopAction` (the corner buttons' radius and margin, centred) and `hiddenAction` (`visibilitychange` inside `attach()`). See `src/04-input.NOTES.md`. The touch target is switched off on every menu, where the upper screen is all confirm taps. ⚠ Like the corner buttons, it is not drawn.
-- ⛔ **`p`, Start and the touch target do not resume.** Plan §7 applies `pause` on play only. RESUME, Purge and Escape resume.
+- ⛔ **`p` and Start toggle on the pause screen only** (Paul, 2026-09-13, after P6). A toggle resumes inside `input.sample()`, so its own step is already a play step. The touch target is off on menus, and a tap there confirms the cursor row, which starts on RESUME. RESUME, Purge and Escape also resume, and all of them go through `resumeRun()`.
 
 Pause rules:
 - ⛔ **A pause freezes the hit-stop drain.** `Game.frame()` drains `hitStopLeft` only while the screen is `"play"` or `"gameover"`, the two screens a freeze belongs to. A pause taken inside a death freeze, or Options opened from that pause, holds the freeze and the fragmentation (§4.4). The menu's own steps still run.
 - ⛔ **The pausing step is the pause menu's entry step.** `update()` calls `syncScreen()` again after `input.sample()`, where a pause arrives. So a Fire held in play does not confirm RESUME.
-- ⛔ **Resume is instant** (§16.3: no countdown). The step after RESUME is a play step. ⛔ **Resume re-latches the Purge**, as `killSkimmer()` does across a freeze. Purge is how the pause menu backs out, and without the latch that press would spend the well's charge on the first play step.
+- ⛔ **Resume is instant** (§16.3: no countdown). The step after RESUME is a play step. ⛔ **Resume re-latches the Purge**, as `killSkimmer()` does across a freeze. Purge is how the pause menu backs out, and without the latch that press, or a Purge landing on the same step as a toggle, would spend the well's charge on the first play step.
 - **QUIT TO TITLE** goes through `quitToTitle()`. CS011's `'quit'` check reads `screen === "pause"` there, before the overwrite.
 
 **Options (Paul, U5; shipped CS008 P6).** TELEMETRY and EXPORT call the same two functions as the `t` and `e` bench keys (`toggleTelemetry()`, `exportTelemetry()` in `23-main.js`). The row's ON/OFF detail is written from the switch on every Options step, never in `draw()`. ⛔ Capture is still off at every launch and never persisted (§15.6). Options is reachable from the title and from pause, and its BACK returns there.
