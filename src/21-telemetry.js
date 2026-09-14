@@ -53,11 +53,12 @@
 //                  working, and a check that did not know which ones they were
 //                  would flag the two most useful stall columns in the file.
 //
-// ⛔ FOUR COLUMNS SHIP WITH KNOWN-CONSTANT VALUES rather than being added when
-// their source lands: `score` and `maxCombo` (0), `mode` ("classic") and
-// `startDepth` (1), out of C.TELEMETRY_PLACEHOLDER. A column added in CS008
-// invalidates every log recorded before it, which is the whole reason GDD 15.6
-// makes the column list a thing you edit deliberately.
+// ⛔ THREE COLUMNS SHIP WITH KNOWN-CONSTANT VALUES rather than being added when
+// their source lands: `maxCombo` (0), `mode` ("classic") and `startDepth` (1),
+// out of C.TELEMETRY_PLACEHOLDER. A column added in CS008 invalidates every log
+// recorded before it, which is the whole reason GDD 15.6 makes the column list
+// a thing you edit deliberately. ⛔ `score` was the fourth, and CS008 P2 moved
+// its SOURCE to state.score without moving its place in the order.
 //
 // ⚠ CROSS-CHECKED AGAINST THE WORKER, which already registers seven statsFields
 // for `vector-vortex` in coinless-kit's services/leaderboard/src/registry.js
@@ -105,7 +106,7 @@ const TELEMETRY_FIELDS = [
   "spawnRemaining",     // ⛔ SAWTOOTH — the well's quota, re-armed by enterWell()
   "purgeUses",          // ⛔ SAWTOOTH — one charge per well, re-armed by enterWell()
   // ---- the run's totals ----------------------------------------------------
-  "score",              // cumulative — ⚠ 0 until addScore() lands in CS008
+  "score",              // cumulative — state.score, addScore()'s (CS008 P2)
   "maxCombo",           // cumulative — ⚠ 0 until GDD 14.4's combo (Overdrive)
   "deaths",             // cumulative
   "wellsCleared",       // cumulative
@@ -202,7 +203,7 @@ function telemetryRow(state) {
     livesLeft:         state.lives,
     spawnRemaining:    state.spawn.remaining,
     purgeUses:         state.purgeUses,
-    score:             P.score,
+    score:             state.score,
     maxCombo:          P.maxCombo,
     deaths:            T.deaths,
     wellsCleared:      T.wellsCleared,

@@ -66,6 +66,11 @@ function enterWell() {
   // charge on the entry step without ever releasing (09-collision.js).
   state.purgeUses = 0;
 
+  // ⛔ GDD 7's "no death" is per WELL, so it is re-armed with the Purge. A dive
+  // death set it after the outgoing well's clear edge had already paid, and
+  // this is where it stops counting against anything (12-scoring.js).
+  state.diedThisWell = false;
+
   resetSpawner(state);
 
   // ⛔ Where CS003 P2's one-line hold reset sat, and for the same reason: a
@@ -581,11 +586,17 @@ const Game = (function () {
     // survivors, and nextWell() is reached only from the dive's END, in
     // updateDive() (11-dive.js). One step of the dive runs on the NEXT step —
     // the branch above — never a second pass through this function.
-    // ⛔ TELEMETRY ONLY (02-state.js's `tally`). Counted at the EDGE — the step
-    // wellCleared() first says yes — and not inside startDive(), which the suite
-    // also drives directly; a well cleared by play is the event the column is
-    // about. Nothing here branches on it.
-    if (wellCleared(state)) { state.tally.wellsCleared++; startDive(state); }
+    // ⛔ TELEMETRY (02-state.js's `tally`) AND GDD 7's CLEAR BONUSES, both at the
+    // EDGE — the step wellCleared() first says yes — and not inside
+    // startDive(), which the suite also drives directly and the dive's repeat
+    // path calls again; a well cleared by play is the event both are about.
+    // ⛔ The bonuses are paid BEFORE the dive (Paul, P4s), in clearBonuses()'s
+    // fixed order (12-scoring.js).
+    if (wellCleared(state)) {
+      state.tally.wellsCleared++;
+      clearBonuses(state);
+      startDive(state);
+    }
   }
 
   // ---- presentation --------------------------------------------------------

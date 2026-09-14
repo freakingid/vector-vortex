@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (P1b done — ⛔ P2, scoring and extra lives, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P2 done — ⛔ P3, mode and Start Depth, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
@@ -46,11 +46,23 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   matched §1.16 to the digit. Four fixtures repaired in place, one re-record;
   `GOLDEN_LANES` and `test-cs008-p1.js` green unedited.
 
+- **P2 (2026-09-13) — scoring and extra lives.** `addScore()` and
+  `clearBonuses()` in `12-scoring.js`. `points()` is the fourth contract
+  method. Three kill sites pay on the false → true `dead` transition. The clear
+  bonuses are paid on the clear step, and the dive termination pays nothing.
+  Lives come at 20k and then every 40k, lost past the cap. `state.score`,
+  `nextLife` and `diedThisWell` are new; `score` left the telemetry
+  placeholder. ⛔ **No baseline moved.** `test-cs008-p2.js` covers every GDD §7
+  row, lives, the bonuses, no-draw against a stubbed `addScore()`, and **§17
+  item 8 over 120,000 played steps with 0 mismatches**. Mutation-checked, 14 of
+  14 red (record in `log/CS008.md`). §1.8's 5 closed-file reds plus 5 from new
+  causes (below), all repaired in place.
+
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 344.0 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 351.3 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **36 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **37 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -105,7 +117,7 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   every retune**, which is what let all three of CS007's `P1_DETERMINISM_HASH`
   re-records be checked rather than merely recorded.
 - ⛔ **`test-cs004-p1.js`'s `GOLDEN_LANES` — its first SIXTEEN entries are STILL
-  the ORIGINAL recording from `9ebd27b`** — through CS006, CS007, CS008 P1 and P1b,
+  the ORIGINAL recording from `9ebd27b`** — through CS006, CS007, CS008 P1, P1b and P2,
   character for character, and a separate prefix assertion now holds them.
   ⛔ **THE ONE EXCEPTION: CS008 P1 APPENDED `2, 5`, and it has ONE cause — the
   climb stops at the kill band**, so held fire clears the window sooner and two
@@ -135,6 +147,30 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   sensitivity/timing constants. Reachable over LAN via `npm run serve`.
 
 ## Known issues
+
+- ⚠ **CS008 P2 — THREE NEW-CAUSE REDS the plan's §1.8 did not list**, recorded
+  before any edit. Code in, suite run, hash and `GOLDEN_LANES` green. Beside
+  §1.8's five, five assertions in four files went red:
+  1. `test-cs003-p3.js:88` and `test-cs003-p4.js:125`, *"no addScore exists
+     yet"*. Cause: `_harness.js` now exports `addScore` and `clearBonuses`.
+  2. `test-cs004-p1.js:77`, *"exactly the three signatures"*. Cause: `points()`
+     is the planned fourth method (plan §3), and the prototype list pins three.
+  3. `test-cs007-p4.js:149,153`, *"the score column is 0 until addScore()"* and
+     *"all four read C.TELEMETRY_PLACEHOLDER"*. Cause: the planned deletion of
+     `score` from the placeholder. §1.8's emulation never deleted the key.
+
+  All three are the replaced claim, repaired in place. ⛔ **Lesson for P3–P8:**
+  an emulation that adds no export, method or key cannot see an assertion that
+  pins one.
+- ⚠ **OPEN FOR P5 — a clear on the step that spends the last life still pays.**
+  The clear edge runs after `killSkimmer()` has set `gameover`. A milestone
+  crossed by those bonuses would leave `lives` at 1 on a stopped screen. Only a
+  Weaver bolt can kill on a clearing step. MEASURED **0 in 268 game overs**
+  (`log/CS008.md`). Whether that step pays is a design call, not built. ⛔ P5's
+  game-over screen should not read `lives > 0` as "still playing".
+- ⚠ **`_harness.js` has `buildGame({ stub: [names] })`** (CS008 P2). It
+  rebinds a top-level function to a no-op after evaluation, for "X changes
+  nothing else" claims. Only `test-cs008-p2.js` uses it.
 
 - ⚠ **THREE OF THE SIX ROSTER CLASSES PARK RATHER THAN HUNT — Carrier, Weaver,
   Surger — and that is what stalls a SOAK now that wells progress.** ⛔ Not a
@@ -204,7 +240,8 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 - ⚠ **PREDICTED, CS008 P1: a SECOND Purge now prefers a Weaver bolt above 0.95
   over a parked enemy.** `purgeTarget()` takes the highest depth, and enemies
   now park at 0.95 while a bolt spends ~9 steps above it. Plan §2 flagged it;
-  not measured, and no phase owns it. P2 touches Purge scoring and should know.
+  not measured, and no phase owns it. ⚠ Since P2, that Purge pays **0** —
+  a bolt has no points.
 - ⚠ **THE SCRIPTED SOAK PLAYER HOLDS FIRE, SO SINCE P1b IT BARELY DIES** — the
   sweep kills what it crosses. Four closed fixtures were repaired for exactly
   that: `st.lives = 1` on the FIRST run of three soaks' `hashRun()` (never after
@@ -229,10 +266,10 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 
 ## Carried tasks (not blocking, no changeset owns them yet)
 
-- ⚠ **`C.TELEMETRY_PLACEHOLDER` IS A FOUR-KEY OBJECT THAT SHRINKS, and CS008
-  takes THREE bites** (corrected at CS008 planning — it said two): `score` (P2),
-  `mode` and `startDepth` (P3). Only `maxCombo` survives, for GDD §14.4's combo. ⛔ A key left
-  there after its column has a real source is a column silently reporting zero.
+- ⚠ **`C.TELEMETRY_PLACEHOLDER` IS A THREE-KEY OBJECT THAT SHRINKS.** P2 took
+  `score`; P3 takes `mode` and `startDepth`. Only `maxCombo` survives, for GDD
+  §14.4's combo. ⛔ A key left there after its column has a real source is a
+  column silently reporting zero.
 - ⚠ **THE TELEMETRY COLUMN LIST IS FROZEN UNTIL A CHANGESET DELIBERATELY MOVES
   IT** (GDD §15.6). A column added in CS008 invalidates every CS007 log, which is
   why the four above already ship at known constants. ⛔ Adding or reordering one
@@ -258,11 +295,11 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   frozen board. `r` restarts. CS008 P5 owns the screen and the restart flow and
   deletes the `restart` action; ⚠ the leaderboard **submission** is CS011's
   (`ROADMAP.md`), and P5 builds only its seat.
-- **No scoring anywhere.** Every `C.PTS_*`, `PTS_WELL_PER_LEVEL`,
-  `PTS_NO_DEATH_WELL` and `PURGE_SAVED_BONUS` are unread until CS008 P2's
-  `addScore()`. ⚠ **Corrected at CS008 planning:** `PTS_DRIFTER` `[250,500,750]`
-  and `PTS_SURGER` 200 **do** exist, since CS001 P0 — two closed tests assert
-  them unread, and P2 rewrites those in place.
+- ⚠ **Corrected (plan §1.10): the Drifter and the Surger DID ship points
+  constants** — `PTS_DRIFTER` `[250, 500, 750]` and `PTS_SURGER` 200, since
+  CS001 P0. Since CS008 P2 each has exactly one reader, its class's
+  `points()`. The Overdrive `PTS_REAVER`, `PTS_MIMIC` and `PTS_WARDEN` are still
+  unread, and CS012 owns them.
 - ⛔ **THE SEVEN DEBUG SPAWN ACTIONS SHIP UNTIL CS016** decides whether debug keys
   ship at all (Paul's H5 call, 2026-08-31). They are **not** ⚠ TEMPORARY, the
   ⚠ provisional palette still needs judging, and `PLAYTEST.md` is written around
@@ -272,15 +309,15 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — ⛔ P2, SCORING AND EXTRA LIVES
+## Next up — ⛔ P3, MODE AND START DEPTH
 
-⛔ **Paste P2's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
+⛔ **Paste P3's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
 session.** The plan is `PLANNED-FEATURES-CS008.md`;
 ⛔ a build phase reads the document, not the planning conversation
 (`CLAUDE.md` rule 3c).
 
-**The sequence:** P1 the rim fix · P1b the crossing fix · **P2 scoring and
-extra lives** · P3 mode and Start Depth · P4 text, HUD, fragmentation · P5 the
+**The sequence:** P1 the rim fix · P1b the crossing fix · P2 scoring and
+extra lives · **P3 mode and Start Depth** · P4 text, HUD, fragmentation · P5 the
 screens · P6 pause and Options · P7 the Controls page · P8 the front-door soak
 and the close.
 
@@ -288,8 +325,8 @@ and the close.
 
 1. ✅ **All three re-records landed** — P1's `GOLDEN_LANES` +2 appended entries
    (the first 16 unmoved) and `P1_DETERMINISM_HASH` 1862183225, then P1b's hash
-   **1229033515** (plan §9). ⛔ **A baseline move in P2–P8 is a defect.**
-   ⛔ P2 scores at the sweep's kill site as well as in `collideShots()` (plan §3).
+   **1229033515** (plan §9). ⛔ **A baseline move in P3–P8 is a defect.** ✅ P2
+   moved none.
 2. ⛔ **The past-99 `startGame()` defect stays unreachable** while Start Depth
    caps at 81 (plan §1.12) — P3 re-words it, does not fix it.
 3. ⛔ **Start Depth un-parks two `PLAYTEST.md` asks** (23 and 65) at P5.
@@ -301,3 +338,5 @@ and the close.
    that P1 has shipped; a sitting's answer belongs in `DECISIONS.md`.
 6. ⚠ **P7 must confirm the sensitivity slider range with Paul** — the plan's
    one flagged tuning number.
+7. ⛔ **P3's Start Depth bonus goes in `clearBonuses()`** (`12-scoring.js`),
+   after the three it pays today, through `addScore()`.

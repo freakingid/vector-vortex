@@ -119,12 +119,15 @@ H.assert(typeof X.respawnSkimmer === "function", "respawnSkimmer is in the build
 H.assert(typeof X.spawnSkimmer === "function", "spawnSkimmer is in the build");
 H.assert(typeof X.skimmerBlinkVisible === "function", "skimmerBlinkVisible is in the build");
 
-// ⛔ Still no scoring this changeset: the extra life at C.EXTRA_LIFE_FIRST and
-// the C.LIVES_MAX ceiling are addScore()'s in CS008, and this phase must not
-// have grown a second route to them.
-H.assert(typeof X.addScore === "undefined" || X.addScore === null,
-         "no addScore exists yet — scoring is CS008's");
-H.assert(!("score" in state), "state carries no score field this changeset");
+// ⛔ The extra life at C.EXTRA_LIFE_FIRST and the C.LIVES_MAX ceiling are
+// addScore()'s, and this phase must not have grown a second route to them.
+// Rewritten in place by CS008 P2, which built addScore(): it exists, and the
+// score field is born at 0. Scoring's own coverage is test-cs008-p2.js.
+H.assert(typeof X.addScore === "function",
+         "addScore is the one route to an extra life (CS008 P2)");
+G.reset();
+X.startGame(SEED);
+H.eq(state.score, 0, "the score field is born at 0");
 
 // ---------------------------------------------------------------------------
 // shipped defaults — ⛔ a fresh run is NOT born invulnerable

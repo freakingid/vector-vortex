@@ -143,15 +143,17 @@ H.assert(row.enemiesAlive >= row.threatsAlive,
 H.eq(row.enemiesAlive - row.threatsAlive >= row.thornsStanding, true,
      "thornsStanding is inside the gap between the two — `anchored`, read off the entity");
 
-// ⛔ THE FOUR KNOWN-CONSTANT COLUMNS SHIP NOW (GDD §15.6). A column added in
-// CS008 invalidates every CS007 log, so the ones whose SOURCE is scheduled get
-// their place in the order now and their source later.
-H.eq(row.score, 0, "⚠ the score column is 0 until addScore() lands in CS008");
+// ⛔ THE KNOWN-CONSTANT COLUMNS SHIP NOW (GDD §15.6). A column added in CS008
+// invalidates every CS007 log, so the ones whose SOURCE is scheduled get their
+// place in the order now and their source later. ⛔ Rewritten in place by CS008
+// P2, which gave `score` its source: the column keeps its place and reads
+// state.score, and its key is gone from the placeholder.
+H.eq(row.score, state.score, "the score column is state.score (CS008 P2)");
+H.assert(!("score" in C.TELEMETRY_PLACEHOLDER), "⛔ and `score` is no longer a placeholder key");
 H.eq(row.maxCombo, 0, "⚠ the maxCombo column is 0 until GDD §14.4's combo");
 H.eq(row.mode, "classic", "⚠ the mode column is \"classic\" until CS008's mode select");
 H.eq(row.startDepth, 1, "⚠ the startDepth column is 1 until GDD §4.6's Start Depth");
-H.eq(row.score, C.TELEMETRY_PLACEHOLDER.score, "and all four read C.TELEMETRY_PLACEHOLDER");
-H.eq(row.maxCombo, C.TELEMETRY_PLACEHOLDER.maxCombo, "... maxCombo");
+H.eq(row.maxCombo, C.TELEMETRY_PLACEHOLDER.maxCombo, "and the other three read C.TELEMETRY_PLACEHOLDER: maxCombo");
 H.eq(row.mode, C.TELEMETRY_PLACEHOLDER.mode, "... mode");
 H.eq(row.startDepth, C.TELEMETRY_PLACEHOLDER.startDepth, "... startDepth");
 

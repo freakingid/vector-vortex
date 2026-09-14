@@ -537,7 +537,9 @@ const C = {
   PTS_CARRIER:          100,
   PTS_VAULTER:          150,
   PTS_SURGER:           200,
-  PTS_DRIFTER:          [250, 500, 750],  // by depth band
+  // ⛔ By depth band, rim pays most (Paul, P1s): EQUAL bands, and the band
+  // count is this array's LENGTH — Drifter.points() never writes a literal 3.
+  PTS_DRIFTER:          [250, 500, 750],
   PTS_REAVER:           300,
   PTS_MIMIC:            400,
   PTS_WARDEN:           500,
@@ -598,14 +600,15 @@ const C = {
                                 // is wrong, so the export says so in its header.
   TELEMETRY_INTERVAL:   0.50,   // s of SIMULATION time between samples (never
                                 // wall clock). 4096 rows is ~34 min of a run.
-  // ⛔ FOUR COLUMNS THAT SHIP NOW WITH KNOWN-CONSTANT VALUES, and that is GDD
+  // ⛔ THREE COLUMNS THAT SHIP NOW WITH KNOWN-CONSTANT VALUES, and that is GDD
   // 15.6's rule rather than laziness: a column added later invalidates every
   // log recorded before it, so the ones whose SOURCE is scheduled get their
-  // place in the order now and their source later. `score` and `maxCombo` land
-  // with addScore() (CS008) and GDD 14.4's combo; `mode` and `startDepth` with
-  // GDD 13's mode select and GDD 4.6's Start Depth. ⛔ Each key is DELETED from
-  // here by the changeset that gives that column a real source.
-  TELEMETRY_PLACEHOLDER: { score: 0, maxCombo: 0, mode: "classic", startDepth: 1 },
+  // place in the order now and their source later. `maxCombo` lands with GDD
+  // 14.4's combo; `mode` and `startDepth` with GDD 13's mode select and GDD
+  // 4.6's Start Depth (CS008 P3). ⛔ Each key is DELETED from here by the
+  // changeset that gives that column a real source — `score` went in CS008 P2,
+  // when addScore() gave it state.score.
+  TELEMETRY_PLACEHOLDER: { maxCombo: 0, mode: "classic", startDepth: 1 },
 
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.4",   // ⚠ 0.0.2 was never written here — see log/CS006.md

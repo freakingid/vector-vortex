@@ -85,10 +85,15 @@ H.assert(typeof X.updateCollisions === "function", "updateCollisions is in the b
 H.assert(typeof X.killSkimmer === "function", "killSkimmer is in the build");
 H.assert(typeof X.updatePurge === "function", "updatePurge is in the build");
 
-// ⛔ No scoring this changeset — addScore() is CS008's single entry point.
-H.assert(typeof X.addScore === "undefined" || X.addScore === null,
-         "no addScore exists yet — scoring is CS008's");
-H.assert(!("score" in state), "state carries no score field this changeset");
+// ⛔ Scoring has ONE entry point, and this phase did not grow a second one.
+// Rewritten in place by CS008 P2, which built it: addScore() exists, and the
+// score field is born at 0 — nothing this phase's pass does on a fresh run
+// writes it by any other route. Scoring's own coverage is test-cs008-p2.js.
+H.assert(typeof X.addScore === "function",
+         "addScore is the one scoring entry point (CS008 P2)");
+G.reset();
+X.startGame(SEED);
+H.eq(state.score, 0, "the score field is born at 0");
 
 // ---------------------------------------------------------------------------
 // Shots vs enemies — the lane match and the depth overlap

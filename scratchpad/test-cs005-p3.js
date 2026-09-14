@@ -108,11 +108,12 @@ H.assert(C.SURGE_DISCHARGE < C.RESPAWN_INVULN,
          `C.RESPAWN_INVULN (${C.RESPAWN_INVULN}) — GDD 4.4's rim push does nothing ` +
          `against a killDepth of 0, so the invulnerability window is the only guard`);
 
-// ⛔ Scope boundary: GDD 7's 200 points is CS008's, and addScore() is its one
-// entry point. The constant exists and must still have exactly one mention in
-// the build — its own declaration.
-H.eq(SCRIPT.split("PTS_SURGER").length - 1, 1,
-     "⛔ C.PTS_SURGER is still unread — no scoring lands before addScore() (CS008)");
+// ⛔ Scope boundary: GDD 7's 200 points is addScore()'s. Rewritten in place by
+// CS008 P2, which built it: the constant has exactly ONE reader, the Surger's
+// own points(), so no second route pays a Surger.
+H.eq(SCRIPT.split("C.PTS_SURGER").length - 1, 1, "⛔ C.PTS_SURGER has exactly one reader");
+H.eq(X.Surger.prototype.points.toString().split("C.PTS_SURGER").length - 1, 1,
+     "⛔ and that reader is Surger.points()");
 
 // ---------------------------------------------------------------------------
 // the ENEMY_KINDS row — ⛔ `dir` ignored, the draw still spent

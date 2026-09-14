@@ -120,6 +120,14 @@ class Enemy {
   // The base returns false deliberately: a subclass that forgets to override it
   // lets shots through, which is visible, rather than eating them silently.
   onShot(shot) { return false; }
+
+  // ⛔ THE FOURTH METHOD (GDD 6.5, 7; CS008 P2): what destroying this entity is
+  // worth. Read by the KILL SITE on the false -> true `dead` transition and
+  // handed to addScore() (12-scoring.js) — the entity says what it is worth,
+  // and never scores itself on death. The base returns 0, the same
+  // default-safe shape as onShot: a subclass that forgets pays nothing, which
+  // is visible, rather than a number nobody chose.
+  points() { return 0; }
 }
 
 // ---------------------------------------------------------------------------
@@ -307,6 +315,8 @@ class Vaulter extends Enemy {
     this.dead = true;
     return true;
   }
+
+  points() { return C.PTS_VAULTER; }
 }
 
 // ---------------------------------------------------------------------------
@@ -445,6 +455,11 @@ class Carrier extends Enemy {
     spawnEnemy(row.kind, lanes[1], this.depth);
     return true;
   }
+
+  // The hull alone. ⛔ The children score for THEMSELVES when they die — each is
+  // an ordinary entity in the one array, with its own points() — so a split
+  // pays nothing extra and a Purged Carrier, which never splits, pays this.
+  points() { return C.PTS_CARRIER; }
 }
 
 // ---------------------------------------------------------------------------
@@ -635,13 +650,15 @@ class Weaver extends Enemy {
     drawWeaver(ctx, well, this.lane, this.depth);
   }
 
-  // Any shot kills it and the shot is spent (GDD 6.1) — 50 points, when CS008
-  // builds addScore(). It leaves no bolt behind: what is already in the air
-  // stays in the air, and nothing new is fired.
+  // Any shot kills it and the shot is spent (GDD 6.1). It leaves no bolt
+  // behind: what is already in the air stays in the air, and nothing new is
+  // fired.
   onShot(shot) {
     this.dead = true;
     return true;
   }
+
+  points() { return C.PTS_WEAVER; }
 }
 
 // ---------------------------------------------------------------------------
@@ -729,6 +746,9 @@ class WeaverBolt extends Enemy {
   onShot(shot) {
     return false;
   }
+
+  // ⛔ points() is the base's 0, by inheritance and on purpose: GDD 7 has no row
+  // for a bolt, and the only thing that ever destroys one is the Purge.
 }
 
 // ---------------------------------------------------------------------------
@@ -817,7 +837,13 @@ class Thorn extends Enemy {
   // ⛔ Clamped at zero on the way out. depth < 0 is no more legal than depth > 1
   // (GDD 3.2), the entity is dead either way, and leaving a negative length in
   // the array for the rest of the step is a number no other system can produce.
+  //
+  // ⛔ AND IT SCORES PER CHIP, FROM HERE (GDD 7, CS008 P2). A chip is what a hit
+  // DOES to a Thorn, and the enemy decides that — so the 5 points are paid
+  // through addScore() on every chip, the killing one included, and points()
+  // below is 0 so the kill site pays nothing on top.
   onShot(shot) {
+    addScore(C.PTS_THORN);
     this.depth -= C.THORN_CHIP;
     if (this.depth <= 0) {
       this.depth = 0;
@@ -825,6 +851,11 @@ class Thorn extends Enemy {
     }
     return true;
   }
+
+  // ⛔ 0, WRITTEN OUT rather than inherited, because it is a decision: the chips
+  // above are the Thorn's whole worth, and a Thorn destroyed by the Dive's
+  // termination guarantee (11-dive.js) is not the player's kill at all.
+  points() { return 0; }
 }
 
 // The live Thorn in `lane`, or null. ⛔ laneDelta, NEVER a bare subtraction: on
@@ -1142,6 +1173,17 @@ class Drifter extends Enemy {
     this.dead = true;
     return true;
   }
+
+  // ⛔ BY DEPTH, IN EQUAL BANDS, RIM PAYS MOST (GDD 7; Paul, P1s): with the
+  // shipped three, depth < 1/3 is 250, < 2/3 is 500, and the rest 750 — a
+  // boundary belongs to the band ABOVE it. ⛔ The band count is the array's
+  // LENGTH, never a literal 3, so a retune of the table cannot leave a band
+  // unreachable; the min() keeps depth 1 inside the last one. The depth read is
+  // the one the entity died at: nothing moves a dead entity.
+  points() {
+    const bands = C.PTS_DRIFTER;
+    return bands[Math.min(bands.length - 1, Math.floor(this.depth * bands.length))];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1302,13 +1344,15 @@ class Surger extends Enemy {
     drawSurger(ctx, well, this.lane, this.depth, this.chargeTip(), this.phase === "discharge");
   }
 
-  // Any shot kills it and the shot is spent (GDD 6.1) — 200 points, when CS008
-  // builds addScore(). ⛔ IN EVERY PHASE, THE DISCHARGE INCLUDED: the lane being
-  // live is a threat to the player standing in it, never armour for the thing
-  // making it. The answer to a Surger is to shoot it, and the fuse is the
-  // window the player is given to decide whether to shoot or to leave.
+  // Any shot kills it and the shot is spent (GDD 6.1). ⛔ IN EVERY PHASE, THE
+  // DISCHARGE INCLUDED: the lane being live is a threat to the player standing
+  // in it, never armour for the thing making it. The answer to a Surger is to
+  // shoot it, and the fuse is the window the player is given to decide whether
+  // to shoot or to leave.
   onShot(shot) {
     this.dead = true;
     return true;
   }
+
+  points() { return C.PTS_SURGER; }
 }

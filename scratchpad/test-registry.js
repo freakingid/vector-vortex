@@ -51,6 +51,9 @@ const STATE_FIELDS = {
   // is about fields built ahead of their changeset, and a counter inside a bag
   // one changeset owns is not a second answer to that question.
   CS007: ["tally"],
+  // GDD 7 and 4.4 — addScore()'s total and its next milestone, and the
+  // per-well flag behind the "no death" clear bonus (12-scoring.js).
+  CS008: ["score", "nextLife", "diedThisWell"],
 };
 
 function stateFields() {

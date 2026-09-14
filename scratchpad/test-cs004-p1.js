@@ -63,18 +63,20 @@ const base = new X.Enemy(3, 0.4);
 H.assert("anchored" in base, "⛔ the Enemy base carries `anchored`");
 H.eq(base.anchored, false, "⛔ and it defaults to false — `depth` is a position");
 
-// ⛔ SEVEN FIELDS, THREE SIGNATURES, AND NO BEHAVIOUR (GDD 6.5). The base
+// ⛔ SEVEN FIELDS, FOUR SIGNATURES, AND NO BEHAVIOUR (GDD 6.5). The base
 // exists so the ninth enemy cannot forget a field; the moment it grows an
 // eighth that is a climb rate, the instruction is to flatten it back to
 // independent classes, not to add a switch. This list is the tripwire.
+// CS008 P2 added the fourth signature, points() (GDD 6.5, 7), rewritten here
+// in place: a default-safe 0, the same shape as onShot's false.
 H.assert(
   JSON.stringify(Object.keys(base)) ===
   JSON.stringify(["lane", "depth", "dead", "purgeable", "blocksClear", "killDepth", "anchored"]),
   "⛔ the base holds exactly the seven contract fields, in contract order");
 H.assert(
   JSON.stringify(Object.getOwnPropertyNames(X.Enemy.prototype)) ===
-  JSON.stringify(["constructor", "update", "draw", "onShot"]),
-  "⛔ and exactly the three signatures");
+  JSON.stringify(["constructor", "update", "draw", "onShot", "points"]),
+  "⛔ and exactly the four signatures");
 H.eq(X.Enemy.prototype.update.length, 3, "update(dt, well, state)");
 H.eq(X.Enemy.prototype.draw.length, 2, "draw(ctx, well)");
 H.eq(X.Enemy.prototype.onShot.length, 1, "onShot(shot)");

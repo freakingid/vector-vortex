@@ -222,6 +222,9 @@ function diveRespawn(state, well) {
     // landing lane makes the entity destroyed provably the one in the way.
     lane = laneNormalize(well, Math.round(diedLane));
     const struck = diveHazard(state, well, lane, 0);
+    // ⛔ NO addScore() AND NO `tally.kills`, and that is a decision (plan §0,
+    // CS008 P2): the termination guarantee destroying a Thorn is not the player
+    // destroying it. The build's three kill sites are all in 09-collision.js.
     if (struck) struck.dead = true;
   }
 

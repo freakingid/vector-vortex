@@ -12,7 +12,8 @@
 // `purgeLatched`,
 // and P4 added `lives` and `invulnTime`. CS006 P1 adds `bandRoll`, and P3 adds
 // `dive` — which DELETED CS003 P2's hold field rather than joining it (GDD 5).
-// CS007 P4 adds `tally`, the run's cumulative counters.
+// CS007 P4 adds `tally`, the run's cumulative counters. CS008 P2 adds `score`,
+// `nextLife` and `diedThisWell`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -105,10 +106,25 @@ function newState() {
 
     // ⛔ GDD 4.4 — the reserve, spent by killSkimmer() and by nothing else.
     // Zero is the game-over stop (screen = "gameover"), not a screen; CS008
-    // owns the UI, the submission and the restart flow. The extra-life awards
-    // at C.EXTRA_LIFE_FIRST / _EVERY and the C.LIVES_MAX ceiling belong to
-    // addScore() in CS008 and are deliberately unread this changeset.
+    // owns the UI, the submission and the restart flow. ⛔ RAISED BY
+    // addScore() AND NOTHING ELSE (12-scoring.js, CS008 P2): an extra life at
+    // each milestone, never past C.LIVES_MAX.
     lives: C.START_LIVES,
+
+    // ⛔ GDD 7 — the run's score. ⛔ addScore() (12-scoring.js) is its ONLY
+    // writer; newState() is what puts it back to zero. No cap, no rollover.
+    score: 0,
+
+    // ⛔ GDD 4.4 — the score at which the next extra life is due. A FIELD, not
+    // a formula over the score: addScore() advances it by C.EXTRA_LIFE_EVERY
+    // each time it is crossed, whether or not the cap let the life through.
+    nextLife: C.EXTRA_LIFE_FIRST,
+
+    // ⛔ GDD 7's "well cleared, no death" — true once the player has died in
+    // THIS well. killSkimmer() sets it; enterWell() clears it. ⚠ A dive death
+    // sets it AFTER the clear edge has paid, and nextWell() clears it before
+    // the next one, so a dive death never voids the bonus (Paul, P4s).
+    diedThisWell: false,
 
     // ⛔ Counts UP toward RESPAWN_INVULN and HOLDS there (GDD 16.3 — no
     // countdown timers anywhere in the build), and STARTS AT THE THRESHOLD,

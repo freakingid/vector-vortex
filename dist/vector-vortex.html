@@ -586,7 +586,9 @@ const C = {
   PTS_CARRIER:          100,
   PTS_VAULTER:          150,
   PTS_SURGER:           200,
-  PTS_DRIFTER:          [250, 500, 750],  // by depth band
+  // ⛔ By depth band, rim pays most (Paul, P1s): EQUAL bands, and the band
+  // count is this array's LENGTH — Drifter.points() never writes a literal 3.
+  PTS_DRIFTER:          [250, 500, 750],
   PTS_REAVER:           300,
   PTS_MIMIC:            400,
   PTS_WARDEN:           500,
@@ -647,14 +649,15 @@ const C = {
                                 // is wrong, so the export says so in its header.
   TELEMETRY_INTERVAL:   0.50,   // s of SIMULATION time between samples (never
                                 // wall clock). 4096 rows is ~34 min of a run.
-  // ⛔ FOUR COLUMNS THAT SHIP NOW WITH KNOWN-CONSTANT VALUES, and that is GDD
+  // ⛔ THREE COLUMNS THAT SHIP NOW WITH KNOWN-CONSTANT VALUES, and that is GDD
   // 15.6's rule rather than laziness: a column added later invalidates every
   // log recorded before it, so the ones whose SOURCE is scheduled get their
-  // place in the order now and their source later. `score` and `maxCombo` land
-  // with addScore() (CS008) and GDD 14.4's combo; `mode` and `startDepth` with
-  // GDD 13's mode select and GDD 4.6's Start Depth. ⛔ Each key is DELETED from
-  // here by the changeset that gives that column a real source.
-  TELEMETRY_PLACEHOLDER: { score: 0, maxCombo: 0, mode: "classic", startDepth: 1 },
+  // place in the order now and their source later. `maxCombo` lands with GDD
+  // 14.4's combo; `mode` and `startDepth` with GDD 13's mode select and GDD
+  // 4.6's Start Depth (CS008 P3). ⛔ Each key is DELETED from here by the
+  // changeset that gives that column a real source — `score` went in CS008 P2,
+  // when addScore() gave it state.score.
+  TELEMETRY_PLACEHOLDER: { maxCombo: 0, mode: "classic", startDepth: 1 },
 
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.4",   // ⚠ 0.0.2 was never written here — see log/CS006.md
@@ -852,7 +855,8 @@ function rngPick(rng, arr) {
 // `purgeLatched`,
 // and P4 added `lives` and `invulnTime`. CS006 P1 adds `bandRoll`, and P3 adds
 // `dive` — which DELETED CS003 P2's hold field rather than joining it (GDD 5).
-// CS007 P4 adds `tally`, the run's cumulative counters.
+// CS007 P4 adds `tally`, the run's cumulative counters. CS008 P2 adds `score`,
+// `nextLife` and `diedThisWell`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -945,10 +949,25 @@ function newState() {
 
     // ⛔ GDD 4.4 — the reserve, spent by killSkimmer() and by nothing else.
     // Zero is the game-over stop (screen = "gameover"), not a screen; CS008
-    // owns the UI, the submission and the restart flow. The extra-life awards
-    // at C.EXTRA_LIFE_FIRST / _EVERY and the C.LIVES_MAX ceiling belong to
-    // addScore() in CS008 and are deliberately unread this changeset.
+    // owns the UI, the submission and the restart flow. ⛔ RAISED BY
+    // addScore() AND NOTHING ELSE (12-scoring.js, CS008 P2): an extra life at
+    // each milestone, never past C.LIVES_MAX.
     lives: C.START_LIVES,
+
+    // ⛔ GDD 7 — the run's score. ⛔ addScore() (12-scoring.js) is its ONLY
+    // writer; newState() is what puts it back to zero. No cap, no rollover.
+    score: 0,
+
+    // ⛔ GDD 4.4 — the score at which the next extra life is due. A FIELD, not
+    // a formula over the score: addScore() advances it by C.EXTRA_LIFE_EVERY
+    // each time it is crossed, whether or not the cap let the life through.
+    nextLife: C.EXTRA_LIFE_FIRST,
+
+    // ⛔ GDD 7's "well cleared, no death" — true once the player has died in
+    // THIS well. killSkimmer() sets it; enterWell() clears it. ⚠ A dive death
+    // sets it AFTER the clear edge has paid, and nextWell() clears it before
+    // the next one, so a dive death never voids the bonus (Paul, P4s).
+    diedThisWell: false,
 
     // ⛔ Counts UP toward RESPAWN_INVULN and HOLDS there (GDD 16.3 — no
     // countdown timers anywhere in the build), and STARTS AT THE THRESHOLD,
@@ -2512,6 +2531,14 @@ class Enemy {
   // The base returns false deliberately: a subclass that forgets to override it
   // lets shots through, which is visible, rather than eating them silently.
   onShot(shot) { return false; }
+
+  // ⛔ THE FOURTH METHOD (GDD 6.5, 7; CS008 P2): what destroying this entity is
+  // worth. Read by the KILL SITE on the false -> true `dead` transition and
+  // handed to addScore() (12-scoring.js) — the entity says what it is worth,
+  // and never scores itself on death. The base returns 0, the same
+  // default-safe shape as onShot: a subclass that forgets pays nothing, which
+  // is visible, rather than a number nobody chose.
+  points() { return 0; }
 }
 
 // ---------------------------------------------------------------------------
@@ -2699,6 +2726,8 @@ class Vaulter extends Enemy {
     this.dead = true;
     return true;
   }
+
+  points() { return C.PTS_VAULTER; }
 }
 
 // ---------------------------------------------------------------------------
@@ -2837,6 +2866,11 @@ class Carrier extends Enemy {
     spawnEnemy(row.kind, lanes[1], this.depth);
     return true;
   }
+
+  // The hull alone. ⛔ The children score for THEMSELVES when they die — each is
+  // an ordinary entity in the one array, with its own points() — so a split
+  // pays nothing extra and a Purged Carrier, which never splits, pays this.
+  points() { return C.PTS_CARRIER; }
 }
 
 // ---------------------------------------------------------------------------
@@ -3027,13 +3061,15 @@ class Weaver extends Enemy {
     drawWeaver(ctx, well, this.lane, this.depth);
   }
 
-  // Any shot kills it and the shot is spent (GDD 6.1) — 50 points, when CS008
-  // builds addScore(). It leaves no bolt behind: what is already in the air
-  // stays in the air, and nothing new is fired.
+  // Any shot kills it and the shot is spent (GDD 6.1). It leaves no bolt
+  // behind: what is already in the air stays in the air, and nothing new is
+  // fired.
   onShot(shot) {
     this.dead = true;
     return true;
   }
+
+  points() { return C.PTS_WEAVER; }
 }
 
 // ---------------------------------------------------------------------------
@@ -3121,6 +3157,9 @@ class WeaverBolt extends Enemy {
   onShot(shot) {
     return false;
   }
+
+  // ⛔ points() is the base's 0, by inheritance and on purpose: GDD 7 has no row
+  // for a bolt, and the only thing that ever destroys one is the Purge.
 }
 
 // ---------------------------------------------------------------------------
@@ -3209,7 +3248,13 @@ class Thorn extends Enemy {
   // ⛔ Clamped at zero on the way out. depth < 0 is no more legal than depth > 1
   // (GDD 3.2), the entity is dead either way, and leaving a negative length in
   // the array for the rest of the step is a number no other system can produce.
+  //
+  // ⛔ AND IT SCORES PER CHIP, FROM HERE (GDD 7, CS008 P2). A chip is what a hit
+  // DOES to a Thorn, and the enemy decides that — so the 5 points are paid
+  // through addScore() on every chip, the killing one included, and points()
+  // below is 0 so the kill site pays nothing on top.
   onShot(shot) {
+    addScore(C.PTS_THORN);
     this.depth -= C.THORN_CHIP;
     if (this.depth <= 0) {
       this.depth = 0;
@@ -3217,6 +3262,11 @@ class Thorn extends Enemy {
     }
     return true;
   }
+
+  // ⛔ 0, WRITTEN OUT rather than inherited, because it is a decision: the chips
+  // above are the Thorn's whole worth, and a Thorn destroyed by the Dive's
+  // termination guarantee (11-dive.js) is not the player's kill at all.
+  points() { return 0; }
 }
 
 // The live Thorn in `lane`, or null. ⛔ laneDelta, NEVER a bare subtraction: on
@@ -3534,6 +3584,17 @@ class Drifter extends Enemy {
     this.dead = true;
     return true;
   }
+
+  // ⛔ BY DEPTH, IN EQUAL BANDS, RIM PAYS MOST (GDD 7; Paul, P1s): with the
+  // shipped three, depth < 1/3 is 250, < 2/3 is 500, and the rest 750 — a
+  // boundary belongs to the band ABOVE it. ⛔ The band count is the array's
+  // LENGTH, never a literal 3, so a retune of the table cannot leave a band
+  // unreachable; the min() keeps depth 1 inside the last one. The depth read is
+  // the one the entity died at: nothing moves a dead entity.
+  points() {
+    const bands = C.PTS_DRIFTER;
+    return bands[Math.min(bands.length - 1, Math.floor(this.depth * bands.length))];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -3694,15 +3755,17 @@ class Surger extends Enemy {
     drawSurger(ctx, well, this.lane, this.depth, this.chargeTip(), this.phase === "discharge");
   }
 
-  // Any shot kills it and the shot is spent (GDD 6.1) — 200 points, when CS008
-  // builds addScore(). ⛔ IN EVERY PHASE, THE DISCHARGE INCLUDED: the lane being
-  // live is a threat to the player standing in it, never armour for the thing
-  // making it. The answer to a Surger is to shoot it, and the fuse is the
-  // window the player is given to decide whether to shoot or to leave.
+  // Any shot kills it and the shot is spent (GDD 6.1). ⛔ IN EVERY PHASE, THE
+  // DISCHARGE INCLUDED: the lane being live is a threat to the player standing
+  // in it, never armour for the thing making it. The answer to a Surger is to
+  // shoot it, and the fuse is the window the player is given to decide whether
+  // to shoot or to leave.
   onShot(shot) {
     this.dead = true;
     return true;
   }
+
+  points() { return C.PTS_SURGER; }
 }
 
 // ==========================================================================
@@ -4072,10 +4135,11 @@ function wellCleared(state) {
 // filters. Nothing here removes an array element; hits set `dead = true` and
 // the caller's .filter() does the removal (GDD 6.5). Never splice mid-loop.
 //
-// ⛔ No scoring yet. addScore() is CS008 P2's single entry point, and the way to
-// keep it single is to not build a temporary second one here. C.PTS_VAULTER and
-// C.PURGE_SAVED_BONUS are deliberately unread until then. ⛔ P2 awards at the
-// rim sweep's kill in collideSkimmer() too, not only in collideShots().
+// ⛔ SCORING, CS008 P2: ALL THREE OF THE BUILD'S KILL SITES ARE IN THIS FILE —
+// collideShots(), the rim sweep in collideSkimmer(), and both Purge uses. Each
+// awards `e.points()` through addScore() (12-scoring.js) on the false -> true
+// `dead` transition, beside the `tally.kills` it already counted, and nowhere
+// else. The Thorn's per-chip 5 is paid inside its own onShot(), not here.
 
 // Are two lanes the same lane, to within the contact tolerance? ⛔ laneDelta,
 // never (a - b): on a 16-lane Ring the distance from lane 15.9 to lane 0 is
@@ -4146,11 +4210,13 @@ function collideShots(state, well) {
       // C.SHOT_MAX the same step, which is what makes camping a thorned lane
       // chip rapidly (GDD 4.2, ⚠ SETTLED — emergent, not a bug to smooth out).
       if (e.onShot(shot)) shot.dead = true;
-      // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and read off `e.dead` rather
-      // than off the return value: onShot() answers "was the shot consumed",
-      // which is a different question from "did the enemy die" — a Thorn chips
-      // and lives, and a Carrier that splits dies. Nothing here branches on it.
-      if (e.dead) state.tally.kills++;
+      // ⛔ THE KILL, read off `e.dead` rather than off the return value:
+      // onShot() answers "was the shot consumed", which is a different question
+      // from "did the enemy die" — a Thorn chips and lives, and a Carrier that
+      // splits dies. `e.dead` was false above, so this IS the false -> true
+      // transition: the telemetry count (02-state.js's `tally`) and the points
+      // (12-scoring.js), and nothing here branches on either.
+      if (e.dead) { state.tally.kills++; addScore(e.points()); }
       break;
     }
   }
@@ -4221,7 +4287,8 @@ function collideShots(state, well) {
 //      ⚠ SETTLED omission below, for the same reason: the Purge is a statement,
 //      and this is a shot that never had to fly. `null` is safe — no onShot in
 //      the build reads its argument — and "consumed" is ignored, because there
-//      is no shot to consume. `kills` counts it; `shotsFired` does not.
+//      is no shot to consume. `kills` counts it; `shotsFired` does not; and
+//      it scores `e.points()` exactly as a shot kill does (CS008 P2).
 //   4. ⛔ `continue`, NEVER `return`. Every enemy touching this step is asked,
 //      stacked ones included, and a Carrier's children appended mid-loop are
 //      reached by the index-based walk, exactly as in collideShots().
@@ -4255,7 +4322,7 @@ function collideSkimmer(state, well) {
     // ⛔ The rim sweep — the header above, and the four decisions in it.
     if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
       e.onShot(null);
-      if (e.dead) { state.tally.kills++; continue; }
+      if (e.dead) { state.tally.kills++; addScore(e.points()); continue; }
     }
     killSkimmer(state);
     return;   // one death per step, whatever else is touching
@@ -4274,9 +4341,9 @@ function collideSkimmer(state, well) {
 // teleport the killing enemy away during the freeze the player is staring at,
 // and the freeze exists to show them what happened.
 //
-// ⛔ No fragmentation and no score. Both are CS008's — the fragmentation is a
-// kit-fx primitive, and addScore() is the one scoring entry point. Death in
-// CS003 reads as hit-stop plus a respawn blink.
+// ⛔ No fragmentation and no score. The fragmentation is CS008 P4's kit-fx
+// primitive, and a death costs no points. What it DOES write for scoring is
+// state.diedThisWell, GDD 7's "no death" bonus (12-scoring.js).
 function killSkimmer(state) {
   const sk = state.skimmer;
   if (!sk || sk.dead) return;
@@ -4293,6 +4360,9 @@ function killSkimmer(state) {
 
   sk.dead = true;
   state.lives -= 1;
+  // ⛔ Below the invulnerability guard, so a declined kill is not a death.
+  // enterWell() is the only thing that clears it.
+  state.diedThisWell = true;
   // ⛔ TELEMETRY ONLY (02-state.js's `tally`). Counted HERE and never derived
   // as START_LIVES - lives: CS008's extra-life awards raise `lives` mid-run,
   // and the derived form would start quietly under-reporting the moment they
@@ -4340,8 +4410,9 @@ function killSkimmer(state) {
 //             button into a decision.
 //   3rd+      nothing.
 //
-// ⛔ No bonus and no points here (GDD 7 is CS008's). C.PURGE_SAVED_BONUS reads
-// state.purgeUses === 0 when it lands; that is why this is a count and not the
+// ⛔ BOTH USES SCORE NORMAL POINTS (GDD 7; Paul, P2s) — each victim's
+// `points()`, through addScore(). C.PURGE_SAVED_BONUS reads state.purgeUses ===
+// 0 at the clear edge (12-scoring.js); that is why this is a count and not the
 // boolean CS003 P2 shipped.
 
 // The second use's victim: the purgeable enemy nearest the RIM (highest depth).
@@ -4408,7 +4479,7 @@ function updatePurge(state) {
   if (state.purgeUses === 1) {
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; }
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); }
     }
     return;
   }
@@ -4420,7 +4491,7 @@ function updatePurge(state) {
     // the weak use by firing it into an empty well.
     // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
     // branches of the panic button count here (02-state.js's `tally`).
-    if (victim) { victim.dead = true; state.tally.kills++; }
+    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points()); }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.
@@ -4665,6 +4736,9 @@ function diveRespawn(state, well) {
     // landing lane makes the entity destroyed provably the one in the way.
     lane = laneNormalize(well, Math.round(diedLane));
     const struck = diveHazard(state, well, lane, 0);
+    // ⛔ NO addScore() AND NO `tally.kills`, and that is a decision (plan §0,
+    // CS008 P2): the termination guarantee destroying a Thorn is not the player
+    // destroying it. The build's three kill sites are all in 09-collision.js.
     if (struck) struck.dead = true;
   }
 
@@ -4739,7 +4813,64 @@ function updateDive(state, well, dt) {
 // ==========================================================================
 // 12-scoring.js
 // ==========================================================================
-// 12-scoring.js — placeholder. See VECTOR-VORTEX-GDD.md for the section that owns this.
+// 12-scoring.js — points, the clear bonuses and extra lives (GDD 7, 4.4). CS008 P2.
+//
+// ⛔ addScore() IS THE ONLY WRITER OF state.score AND THE ONLY PLACE A LIFE IS
+// AWARDED. Every kill site, every bonus and every chip routes through it, so
+// the milestone logic has exactly one place to live (GDD 7). A second writer is
+// a score the milestones never saw.
+//
+// ⛔ NOTHING HERE SPENDS AN RNG DRAW, AND NOTHING IN THE SIMULATION BRANCHES ON
+// state.score. The one thing scoring feeds back into the run is `lives`, through
+// the milestone below — which is why a scored run and an unscored one spend the
+// same draws until an awarded life outlives a game over (test-cs008-p2.js).
+//
+// ⛔ WHERE THE POINTS COME FROM. An enemy's worth is read off the entity through
+// its fourth contract method, points() (07-enemies.js, GDD 6.5), and awarded by
+// the KILL SITE on the false -> true `dead` transition. There are three kill
+// sites and no fourth (plan §3):
+//
+//   collideShots()     a shot kill                          (09-collision.js)
+//   collideSkimmer()   the rim sweep — a shot that never had to fly (P1b)
+//   updatePurge()      both uses, normal points (Paul, P2s)
+//
+// ⛔ The Dive's termination kill awards NOTHING (11-dive.js): it is not the
+// player destroying a Thorn, and it is not counted in `tally.kills` either. The
+// Thorn itself scores per CHIP from inside its own onShot(), because the enemy
+// decides what a hit does — its points() is 0, so its death pays nothing extra.
+
+// Add `n` points, and award every extra life the new total has crossed.
+//
+// ⛔ `state.nextLife` IS THE NEXT MILESTONE, A FIELD, NOT A FORMULA OVER THE
+// SCORE. C.EXTRA_LIFE_FIRST, then every C.EXTRA_LIFE_EVERY (Paul, P3s). The
+// `while` is what makes one award that crosses two milestones pay both.
+//
+// ⚠ AN AWARD PAST C.LIVES_MAX IS LOST, AND IN CS008 THAT IS SILENT. The milestone
+// still advances — a life refused at the cap is not banked for later. GDD 4.4
+// wants a distinct sound for it, and audio is CS009's.
+function addScore(n) {
+  state.score += n;
+  while (state.score >= state.nextLife) {
+    if (state.lives < C.LIVES_MAX) state.lives += 1;
+    // else: CS009 voices the lost life here (GDD 4.4, "never silently swallowed").
+    state.nextLife += C.EXTRA_LIFE_EVERY;
+  }
+}
+
+// The well-clear bonuses (GDD 7), called ONCE, from Game.update()'s clear edge —
+// the step wellCleared() first says yes, before startDive() (Paul, P4s).
+//
+// ⛔ IN THIS ORDER, AND THE ORDER IS FIXED: the level bonus, the unspent Purge,
+// no death. P3 appends the Start Depth bonus here.
+//
+// ⛔ "NO DEATH" IS state.diedThisWell, which enterWell() clears and killSkimmer()
+// sets. A dive death happens AFTER this edge and is cleared by nextWell() before
+// the next one, so it never voids the bonus it follows — with no special case.
+function clearBonuses(state) {
+  addScore(C.PTS_WELL_PER_LEVEL * state.level);
+  if (state.purgeUses === 0) addScore(C.PURGE_SAVED_BONUS);
+  if (!state.diedThisWell) addScore(C.PTS_NO_DEATH_WELL);
+}
 
 // ==========================================================================
 // 13-render-well.js
@@ -5639,11 +5770,12 @@ function drawSurger(ctx, well, lane, depth, tip, live) {
 //                  working, and a check that did not know which ones they were
 //                  would flag the two most useful stall columns in the file.
 //
-// ⛔ FOUR COLUMNS SHIP WITH KNOWN-CONSTANT VALUES rather than being added when
-// their source lands: `score` and `maxCombo` (0), `mode` ("classic") and
-// `startDepth` (1), out of C.TELEMETRY_PLACEHOLDER. A column added in CS008
-// invalidates every log recorded before it, which is the whole reason GDD 15.6
-// makes the column list a thing you edit deliberately.
+// ⛔ THREE COLUMNS SHIP WITH KNOWN-CONSTANT VALUES rather than being added when
+// their source lands: `maxCombo` (0), `mode` ("classic") and `startDepth` (1),
+// out of C.TELEMETRY_PLACEHOLDER. A column added in CS008 invalidates every log
+// recorded before it, which is the whole reason GDD 15.6 makes the column list
+// a thing you edit deliberately. ⛔ `score` was the fourth, and CS008 P2 moved
+// its SOURCE to state.score without moving its place in the order.
 //
 // ⚠ CROSS-CHECKED AGAINST THE WORKER, which already registers seven statsFields
 // for `vector-vortex` in coinless-kit's services/leaderboard/src/registry.js
@@ -5691,7 +5823,7 @@ const TELEMETRY_FIELDS = [
   "spawnRemaining",     // ⛔ SAWTOOTH — the well's quota, re-armed by enterWell()
   "purgeUses",          // ⛔ SAWTOOTH — one charge per well, re-armed by enterWell()
   // ---- the run's totals ----------------------------------------------------
-  "score",              // cumulative — ⚠ 0 until addScore() lands in CS008
+  "score",              // cumulative — state.score, addScore()'s (CS008 P2)
   "maxCombo",           // cumulative — ⚠ 0 until GDD 14.4's combo (Overdrive)
   "deaths",             // cumulative
   "wellsCleared",       // cumulative
@@ -5788,7 +5920,7 @@ function telemetryRow(state) {
     livesLeft:         state.lives,
     spawnRemaining:    state.spawn.remaining,
     purgeUses:         state.purgeUses,
-    score:             P.score,
+    score:             state.score,
     maxCombo:          P.maxCombo,
     deaths:            T.deaths,
     wellsCleared:      T.wellsCleared,
@@ -6053,6 +6185,11 @@ function enterWell() {
   // who is still holding the button from the previous well spend the new
   // charge on the entry step without ever releasing (09-collision.js).
   state.purgeUses = 0;
+
+  // ⛔ GDD 7's "no death" is per WELL, so it is re-armed with the Purge. A dive
+  // death set it after the outgoing well's clear edge had already paid, and
+  // this is where it stops counting against anything (12-scoring.js).
+  state.diedThisWell = false;
 
   resetSpawner(state);
 
@@ -6569,11 +6706,17 @@ const Game = (function () {
     // survivors, and nextWell() is reached only from the dive's END, in
     // updateDive() (11-dive.js). One step of the dive runs on the NEXT step —
     // the branch above — never a second pass through this function.
-    // ⛔ TELEMETRY ONLY (02-state.js's `tally`). Counted at the EDGE — the step
-    // wellCleared() first says yes — and not inside startDive(), which the suite
-    // also drives directly; a well cleared by play is the event the column is
-    // about. Nothing here branches on it.
-    if (wellCleared(state)) { state.tally.wellsCleared++; startDive(state); }
+    // ⛔ TELEMETRY (02-state.js's `tally`) AND GDD 7's CLEAR BONUSES, both at the
+    // EDGE — the step wellCleared() first says yes — and not inside
+    // startDive(), which the suite also drives directly and the dive's repeat
+    // path calls again; a well cleared by play is the event both are about.
+    // ⛔ The bonuses are paid BEFORE the dive (Paul, P4s), in clearBonuses()'s
+    // fixed order (12-scoring.js).
+    if (wellCleared(state)) {
+      state.tally.wellsCleared++;
+      clearBonuses(state);
+      startDive(state);
+    }
   }
 
   // ---- presentation --------------------------------------------------------

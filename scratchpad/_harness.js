@@ -167,8 +167,18 @@ function buildGame(opts = {}) {
     // are named here so the assertion reads the BUILT file rather than src/.
     "TELEMETRY_FIELDS", "TELEMETRY_KINDS", "telemetryRow", "telemetryCell",
     "Telemetry",
+    // scoring and extra lives (12-scoring.js, CS008 P2)
+    "addScore", "clearBonuses",
   ];
-  const tail = "\n;return {" +
+  // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
+  // has evaluated, so every internal caller reaches the stub. For a claim of
+  // the form "X changes nothing else" (test-cs008-p2.js: scoring spends no RNG
+  // draw) — stubbing a function's EFFECT would still run its body. A name the
+  // build does not define as a function throws rather than stubbing nothing.
+  const stubs = (opts.stub || []).map(n =>
+    `\n;if (typeof ${n} !== "function") throw new Error("stub: no function ${n}");` +
+    `\n${n} = function () {};`).join("");
+  const tail = stubs + "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +
     "};";
   const fn = new Function("window", "document", "navigator", "performance",

@@ -25,10 +25,11 @@
 // filters. Nothing here removes an array element; hits set `dead = true` and
 // the caller's .filter() does the removal (GDD 6.5). Never splice mid-loop.
 //
-// ⛔ No scoring yet. addScore() is CS008 P2's single entry point, and the way to
-// keep it single is to not build a temporary second one here. C.PTS_VAULTER and
-// C.PURGE_SAVED_BONUS are deliberately unread until then. ⛔ P2 awards at the
-// rim sweep's kill in collideSkimmer() too, not only in collideShots().
+// ⛔ SCORING, CS008 P2: ALL THREE OF THE BUILD'S KILL SITES ARE IN THIS FILE —
+// collideShots(), the rim sweep in collideSkimmer(), and both Purge uses. Each
+// awards `e.points()` through addScore() (12-scoring.js) on the false -> true
+// `dead` transition, beside the `tally.kills` it already counted, and nowhere
+// else. The Thorn's per-chip 5 is paid inside its own onShot(), not here.
 
 // Are two lanes the same lane, to within the contact tolerance? ⛔ laneDelta,
 // never (a - b): on a 16-lane Ring the distance from lane 15.9 to lane 0 is
@@ -99,11 +100,13 @@ function collideShots(state, well) {
       // C.SHOT_MAX the same step, which is what makes camping a thorned lane
       // chip rapidly (GDD 4.2, ⚠ SETTLED — emergent, not a bug to smooth out).
       if (e.onShot(shot)) shot.dead = true;
-      // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and read off `e.dead` rather
-      // than off the return value: onShot() answers "was the shot consumed",
-      // which is a different question from "did the enemy die" — a Thorn chips
-      // and lives, and a Carrier that splits dies. Nothing here branches on it.
-      if (e.dead) state.tally.kills++;
+      // ⛔ THE KILL, read off `e.dead` rather than off the return value:
+      // onShot() answers "was the shot consumed", which is a different question
+      // from "did the enemy die" — a Thorn chips and lives, and a Carrier that
+      // splits dies. `e.dead` was false above, so this IS the false -> true
+      // transition: the telemetry count (02-state.js's `tally`) and the points
+      // (12-scoring.js), and nothing here branches on either.
+      if (e.dead) { state.tally.kills++; addScore(e.points()); }
       break;
     }
   }
@@ -174,7 +177,8 @@ function collideShots(state, well) {
 //      ⚠ SETTLED omission below, for the same reason: the Purge is a statement,
 //      and this is a shot that never had to fly. `null` is safe — no onShot in
 //      the build reads its argument — and "consumed" is ignored, because there
-//      is no shot to consume. `kills` counts it; `shotsFired` does not.
+//      is no shot to consume. `kills` counts it; `shotsFired` does not; and
+//      it scores `e.points()` exactly as a shot kill does (CS008 P2).
 //   4. ⛔ `continue`, NEVER `return`. Every enemy touching this step is asked,
 //      stacked ones included, and a Carrier's children appended mid-loop are
 //      reached by the index-based walk, exactly as in collideShots().
@@ -208,7 +212,7 @@ function collideSkimmer(state, well) {
     // ⛔ The rim sweep — the header above, and the four decisions in it.
     if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
       e.onShot(null);
-      if (e.dead) { state.tally.kills++; continue; }
+      if (e.dead) { state.tally.kills++; addScore(e.points()); continue; }
     }
     killSkimmer(state);
     return;   // one death per step, whatever else is touching
@@ -227,9 +231,9 @@ function collideSkimmer(state, well) {
 // teleport the killing enemy away during the freeze the player is staring at,
 // and the freeze exists to show them what happened.
 //
-// ⛔ No fragmentation and no score. Both are CS008's — the fragmentation is a
-// kit-fx primitive, and addScore() is the one scoring entry point. Death in
-// CS003 reads as hit-stop plus a respawn blink.
+// ⛔ No fragmentation and no score. The fragmentation is CS008 P4's kit-fx
+// primitive, and a death costs no points. What it DOES write for scoring is
+// state.diedThisWell, GDD 7's "no death" bonus (12-scoring.js).
 function killSkimmer(state) {
   const sk = state.skimmer;
   if (!sk || sk.dead) return;
@@ -246,6 +250,9 @@ function killSkimmer(state) {
 
   sk.dead = true;
   state.lives -= 1;
+  // ⛔ Below the invulnerability guard, so a declined kill is not a death.
+  // enterWell() is the only thing that clears it.
+  state.diedThisWell = true;
   // ⛔ TELEMETRY ONLY (02-state.js's `tally`). Counted HERE and never derived
   // as START_LIVES - lives: CS008's extra-life awards raise `lives` mid-run,
   // and the derived form would start quietly under-reporting the moment they
@@ -293,8 +300,9 @@ function killSkimmer(state) {
 //             button into a decision.
 //   3rd+      nothing.
 //
-// ⛔ No bonus and no points here (GDD 7 is CS008's). C.PURGE_SAVED_BONUS reads
-// state.purgeUses === 0 when it lands; that is why this is a count and not the
+// ⛔ BOTH USES SCORE NORMAL POINTS (GDD 7; Paul, P2s) — each victim's
+// `points()`, through addScore(). C.PURGE_SAVED_BONUS reads state.purgeUses ===
+// 0 at the clear edge (12-scoring.js); that is why this is a count and not the
 // boolean CS003 P2 shipped.
 
 // The second use's victim: the purgeable enemy nearest the RIM (highest depth).
@@ -361,7 +369,7 @@ function updatePurge(state) {
   if (state.purgeUses === 1) {
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; }
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); }
     }
     return;
   }
@@ -373,7 +381,7 @@ function updatePurge(state) {
     // the weak use by firing it into an empty well.
     // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
     // branches of the panic button count here (02-state.js's `tally`).
-    if (victim) { victim.dead = true; state.tally.kills++; }
+    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points()); }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.
