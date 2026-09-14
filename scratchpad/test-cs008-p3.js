@@ -170,6 +170,14 @@ for (let i = 0; i < 600; i++) G.update(DT);
 H.eq(state.score, 0, "⛔ a run that dies in well 9 is never paid");
 H.eq(state.tally.wellsCleared, 0, "... because it never clears it");
 
+// ⛔ A life lost in the starting well does NOT void the bonus (Paul, 2026-09-13):
+// only the run ending there does. The death costs the no-death 1,000 and no more.
+begin({ startDepth: 9 });
+X.killSkimmer(state);
+H.eq(state.lives, C.START_LIVES - 1, "fixture: a life lost in well 9, the run goes on");
+H.eq(clearNow(), 9 * GDD.wellPerLevel + GDD.purgeUnspent + 22300,
+     "⛔ ... and clearing well 9 still pays 22,300, without the no-death bonus");
+
 begin({});
 H.eq(clearNow(), GDD.wellPerLevel + GDD.purgeUnspent + GDD.noDeath,
      "a default run's level-1 clear pays the three bonuses and startBonus(1), which is 0");

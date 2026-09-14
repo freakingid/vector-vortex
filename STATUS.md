@@ -174,12 +174,9 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   All three are the replaced claim, repaired in place. ⛔ **Lesson for P3–P8:**
   an emulation that adds no export, method or key cannot see an assertion that
   pins one.
-- ⚠ **CS008 P3 — "dies in well 9" was built as the RUN ending there**, which is
-  what plan §4's mechanism gives (paid when `level === startDepth`, no death
-  test). A life lost in the starting well, then a clear, still pays the bonus
-  (not the no-death 1,000). ⛔ If S2's "survive the well you chose" meant any
-  death, that is Paul's call and a one-line change; `test-cs008-p3.js` asserts
-  only the run-ending case.
+- ✅ **A life lost in the starting well does not void the Start Depth bonus —
+  answered.** Paul, 2026-09-13: only the run ending there does; the death costs
+  the no-death 1,000. `DECISIONS.md` carries it; `test-cs008-p3.js` stages both.
 - ⚠ **`test-cs007-p4.js` finds the telemetry module by the text
   `// 22-meta.js`**, first occurrence. A comment line anywhere earlier in the
   build that begins `// 22-meta.js` (P3 wrote one in `02-state.js`) blanks its

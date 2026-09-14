@@ -533,3 +533,22 @@ the run had not stopped yet.
 
 **What would change it.** Nothing expected. A later rule that the dead player
 did not clear the well ("pay nothing") would move the guard to the clear edge.
+
+
+---
+
+## 2026-09-13 — CS008 P3: a life lost in the starting well keeps the Start Depth bonus
+
+**The question.** S2 pays the bonus "only if you survive the well you chose".
+Plan §4's mechanism pays on the starting well's clear with no death test, so a
+player who loses a life there and then clears it is paid. Was "survive" meant
+as any death?
+
+**The call — Paul, on Claude's recommendation: still paid.** Only a run that
+ends in its starting well forfeits the bonus. The death already costs a life
+and the no-death 1,000; voiding 22,300+ on one slip would make a deep start a
+gamble, against GDD §4.6's "trade safety for score legibly". No code change;
+`test-cs008-p3.js` stages the case.
+
+**What would change it.** A playtest finding that deep starts are farmed by
+dying freely in the starting well.
