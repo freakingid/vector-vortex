@@ -362,6 +362,23 @@ H.eq(clearStep(), 150 + 700 + 500, "⛔ a death in the well: no 1,000");
   H.eq(clearStep(), 150 + 800 + 500 + 1000, "and pays its own no-death bonus");
 }
 
+// ⛔ A stopped run scores but gains no life (Paul, 2026-09-13). The last life
+// and the clear land on one step: a shot takes the last Vaulter, a bolt takes
+// the Skimmer, and the clear bonuses cross 20,000 after the stop.
+{
+  quiet(7);
+  X.addScore(19000);
+  state.lives = 1;
+  armClear(7);
+  put(new X.WeaverBolt(Math.round(state.skimmer.lane), PARK));
+  const d = clearStep();
+  H.eq(state.screen, "gameover", "fixture: that step spent the last life");
+  H.eq(d, 150 + 700 + 500, "⛔ the game-over step still pays its clear bonuses (no death bonus: it died)");
+  H.assert(state.score >= GDD.lifeFirst, "fixture: and they crossed 20,000");
+  H.eq(state.lives, 0, "⛔ but a stopped run gains no life — lives stays 0");
+  H.eq(state.nextLife, 60000, "and the milestone is spent, not banked");
+}
+
 // ---------------------------------------------------------------------------
 // telemetry — the score column's source
 // ---------------------------------------------------------------------------

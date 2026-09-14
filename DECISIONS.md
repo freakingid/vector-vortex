@@ -516,3 +516,20 @@ the write-up is `NEXT-STEPS.md`. P8's R4 playtest ask is moot.
 belongs to tuning. Only a finding that the sweep itself reads wrong would
 re-open K1.
 
+
+---
+
+## 2026-09-13 — CS008 P2: a clear on the step that spends the last life
+
+**The question.** The clear edge runs after `killSkimmer()`. A Weaver bolt can
+kill on the step a shot takes the well's last enemy, so the clear bonuses were
+paid after the run had stopped. If they crossed a milestone, `lives` went back
+to 1 on the game-over stop. MEASURED 0 times in 268 game overs; reachable.
+
+**The call — Paul: score, no life.** The bonuses count toward the final score.
+`addScore()` awards no life while `screen === "gameover"`, and the milestone is
+spent, not banked. An award earlier in that step, before the death, still pays:
+the run had not stopped yet.
+
+**What would change it.** Nothing expected. A later rule that the dead player
+did not clear the well ("pay nothing") would move the guard to the clear edge.

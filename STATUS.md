@@ -60,7 +60,7 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 351.3 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 351.8 KB); the
   manifest is checked both directions against `src/`.
 - `node scratchpad/run-all.js`: **37 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
@@ -162,12 +162,10 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   All three are the replaced claim, repaired in place. ⛔ **Lesson for P3–P8:**
   an emulation that adds no export, method or key cannot see an assertion that
   pins one.
-- ⚠ **OPEN FOR P5 — a clear on the step that spends the last life still pays.**
-  The clear edge runs after `killSkimmer()` has set `gameover`. A milestone
-  crossed by those bonuses would leave `lives` at 1 on a stopped screen. Only a
-  Weaver bolt can kill on a clearing step. MEASURED **0 in 268 game overs**
-  (`log/CS008.md`). Whether that step pays is a design call, not built. ⛔ P5's
-  game-over screen should not read `lives > 0` as "still playing".
+- ✅ **A clear on the step that spends the last life — answered and built.**
+  Paul, 2026-09-13: **score, no life**. The bonuses count toward the final score,
+  and `addScore()` awards no life while `screen === "gameover"`, so `lives`
+  stays 0 on the stop. Staged in `test-cs008-p2.js`. `DECISIONS.md` carries it.
 - ⚠ **`_harness.js` has `buildGame({ stub: [names] })`** (CS008 P2). It
   rebinds a top-level function to a no-op after evaluation, for "X changes
   nothing else" claims. Only `test-cs008-p2.js` uses it.
