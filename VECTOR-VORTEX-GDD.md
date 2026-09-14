@@ -301,6 +301,8 @@ Start 3. Extra life at 20,000 then every 40,000. Reserve cap 6; awards past the 
 
 ⚠ **SETTLED, second half — Paul, CS004 P1.** The clamp applies to every entity whose `depth` is a **position**, and skips those whose `depth` is a **length** — §6.5's `anchored` field. ⛔ This is **not** a narrowing of the band above: everything above `RESPAWN_PUSH_DEPTH` still comes down to it, in every lane, on every entity the clamp means anything for. It is about *which entities*, not *how far down*. Clamping a length is not a push but a free chip — the Thorn is an extent rooted at the throat, so an unconditional clamp would silently shorten every Thorn past 0.55 on every player death, in the one place nobody would look. Every enemy that existed when this landed is `anchored = false` and is unaffected.
 
+⛔ **Shipped, CS008 P4 — the fragmentation.** While `skimmer.dead`, `Game.draw()` draws `drawFragments()` (`14-render-entities.js`, a kit-fx primitive) **instead of** the craft: each segment of the craft's own outline drifts outward from its centroid by `FRAG_DRIFT × t`, turns by `±FRAG_SPIN × t` alternating by segment, and fades as `1 − t` (Paul, U9). ⛔ **`t` is hit-stop progress**, `fragmentT(hitStopLeft, HIT_STOP_DEATH)` — no RNG and no second clock, so identical progress draws identically and the freeze the player is watching is the animation. Every death goes through `killSkimmer()`'s freeze, so a Dive death fragments too. Once the freeze is spent the craft is not drawn until the respawn step, and after the last life it stays gone.
+
 Zero lives sets `screen = "gameover"`, which is a ⛔ **stop, not a screen**: `Game.update()` returns early above everything, so no clock, no spawner, no entity pass, no collision and no level advance run, while `draw()` is untouched and the board the player died on stays up. CS008 owns the game-over UI and the real restart flow; the submission is CS011's.
 
 ⛔ **Shipped, CS008 P2 — extra lives.** `addScore()` (`12-scoring.js`, §7) is the **only** place a life is awarded. The next milestone is a field, `state.nextLife`, born at `EXTRA_LIFE_FIRST` (20,000); crossing it adds a life if `lives < LIVES_MAX` and advances it by `EXTRA_LIFE_EVERY` (40,000) **either way** — 20k, 60k, 100k, 140k … (Paul, P3s). A `while` pays one award that crosses two milestones twice. ⚠ **An award past the cap is lost, and in CS008 it is silent**: the milestone moves on and nothing is banked. The distinct sound above is CS009's, and the hook line is commented in `addScore()`. ⛔ **A stopped run scores but gains no life** (Paul, 2026-09-13). A clear edge on the step that spends the last life — only a Weaver bolt can kill on a clearing step, measured 0 times in 268 game overs — still pays its bonuses, because the edge runs after `killSkimmer()`. The points count toward the final score, but `addScore()` awards no life while `screen === "gameover"`, so `lives` stays 0 on the stop and the milestone is spent.
@@ -828,6 +830,8 @@ Glow is two strokes — wide at low alpha, thin at full — composited with `lig
 
 ⛔ **HUD uses `glowStroke`.** No `fillRect`, no `strokeRect`.
 
+⛔ **The one exception is text, and it has one path — `drawText(ctx, str, x, y, size, color, align)`** (`13-render-well.js`, Paul's T1, CS008 P4). A glyph is not a polyline, so text cannot go through `drawPoly`; it is the build's only `fillText` and only `strokeText` site. Its glow is the same two passes as above under `lighter` — `strokeText` at `GLOW_WIDE_W` / `GLOW_WIDE_ALPHA`, then `fillText` at full — and never `shadowBlur`. `TEXT_FONT_FAMILY` is a monospace stack. `test-cs008-p4.js` pins the single site and zero rectangles in the built file.
+
 ### 10.3 ⛔ The readability contract
 
 **Nothing is drawn over `depth < 0.25` at an opacity that obscures an approaching enemy.** Explosions, particles, and score popups are clipped or faded in that zone. This is what Tempest 4000 was criticised for violating, and it is the difference between tense and unfair.
@@ -835,6 +839,17 @@ Glow is two strokes — wide at low alpha, thin at full — composited with `lig
 ### 10.4 HUD
 
 Score top-left, lives bottom-left, level and band top-right, Purge charge bottom-right, combo (Overdrive) centre-top and loud. Everything else lives in the well.
+
+**Shipped, CS008 P4.** `drawHud(ctx, view)` (`15-render-hud.js`) is drawn **last** by `Game.draw()` and ⛔ reads no game state: `view` carries `score`, `lives`, `level`, `levelColor`, `purgeUses`, `mirror` and the reserve icon's poly, filled in place each frame. `hudLayout(view)` is the one place a corner is placed, and every size in it is a `C.HUD_*` constant.
+
+| Corner | Content |
+|---|---|
+| Top-left | the score, in `HUD_COLOR` |
+| Bottom-left | reserve craft, `lives − 1`, as small `SKIMMER_POLY` outlines (H1) |
+| Top-right | "LEVEL n" in `wellBandColor(level, bandRoll)`, no band name (H2) |
+| Bottom-right | the Purge glyph: bright at `purgeUses` 0, `HUD_PURGE_DIM_ALPHA` at 1, absent at 2 or more (§4.3) |
+
+⛔ **The touch-button side insets** by `TOUCH_BUTTON_R × HUD_TOUCH_INSET_R` (2.5) at all times, not only on detected touch (H3) — the buttons sit on exactly the right-hand corners (`C.INPUT_MIRROR` moves them left). The side comes from `view.mirror`; CS008 P7 sources it from the input module. A text rectangle is sized by `TEXT_CHAR_W`, not `measureText()`, so `test-cs008-p4.js` asserts arithmetically that every rectangle clears the throat zone (§10.3) on all sixteen wells and every touch-button point, mirrored and not. Combo is Overdrive's and not built.
 
 ---
 

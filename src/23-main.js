@@ -647,12 +647,35 @@ const Game = (function () {
     // ⛔ The respawn blink is a DRAW-TIME decision and nothing else (GDD 4.4).
     // The craft is fully simulated on the frames it is not painted; skipping
     // its update instead would be a control dropout, which is pillar P1's one
-    // unforgivable failure. A dead craft still draws — the freeze exists to
-    // show the player what happened to it.
-    if (state.skimmer && skimmerBlinkVisible(state.invulnTime)) {
-      state.skimmer.draw(ctx, well);
+    // unforgivable failure.
+    // ⛔ A DEAD CRAFT FRAGMENTS INSTEAD (GDD 4.4; CS008 P4). The freeze exists
+    // to show the player what happened, and it is the fragmentation's clock:
+    // t is hit-stop progress, so there is no second clock and no draw spent.
+    // Every death — the Dive's included — goes through killSkimmer() and its
+    // freeze, so every death fragments. Once the freeze is spent (t = 1) the
+    // craft is gone until the respawn step, and on a game over it stays gone.
+    const sk = state.skimmer;
+    if (sk && sk.dead) {
+      drawFragments(ctx, skimmerPoints(well, sk.lane, 0), true,
+                    fragmentT(hitStopLeft, C.HIT_STOP_DEATH), C.SKIMMER_COLOR);
+    } else if (sk && skimmerBlinkVisible(state.invulnTime)) {
+      sk.draw(ctx, well);
     }
+    // ⛔ THE HUD IS LAST and reads only this view (15-render-hud.js). The view
+    // object is filled in place, never allocated per frame.
+    _hudView.score = state.score;
+    _hudView.lives = state.lives;
+    _hudView.level = state.level;
+    _hudView.levelColor = wellBandColor(state.level, state.bandRoll);
+    _hudView.purgeUses = state.purgeUses;
+    _hudView.mirror = C.INPUT_MIRROR;
+    drawHud(ctx, _hudView);
   }
+
+  const _hudView = {
+    score: 0, lives: 0, level: 1, levelColor: "", purgeUses: 0,
+    mirror: false, icon: SKIMMER_POLY,
+  };
 
   // ---- the frame -----------------------------------------------------------
 

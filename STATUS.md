@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (P3 done — ⛔ P4, text, HUD and fragmentation, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P4 done — ⛔ P5, the screens, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
@@ -70,11 +70,29 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   in `log/CS008.md`). Three planned reds repaired in place; one new-cause red was
   my own comment, fixed in source (below). GDD §4.6 table corrected.
 
+- **P4 (2026-09-13) — text, the HUD and the fragmentation.** `drawText()` in
+  `13-render-well.js`, the one `fillText`/`strokeText` site (T1, `CLAUDE.md`
+  line added). `drawHud(ctx, view)` + `hudLayout(view)` in `15-render-hud.js`,
+  drawn last, reading only a view `Game.draw()` fills in place. The corners
+  follow GDD §10.4, H1–H3. `drawFragments()` + `fragmentT()` at the foot of
+  `14-render-entities.js`, drawn instead of a dead craft, `t` = hit-stop
+  progress, no RNG. `C.TEXT_*`, `HUD_*`, `FRAG_*`. `src/14-render-entities.NOTES.md`
+  created. ⛔ **No baseline moved** and **no closed file was edited** except
+  `_harness.js`'s export list. `test-cs008-p4.js`, 535 assertions:
+  - one text site, zero rectangles;
+  - rectangles clear of the throat on 16 wells and of the real touch hit test,
+    mirrored and not;
+  - icons `lives − 1`, glyph bright/dim/absent;
+  - fragments identical per `t`, and `t` 0 → 1 over the real freeze with
+    `state.rng` throwing.
+
+  Mutation-checked, 12 of 12 red (record in `log/CS008.md`).
+
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 357.5 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 369.7 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **38 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **39 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -159,6 +177,23 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   sensitivity/timing constants. Reachable over LAN via `npm run serve`.
 
 ## Known issues
+
+- ⛔ **CS008 P4 — `test-cs008-p4.js` scans the WHOLE built file, comments
+  included.** Any `fillRect` or `strokeRect` text, or a second `.fillText(` /
+  `.strokeText(`, turns it red. P5's screens draw every string through
+  `drawText()`; ⛔ never name those calls in a comment. `test-cs002-p3.js`
+  also bans the text `ctx.fill` anywhere in `14-render-entities.js`.
+- ⚠ **CS008 P4 — the HUD's mirror side reads `C.INPUT_MIRROR`**, via
+  `_hudView.mirror` in `Game.draw()`. P7 changes that one line to read the input
+  module. ⚠ `drawHud` is not screen-aware: P5 decides whether the title and
+  menus draw it.
+- ⚠ **CS008 P4 — a dead craft is not drawn once the freeze is spent.** After the
+  last life the game-over board has no craft on it. That is the fragmentation
+  finishing, not a missing draw.
+- ⚠ **CS008 P4 — `drawFragments` reads `C.FRAG_*` and `glowStroke` reads
+  `C.GLOW_*`.** kit-fx extraction owes an options argument
+  (`src/14-render-entities.NOTES.md`). A known gap, recorded rather than taken
+  this phase.
 
 - ⚠ **CS008 P2 — THREE NEW-CAUSE REDS the plan's §1.8 did not list**, recorded
   before any edit. Code in, suite run, hash and `GOLDEN_LANES` green. Beside
@@ -326,16 +361,16 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — ⛔ P4, TEXT, THE HUD AND THE DEATH FRAGMENTATION
+## Next up — ⛔ P5, THE SCREENS
 
-⛔ **Paste P4's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
+⛔ **Paste P5's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
 session.** The plan is `PLANNED-FEATURES-CS008.md`;
 ⛔ a build phase reads the document, not the planning conversation
 (`CLAUDE.md` rule 3c).
 
 **The sequence:** P1 the rim fix · P1b the crossing fix · P2 scoring and
-extra lives · P3 mode and Start Depth · **P4 text, HUD, fragmentation** · P5 the
-screens · P6 pause and Options · P7 the Controls page · P8 the front-door soak
+extra lives · P3 mode and Start Depth · P4 text, HUD, fragmentation · **P5 the
+screens** · P6 pause and Options · P7 the Controls page · P8 the front-door soak
 and the close.
 
 ⛔ **What each phase must not lose, carried from before the plan:**
@@ -349,7 +384,8 @@ and the close.
 3. ⛔ **Start Depth un-parks two `PLAYTEST.md` asks** (23 and 65) at P5.
 4. ⚠ **The HUD's menu/screen portion is `kit-menu`'s draft** and
    `14-render-entities.js` is `kit-fx`'s — both get a `.NOTES.md` in the phase
-   that first touches them (P4, P5).
+   that first touches them. ✅ P4 created kit-fx's; ⛔ P5 creates
+   `src/15-render-hud.NOTES.md`.
 5. ⚠ **Nothing has been tuned against GDD §8.2's targets.** The CS007 ask
    *"can you NAME what changed at level 5, at 9, at 13"* is answerable now
    that P1 has shipped; a sitting's answer belongs in `DECISIONS.md`.

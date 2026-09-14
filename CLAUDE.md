@@ -323,6 +323,9 @@ sprites, no textures.
 
 ⛔ **The HUD uses `glowStroke`** — no `fillRect`, no `strokeRect`.
 
+⛔ **Text goes through `drawText()` (`13-render-well.js`) and nothing else** — the
+build's one `fillText`/`strokeText` site, pinned by `test-cs008-p4.js` (T1).
+
 ⛔ **Nothing opaque is drawn below `C.READABILITY_DEPTH` (0.25).** Explosions,
 particles and score popups are clipped or faded in the throat zone. This is what
 *Tempest 4000* was criticised for violating, and it is the difference between a

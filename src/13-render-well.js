@@ -53,6 +53,35 @@ function glowStroke(ctx, color, width, alpha) {
   ctx.strokeStyle = prevStyle;
 }
 
+// ⛔ THE ONE TEXT PATH IN THE BUILD (CS008 P4, T1) — the only strokeText and
+// the only fillText call site, pinned by test-cs008-p4.js. A glyph is not a
+// polyline, so text is the single sanctioned exception to "drawPoly +
+// glowStroke only"; the glow is still GDD 10.2's two passes under `lighter`,
+// wide-and-dim then bright, and never shadowBlur. `y` is the TOP of the text.
+function drawText(ctx, str, x, y, size, color, align) {
+  const prevOp = ctx.globalCompositeOperation;
+  const prevAlpha = ctx.globalAlpha;
+  const prevWidth = ctx.lineWidth;
+
+  ctx.globalCompositeOperation = "lighter";
+  ctx.font = size + "px " + C.TEXT_FONT_FAMILY;
+  ctx.textAlign = align || "left";
+  ctx.textBaseline = "top";
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+
+  ctx.lineWidth = C.GLOW_WIDE_W;
+  ctx.globalAlpha = C.GLOW_WIDE_ALPHA;
+  ctx.strokeText(str, x, y);
+
+  ctx.globalAlpha = 1;
+  ctx.fillText(str, x, y);
+
+  ctx.globalCompositeOperation = prevOp;
+  ctx.globalAlpha = prevAlpha;
+  ctx.lineWidth = prevWidth;
+}
+
 // Depth-varying line weight (GDD 10.1 — vector hardware couldn't do this).
 // Linear in depth: thin at the throat, thick at the rim.
 function laneLineWidth(depth) {

@@ -564,6 +564,37 @@ const C = {
   READABILITY_DEPTH:    0.25,   // ⛔ nothing opaque drawn below this depth
   ATTRACT_IDLE:         20,     // s before attract mode
 
+  // ---- Text and the HUD (GDD 10.2, 10.4) — CS008 P4 ------------------------
+  // ⛔ drawText() (13-render-well.js) is the ONE text path in the build. Its
+  // glow reuses GLOW_WIDE_W / GLOW_WIDE_ALPHA below, so nothing here is a
+  // global glow constant.
+  TEXT_FONT_FAMILY:     "ui-monospace, Menlo, Consolas, \"Courier New\", monospace",
+  // Monospace advance as a fraction of the font size. ⛔ LAYOUT ONLY: hudLayout()
+  // sizes a text rectangle from it rather than from measureText(), so the
+  // readability and touch-button assertions are arithmetic, not a font probe.
+  // Conservative on purpose — every stack above advances at or under 0.6 em.
+  TEXT_CHAR_W:          0.62,
+  HUD_COLOR:            "#FFFFFF",  // ⚠ provisional, the same standing as SKIMMER_COLOR
+  HUD_MARGIN:           24,     // px, from the world edge to every corner item
+  HUD_TEXT_SIZE:        28,     // px, score and "LEVEL n"
+  HUD_ICON_SIZE:        30,     // px, a reserve craft's width, prong to prong
+  HUD_ICON_DEPTH_SCALE: 2.0,    // SKIMMER_POLY `d` → px, as a multiple of the icon size
+  HUD_ICON_GAP:         10,     // px between reserve craft
+  HUD_LINE_W:           2.0,    // px, icon and glyph stroke
+  HUD_PURGE_SIZE:       30,     // px, the Purge glyph's diameter
+  HUD_PURGE_DIM_ALPHA:  0.35,   // GDD 4.3 — the weak second use still waiting
+  // ⛔ H3: the touch-button side's items shift inward by this many
+  // TOUCH_BUTTON_R — the button's far edge (margin 1.5 R + radius 1 R) and a
+  // margin. The side is the mirror flag in the HUD view, never a detected device.
+  HUD_TOUCH_INSET_R:    2.5,
+
+  // ---- The death fragmentation (GDD 4.4) — CS008 P4 -----------------------
+  // ⛔ drawFragments() (14-render-entities.js) is a function of hit-stop
+  // progress and these, and nothing else: no RNG, no clock of its own.
+  FRAG_DRIFT:           48,     // px each segment travels outward by t = 1
+  FRAG_SPIN:            1.2,    // rad each segment turns by t = 1, alternating sign
+  FRAG_LINE_W:          3.0,    // px — LINE_W_RIM, the craft's own weight
+
   // ---- Well rendering (GDD 3.6, 3.7, 10.2) --------------------------------
   // Band palette. shapeIndex = (level-1) mod 16 picks the well; the BAND below
   // picks colour from level directly. Ember carries its own alpha (GDD 3.6);

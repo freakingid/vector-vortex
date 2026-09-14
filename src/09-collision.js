@@ -231,8 +231,9 @@ function collideSkimmer(state, well) {
 // teleport the killing enemy away during the freeze the player is staring at,
 // and the freeze exists to show them what happened.
 //
-// ⛔ No fragmentation and no score. The fragmentation is CS008 P4's kit-fx
-// primitive, and a death costs no points. What it DOES write for scoring is
+// ⛔ No fragmentation and no score. The fragmentation is drawFragments()
+// (14-render-entities.js), drawn by Game.draw() off the freeze this function
+// starts, and a death costs no points. What it DOES write for scoring is
 // state.diedThisWell, GDD 7's "no death" bonus (12-scoring.js).
 function killSkimmer(state) {
   const sk = state.skimmer;

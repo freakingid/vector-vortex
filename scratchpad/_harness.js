@@ -171,6 +171,8 @@ function buildGame(opts = {}) {
     "addScore", "clearBonuses",
     // the run's parameters and Start Depth (12/22, CS008 P3)
     "startBonus", "levelRecord", "startDepthOptions",
+    // text, the HUD and the death fragmentation (13/14/15, CS008 P4)
+    "drawText", "drawHud", "hudLayout", "PURGE_GLYPH_POLY", "drawFragments", "fragmentT",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of

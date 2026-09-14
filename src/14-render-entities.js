@@ -7,6 +7,7 @@
 // point and so does not use entityPoints() at all. CS005 P2 adds the Drifter's
 // two silhouettes and P3 the Surger, which is BOTH: a silhouette at a point and
 // a segment along its lane. See drawThorn() and drawSurgeLane() at the foot.
+// CS008 P4 adds drawFragments(), the death fragmentation, at the very foot.
 //
 // ⛔ drawPoly + glowStroke only (GDD 10.2). No fill, no sprite, no texture.
 //
@@ -635,4 +636,67 @@ function drawSurger(ctx, well, lane, depth, tip, live) {
   drawSurgeLane(ctx, well, lane, tip, live);
   drawPoly(ctx, entityPoints(well, lane, depth, SURGER_POLY, C.SURGER_SIZE), false);
   glowStroke(ctx, C.SURGER_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
+// The death fragmentation (GDD 4.4; CS008 P4, U9) — a kit-fx primitive.
+// ---------------------------------------------------------------------------
+//
+// The craft breaks into its OWN outline segments: segment i of `points` (and
+// the closing edge when `closed`) drifts outward from the points' centroid by
+// C.FRAG_DRIFT × t, turns about its own midpoint by C.FRAG_SPIN × t with the
+// sign alternating by index, and fades as 1 − t. `points` are SCREEN points —
+// the caller projects the silhouette, this breaks it. See
+// 14-render-entities.NOTES.md.
+//
+// ⛔ A PURE FUNCTION OF ITS ARGUMENTS. No RNG, no clock, no state: `t` is
+// hit-stop progress, fragmentT() below, read in Game.draw(). The freeze is when
+// it plays and update() is not running then, so a draw here could only ever be
+// a draw on the frame clock (CLAUDE.md, Math and lifecycle). Identical `t` means
+// identical calls, which is what test-cs008-p4.js asserts.
+//
+// ⛔ NO PER-FRAME ALLOCATION: one preallocated pair, the drawThorn() rule.
+const _fragA = { x: 0, y: 0 };
+const _fragB = { x: 0, y: 0 };
+const _fragSeg = [_fragA, _fragB];
+
+function drawFragments(ctx, points, closed, t, color) {
+  const n = points.length;
+  if (n < 2 || !(t < 1)) return;   // t ≥ 1 is spent; NaN draws nothing either
+  const k = t > 0 ? t : 0;
+
+  let cx = 0, cy = 0;
+  for (let i = 0; i < n; i++) { cx += points[i].x; cy += points[i].y; }
+  cx /= n; cy /= n;
+
+  const segs = closed ? n : n - 1;
+  for (let i = 0; i < segs; i++) {
+    const p = points[i], q = points[(i + 1) % n];
+    const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
+    // Outward is centroid → midpoint. A midpoint ON the centroid has no
+    // outward, and that segment spins in place rather than dividing by zero.
+    const dx = mx - cx, dy = my - cy;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const ox = len > 0 ? dx / len * C.FRAG_DRIFT * k : 0;
+    const oy = len > 0 ? dy / len * C.FRAG_DRIFT * k : 0;
+    const a = (i % 2 === 0 ? 1 : -1) * C.FRAG_SPIN * k;
+    const cos = Math.cos(a), sin = Math.sin(a);
+    const hx = (p.x - mx), hy = (p.y - my);
+    _fragA.x = mx + ox + hx * cos - hy * sin;
+    _fragA.y = my + oy + hx * sin + hy * cos;
+    _fragB.x = mx + ox - hx * cos + hy * sin;
+    _fragB.y = my + oy - hx * sin - hy * cos;
+    drawPoly(ctx, _fragSeg, false);
+    glowStroke(ctx, color, C.FRAG_LINE_W, 1 - k);
+  }
+}
+
+// Hit-stop progress, 0 on the death step's frame and 1 as the freeze ends.
+// ⛔ Takes the numbers, not Game: `left` is Game.hitStopLeft and `total` the
+// death freeze, so this module reads no game object. Clamped both ways — a
+// headless caller that never froze has left = 0, which is t = 1, spent.
+function fragmentT(left, total) {
+  if (!(total > 0)) return 1;
+  const t = 1 - left / total;
+  return t < 0 ? 0 : (t > 1 ? 1 : t);
 }
