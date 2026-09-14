@@ -500,6 +500,12 @@ const C = {
   GAMEPAD_DEADZONE:     0.15,   // stick units; below this, zero
   GAMEPAD_SENS:         12.0,   // lane-units/sec at full stick deflection
   GAMEPAD_PAUSE_BUTTON: 9,      // standard mapping's Start — queues `pause` (CS008 P6, U4)
+  // The CONTROLS page's two sensitivity rows (CS008 P7), as multiples of
+  // MOUSE_SENS / TOUCH_SENS. ✅ Paul confirmed the range, 2026-09-13. ×1.0 is
+  // the shipped constant exactly, so an untouched row changes nothing.
+  SENS_MIN_MULT:        0.5,
+  SENS_MAX_MULT:        2.0,
+  SENS_STEP:            0.1,    // one rotate step on an adjusting row
 
   // ---- Audio (GDD 11) -----------------------------------------------------
   MUSIC_LOOKAHEAD:      0.20,   // s. ⛔ per-frame; never setTimeout/setInterval.
@@ -599,7 +605,7 @@ const C = {
   MENU_TEXT_SIZE:       30,     // px, info lines and rows
   MENU_TOP_Y:           240,    // px, the first info line's top edge
   MENU_ROW_H:           46,     // px per info line and per row
-  MENU_COL_W:           420,    // px, a row's label (left) to its detail (right)
+  MENU_COL_W:           460,    // px, a row's label (left) to its detail (right). 460 fits "MOUSE SENSITIVITY" beside an adjusting detail (P7)
   MENU_VISIBLE_ROWS:    7,      // rows drawn at once; the window follows the cursor
   MENU_COLOR:           "#FFFFFF",  // ⚠ provisional — the selected row and the title
   MENU_IDLE_COLOR:      "#7FA8C8",  // ⚠ provisional — an enabled row not selected

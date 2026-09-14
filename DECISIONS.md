@@ -617,3 +617,27 @@ do nothing (`PLAYTEST.md`, screens).
 **What would change it.** A playtest where a toggle press un-pauses by accident,
 say a double-tapped Start.
 
+---
+
+## 2026-09-13 — CS008 P7: the sensitivity range, the slider mode, a refusal ends a capture, no unbinding swap
+
+**The questions.** P7 was told to confirm one number, the plan's flagged
+×0.5–×2.0 sensitivity range. Three more surfaced that plan §8 does not answer:
+- how a slider takes rotate, when rotate moves the cursor;
+- what a refused key does to an armed capture;
+- whether a swap may leave a gamepad action with no button.
+
+**The calls — Paul, on Claude's recommendation.**
+- **×0.5 to ×2.0 in ×0.1 steps.**
+- **Fire arms a slider.** Rotate adjusts it, and Fire, Purge or Escape leaves
+  and keeps the value.
+- **A refused key ends the capture** with its reason shown, so Escape and Start
+  double as cancel.
+- **A swap that would leave an action unbound is refused**, so a pad-only player
+  cannot lose Fire.
+
+Detail is in `log/CS008.md`, P7, and GDD §10.5.
+
+**What would change it.** A hardware pass where ×2.0 still feels slow on a
+high-DPI mouse, or where players expect Purge on a slider to revert.
+

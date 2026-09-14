@@ -4,8 +4,8 @@
 // only; nothing simulates while paused; ⛔ hitStopLeft and the fragmentation
 // hold under a pause taken inside a death freeze; resume is instant and spends
 // no Purge; OPTIONS from the title and from pause; the telemetry row is the `t`
-// key and EXPORT is `e`; the credits carry no forbidden word; the CONTROLS stub
-// says so on screen; kit-input 0.5.0's three action sources.
+// key and EXPORT is `e`; the credits carry no forbidden word; the CONTROLS row
+// opens its page; kit-input 0.5.0's three action sources.
 //
 // ⛔ TRAPS IN THE FIXTURES.
 //  1. The freeze lives in Game.frame(), so everything is driven through frame()
@@ -387,13 +387,14 @@ steps(40);
 H.assert(X.Telemetry.count > 0, "and capture samples the run");
 captureLog(() => press(key("t")));
 
-// The CONTROLS stub says so on screen.
+// The CONTROLS row opens its page. CS008 P7 replaced the stub with the built
+// page (test-cs008-p7.js owns its rows), so its BACK is now the last row.
 toTitle();
 tapRight(1); press(FIRE); tapRight(2); press(FIRE);
 H.eq(state.screen, "controls", "CONTROLS opens its page");
 const ctl = drawnTexts().map(t => t.str);
-H.assert(ctl.includes("CONTROLS") && ctl.includes("NOT BUILT YET"), "⛔ the CONTROLS stub says on screen that it does nothing yet");
-press(FIRE);
+H.assert(ctl.includes("CONTROLS") && !ctl.includes("NOT BUILT YET"), "⛔ the CONTROLS page is built: no stub line on screen");
+tapRight(7); press(FIRE);
 H.eq(state.screen, "options", "its BACK returns to OPTIONS");
 press(PURGE);
 H.eq(state.screen, "title", "OPTIONS opened from the title backs out to the title");

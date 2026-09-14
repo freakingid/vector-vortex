@@ -401,7 +401,8 @@ G.input.touchStart(8, 640, zoneY + 50); liveStep();
 H.eq(state.input.fire, C.TOUCH_AUTOFIRE, "⛔ in play, a rotation-zone touch auto-fires as shipped");
 G.input.touchEnd(8); liveStep();
 let threw = 0;
-try { G.input.configure({ touchSens: 1 }); } catch (err) { threw++; }
+// CS008 P7 made touchSens configurable (kit-input 0.6.0); keyTapMs stays unlisted.
+try { G.input.configure({ keyTapMs: 1 }); } catch (err) { threw++; }
 try { G.input.configure({ touchTapFire: true, touchAutofire: 1 }); } catch (err) { threw++; }
 H.eq(threw, 2, "configure() refuses an unlisted key and a non-boolean");
 G.input.touchStart(9, 640, zoneY / 2); liveStep();

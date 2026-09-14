@@ -549,6 +549,12 @@ const C = {
   GAMEPAD_DEADZONE:     0.15,   // stick units; below this, zero
   GAMEPAD_SENS:         12.0,   // lane-units/sec at full stick deflection
   GAMEPAD_PAUSE_BUTTON: 9,      // standard mapping's Start — queues `pause` (CS008 P6, U4)
+  // The CONTROLS page's two sensitivity rows (CS008 P7), as multiples of
+  // MOUSE_SENS / TOUCH_SENS. ✅ Paul confirmed the range, 2026-09-13. ×1.0 is
+  // the shipped constant exactly, so an untouched row changes nothing.
+  SENS_MIN_MULT:        0.5,
+  SENS_MAX_MULT:        2.0,
+  SENS_STEP:            0.1,    // one rotate step on an adjusting row
 
   // ---- Audio (GDD 11) -----------------------------------------------------
   MUSIC_LOOKAHEAD:      0.20,   // s. ⛔ per-frame; never setTimeout/setInterval.
@@ -648,7 +654,7 @@ const C = {
   MENU_TEXT_SIZE:       30,     // px, info lines and rows
   MENU_TOP_Y:           240,    // px, the first info line's top edge
   MENU_ROW_H:           46,     // px per info line and per row
-  MENU_COL_W:           420,    // px, a row's label (left) to its detail (right)
+  MENU_COL_W:           460,    // px, a row's label (left) to its detail (right). 460 fits "MOUSE SENSITIVITY" beside an adjusting detail (P7)
   MENU_VISIBLE_ROWS:    7,      // rows drawn at once; the window follows the cursor
   MENU_COLOR:           "#FFFFFF",  // ⚠ provisional — the selected row and the title
   MENU_IDLE_COLOR:      "#7FA8C8",  // ⚠ provisional — an enabled row not selected
@@ -1669,7 +1675,7 @@ function screenPos(well, lane, depth, out) {
 // lets a headless test replay a recorded event list with no DOM at all, which
 // is what makes the determinism guarantee (GDD 17.1) testable.
 
-const INPUT_VERSION = "0.5.0";
+const INPUT_VERSION = "0.6.0";
 
 // Default bindings, matched case-insensitively. These are NOT tunables — a
 // keymap is this module's own default and a host replaces it wholesale through
@@ -1693,12 +1699,17 @@ function inputNormKey(k) {
 // Default gamepad button map, standard Gamepad layout indices. NOT a tunable
 // for the same reason INPUT_KEYS_DEFAULT isn't — this is the module's own
 // default and a host replaces it wholesale through options.gamepadButtons.
-//   0 = A, 4/5 = Left/Right Bumper, 6/7 = Left/Right Trigger.
+//   0 = A, 4/5 = Left/Right Bumper, 6/7 = Left/Right Trigger, 14/15 = D-pad.
+// ⛔ left/right (0.6.0) are the D-pad, and a map that omits them keeps 14/15,
+// so a 0.3.0-shaped override still has a D-pad.
 const GAMEPAD_BUTTONS_DEFAULT = {
   fire:  [0],
   jump:  [4, 6],
   purge: [5, 7],
+  left:  [14],
+  right: [15],
 };
+const GAMEPAD_BUTTON_ACTIONS = ["fire", "jump", "purge", "left", "right"];
 
 // ⛔ Numeric tunables are REQUIRED, never defaulted. A default here would be a
 // second tuning surface competing with the host's config object, and the point
@@ -1752,6 +1763,7 @@ function inputBuildBindings(src) {
 //     gamepadActions, // optional { actionName: [buttonIdx, ...] }, queued on a press edge (0.5.0)
 //     touchTopAction, // optional action name — a button centred on the top edge queues it (0.5.0)
 //     hiddenAction,   // optional action name — the page going hidden queues it (0.5.0)
+//     gamepadButtons, // optional, shape of GAMEPAD_BUTTONS_DEFAULT; left/right default to the D-pad
 //     keys,        // optional binding override, shape of INPUT_KEYS_DEFAULT
 //     actionKeys,  // optional { actionName: ["key", ...] } for named actions
 //     onAction,    // optional (name) => void, called during sample()
@@ -1759,7 +1771,8 @@ function inputBuildBindings(src) {
 function createInput(options) {
   const opts = options || {};
 
-  const mouseSens   = inputRequireNum(opts, "mouseSens");
+  // ⛔ `let`: configure() is the one writer after creation (0.6.0).
+  let mouseSens     = inputRequireNum(opts, "mouseSens");
   const keyTapS     = inputRequireNum(opts, "keyTapMs") / 1000;
   const keySpeedMin = inputRequireNum(opts, "keySpeedMin");
   const keySpeedMax = inputRequireNum(opts, "keySpeedMax");
@@ -1767,11 +1780,12 @@ function createInput(options) {
   const pointerLockOffer = opts.pointerLockOffer !== false;
   const onAction = typeof opts.onAction === "function" ? opts.onAction : null;
 
-  const touchSens      = inputRequireNum(opts, "touchSens");
+  let touchSens        = inputRequireNum(opts, "touchSens");
   const touchZoneFrac  = inputRequireNum(opts, "touchZoneFrac");
   const touchButtonR   = inputRequireNum(opts, "touchButtonR");
-  // ⛔ `let`, NOT `const`, AND ONLY THESE TWO (0.4.0). configure() below is the
-  // one writer after creation. Everything else is still fixed at creation.
+  // ⛔ `let` ONLY FOR WHAT configure() BELOW NAMES: mouseSens, touchSens,
+  // inputMirror (0.6.0) and the three switches. Everything else is fixed at
+  // creation; the two binding maps have their own setters.
   let touchAutofire    = inputRequireBool(opts, "touchAutofire");
   // A touch that lands outside the rotation zone AND both buttons holds `fire`
   // while this is on. Optional and OFF by default, so a host that never names
@@ -1781,7 +1795,7 @@ function createInput(options) {
   const gamepadSens     = inputRequireNum(opts, "gamepadSens");
   const worldW = inputRequireNum(opts, "worldW");
   const worldH = inputRequireNum(opts, "worldH");
-  const inputMirror = inputRequireBool(opts, "inputMirror");
+  let inputMirror = inputRequireBool(opts, "inputMirror");
 
   // ---- three sources of a NAMED action (0.5.0) ------------------------------
   // Each is optional, and a host that names none of them gets 0.4.0 exactly.
@@ -1808,8 +1822,8 @@ function createInput(options) {
   // reset(), because browsers fire blur and visibilitychange in either order.
   let hiddenPending = false;
 
-  const bindings = inputBuildBindings(opts.keys || INPUT_KEYS_DEFAULT);
   const actions  = inputBuildBindings(opts.actionKeys || {});
+  let bindings = null;
 
   // The D-pad rides the SAME tap/hold state machine the keyboard uses (GDD
   // 9.4) — these are not a second axis model, just two more bound "keys" that
@@ -1819,16 +1833,39 @@ function createInput(options) {
     if (!bindings.byAction[action]) bindings.byAction[action] = [];
     bindings.byAction[action].push(key);
   }
-  bindSynthetic("gamepadleft", "left");
-  bindSynthetic("gamepadright", "right");
+  function installBindings(src) {
+    bindings = inputBuildBindings(src);
+    bindSynthetic("gamepadleft", "left");
+    bindSynthetic("gamepadright", "right");
+  }
+  installBindings(opts.keys || INPUT_KEYS_DEFAULT);
 
-  // fire/purge/jump button map — host-overridable wholesale, same pattern as
-  // `keys` above.
-  const gamepadButtons = opts.gamepadButtons || GAMEPAD_BUTTONS_DEFAULT;
+  // fire/purge/jump/left/right button map — host-overridable wholesale, same
+  // pattern as `keys` above, and replaceable later through setGamepadButtons().
+  function fillPad(map) {
+    const out = {};
+    for (const name of Object.keys(map)) out[name] = map[name];
+    if (out.left === undefined) out.left = GAMEPAD_BUTTONS_DEFAULT.left;
+    if (out.right === undefined) out.right = GAMEPAD_BUTTONS_DEFAULT.right;
+    return out;
+  }
+  let gamepadButtons = fillPad(opts.gamepadButtons || GAMEPAD_BUTTONS_DEFAULT);
 
   const pressed = new Set();   // normalized key names currently down
   const buttons = new Set();   // non-key sources holding a button: "fire", ...
   const queued  = [];          // named actions triggered since the last sample
+
+  // ---- capture (0.6.0) ----------------------------------------------------
+  // captureNext(cb) arms ONE capture. The next key press or gamepad button
+  // press edge is handed to cb, during sample(), as { key } or { button }, and
+  // ⛔ NEVER REACHES THE STRUCT OR A NAMED ACTION: the key or button is
+  // SWALLOWED until it is released, so its auto-repeat and its held level are
+  // nothing too. Something already held when the capture arms is not a press.
+  let captureCb = null;
+  let captured = null;          // { cb, result } awaiting dispatch in sample()
+  const swallowedKeys = new Set();
+  const swallowedButtons = new Set();
+  const gpPrev = [];            // raw pressed state per button at the last poll
 
   // One record per rotation direction. `emitted` is how much of a lane this
   // press has already delivered, which is what makes the tap exact.
@@ -1870,7 +1907,15 @@ function createInput(options) {
     const bound = bindings.byKey.has(k) || actions.byKey.has(k);
     // Held keys repeat. A repeat is not a new press — treating it as one would
     // restart the ramp sixty times a second and re-arm the tap forever.
-    if (pressed.has(k)) return bound;
+    if (pressed.has(k) || swallowedKeys.has(k)) return bound;
+    // The D-pad's synthetic keys are never captured: its buttons are, in
+    // pollGamepads(), before they become keys.
+    if (captureCb !== null && k !== "gamepadleft" && k !== "gamepadright") {
+      swallowedKeys.add(k);
+      captured = { cb: captureCb, result: { key: k } };
+      captureCb = null;
+      return true;
+    }
     pressed.add(k);
 
     const dir = axis[bindings.byKey.get(k)];
@@ -1885,6 +1930,7 @@ function createInput(options) {
   function keyUp(rawKey) {
     const k = inputNormKey(rawKey);
     const bound = bindings.byKey.has(k) || actions.byKey.has(k);
+    if (swallowedKeys.delete(k)) return true;
     if (!pressed.delete(k)) return bound;
     const name = bindings.byKey.get(k);
     // Another key bound to the same direction may still be down (arrow + WASD).
@@ -1977,6 +2023,8 @@ function createInput(options) {
     try { pads = win.navigator.getGamepads(); } catch (err) { return; }
     const gp = pads && pads[0];
     if (!gp) {
+      gpPrev.length = 0;
+      swallowedButtons.clear();
       gamepadAxisX = 0;
       if (gpDpadLeftDown)  { keyUp("gamepadleft");  gpDpadLeftDown = false; }
       if (gpDpadRightDown) { keyUp("gamepadright"); gpDpadRightDown = false; }
@@ -1987,39 +2035,54 @@ function createInput(options) {
     const ax = gp.axes && typeof gp.axes[0] === "number" && isFinite(gp.axes[0]) ? gp.axes[0] : 0;
     gamepadAxisX = ax;
 
+    // Capture and swallowing (0.6.0), BEFORE any button is read below: a
+    // swallowed button reads as up everywhere until it is really released.
+    const nb = gp.buttons ? gp.buttons.length : 0;
+    for (let i = 0; i < nb; i++) {
+      const raw = !!(gp.buttons[i] && gp.buttons[i].pressed);
+      if (raw && !gpPrev[i] && captureCb !== null) {
+        swallowedButtons.add(i);
+        captured = { cb: captureCb, result: { button: i } };
+        captureCb = null;
+      }
+      if (!raw) swallowedButtons.delete(i);
+      gpPrev[i] = raw;
+    }
+    gpPrev.length = nb;
+
     // ⛔ The D-pad reaches `left`/`right` through keyDown/keyUp — the SAME
     // tap/hold implementation the keyboard uses. This is edge detection only;
     // the state machine that turns a press into a lane delta lives in exactly
-    // one place (advanceAxis/releaseAxis above).
-    const left  = !!(gp.buttons && gp.buttons[14] && gp.buttons[14].pressed);
-    const right = !!(gp.buttons && gp.buttons[15] && gp.buttons[15].pressed);
+    // one place (advanceAxis/releaseAxis above). Which buttons are the D-pad is
+    // the map's left/right lists (0.6.0), 14 and 15 by default.
+    const left  = padHeld(gp, gamepadButtons.left);
+    const right = padHeld(gp, gamepadButtons.right);
     if (left !== gpDpadLeftDown)   { if (left) keyDown("gamepadleft"); else keyUp("gamepadleft"); gpDpadLeftDown = left; }
     if (right !== gpDpadRightDown) { if (right) keyDown("gamepadright"); else keyUp("gamepadright"); gpDpadRightDown = right; }
 
     // fire/purge/jump — level state, recomputed every poll. Any bound button
     // held is enough; this is OR across a button LIST, not an edge.
     for (const name of Object.keys(gamepadHeld)) {
-      const list = gamepadButtons[name] || [];
-      let held = false;
-      for (let i = 0; i < list.length; i++) {
-        const b = gp.buttons && gp.buttons[list[i]];
-        if (b && b.pressed) { held = true; break; }
-      }
-      gamepadHeld[name] = held;
+      gamepadHeld[name] = padHeld(gp, gamepadButtons[name]);
     }
 
     // Named actions (0.5.0) — an EDGE, not a level: a button held for a second
     // queues its action once, exactly as a held key does not repeat one.
     for (const name of Object.keys(gamepadActions)) {
-      const list = gamepadActions[name] || [];
-      let held = false;
-      for (let i = 0; i < list.length; i++) {
-        const b = gp.buttons && gp.buttons[list[i]];
-        if (b && b.pressed) { held = true; break; }
-      }
+      const held = padHeld(gp, gamepadActions[name]);
       if (held && !gamepadActionHeld[name]) queued.push(name);
       gamepadActionHeld[name] = held;
     }
+  }
+
+  // Any listed button pressed and not swallowed. OR across the list.
+  function padHeld(gp, list) {
+    if (!list || !gp.buttons) return false;
+    for (let i = 0; i < list.length; i++) {
+      const b = gp.buttons[list[i]];
+      if (b && b.pressed && !swallowedButtons.has(list[i])) return true;
+    }
+    return false;
   }
 
   // The page went hidden (0.5.0). attach() calls this from visibilitychange;
@@ -2108,6 +2171,12 @@ function createInput(options) {
     // Named actions are dispatched HERE, in simulation order, not at DOM-event
     // time. A recorded event list therefore replays identically (GDD 17.1),
     // and a debug action cannot land halfway through a frame.
+    // A capture is handed over first, in simulation order like everything else.
+    if (captured !== null) {
+      const c = captured;
+      captured = null;
+      c.cb(c.result);
+    }
     if (queued.length) {
       if (onAction) for (let i = 0; i < queued.length; i++) onAction(queued[i]);
       queued.length = 0;
@@ -2119,27 +2188,131 @@ function createInput(options) {
     return s;
   }
 
-  // configure(partial) — change a switch AFTER creation (0.4.0). ⛔ ONLY the keys
-  // below; any other key throws, and so does a non-boolean, BEFORE anything is
-  // written, so a bad call changes nothing. A host whose screens want different
-  // touch behaviour (a menu, where a drag must not also be a press) flips these
-  // on its own screen changes; the struct keeps its four fields either way.
-  // reset() does NOT restore them — they are settings, not held input.
-  const CONFIGURABLE = { touchAutofire: true, touchTapFire: true, touchTopTarget: true };
+  // configure(partial) — change a setting AFTER creation (0.4.0; the two
+  // sensitivities and inputMirror since 0.6.0). ⛔ ONLY the keys below; any other
+  // key throws, and so does a wrong type, BEFORE anything is written, so a bad
+  // call changes nothing. A host whose screens want different touch behaviour
+  // (a menu, where a drag must not also be a press) flips the switches on its
+  // own screen changes; the struct keeps its four fields either way. reset()
+  // does NOT restore any of them — they are settings, not held input.
+  // ⛔ A sensitivity is still applied as ONE multiply in sample(): configure()
+  // replaces the factor and adds no curve (GDD 9.1).
+  const CONFIGURABLE = { touchAutofire: "boolean", touchTapFire: "boolean", touchTopTarget: "boolean",
+                         inputMirror: "boolean", mouseSens: "number", touchSens: "number" };
   function configure(partial) {
     const p = partial || {};
     const keys = Object.keys(p);
     for (let i = 0; i < keys.length; i++) {
-      if (!CONFIGURABLE[keys[i]]) throw new Error("configure: " + keys[i] + " is not configurable");
-      if (typeof p[keys[i]] !== "boolean") throw new Error("configure: " + keys[i] + " must be a boolean");
+      const type = CONFIGURABLE[keys[i]];
+      if (!type) throw new Error("configure: " + keys[i] + " is not configurable");
+      if (type === "boolean" && typeof p[keys[i]] !== "boolean") throw new Error("configure: " + keys[i] + " must be a boolean");
+      if (type === "number" && (typeof p[keys[i]] !== "number" || !isFinite(p[keys[i]]))) {
+        throw new Error("configure: " + keys[i] + " must be a finite number");
+      }
     }
     if (p.touchAutofire !== undefined) touchAutofire = p.touchAutofire;
     if (p.touchTapFire !== undefined) touchTapFire = p.touchTapFire;
     if (p.touchTopTarget !== undefined) touchTopTarget = p.touchTopTarget;
+    if (p.inputMirror !== undefined) inputMirror = p.inputMirror;
+    if (p.mouseSens !== undefined) mouseSens = p.mouseSens;
+    if (p.touchSens !== undefined) touchSens = p.touchSens;
+  }
+
+  // setting(name) — the current value of a configure() key (0.6.0). Allocates
+  // nothing, so a host may read it every frame.
+  function setting(name) {
+    if (!CONFIGURABLE[name]) throw new Error("setting: " + name + " is not configurable");
+    if (name === "touchAutofire") return touchAutofire;
+    if (name === "touchTapFire") return touchTapFire;
+    if (name === "touchTopTarget") return touchTopTarget;
+    if (name === "inputMirror") return inputMirror;
+    if (name === "mouseSens") return mouseSens;
+    return touchSens;
+  }
+
+  // ---- rebinding (0.6.0) ---------------------------------------------------
+  // Both setters replace a map WHOLESALE, validate everything BEFORE writing,
+  // and throw on: a list that is not an array, an entry of the wrong type, the
+  // same key or button twice, and ⛔ A KEY OR BUTTON THAT IS ALSO A NAMED
+  // ACTION — a key doing two jobs is a bug waiting for a player who rebinds.
+  function checkMap(fn, map, allowed, isEntry, reserved, norm) {
+    if (map === null || typeof map !== "object") throw new Error(fn + ": the map must be an object");
+    const seen = new Set();
+    for (const name of Object.keys(map)) {
+      if (allowed && allowed.indexOf(name) < 0) throw new Error(fn + ": " + name + " is not a bindable action");
+      const list = map[name];
+      if (!Array.isArray(list)) throw new Error(fn + ": " + name + " must be an array");
+      for (let i = 0; i < list.length; i++) {
+        if (!isEntry(list[i])) throw new Error(fn + ": " + name + " has an invalid entry");
+        const v = norm(list[i]);
+        if (reserved(v)) throw new Error(fn + ": " + JSON.stringify(v) + " is a named action");
+        if (seen.has(v)) throw new Error(fn + ": " + JSON.stringify(v) + " is bound twice");
+        seen.add(v);
+      }
+    }
+  }
+
+  // A direction whose keys no longer hold it lets go WITHOUT a tap's nudge: a
+  // rebind is not a release the player made.
+  function dropOrphanedAxes() {
+    for (const name of Object.keys(axis)) {
+      const dir = axis[name];
+      if (dir.down && !anyKeyHeld(name)) { dir.down = false; dir.held = 0; dir.emitted = 0; dir.tap = false; }
+    }
+  }
+
+  function setBindings(keys) {
+    checkMap("setBindings", keys, null,
+             k => typeof k === "string" && k !== "",
+             k => actions.byKey.has(k) || k === "gamepadleft" || k === "gamepadright",
+             inputNormKey);
+    installBindings(keys);
+    dropOrphanedAxes();
+  }
+
+  function setGamepadButtons(map) {
+    const reservedButtons = new Set();
+    for (const name of Object.keys(gamepadActions)) {
+      const list = gamepadActions[name] || [];
+      for (let i = 0; i < list.length; i++) reservedButtons.add(list[i]);
+    }
+    checkMap("setGamepadButtons", map, GAMEPAD_BUTTON_ACTIONS,
+             b => typeof b === "number" && Number.isInteger(b) && b >= 0,
+             b => reservedButtons.has(b),
+             b => b);
+    gamepadButtons = fillPad(map);
+  }
+
+  function copyMap(src) {
+    const out = {};
+    for (const name of Object.keys(src)) out[name] = src[name].slice();
+    return out;
+  }
+  // Copies, never the live maps. The keyboard copy leaves out the D-pad's two
+  // synthetic keys, so it is exactly what setBindings() takes.
+  function getBindings() {
+    const out = copyMap(bindings.byAction);
+    for (const name of Object.keys(out)) {
+      out[name] = out[name].filter(k => k !== "gamepadleft" && k !== "gamepadright");
+    }
+    return out;
+  }
+  function getGamepadButtons() { return copyMap(gamepadButtons); }
+
+  // captureNext(cb) arms one capture; captureNext(null) disarms it, and a result
+  // not yet dispatched is dropped. ⛔ An armed capture survives reset(): it is a
+  // request, not held input.
+  function captureNext(cb) {
+    if (cb !== null && typeof cb !== "function") throw new Error("captureNext: cb must be a function or null");
+    captureCb = cb;
+    if (cb === null) captured = null;
   }
 
   function reset() {
     pressed.clear();
+    swallowedKeys.clear();
+    swallowedButtons.clear();
+    gpPrev.length = 0;
     buttons.clear();
     queued.length = 0;
     hiddenPending = false;
@@ -2289,7 +2462,8 @@ function createInput(options) {
 
   return {
     VERSION: INPUT_VERSION,
-    sample, reset, configure,
+    sample, reset, configure, setting,
+    setBindings, setGamepadButtons, getBindings, getGamepadButtons, captureNext,
     keyDown, keyUp, mouseMove, setButton,
     touchStart, touchMove, touchEnd, pollGamepads, pageHidden,
     attach, detach,
@@ -6099,7 +6273,7 @@ function hudLayout(view) {
 
 // Called LAST from Game.draw(), so the HUD sits over the board. `view`:
 //   score, lives, level, levelColor, purgeUses — the numbers shown
-//   mirror  the touch buttons' side (H3); P7 sources it from the input module
+//   mirror  the touch buttons' side (H3), the input module's live flag since P7
 //   icon    the reserve craft's local-space poly ({ l, d }, d ≤ 0 inward)
 function drawHud(ctx, view) {
   const L = hudLayout(view);
@@ -7088,6 +7262,50 @@ const Game = (function () {
   // these (CLAUDE.md, Test rules).
   const stats = { frames: 0, ticks: 0, lastSteps: 0, accumulator: 0 };
 
+  // ⛔ NAMED ACTIONS, NEVER A SECOND LISTENER (GDD 9.5). See runAction().
+  //
+  // ⛔ DIGITS, and that is not a style choice. "w" cycles the well out from
+  // under the level clock, so the closed soaks' recorded input lists
+  // deliberately never press it; a new binding that collided with it would
+  // move the determinism hash and the failure would read as a physics bug.
+  // The digits collide with nothing in INPUT_KEYS_DEFAULT either (04-input.js).
+  // ⛔ "r" IS UNBOUND SINCE CS008 P5 (U2): its debug restart is deleted, and
+  // game over's RESTART row is the one way to start a run again.
+  const ACTION_KEYS = {
+    // ⛔ THE MENUS' SECOND WAY BACK (U1; GDD 10.5). Purge is the first, read
+    // off the struct; Escape is a named action because it is not one of the
+    // four fields. On a menu it only QUEUES a back — the menu step consumes it,
+    // so an Escape during game over's freeze acts on nothing. In play it
+    // pauses (CS008 P6, below).
+    back:         ["escape"],
+    // ⛔ ESCAPE STAYS `back`, AND `back` IN PLAY IS A PAUSE (runAction). A key
+    // maps to ONE action, and Escape has to mean pause in play and back in a
+    // menu. `pause` and `autoPause` are what must NOT back out of a menu —
+    // above all the page going hidden on the START DEPTH screen.
+    pause:        ["p"],
+    cycleWell:    ["w"],
+    spawnVaulter: ["1"],
+    spawnCarrier: ["2"],
+    spawnWeaver:  ["3"],
+    spawnThorn:   ["4"],
+    spawnDrifter: ["5"],
+    spawnSurger:  ["6"],
+    spawnRow:     ["0"],
+    // ⛔ THE TELEMETRY BENCH (GDD 15.6; 21-telemetry.js). CS007 P4. Two
+    // actions, because there is no HUD and no Options screen until CS008 and
+    // the debug bench is the only surface there is.
+    //
+    // ⛔ AND THESE ARE THE FIRST DEBUG KEYS THAT ARE SAFE INSIDE A HASHED RUN.
+    // "w", the seven digits and the "r" CS008 P5 deleted are on three closed
+    // soaks' FORBIDDEN list because each moved the run's stream or its clock; neither of these
+    // touches the simulation at all — one flips a module-level boolean and one
+    // reads the ring and writes to the console. That is the same claim
+    // test-cs007-p4.js's headline assertion makes, from the other side, and it
+    // is why the soaks' lists are correct WITHOUT these two.
+    telemetryToggle: ["t"],
+    telemetryExport: ["e"],
+  };
+
   // ⛔ The kit boundary: 04-input.js reads no game global, so every tunable it
   // needs is handed over here, from C. Verbose on purpose — it is the one
   // thing that makes that module extractable (CLAUDE.md, Kit modules).
@@ -7118,49 +7336,7 @@ const Game = (function () {
     gamepadActions:   { pause: [C.GAMEPAD_PAUSE_BUTTON] },
     touchTopAction:   "pause",
     hiddenAction:     "autoPause",
-    // ⛔ NAMED ACTIONS, NEVER A SECOND LISTENER (GDD 9.5). See runAction().
-    //
-    // ⛔ DIGITS, and that is not a style choice. "w" cycles the well out from
-    // under the level clock, so the closed soaks' recorded input lists
-    // deliberately never press it; a new binding that collided with it would
-    // move the determinism hash and the failure would read as a physics bug.
-    // The digits collide with nothing in INPUT_KEYS_DEFAULT either (04-input.js).
-    // ⛔ "r" IS UNBOUND SINCE CS008 P5 (U2): its debug restart is deleted, and
-    // game over's RESTART row is the one way to start a run again.
-    actionKeys:       {
-      // ⛔ THE MENUS' SECOND WAY BACK (U1; GDD 10.5). Purge is the first, read
-      // off the struct; Escape is a named action because it is not one of the
-      // four fields. On a menu it only QUEUES a back — the menu step consumes it,
-      // so an Escape during game over's freeze acts on nothing. In play it
-      // pauses (CS008 P6, below).
-      back:         ["escape"],
-      // ⛔ ESCAPE STAYS `back`, AND `back` IN PLAY IS A PAUSE (runAction). A key
-      // maps to ONE action, and Escape has to mean pause in play and back in a
-      // menu. `pause` and `autoPause` are what must NOT back out of a menu —
-      // above all the page going hidden on the START DEPTH screen.
-      pause:        ["p"],
-      cycleWell:    ["w"],
-      spawnVaulter: ["1"],
-      spawnCarrier: ["2"],
-      spawnWeaver:  ["3"],
-      spawnThorn:   ["4"],
-      spawnDrifter: ["5"],
-      spawnSurger:  ["6"],
-      spawnRow:     ["0"],
-      // ⛔ THE TELEMETRY BENCH (GDD 15.6; 21-telemetry.js). CS007 P4. Two
-      // actions, because there is no HUD and no Options screen until CS008 and
-      // the debug bench is the only surface there is.
-      //
-      // ⛔ AND THESE ARE THE FIRST DEBUG KEYS THAT ARE SAFE INSIDE A HASHED RUN.
-      // "w", the seven digits and the "r" CS008 P5 deleted are on three closed
-      // soaks' FORBIDDEN list because each moved the run's stream or its clock; neither of these
-      // touches the simulation at all — one flips a module-level boolean and one
-      // reads the ring and writes to the console. That is the same claim
-      // test-cs007-p4.js's headline assertion makes, from the other side, and it
-      // is why the soaks' lists are correct WITHOUT these two.
-      telemetryToggle: ["t"],
-      telemetryExport: ["e"],
-    },
+    actionKeys:       ACTION_KEYS,
     onAction:         runAction,
   });
 
@@ -7258,6 +7434,9 @@ const Game = (function () {
     // must land inside a freeze (plan §7).
     if (name === "back") {
       if (state.screen === "play") pauseRun();
+      // ⛔ An adjusting row takes Escape as its own exit (CS008 P7), never as a
+      // back out of the page. A capture never sees Escape here: it swallows it.
+      else if (adjusting !== null) adjusting = null;
       else menu.back();
     }
     // ⛔ `p` AND START TOGGLE, ON THE PAUSE SCREEN ONLY (Paul, 2026-09-13). On
@@ -7323,7 +7502,16 @@ const Game = (function () {
   // ⛔ SCREENS ARE DATA, and the menu model never sees `state` (15-render-hud.js).
   // The game owns this table and what each action name does; the model owns
   // the cursor and the edges. `back` is the row Purge and Escape take.
+  // The five device actions the KEYBOARD and GAMEPAD pages rebind (plan §8).
+  // Above SCREENS, which builds those pages' rows from it.
+  const CONTROL_ACTIONS = ["left", "right", "fire", "purge", "jump"];
   const OPTIONS_TELEMETRY = { label: "TELEMETRY", detail: "OFF", enabled: true, action: "toggleTelemetry" };
+  const CTL_ROWS = {
+    mouse:    { label: "MOUSE SENSITIVITY", detail: "", enabled: true, action: "adjustMouse" },
+    touch:    { label: "TOUCH SENSITIVITY", detail: "", enabled: true, action: "adjustTouch" },
+    mirror:   { label: "LEFT-HANDED TOUCH", detail: "", enabled: true, action: "toggleMirror" },
+    autofire: { label: "TOUCH AUTO-FIRE",   detail: "", enabled: true, action: "toggleAutofire" },
+  };
   const SCREENS = {
     title: { title: "VECTOR VORTEX", lines: [], back: null, items: [
       { label: "PLAY",    detail: "", enabled: true, action: "toMode" },
@@ -7355,10 +7543,17 @@ const Game = (function () {
       { label: "CREDITS",  detail: "\u203A",     enabled: true, action: "toCredits" },
       { label: "BACK",     detail: "",           enabled: true, action: "optionsBack" },
     ] },
-    // ⛔ P7 FILLS THIS IN (plan §8). A row that does nothing says so on screen.
-    controls: { title: "CONTROLS", lines: ["NOT BUILT YET"], back: "backToOptions", items: [
-      { label: "BACK", detail: "", enabled: true, action: "backToOptions" },
+    // U7 (CS008 P7). Every detail is written by refreshControlRows(), in update().
+    controls: { title: "CONTROLS", lines: [], back: "backToOptions", items: [
+      CTL_ROWS.mouse, CTL_ROWS.touch, CTL_ROWS.mirror, CTL_ROWS.autofire,
+      { label: "KEYBOARD",          detail: "\u203A", enabled: true, action: "toKeyboard" },
+      { label: "GAMEPAD",           detail: "\u203A", enabled: true, action: "toGamepad" },
+      { label: "RESET TO DEFAULTS", detail: "",       enabled: true, action: "resetControls" },
+      { label: "BACK",              detail: "",       enabled: true, action: "backToOptions" },
     ] },
+    // Five device actions, two slots each. The one line is a refusal's reason.
+    keyboard: { title: "KEYBOARD", lines: [""], back: "backToControls", items: slotRows() },
+    gamepad:  { title: "GAMEPAD",  lines: [""], back: "backToControls", items: slotRows() },
     credits: { title: "CREDITS", lines: C.CREDITS_LINES.concat("VERSION " + C.GAME_VERSION),
                back: "backToOptions", items: [
       { label: "BACK", detail: "", enabled: true, action: "backToOptions" },
@@ -7384,7 +7579,178 @@ const Game = (function () {
   function runOnScreen() {
     const s = state.screen;
     if (s === "play" || s === "pause" || s === "gameover") return true;
-    return optionsFrom === "pause" && (s === "options" || s === "controls" || s === "credits");
+    return optionsFrom === "pause" && (s === "options" || s === "controls" || s === "credits" ||
+                                       s === "keyboard" || s === "gamepad");
+  }
+
+  // ---- the CONTROLS page (GDD 9, 10.5; CS008 P7) ----------------------------
+  //
+  // ⛔ SESSION-ONLY until CS011: nothing here is stored, and quitToTitle() keeps
+  // it because it lives outside `state`. The kit holds the live values; this
+  // holds what the page shows — the sensitivity multipliers as whole steps, the
+  // auto-fire SETTING (syncScreen() applies it in play only), and the bindings
+  // as two slots per action, a slot being null when empty.
+  const SENS_UNIT = Math.round(1 / C.SENS_STEP);             // steps in ×1.0
+  const SENS_LO = Math.round(C.SENS_MIN_MULT / C.SENS_STEP);
+  const SENS_HI = Math.round(C.SENS_MAX_MULT / C.SENS_STEP);
+  const PAD_BUTTON_NAMES = ["A", "B", "X", "Y", "LB", "RB", "LT", "RT", "BACK", "START",
+                            "LS", "RS", "D-UP", "D-DOWN", "D-LEFT", "D-RIGHT", "HOME"];
+  const controls = { mouse: SENS_UNIT, touch: SENS_UNIT, autofire: C.TOUCH_AUTOFIRE,
+                     keys: toSlots(INPUT_KEYS_DEFAULT), pad: toSlots(GAMEPAD_BUTTONS_DEFAULT) };
+  let adjusting = null;       // "mouse" | "touch" while a sensitivity row takes rotate
+  let adjustAcc = 0;
+  let capturing = null;       // { page, bind, slot } while a slot waits for a press
+  let pageNote = "";          // a refusal's reason, shown until the next capture
+  let prevFire = false, prevPurge = false;   // the struct's levels at the last menu step
+  const _neutral = { rotate: 0, fire: false, purge: false, jump: false };
+
+  function slotRows() {
+    const rows = [];
+    for (let a = 0; a < CONTROL_ACTIONS.length; a++) {
+      for (let slot = 0; slot < 2; slot++) {
+        rows.push({ label: CONTROL_ACTIONS[a].toUpperCase() + " " + (slot + 1), detail: "", enabled: true,
+                    action: "rebind", bind: CONTROL_ACTIONS[a], slot: slot });
+      }
+    }
+    rows.push({ label: "BACK", detail: "", enabled: true, action: "backToControls" });
+    return rows;
+  }
+  function toSlots(map) {
+    const out = {};
+    for (const a of CONTROL_ACTIONS) {
+      const list = map[a] || [];
+      out[a] = [list[0] === undefined ? null : list[0], list[1] === undefined ? null : list[1]];
+    }
+    return out;
+  }
+  function fromSlots(slots) {
+    const out = {};
+    for (const a of CONTROL_ACTIONS) out[a] = slots[a].filter(v => v !== null);
+    return out;
+  }
+  function sensFor(base, steps) { return base * (steps / SENS_UNIT); }   // ⛔ ×1.0 is `base` exactly
+
+  // ⛔ THE ONE RESET: the RESET TO DEFAULTS row, and Game.reset() for the suite.
+  function resetControls() {
+    controls.mouse = SENS_UNIT;
+    controls.touch = SENS_UNIT;
+    controls.autofire = C.TOUCH_AUTOFIRE;
+    controls.keys = toSlots(INPUT_KEYS_DEFAULT);
+    controls.pad = toSlots(GAMEPAD_BUTTONS_DEFAULT);
+    input.configure({ mouseSens: C.MOUSE_SENS, touchSens: C.TOUCH_SENS, inputMirror: C.INPUT_MIRROR });
+    input.setBindings(fromSlots(controls.keys));
+    input.setGamepadButtons(fromSlots(controls.pad));
+    endControlModes();
+  }
+  function endControlModes() {
+    if (capturing !== null) input.captureNext(null);
+    capturing = null;
+    adjusting = null;
+    pageNote = "";
+  }
+
+  function keyName(k) {
+    if (k === null) return "-";
+    if (k === " ") return "SPACE";
+    if (k.indexOf("arrow") === 0) return "ARROW " + k.slice(5).toUpperCase();
+    return k.toUpperCase();
+  }
+  function buttonName(b) {
+    if (b === null) return "-";
+    return PAD_BUTTON_NAMES[b] !== undefined ? PAD_BUTTON_NAMES[b] : "BUTTON " + b;
+  }
+
+  // ⛔ REFUSED (plan §8, U8): every key that is a named action — Escape, `p`,
+  // the debug keys, `t` and `e` — and every digit; on a pad, gamepad Start.
+  function reservedKey(k) {
+    if (/^[0-9]$/.test(k)) return true;
+    for (const name of Object.keys(ACTION_KEYS)) if (ACTION_KEYS[name].indexOf(k) >= 0) return true;
+    return false;
+  }
+
+  // Delivered by the kit inside input.sample(). ⛔ A refusal ENDS the capture
+  // with its reason on the page (Paul, 2026-09-13), so Escape and Start double
+  // as cancel. A clash SWAPS (U8); ⛔ a swap that would leave an action with no
+  // key or button is refused (Paul, 2026-09-13).
+  function onCaptured(result) {
+    const c = capturing;
+    capturing = null;
+    if (c === null) return;
+    const keys = c.page === "keyboard";
+    const v = keys ? result.key : result.button;
+    if (v === undefined) { pageNote = keys ? "PRESS A KEY" : "PRESS A BUTTON"; return; }
+    const shown = keys ? keyName(v) : buttonName(v);
+    if (keys ? reservedKey(v) : v === C.GAMEPAD_PAUSE_BUTTON) { pageNote = shown + " IS RESERVED"; return; }
+    const slots = keys ? controls.keys : controls.pad;
+    const next = {};
+    for (const a of CONTROL_ACTIONS) next[a] = slots[a].slice();
+    const old = next[c.bind][c.slot];
+    for (const a of CONTROL_ACTIONS) {
+      for (let i = 0; i < 2; i++) if (next[a][i] === v) next[a][i] = old;
+    }
+    next[c.bind][c.slot] = v;
+    for (const a of CONTROL_ACTIONS) {
+      if (next[a][0] === null && next[a][1] === null) {
+        pageNote = a.toUpperCase() + (keys ? " NEEDS A KEY" : " NEEDS A BUTTON");
+        return;
+      }
+    }
+    if (keys) { controls.keys = next; input.setBindings(fromSlots(next)); }
+    else { controls.pad = next; input.setGamepadButtons(fromSlots(next)); }
+    pageNote = "";
+  }
+
+  // A step on a CONTROLS page while a row owns the input. ⛔ The menu still
+  // steps, on a snapshot with no rotate and the real Fire and Purge levels,
+  // and its answer is ignored: that keeps its edges current, so the press that
+  // ends a mode is not a second press on the row once the menu has it back.
+  function stepControlMode(screen) {
+    const inp = state.input;
+    const fireEdge = inp.fire && !prevFire, purgeEdge = inp.purge && !prevPurge;
+    if (adjusting !== null) {
+      adjustAcc += inp.rotate;
+      const whole = Math.trunc(adjustAcc / C.MENU_ROTATE_STEP);
+      if (whole !== 0) {
+        adjustAcc -= whole * C.MENU_ROTATE_STEP;
+        const n = Math.min(SENS_HI, Math.max(SENS_LO, controls[adjusting] + whole));
+        controls[adjusting] = n;
+        if (adjusting === "mouse") input.configure({ mouseSens: sensFor(C.MOUSE_SENS, n) });
+        else input.configure({ touchSens: sensFor(C.TOUCH_SENS, n) });
+      }
+      if (fireEdge || purgeEdge) adjusting = null;           // ⛔ any exit keeps the value
+    } else if (fireEdge || purgeEdge) {
+      // Only a mouse button or a touch reaches here: a capture swallows keys
+      // and pad buttons. It cancels.
+      input.captureNext(null);
+      capturing = null;
+    }
+    _neutral.fire = inp.fire;
+    _neutral.purge = inp.purge;
+    menu.step(screen, _neutral);
+  }
+
+  function refreshControlRows() {
+    const mult = n => "\u00D7" + (n / SENS_UNIT).toFixed(1);
+    CTL_ROWS.mouse.detail = adjusting === "mouse" ? "\u2039" + mult(controls.mouse) + "\u203A" : mult(controls.mouse);
+    CTL_ROWS.touch.detail = adjusting === "touch" ? "\u2039" + mult(controls.touch) + "\u203A" : mult(controls.touch);
+    CTL_ROWS.mirror.detail = input.setting("inputMirror") ? "ON" : "OFF";
+    CTL_ROWS.autofire.detail = controls.autofire ? "ON" : "OFF";
+    for (const page of ["keyboard", "gamepad"]) {
+      const keys = page === "keyboard";
+      const scr = SCREENS[page];
+      scr.lines[0] = pageNote;
+      const slots = keys ? controls.keys : controls.pad;
+      for (let i = 0; i < scr.items.length; i++) {
+        const row = scr.items[i];
+        if (row.action !== "rebind") continue;
+        if (capturing !== null && capturing.page === page && capturing.bind === row.bind && capturing.slot === row.slot) {
+          row.detail = keys ? "PRESS A KEY" : "PRESS A BUTTON";
+        } else {
+          const v = slots[row.bind][row.slot];
+          row.detail = keys ? keyName(v) : buttonName(v);
+        }
+      }
+    }
   }
 
   function buildDepthRows() {
@@ -7423,6 +7789,20 @@ const Game = (function () {
     if (name === "optionsBack") state.screen = optionsFrom;
     if (name === "backToOptions") state.screen = "options";
     if (name === "toControls") state.screen = "controls";
+    if (name === "toKeyboard") state.screen = "keyboard";
+    if (name === "toGamepad") state.screen = "gamepad";
+    if (name === "backToControls") state.screen = "controls";
+    if (name === "adjustMouse") { adjusting = "mouse"; adjustAcc = 0; }
+    if (name === "adjustTouch") { adjusting = "touch"; adjustAcc = 0; }
+    if (name === "toggleMirror") input.configure({ inputMirror: !input.setting("inputMirror") });
+    if (name === "toggleAutofire") controls.autofire = !controls.autofire;
+    if (name === "resetControls") resetControls();
+    if (name === "rebind") {
+      const row = screen.items[menu.cursor];
+      capturing = { page: state.screen, bind: row.bind, slot: row.slot };
+      pageNote = "";
+      input.captureNext(onCaptured);
+    }
     if (name === "toCredits") state.screen = "credits";
     if (name === "toggleTelemetry") toggleTelemetry();
     if (name === "exportTelemetry") exportTelemetry();
@@ -7460,8 +7840,11 @@ const Game = (function () {
     const inPlay = state.screen === "play";
     // ⛔ The top-edge pause target is live in play only; on a menu the upper
     // screen is all confirm taps and a dead spot there would fail silently.
-    input.configure({ touchAutofire: inPlay ? C.TOUCH_AUTOFIRE : false, touchTapFire: !inPlay,
+    // ⛔ In play, auto-fire is the CONTROLS page's setting (CS008 P7).
+    input.configure({ touchAutofire: inPlay ? controls.autofire : false, touchTapFire: !inPlay,
                       touchTopTarget: inPlay });
+    // A row that owned the input does not follow the player off its page.
+    endControlModes();
     menu.reset();
   }
 
@@ -7491,11 +7874,17 @@ const Game = (function () {
     if (state.screen !== "play") {
       const screen = SCREENS[state.screen];
       if (screen) {
-        const action = menu.step(screen, state.input);
-        if (action) menuAction(action, screen);
+        if (adjusting !== null || capturing !== null) stepControlMode(screen);
+        else {
+          const action = menu.step(screen, state.input);
+          if (action) menuAction(action, screen);
+        }
       }
+      prevFire = state.input.fire;
+      prevPurge = state.input.purge;
       // After the action, so the step that toggled it already shows it.
       if (state.screen === "options") OPTIONS_TELEMETRY.detail = Telemetry.enabled() ? "ON" : "OFF";
+      if (state.screen === "controls" || state.screen === "keyboard" || state.screen === "gamepad") refreshControlRows();
       return;
     }
 
@@ -7648,7 +8037,7 @@ const Game = (function () {
       _hudView.level = state.level;
       _hudView.levelColor = wellBandColor(state.level, state.bandRoll);
       _hudView.purgeUses = state.purgeUses;
-      _hudView.mirror = C.INPUT_MIRROR;
+      _hudView.mirror = input.setting("inputMirror");   // ⛔ the live flag (CS008 P7)
       drawHud(ctx, _hudView);
     }
     // The menu over everything, on every screen but play.
@@ -7765,6 +8154,7 @@ const Game = (function () {
     lastMs = 0;
     hitStopLeft = 0;
     syncedScreen = null;
+    resetControls();
     stats.frames = 0; stats.ticks = 0; stats.lastSteps = 0; stats.accumulator = 0;
   }
 

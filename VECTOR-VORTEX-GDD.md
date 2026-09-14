@@ -25,9 +25,9 @@ Modelled on Orbital Overhaul's §0 read contract. A future session reads §0 + �
 | 6 | Enemies | Any entity, spawning, AI |
 | 7 | Scoring | Points, bonuses, extra lives |
 | 8 | Difficulty | The heat clock, introduction schedule |
-| 9 | Controls | Any input path |
+| 9 | Controls | Any input path; runtime settings and rebinding (9.5) |
 | 10 | Visual design | Rendering, glow, HUD, readability |
-| 10.5 | Screens and menus | Title, mode, Start Depth, options, credits, controls, game over, pause and its five sources; the screen state machine; the menu model; menu input on any device |
+| 10.5 | Screens and menus | Title, mode, Start Depth, options, credits, controls and rebinding, game over, pause and its five sources; the screen state machine; the menu model; menu input on any device |
 | 11 | **Audio** | Music, SFX, the intensity director |
 | 12 | Onboarding | Prompts, attract mode, first-run |
 | 13 | Modes | Classic vs Overdrive gating |
@@ -817,6 +817,13 @@ Left stick X proportional; D-pad uses the keyboard dual-mode model.
 state.input = { rotate: 0, fire: false, purge: false, jump: false }
 ```
 
+**Runtime settings (CS008 P7, kit-input 0.6.0).** The CONTROLS page (§10.5) changes the module after creation, and only through its own surface:
+- `configure()` takes `mouseSens`, `touchSens` and `inputMirror` beside the three touch switches, and `setting(name)` reads any of them back. ⛔ **A sensitivity is still one multiply** (§9.1): the page swaps the factor, and `test-cs008-p7.js` pins both the exact product and the one line in `sample()`.
+- `setBindings(keys)` and `setGamepadButtons(map)` replace a map wholesale. ⛔ **Neither will bind a key or button that is also a named action.** The gamepad map now names `left` and `right` too, the D-pad's buttons (14 and 15 by default), and they still ride §9.2's tap/hold model.
+- `captureNext(cb)` hands the next key press or pad button press to `cb`. ⛔ **A captured press never reaches the struct or a named action**, and it stays swallowed until released.
+
+See `src/04-input.NOTES.md`.
+
 ---
 
 ## 10. Visual design
@@ -852,13 +859,13 @@ Score top-left, lives bottom-left, level and band top-right, Purge charge bottom
 | Top-right | "LEVEL n" in `wellBandColor(level, bandRoll)`, no band name (H2) |
 | Bottom-right | the Purge glyph: bright at `purgeUses` 0, `HUD_PURGE_DIM_ALPHA` at 1, absent at 2 or more (§4.3) |
 
-⛔ **The touch-button side insets** by `TOUCH_BUTTON_R × HUD_TOUCH_INSET_R` (2.5) at all times, not only on detected touch (H3) — the buttons sit on exactly the right-hand corners (`C.INPUT_MIRROR` moves them left). The side comes from `view.mirror`; CS008 P7 sources it from the input module. A text rectangle is sized by `TEXT_CHAR_W`, not `measureText()`, so `test-cs008-p4.js` asserts arithmetically that every rectangle clears the throat zone (§10.3) on all sixteen wells and every touch-button point, mirrored and not. Combo is Overdrive's and not built.
+⛔ **The touch-button side insets** by `TOUCH_BUTTON_R × HUD_TOUCH_INSET_R` (2.5) at all times, not only on detected touch (H3) — the buttons sit on exactly the right-hand corners (`C.INPUT_MIRROR` moves them left). The side comes from `view.mirror`, which `Game.draw()` reads off kit-input's live `setting("inputMirror")` (CS008 P7), so LEFT-HANDED TOUCH moves the inset at once. A text rectangle is sized by `TEXT_CHAR_W`, not `measureText()`, so `test-cs008-p4.js` asserts arithmetically that every rectangle clears the throat zone (§10.3) on all sixteen wells and every touch-button point, mirrored and not. Combo is Overdrive's and not built.
 
 ⛔ **H4 (Paul, 2026-09-13; shipped CS008 P5, extended P6): the HUD draws wherever a run is on screen — play (the Dive included), pause, game over, and Options (with its sub-pages) opened from pause — and not on title, mode, Start Depth or the title's Options**, where no run exists, so it would show a stale or default score. `runOnScreen()` in `23-main.js` is the one predicate. Options-from-pause is Paul's call (2026-09-13, after P6): a run exists there, and hiding the HUD over a still-drawn board would read as a different state.
 
 ### 10.5 Screens and menus
 
-**Shipped, CS008 P5 and P6.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"play"`, `"pause"`, `"gameover"`, `"options"`, `"controls"`, `"credits"`.
+**Shipped, CS008 P5, P6 and P7.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"play"`, `"pause"`, `"gameover"`, `"options"`, `"controls"`, `"keyboard"`, `"gamepad"`, `"credits"`.
 
 ```
 boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH ──row──► PLAY ──last life──► GAME OVER
@@ -869,7 +876,9 @@ boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH �
 PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
                          ├──QUIT TO TITLE──► TITLE
                          └──OPTIONS──► OPTIONS ──back──► wherever it was opened from (TITLE or PAUSE)
-                                         ├──CONTROLS──► CONTROLS (P7 stub) ──back──► OPTIONS
+                                         ├──CONTROLS──► CONTROLS ──back──► OPTIONS
+                                         │                ├──KEYBOARD──► KEYBOARD ──back──► CONTROLS
+                                         │                └──GAMEPAD───► GAMEPAD ───back──► CONTROLS
                                          └──CREDITS───► CREDITS ─────────────back──► OPTIONS
 ```
 
@@ -880,7 +889,8 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 | Start Depth | `startDepthOptions()` (§4.6), each row with its `startBonus()`. ⛔ No countdown | Mode |
 | Pause | RESUME, OPTIONS, QUIT TO TITLE (U4), over the frozen board | RESUME |
 | Options | TELEMETRY (ON/OFF), EXPORT (TO CONSOLE), CONTROLS ›, CREDITS ›, BACK (U5). Sound and music are CS009's rows | Title or pause — wherever it was opened from |
-| Controls | The line NOT BUILT YET and BACK. ⛔ A stub says so on screen; CS008 P7 fills it | Options |
+| Controls | MOUSE SENSITIVITY, TOUCH SENSITIVITY, LEFT-HANDED TOUCH, TOUCH AUTO-FIRE, KEYBOARD ›, GAMEPAD ›, RESET TO DEFAULTS, BACK (U7) | Options |
+| Keyboard, Gamepad | LEFT, RIGHT, FIRE, PURGE and JUMP, two slots each, then BACK. One line above the rows shows a refusal's reason | Controls |
 | Credits | `C.CREDITS_LINES`, then `VERSION` + `C.GAME_VERSION` (U6). ⚠ Placeholder copy; Paul replaces it before ship. ⛔ §18: no mention of the original game or its publisher | Options |
 | Game over | SCORE and LEVEL lines, then RESTART and QUIT TO TITLE (U2) | Title, via `quitToTitle()` |
 
@@ -903,6 +913,16 @@ Pause rules:
 - **QUIT TO TITLE** goes through `quitToTitle()`. CS011's `'quit'` check reads `screen === "pause"` there, before the overwrite.
 
 **Options (Paul, U5; shipped CS008 P6).** TELEMETRY and EXPORT call the same two functions as the `t` and `e` bench keys (`toggleTelemetry()`, `exportTelemetry()` in `23-main.js`). The row's ON/OFF detail is written from the switch on every Options step, never in `draw()`. ⛔ Capture is still off at every launch and never persisted (§15.6). Options is reachable from the title and from pause, and its BACK returns there.
+
+**Controls (Paul, U7 and U8; shipped CS008 P7).** ⛔ **Session-only until CS011**: nothing is stored, and a quit to the title keeps every setting.
+- **Sensitivity rows are ×`C.SENS_MIN_MULT` 0.5 to ×`C.SENS_MAX_MULT` 2.0 of `MOUSE_SENS` / `TOUCH_SENS`, in `C.SENS_STEP` 0.1 steps.** Paul confirmed the range (2026-09-13). ×1.0 is the shipped constant exactly.
+- **Fire on a sensitivity row arms it** (Paul, 2026-09-13), and the detail shows `‹×1.2›`. Rotate then changes the value live, one step per whole `MENU_ROTATE_STEP`, clamped at both ends. ⛔ Fire, Purge or Escape leaves the row **and keeps the value**, and never leaves the page.
+- **LEFT-HANDED TOUCH** flips kit-input's mirror at once. **TOUCH AUTO-FIRE** is the setting `syncScreen()` applies on entering play; ⛔ on every menu, auto-fire stays off.
+- **Fire on a slot arms a capture**, and the slot reads PRESS A KEY or PRESS A BUTTON. The next key (KEYBOARD) or pad button (GAMEPAD) is the new binding. ⛔ **A clash swaps** (U8): the slot that held the key takes this slot's old one.
+- ⛔ **Refused, with the reason on the page, and the refusal ENDS the capture** (Paul, 2026-09-13), so Escape and Start double as cancel. Refused keys are every named-action key (Escape, `p`, `w`, the bench digits, `t`, `e`) and every digit. On a pad, Start is refused. A pad button on KEYBOARD, or a key on GAMEPAD, is refused too. A mouse click or a touch cancels a capture without a reason.
+- ⛔ **A swap that would leave an action with no binding is refused** ("FIRE NEEDS A BUTTON"; Paul, 2026-09-13). Gamepad fire, left and right ship with one button each, so a pad-only player cannot lock themselves out of the menus.
+- **RESET TO DEFAULTS** restores `INPUT_KEYS_DEFAULT`, the gamepad defaults and the `C` values of both sensitivities, the mirror and auto-fire.
+- ⛔ **While a row owns the input, the menu model still steps**, on a snapshot with no rotate and the real Fire and Purge levels, and its answer is ignored. That keeps its edges current, so a Purge held past a row's exit does not back out of the page.
 
 **Navigation (Paul, U1).** Rotate moves the cursor, Fire confirms, Purge backs out, and Escape also backs out (a named action, `back`). The menu model is `createMenu()` in `15-render-hud.js`, kit-menu's draft (`src/15-render-hud.NOTES.md`). ⛔ It reads no game state: a screen is data (rows with a label, a detail, an enabled flag and an action name, plus a back action), a step takes the input struct and returns an action name, and `23-main.js` decides what each name does.
 - ⛔ **Fire and Purge are rising edges** against the previous step. The struct stays four levels (§9.5).

@@ -322,6 +322,50 @@ const Game = (function () {
   // these (CLAUDE.md, Test rules).
   const stats = { frames: 0, ticks: 0, lastSteps: 0, accumulator: 0 };
 
+  // ⛔ NAMED ACTIONS, NEVER A SECOND LISTENER (GDD 9.5). See runAction().
+  //
+  // ⛔ DIGITS, and that is not a style choice. "w" cycles the well out from
+  // under the level clock, so the closed soaks' recorded input lists
+  // deliberately never press it; a new binding that collided with it would
+  // move the determinism hash and the failure would read as a physics bug.
+  // The digits collide with nothing in INPUT_KEYS_DEFAULT either (04-input.js).
+  // ⛔ "r" IS UNBOUND SINCE CS008 P5 (U2): its debug restart is deleted, and
+  // game over's RESTART row is the one way to start a run again.
+  const ACTION_KEYS = {
+    // ⛔ THE MENUS' SECOND WAY BACK (U1; GDD 10.5). Purge is the first, read
+    // off the struct; Escape is a named action because it is not one of the
+    // four fields. On a menu it only QUEUES a back — the menu step consumes it,
+    // so an Escape during game over's freeze acts on nothing. In play it
+    // pauses (CS008 P6, below).
+    back:         ["escape"],
+    // ⛔ ESCAPE STAYS `back`, AND `back` IN PLAY IS A PAUSE (runAction). A key
+    // maps to ONE action, and Escape has to mean pause in play and back in a
+    // menu. `pause` and `autoPause` are what must NOT back out of a menu —
+    // above all the page going hidden on the START DEPTH screen.
+    pause:        ["p"],
+    cycleWell:    ["w"],
+    spawnVaulter: ["1"],
+    spawnCarrier: ["2"],
+    spawnWeaver:  ["3"],
+    spawnThorn:   ["4"],
+    spawnDrifter: ["5"],
+    spawnSurger:  ["6"],
+    spawnRow:     ["0"],
+    // ⛔ THE TELEMETRY BENCH (GDD 15.6; 21-telemetry.js). CS007 P4. Two
+    // actions, because there is no HUD and no Options screen until CS008 and
+    // the debug bench is the only surface there is.
+    //
+    // ⛔ AND THESE ARE THE FIRST DEBUG KEYS THAT ARE SAFE INSIDE A HASHED RUN.
+    // "w", the seven digits and the "r" CS008 P5 deleted are on three closed
+    // soaks' FORBIDDEN list because each moved the run's stream or its clock; neither of these
+    // touches the simulation at all — one flips a module-level boolean and one
+    // reads the ring and writes to the console. That is the same claim
+    // test-cs007-p4.js's headline assertion makes, from the other side, and it
+    // is why the soaks' lists are correct WITHOUT these two.
+    telemetryToggle: ["t"],
+    telemetryExport: ["e"],
+  };
+
   // ⛔ The kit boundary: 04-input.js reads no game global, so every tunable it
   // needs is handed over here, from C. Verbose on purpose — it is the one
   // thing that makes that module extractable (CLAUDE.md, Kit modules).
@@ -352,49 +396,7 @@ const Game = (function () {
     gamepadActions:   { pause: [C.GAMEPAD_PAUSE_BUTTON] },
     touchTopAction:   "pause",
     hiddenAction:     "autoPause",
-    // ⛔ NAMED ACTIONS, NEVER A SECOND LISTENER (GDD 9.5). See runAction().
-    //
-    // ⛔ DIGITS, and that is not a style choice. "w" cycles the well out from
-    // under the level clock, so the closed soaks' recorded input lists
-    // deliberately never press it; a new binding that collided with it would
-    // move the determinism hash and the failure would read as a physics bug.
-    // The digits collide with nothing in INPUT_KEYS_DEFAULT either (04-input.js).
-    // ⛔ "r" IS UNBOUND SINCE CS008 P5 (U2): its debug restart is deleted, and
-    // game over's RESTART row is the one way to start a run again.
-    actionKeys:       {
-      // ⛔ THE MENUS' SECOND WAY BACK (U1; GDD 10.5). Purge is the first, read
-      // off the struct; Escape is a named action because it is not one of the
-      // four fields. On a menu it only QUEUES a back — the menu step consumes it,
-      // so an Escape during game over's freeze acts on nothing. In play it
-      // pauses (CS008 P6, below).
-      back:         ["escape"],
-      // ⛔ ESCAPE STAYS `back`, AND `back` IN PLAY IS A PAUSE (runAction). A key
-      // maps to ONE action, and Escape has to mean pause in play and back in a
-      // menu. `pause` and `autoPause` are what must NOT back out of a menu —
-      // above all the page going hidden on the START DEPTH screen.
-      pause:        ["p"],
-      cycleWell:    ["w"],
-      spawnVaulter: ["1"],
-      spawnCarrier: ["2"],
-      spawnWeaver:  ["3"],
-      spawnThorn:   ["4"],
-      spawnDrifter: ["5"],
-      spawnSurger:  ["6"],
-      spawnRow:     ["0"],
-      // ⛔ THE TELEMETRY BENCH (GDD 15.6; 21-telemetry.js). CS007 P4. Two
-      // actions, because there is no HUD and no Options screen until CS008 and
-      // the debug bench is the only surface there is.
-      //
-      // ⛔ AND THESE ARE THE FIRST DEBUG KEYS THAT ARE SAFE INSIDE A HASHED RUN.
-      // "w", the seven digits and the "r" CS008 P5 deleted are on three closed
-      // soaks' FORBIDDEN list because each moved the run's stream or its clock; neither of these
-      // touches the simulation at all — one flips a module-level boolean and one
-      // reads the ring and writes to the console. That is the same claim
-      // test-cs007-p4.js's headline assertion makes, from the other side, and it
-      // is why the soaks' lists are correct WITHOUT these two.
-      telemetryToggle: ["t"],
-      telemetryExport: ["e"],
-    },
+    actionKeys:       ACTION_KEYS,
     onAction:         runAction,
   });
 
@@ -492,6 +494,9 @@ const Game = (function () {
     // must land inside a freeze (plan §7).
     if (name === "back") {
       if (state.screen === "play") pauseRun();
+      // ⛔ An adjusting row takes Escape as its own exit (CS008 P7), never as a
+      // back out of the page. A capture never sees Escape here: it swallows it.
+      else if (adjusting !== null) adjusting = null;
       else menu.back();
     }
     // ⛔ `p` AND START TOGGLE, ON THE PAUSE SCREEN ONLY (Paul, 2026-09-13). On
@@ -557,7 +562,16 @@ const Game = (function () {
   // ⛔ SCREENS ARE DATA, and the menu model never sees `state` (15-render-hud.js).
   // The game owns this table and what each action name does; the model owns
   // the cursor and the edges. `back` is the row Purge and Escape take.
+  // The five device actions the KEYBOARD and GAMEPAD pages rebind (plan §8).
+  // Above SCREENS, which builds those pages' rows from it.
+  const CONTROL_ACTIONS = ["left", "right", "fire", "purge", "jump"];
   const OPTIONS_TELEMETRY = { label: "TELEMETRY", detail: "OFF", enabled: true, action: "toggleTelemetry" };
+  const CTL_ROWS = {
+    mouse:    { label: "MOUSE SENSITIVITY", detail: "", enabled: true, action: "adjustMouse" },
+    touch:    { label: "TOUCH SENSITIVITY", detail: "", enabled: true, action: "adjustTouch" },
+    mirror:   { label: "LEFT-HANDED TOUCH", detail: "", enabled: true, action: "toggleMirror" },
+    autofire: { label: "TOUCH AUTO-FIRE",   detail: "", enabled: true, action: "toggleAutofire" },
+  };
   const SCREENS = {
     title: { title: "VECTOR VORTEX", lines: [], back: null, items: [
       { label: "PLAY",    detail: "", enabled: true, action: "toMode" },
@@ -589,10 +603,17 @@ const Game = (function () {
       { label: "CREDITS",  detail: "\u203A",     enabled: true, action: "toCredits" },
       { label: "BACK",     detail: "",           enabled: true, action: "optionsBack" },
     ] },
-    // ⛔ P7 FILLS THIS IN (plan §8). A row that does nothing says so on screen.
-    controls: { title: "CONTROLS", lines: ["NOT BUILT YET"], back: "backToOptions", items: [
-      { label: "BACK", detail: "", enabled: true, action: "backToOptions" },
+    // U7 (CS008 P7). Every detail is written by refreshControlRows(), in update().
+    controls: { title: "CONTROLS", lines: [], back: "backToOptions", items: [
+      CTL_ROWS.mouse, CTL_ROWS.touch, CTL_ROWS.mirror, CTL_ROWS.autofire,
+      { label: "KEYBOARD",          detail: "\u203A", enabled: true, action: "toKeyboard" },
+      { label: "GAMEPAD",           detail: "\u203A", enabled: true, action: "toGamepad" },
+      { label: "RESET TO DEFAULTS", detail: "",       enabled: true, action: "resetControls" },
+      { label: "BACK",              detail: "",       enabled: true, action: "backToOptions" },
     ] },
+    // Five device actions, two slots each. The one line is a refusal's reason.
+    keyboard: { title: "KEYBOARD", lines: [""], back: "backToControls", items: slotRows() },
+    gamepad:  { title: "GAMEPAD",  lines: [""], back: "backToControls", items: slotRows() },
     credits: { title: "CREDITS", lines: C.CREDITS_LINES.concat("VERSION " + C.GAME_VERSION),
                back: "backToOptions", items: [
       { label: "BACK", detail: "", enabled: true, action: "backToOptions" },
@@ -618,7 +639,178 @@ const Game = (function () {
   function runOnScreen() {
     const s = state.screen;
     if (s === "play" || s === "pause" || s === "gameover") return true;
-    return optionsFrom === "pause" && (s === "options" || s === "controls" || s === "credits");
+    return optionsFrom === "pause" && (s === "options" || s === "controls" || s === "credits" ||
+                                       s === "keyboard" || s === "gamepad");
+  }
+
+  // ---- the CONTROLS page (GDD 9, 10.5; CS008 P7) ----------------------------
+  //
+  // ⛔ SESSION-ONLY until CS011: nothing here is stored, and quitToTitle() keeps
+  // it because it lives outside `state`. The kit holds the live values; this
+  // holds what the page shows — the sensitivity multipliers as whole steps, the
+  // auto-fire SETTING (syncScreen() applies it in play only), and the bindings
+  // as two slots per action, a slot being null when empty.
+  const SENS_UNIT = Math.round(1 / C.SENS_STEP);             // steps in ×1.0
+  const SENS_LO = Math.round(C.SENS_MIN_MULT / C.SENS_STEP);
+  const SENS_HI = Math.round(C.SENS_MAX_MULT / C.SENS_STEP);
+  const PAD_BUTTON_NAMES = ["A", "B", "X", "Y", "LB", "RB", "LT", "RT", "BACK", "START",
+                            "LS", "RS", "D-UP", "D-DOWN", "D-LEFT", "D-RIGHT", "HOME"];
+  const controls = { mouse: SENS_UNIT, touch: SENS_UNIT, autofire: C.TOUCH_AUTOFIRE,
+                     keys: toSlots(INPUT_KEYS_DEFAULT), pad: toSlots(GAMEPAD_BUTTONS_DEFAULT) };
+  let adjusting = null;       // "mouse" | "touch" while a sensitivity row takes rotate
+  let adjustAcc = 0;
+  let capturing = null;       // { page, bind, slot } while a slot waits for a press
+  let pageNote = "";          // a refusal's reason, shown until the next capture
+  let prevFire = false, prevPurge = false;   // the struct's levels at the last menu step
+  const _neutral = { rotate: 0, fire: false, purge: false, jump: false };
+
+  function slotRows() {
+    const rows = [];
+    for (let a = 0; a < CONTROL_ACTIONS.length; a++) {
+      for (let slot = 0; slot < 2; slot++) {
+        rows.push({ label: CONTROL_ACTIONS[a].toUpperCase() + " " + (slot + 1), detail: "", enabled: true,
+                    action: "rebind", bind: CONTROL_ACTIONS[a], slot: slot });
+      }
+    }
+    rows.push({ label: "BACK", detail: "", enabled: true, action: "backToControls" });
+    return rows;
+  }
+  function toSlots(map) {
+    const out = {};
+    for (const a of CONTROL_ACTIONS) {
+      const list = map[a] || [];
+      out[a] = [list[0] === undefined ? null : list[0], list[1] === undefined ? null : list[1]];
+    }
+    return out;
+  }
+  function fromSlots(slots) {
+    const out = {};
+    for (const a of CONTROL_ACTIONS) out[a] = slots[a].filter(v => v !== null);
+    return out;
+  }
+  function sensFor(base, steps) { return base * (steps / SENS_UNIT); }   // ⛔ ×1.0 is `base` exactly
+
+  // ⛔ THE ONE RESET: the RESET TO DEFAULTS row, and Game.reset() for the suite.
+  function resetControls() {
+    controls.mouse = SENS_UNIT;
+    controls.touch = SENS_UNIT;
+    controls.autofire = C.TOUCH_AUTOFIRE;
+    controls.keys = toSlots(INPUT_KEYS_DEFAULT);
+    controls.pad = toSlots(GAMEPAD_BUTTONS_DEFAULT);
+    input.configure({ mouseSens: C.MOUSE_SENS, touchSens: C.TOUCH_SENS, inputMirror: C.INPUT_MIRROR });
+    input.setBindings(fromSlots(controls.keys));
+    input.setGamepadButtons(fromSlots(controls.pad));
+    endControlModes();
+  }
+  function endControlModes() {
+    if (capturing !== null) input.captureNext(null);
+    capturing = null;
+    adjusting = null;
+    pageNote = "";
+  }
+
+  function keyName(k) {
+    if (k === null) return "-";
+    if (k === " ") return "SPACE";
+    if (k.indexOf("arrow") === 0) return "ARROW " + k.slice(5).toUpperCase();
+    return k.toUpperCase();
+  }
+  function buttonName(b) {
+    if (b === null) return "-";
+    return PAD_BUTTON_NAMES[b] !== undefined ? PAD_BUTTON_NAMES[b] : "BUTTON " + b;
+  }
+
+  // ⛔ REFUSED (plan §8, U8): every key that is a named action — Escape, `p`,
+  // the debug keys, `t` and `e` — and every digit; on a pad, gamepad Start.
+  function reservedKey(k) {
+    if (/^[0-9]$/.test(k)) return true;
+    for (const name of Object.keys(ACTION_KEYS)) if (ACTION_KEYS[name].indexOf(k) >= 0) return true;
+    return false;
+  }
+
+  // Delivered by the kit inside input.sample(). ⛔ A refusal ENDS the capture
+  // with its reason on the page (Paul, 2026-09-13), so Escape and Start double
+  // as cancel. A clash SWAPS (U8); ⛔ a swap that would leave an action with no
+  // key or button is refused (Paul, 2026-09-13).
+  function onCaptured(result) {
+    const c = capturing;
+    capturing = null;
+    if (c === null) return;
+    const keys = c.page === "keyboard";
+    const v = keys ? result.key : result.button;
+    if (v === undefined) { pageNote = keys ? "PRESS A KEY" : "PRESS A BUTTON"; return; }
+    const shown = keys ? keyName(v) : buttonName(v);
+    if (keys ? reservedKey(v) : v === C.GAMEPAD_PAUSE_BUTTON) { pageNote = shown + " IS RESERVED"; return; }
+    const slots = keys ? controls.keys : controls.pad;
+    const next = {};
+    for (const a of CONTROL_ACTIONS) next[a] = slots[a].slice();
+    const old = next[c.bind][c.slot];
+    for (const a of CONTROL_ACTIONS) {
+      for (let i = 0; i < 2; i++) if (next[a][i] === v) next[a][i] = old;
+    }
+    next[c.bind][c.slot] = v;
+    for (const a of CONTROL_ACTIONS) {
+      if (next[a][0] === null && next[a][1] === null) {
+        pageNote = a.toUpperCase() + (keys ? " NEEDS A KEY" : " NEEDS A BUTTON");
+        return;
+      }
+    }
+    if (keys) { controls.keys = next; input.setBindings(fromSlots(next)); }
+    else { controls.pad = next; input.setGamepadButtons(fromSlots(next)); }
+    pageNote = "";
+  }
+
+  // A step on a CONTROLS page while a row owns the input. ⛔ The menu still
+  // steps, on a snapshot with no rotate and the real Fire and Purge levels,
+  // and its answer is ignored: that keeps its edges current, so the press that
+  // ends a mode is not a second press on the row once the menu has it back.
+  function stepControlMode(screen) {
+    const inp = state.input;
+    const fireEdge = inp.fire && !prevFire, purgeEdge = inp.purge && !prevPurge;
+    if (adjusting !== null) {
+      adjustAcc += inp.rotate;
+      const whole = Math.trunc(adjustAcc / C.MENU_ROTATE_STEP);
+      if (whole !== 0) {
+        adjustAcc -= whole * C.MENU_ROTATE_STEP;
+        const n = Math.min(SENS_HI, Math.max(SENS_LO, controls[adjusting] + whole));
+        controls[adjusting] = n;
+        if (adjusting === "mouse") input.configure({ mouseSens: sensFor(C.MOUSE_SENS, n) });
+        else input.configure({ touchSens: sensFor(C.TOUCH_SENS, n) });
+      }
+      if (fireEdge || purgeEdge) adjusting = null;           // ⛔ any exit keeps the value
+    } else if (fireEdge || purgeEdge) {
+      // Only a mouse button or a touch reaches here: a capture swallows keys
+      // and pad buttons. It cancels.
+      input.captureNext(null);
+      capturing = null;
+    }
+    _neutral.fire = inp.fire;
+    _neutral.purge = inp.purge;
+    menu.step(screen, _neutral);
+  }
+
+  function refreshControlRows() {
+    const mult = n => "\u00D7" + (n / SENS_UNIT).toFixed(1);
+    CTL_ROWS.mouse.detail = adjusting === "mouse" ? "\u2039" + mult(controls.mouse) + "\u203A" : mult(controls.mouse);
+    CTL_ROWS.touch.detail = adjusting === "touch" ? "\u2039" + mult(controls.touch) + "\u203A" : mult(controls.touch);
+    CTL_ROWS.mirror.detail = input.setting("inputMirror") ? "ON" : "OFF";
+    CTL_ROWS.autofire.detail = controls.autofire ? "ON" : "OFF";
+    for (const page of ["keyboard", "gamepad"]) {
+      const keys = page === "keyboard";
+      const scr = SCREENS[page];
+      scr.lines[0] = pageNote;
+      const slots = keys ? controls.keys : controls.pad;
+      for (let i = 0; i < scr.items.length; i++) {
+        const row = scr.items[i];
+        if (row.action !== "rebind") continue;
+        if (capturing !== null && capturing.page === page && capturing.bind === row.bind && capturing.slot === row.slot) {
+          row.detail = keys ? "PRESS A KEY" : "PRESS A BUTTON";
+        } else {
+          const v = slots[row.bind][row.slot];
+          row.detail = keys ? keyName(v) : buttonName(v);
+        }
+      }
+    }
   }
 
   function buildDepthRows() {
@@ -657,6 +849,20 @@ const Game = (function () {
     if (name === "optionsBack") state.screen = optionsFrom;
     if (name === "backToOptions") state.screen = "options";
     if (name === "toControls") state.screen = "controls";
+    if (name === "toKeyboard") state.screen = "keyboard";
+    if (name === "toGamepad") state.screen = "gamepad";
+    if (name === "backToControls") state.screen = "controls";
+    if (name === "adjustMouse") { adjusting = "mouse"; adjustAcc = 0; }
+    if (name === "adjustTouch") { adjusting = "touch"; adjustAcc = 0; }
+    if (name === "toggleMirror") input.configure({ inputMirror: !input.setting("inputMirror") });
+    if (name === "toggleAutofire") controls.autofire = !controls.autofire;
+    if (name === "resetControls") resetControls();
+    if (name === "rebind") {
+      const row = screen.items[menu.cursor];
+      capturing = { page: state.screen, bind: row.bind, slot: row.slot };
+      pageNote = "";
+      input.captureNext(onCaptured);
+    }
     if (name === "toCredits") state.screen = "credits";
     if (name === "toggleTelemetry") toggleTelemetry();
     if (name === "exportTelemetry") exportTelemetry();
@@ -694,8 +900,11 @@ const Game = (function () {
     const inPlay = state.screen === "play";
     // ⛔ The top-edge pause target is live in play only; on a menu the upper
     // screen is all confirm taps and a dead spot there would fail silently.
-    input.configure({ touchAutofire: inPlay ? C.TOUCH_AUTOFIRE : false, touchTapFire: !inPlay,
+    // ⛔ In play, auto-fire is the CONTROLS page's setting (CS008 P7).
+    input.configure({ touchAutofire: inPlay ? controls.autofire : false, touchTapFire: !inPlay,
                       touchTopTarget: inPlay });
+    // A row that owned the input does not follow the player off its page.
+    endControlModes();
     menu.reset();
   }
 
@@ -725,11 +934,17 @@ const Game = (function () {
     if (state.screen !== "play") {
       const screen = SCREENS[state.screen];
       if (screen) {
-        const action = menu.step(screen, state.input);
-        if (action) menuAction(action, screen);
+        if (adjusting !== null || capturing !== null) stepControlMode(screen);
+        else {
+          const action = menu.step(screen, state.input);
+          if (action) menuAction(action, screen);
+        }
       }
+      prevFire = state.input.fire;
+      prevPurge = state.input.purge;
       // After the action, so the step that toggled it already shows it.
       if (state.screen === "options") OPTIONS_TELEMETRY.detail = Telemetry.enabled() ? "ON" : "OFF";
+      if (state.screen === "controls" || state.screen === "keyboard" || state.screen === "gamepad") refreshControlRows();
       return;
     }
 
@@ -882,7 +1097,7 @@ const Game = (function () {
       _hudView.level = state.level;
       _hudView.levelColor = wellBandColor(state.level, state.bandRoll);
       _hudView.purgeUses = state.purgeUses;
-      _hudView.mirror = C.INPUT_MIRROR;
+      _hudView.mirror = input.setting("inputMirror");   // ⛔ the live flag (CS008 P7)
       drawHud(ctx, _hudView);
     }
     // The menu over everything, on every screen but play.
@@ -999,6 +1214,7 @@ const Game = (function () {
     lastMs = 0;
     hitStopLeft = 0;
     syncedScreen = null;
+    resetControls();
     stats.frames = 0; stats.ticks = 0; stats.lastSteps = 0; stats.accumulator = 0;
   }
 

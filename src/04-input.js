@@ -39,7 +39,7 @@
 // lets a headless test replay a recorded event list with no DOM at all, which
 // is what makes the determinism guarantee (GDD 17.1) testable.
 
-const INPUT_VERSION = "0.5.0";
+const INPUT_VERSION = "0.6.0";
 
 // Default bindings, matched case-insensitively. These are NOT tunables — a
 // keymap is this module's own default and a host replaces it wholesale through
@@ -63,12 +63,17 @@ function inputNormKey(k) {
 // Default gamepad button map, standard Gamepad layout indices. NOT a tunable
 // for the same reason INPUT_KEYS_DEFAULT isn't — this is the module's own
 // default and a host replaces it wholesale through options.gamepadButtons.
-//   0 = A, 4/5 = Left/Right Bumper, 6/7 = Left/Right Trigger.
+//   0 = A, 4/5 = Left/Right Bumper, 6/7 = Left/Right Trigger, 14/15 = D-pad.
+// ⛔ left/right (0.6.0) are the D-pad, and a map that omits them keeps 14/15,
+// so a 0.3.0-shaped override still has a D-pad.
 const GAMEPAD_BUTTONS_DEFAULT = {
   fire:  [0],
   jump:  [4, 6],
   purge: [5, 7],
+  left:  [14],
+  right: [15],
 };
+const GAMEPAD_BUTTON_ACTIONS = ["fire", "jump", "purge", "left", "right"];
 
 // ⛔ Numeric tunables are REQUIRED, never defaulted. A default here would be a
 // second tuning surface competing with the host's config object, and the point
@@ -122,6 +127,7 @@ function inputBuildBindings(src) {
 //     gamepadActions, // optional { actionName: [buttonIdx, ...] }, queued on a press edge (0.5.0)
 //     touchTopAction, // optional action name — a button centred on the top edge queues it (0.5.0)
 //     hiddenAction,   // optional action name — the page going hidden queues it (0.5.0)
+//     gamepadButtons, // optional, shape of GAMEPAD_BUTTONS_DEFAULT; left/right default to the D-pad
 //     keys,        // optional binding override, shape of INPUT_KEYS_DEFAULT
 //     actionKeys,  // optional { actionName: ["key", ...] } for named actions
 //     onAction,    // optional (name) => void, called during sample()
@@ -129,7 +135,8 @@ function inputBuildBindings(src) {
 function createInput(options) {
   const opts = options || {};
 
-  const mouseSens   = inputRequireNum(opts, "mouseSens");
+  // ⛔ `let`: configure() is the one writer after creation (0.6.0).
+  let mouseSens     = inputRequireNum(opts, "mouseSens");
   const keyTapS     = inputRequireNum(opts, "keyTapMs") / 1000;
   const keySpeedMin = inputRequireNum(opts, "keySpeedMin");
   const keySpeedMax = inputRequireNum(opts, "keySpeedMax");
@@ -137,11 +144,12 @@ function createInput(options) {
   const pointerLockOffer = opts.pointerLockOffer !== false;
   const onAction = typeof opts.onAction === "function" ? opts.onAction : null;
 
-  const touchSens      = inputRequireNum(opts, "touchSens");
+  let touchSens        = inputRequireNum(opts, "touchSens");
   const touchZoneFrac  = inputRequireNum(opts, "touchZoneFrac");
   const touchButtonR   = inputRequireNum(opts, "touchButtonR");
-  // ⛔ `let`, NOT `const`, AND ONLY THESE TWO (0.4.0). configure() below is the
-  // one writer after creation. Everything else is still fixed at creation.
+  // ⛔ `let` ONLY FOR WHAT configure() BELOW NAMES: mouseSens, touchSens,
+  // inputMirror (0.6.0) and the three switches. Everything else is fixed at
+  // creation; the two binding maps have their own setters.
   let touchAutofire    = inputRequireBool(opts, "touchAutofire");
   // A touch that lands outside the rotation zone AND both buttons holds `fire`
   // while this is on. Optional and OFF by default, so a host that never names
@@ -151,7 +159,7 @@ function createInput(options) {
   const gamepadSens     = inputRequireNum(opts, "gamepadSens");
   const worldW = inputRequireNum(opts, "worldW");
   const worldH = inputRequireNum(opts, "worldH");
-  const inputMirror = inputRequireBool(opts, "inputMirror");
+  let inputMirror = inputRequireBool(opts, "inputMirror");
 
   // ---- three sources of a NAMED action (0.5.0) ------------------------------
   // Each is optional, and a host that names none of them gets 0.4.0 exactly.
@@ -178,8 +186,8 @@ function createInput(options) {
   // reset(), because browsers fire blur and visibilitychange in either order.
   let hiddenPending = false;
 
-  const bindings = inputBuildBindings(opts.keys || INPUT_KEYS_DEFAULT);
   const actions  = inputBuildBindings(opts.actionKeys || {});
+  let bindings = null;
 
   // The D-pad rides the SAME tap/hold state machine the keyboard uses (GDD
   // 9.4) — these are not a second axis model, just two more bound "keys" that
@@ -189,16 +197,39 @@ function createInput(options) {
     if (!bindings.byAction[action]) bindings.byAction[action] = [];
     bindings.byAction[action].push(key);
   }
-  bindSynthetic("gamepadleft", "left");
-  bindSynthetic("gamepadright", "right");
+  function installBindings(src) {
+    bindings = inputBuildBindings(src);
+    bindSynthetic("gamepadleft", "left");
+    bindSynthetic("gamepadright", "right");
+  }
+  installBindings(opts.keys || INPUT_KEYS_DEFAULT);
 
-  // fire/purge/jump button map — host-overridable wholesale, same pattern as
-  // `keys` above.
-  const gamepadButtons = opts.gamepadButtons || GAMEPAD_BUTTONS_DEFAULT;
+  // fire/purge/jump/left/right button map — host-overridable wholesale, same
+  // pattern as `keys` above, and replaceable later through setGamepadButtons().
+  function fillPad(map) {
+    const out = {};
+    for (const name of Object.keys(map)) out[name] = map[name];
+    if (out.left === undefined) out.left = GAMEPAD_BUTTONS_DEFAULT.left;
+    if (out.right === undefined) out.right = GAMEPAD_BUTTONS_DEFAULT.right;
+    return out;
+  }
+  let gamepadButtons = fillPad(opts.gamepadButtons || GAMEPAD_BUTTONS_DEFAULT);
 
   const pressed = new Set();   // normalized key names currently down
   const buttons = new Set();   // non-key sources holding a button: "fire", ...
   const queued  = [];          // named actions triggered since the last sample
+
+  // ---- capture (0.6.0) ----------------------------------------------------
+  // captureNext(cb) arms ONE capture. The next key press or gamepad button
+  // press edge is handed to cb, during sample(), as { key } or { button }, and
+  // ⛔ NEVER REACHES THE STRUCT OR A NAMED ACTION: the key or button is
+  // SWALLOWED until it is released, so its auto-repeat and its held level are
+  // nothing too. Something already held when the capture arms is not a press.
+  let captureCb = null;
+  let captured = null;          // { cb, result } awaiting dispatch in sample()
+  const swallowedKeys = new Set();
+  const swallowedButtons = new Set();
+  const gpPrev = [];            // raw pressed state per button at the last poll
 
   // One record per rotation direction. `emitted` is how much of a lane this
   // press has already delivered, which is what makes the tap exact.
@@ -240,7 +271,15 @@ function createInput(options) {
     const bound = bindings.byKey.has(k) || actions.byKey.has(k);
     // Held keys repeat. A repeat is not a new press — treating it as one would
     // restart the ramp sixty times a second and re-arm the tap forever.
-    if (pressed.has(k)) return bound;
+    if (pressed.has(k) || swallowedKeys.has(k)) return bound;
+    // The D-pad's synthetic keys are never captured: its buttons are, in
+    // pollGamepads(), before they become keys.
+    if (captureCb !== null && k !== "gamepadleft" && k !== "gamepadright") {
+      swallowedKeys.add(k);
+      captured = { cb: captureCb, result: { key: k } };
+      captureCb = null;
+      return true;
+    }
     pressed.add(k);
 
     const dir = axis[bindings.byKey.get(k)];
@@ -255,6 +294,7 @@ function createInput(options) {
   function keyUp(rawKey) {
     const k = inputNormKey(rawKey);
     const bound = bindings.byKey.has(k) || actions.byKey.has(k);
+    if (swallowedKeys.delete(k)) return true;
     if (!pressed.delete(k)) return bound;
     const name = bindings.byKey.get(k);
     // Another key bound to the same direction may still be down (arrow + WASD).
@@ -347,6 +387,8 @@ function createInput(options) {
     try { pads = win.navigator.getGamepads(); } catch (err) { return; }
     const gp = pads && pads[0];
     if (!gp) {
+      gpPrev.length = 0;
+      swallowedButtons.clear();
       gamepadAxisX = 0;
       if (gpDpadLeftDown)  { keyUp("gamepadleft");  gpDpadLeftDown = false; }
       if (gpDpadRightDown) { keyUp("gamepadright"); gpDpadRightDown = false; }
@@ -357,39 +399,54 @@ function createInput(options) {
     const ax = gp.axes && typeof gp.axes[0] === "number" && isFinite(gp.axes[0]) ? gp.axes[0] : 0;
     gamepadAxisX = ax;
 
+    // Capture and swallowing (0.6.0), BEFORE any button is read below: a
+    // swallowed button reads as up everywhere until it is really released.
+    const nb = gp.buttons ? gp.buttons.length : 0;
+    for (let i = 0; i < nb; i++) {
+      const raw = !!(gp.buttons[i] && gp.buttons[i].pressed);
+      if (raw && !gpPrev[i] && captureCb !== null) {
+        swallowedButtons.add(i);
+        captured = { cb: captureCb, result: { button: i } };
+        captureCb = null;
+      }
+      if (!raw) swallowedButtons.delete(i);
+      gpPrev[i] = raw;
+    }
+    gpPrev.length = nb;
+
     // ⛔ The D-pad reaches `left`/`right` through keyDown/keyUp — the SAME
     // tap/hold implementation the keyboard uses. This is edge detection only;
     // the state machine that turns a press into a lane delta lives in exactly
-    // one place (advanceAxis/releaseAxis above).
-    const left  = !!(gp.buttons && gp.buttons[14] && gp.buttons[14].pressed);
-    const right = !!(gp.buttons && gp.buttons[15] && gp.buttons[15].pressed);
+    // one place (advanceAxis/releaseAxis above). Which buttons are the D-pad is
+    // the map's left/right lists (0.6.0), 14 and 15 by default.
+    const left  = padHeld(gp, gamepadButtons.left);
+    const right = padHeld(gp, gamepadButtons.right);
     if (left !== gpDpadLeftDown)   { if (left) keyDown("gamepadleft"); else keyUp("gamepadleft"); gpDpadLeftDown = left; }
     if (right !== gpDpadRightDown) { if (right) keyDown("gamepadright"); else keyUp("gamepadright"); gpDpadRightDown = right; }
 
     // fire/purge/jump — level state, recomputed every poll. Any bound button
     // held is enough; this is OR across a button LIST, not an edge.
     for (const name of Object.keys(gamepadHeld)) {
-      const list = gamepadButtons[name] || [];
-      let held = false;
-      for (let i = 0; i < list.length; i++) {
-        const b = gp.buttons && gp.buttons[list[i]];
-        if (b && b.pressed) { held = true; break; }
-      }
-      gamepadHeld[name] = held;
+      gamepadHeld[name] = padHeld(gp, gamepadButtons[name]);
     }
 
     // Named actions (0.5.0) — an EDGE, not a level: a button held for a second
     // queues its action once, exactly as a held key does not repeat one.
     for (const name of Object.keys(gamepadActions)) {
-      const list = gamepadActions[name] || [];
-      let held = false;
-      for (let i = 0; i < list.length; i++) {
-        const b = gp.buttons && gp.buttons[list[i]];
-        if (b && b.pressed) { held = true; break; }
-      }
+      const held = padHeld(gp, gamepadActions[name]);
       if (held && !gamepadActionHeld[name]) queued.push(name);
       gamepadActionHeld[name] = held;
     }
+  }
+
+  // Any listed button pressed and not swallowed. OR across the list.
+  function padHeld(gp, list) {
+    if (!list || !gp.buttons) return false;
+    for (let i = 0; i < list.length; i++) {
+      const b = gp.buttons[list[i]];
+      if (b && b.pressed && !swallowedButtons.has(list[i])) return true;
+    }
+    return false;
   }
 
   // The page went hidden (0.5.0). attach() calls this from visibilitychange;
@@ -478,6 +535,12 @@ function createInput(options) {
     // Named actions are dispatched HERE, in simulation order, not at DOM-event
     // time. A recorded event list therefore replays identically (GDD 17.1),
     // and a debug action cannot land halfway through a frame.
+    // A capture is handed over first, in simulation order like everything else.
+    if (captured !== null) {
+      const c = captured;
+      captured = null;
+      c.cb(c.result);
+    }
     if (queued.length) {
       if (onAction) for (let i = 0; i < queued.length; i++) onAction(queued[i]);
       queued.length = 0;
@@ -489,27 +552,131 @@ function createInput(options) {
     return s;
   }
 
-  // configure(partial) — change a switch AFTER creation (0.4.0). ⛔ ONLY the keys
-  // below; any other key throws, and so does a non-boolean, BEFORE anything is
-  // written, so a bad call changes nothing. A host whose screens want different
-  // touch behaviour (a menu, where a drag must not also be a press) flips these
-  // on its own screen changes; the struct keeps its four fields either way.
-  // reset() does NOT restore them — they are settings, not held input.
-  const CONFIGURABLE = { touchAutofire: true, touchTapFire: true, touchTopTarget: true };
+  // configure(partial) — change a setting AFTER creation (0.4.0; the two
+  // sensitivities and inputMirror since 0.6.0). ⛔ ONLY the keys below; any other
+  // key throws, and so does a wrong type, BEFORE anything is written, so a bad
+  // call changes nothing. A host whose screens want different touch behaviour
+  // (a menu, where a drag must not also be a press) flips the switches on its
+  // own screen changes; the struct keeps its four fields either way. reset()
+  // does NOT restore any of them — they are settings, not held input.
+  // ⛔ A sensitivity is still applied as ONE multiply in sample(): configure()
+  // replaces the factor and adds no curve (GDD 9.1).
+  const CONFIGURABLE = { touchAutofire: "boolean", touchTapFire: "boolean", touchTopTarget: "boolean",
+                         inputMirror: "boolean", mouseSens: "number", touchSens: "number" };
   function configure(partial) {
     const p = partial || {};
     const keys = Object.keys(p);
     for (let i = 0; i < keys.length; i++) {
-      if (!CONFIGURABLE[keys[i]]) throw new Error("configure: " + keys[i] + " is not configurable");
-      if (typeof p[keys[i]] !== "boolean") throw new Error("configure: " + keys[i] + " must be a boolean");
+      const type = CONFIGURABLE[keys[i]];
+      if (!type) throw new Error("configure: " + keys[i] + " is not configurable");
+      if (type === "boolean" && typeof p[keys[i]] !== "boolean") throw new Error("configure: " + keys[i] + " must be a boolean");
+      if (type === "number" && (typeof p[keys[i]] !== "number" || !isFinite(p[keys[i]]))) {
+        throw new Error("configure: " + keys[i] + " must be a finite number");
+      }
     }
     if (p.touchAutofire !== undefined) touchAutofire = p.touchAutofire;
     if (p.touchTapFire !== undefined) touchTapFire = p.touchTapFire;
     if (p.touchTopTarget !== undefined) touchTopTarget = p.touchTopTarget;
+    if (p.inputMirror !== undefined) inputMirror = p.inputMirror;
+    if (p.mouseSens !== undefined) mouseSens = p.mouseSens;
+    if (p.touchSens !== undefined) touchSens = p.touchSens;
+  }
+
+  // setting(name) — the current value of a configure() key (0.6.0). Allocates
+  // nothing, so a host may read it every frame.
+  function setting(name) {
+    if (!CONFIGURABLE[name]) throw new Error("setting: " + name + " is not configurable");
+    if (name === "touchAutofire") return touchAutofire;
+    if (name === "touchTapFire") return touchTapFire;
+    if (name === "touchTopTarget") return touchTopTarget;
+    if (name === "inputMirror") return inputMirror;
+    if (name === "mouseSens") return mouseSens;
+    return touchSens;
+  }
+
+  // ---- rebinding (0.6.0) ---------------------------------------------------
+  // Both setters replace a map WHOLESALE, validate everything BEFORE writing,
+  // and throw on: a list that is not an array, an entry of the wrong type, the
+  // same key or button twice, and ⛔ A KEY OR BUTTON THAT IS ALSO A NAMED
+  // ACTION — a key doing two jobs is a bug waiting for a player who rebinds.
+  function checkMap(fn, map, allowed, isEntry, reserved, norm) {
+    if (map === null || typeof map !== "object") throw new Error(fn + ": the map must be an object");
+    const seen = new Set();
+    for (const name of Object.keys(map)) {
+      if (allowed && allowed.indexOf(name) < 0) throw new Error(fn + ": " + name + " is not a bindable action");
+      const list = map[name];
+      if (!Array.isArray(list)) throw new Error(fn + ": " + name + " must be an array");
+      for (let i = 0; i < list.length; i++) {
+        if (!isEntry(list[i])) throw new Error(fn + ": " + name + " has an invalid entry");
+        const v = norm(list[i]);
+        if (reserved(v)) throw new Error(fn + ": " + JSON.stringify(v) + " is a named action");
+        if (seen.has(v)) throw new Error(fn + ": " + JSON.stringify(v) + " is bound twice");
+        seen.add(v);
+      }
+    }
+  }
+
+  // A direction whose keys no longer hold it lets go WITHOUT a tap's nudge: a
+  // rebind is not a release the player made.
+  function dropOrphanedAxes() {
+    for (const name of Object.keys(axis)) {
+      const dir = axis[name];
+      if (dir.down && !anyKeyHeld(name)) { dir.down = false; dir.held = 0; dir.emitted = 0; dir.tap = false; }
+    }
+  }
+
+  function setBindings(keys) {
+    checkMap("setBindings", keys, null,
+             k => typeof k === "string" && k !== "",
+             k => actions.byKey.has(k) || k === "gamepadleft" || k === "gamepadright",
+             inputNormKey);
+    installBindings(keys);
+    dropOrphanedAxes();
+  }
+
+  function setGamepadButtons(map) {
+    const reservedButtons = new Set();
+    for (const name of Object.keys(gamepadActions)) {
+      const list = gamepadActions[name] || [];
+      for (let i = 0; i < list.length; i++) reservedButtons.add(list[i]);
+    }
+    checkMap("setGamepadButtons", map, GAMEPAD_BUTTON_ACTIONS,
+             b => typeof b === "number" && Number.isInteger(b) && b >= 0,
+             b => reservedButtons.has(b),
+             b => b);
+    gamepadButtons = fillPad(map);
+  }
+
+  function copyMap(src) {
+    const out = {};
+    for (const name of Object.keys(src)) out[name] = src[name].slice();
+    return out;
+  }
+  // Copies, never the live maps. The keyboard copy leaves out the D-pad's two
+  // synthetic keys, so it is exactly what setBindings() takes.
+  function getBindings() {
+    const out = copyMap(bindings.byAction);
+    for (const name of Object.keys(out)) {
+      out[name] = out[name].filter(k => k !== "gamepadleft" && k !== "gamepadright");
+    }
+    return out;
+  }
+  function getGamepadButtons() { return copyMap(gamepadButtons); }
+
+  // captureNext(cb) arms one capture; captureNext(null) disarms it, and a result
+  // not yet dispatched is dropped. ⛔ An armed capture survives reset(): it is a
+  // request, not held input.
+  function captureNext(cb) {
+    if (cb !== null && typeof cb !== "function") throw new Error("captureNext: cb must be a function or null");
+    captureCb = cb;
+    if (cb === null) captured = null;
   }
 
   function reset() {
     pressed.clear();
+    swallowedKeys.clear();
+    swallowedButtons.clear();
+    gpPrev.length = 0;
     buttons.clear();
     queued.length = 0;
     hiddenPending = false;
@@ -659,7 +826,8 @@ function createInput(options) {
 
   return {
     VERSION: INPUT_VERSION,
-    sample, reset, configure,
+    sample, reset, configure, setting,
+    setBindings, setGamepadButtons, getBindings, getGamepadButtons, captureNext,
     keyDown, keyUp, mouseMove, setButton,
     touchStart, touchMove, touchEnd, pollGamepads, pageHidden,
     attach, detach,

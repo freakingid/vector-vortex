@@ -93,7 +93,7 @@ function hudLayout(view) {
 
 // Called LAST from Game.draw(), so the HUD sits over the board. `view`:
 //   score, lives, level, levelColor, purgeUses — the numbers shown
-//   mirror  the touch buttons' side (H3); P7 sources it from the input module
+//   mirror  the touch buttons' side (H3), the input module's live flag since P7
 //   icon    the reserve craft's local-space poly ({ l, d }, d ≤ 0 inward)
 function drawHud(ctx, view) {
   const L = hudLayout(view);

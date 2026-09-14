@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (P6 done — ⛔ P7, the Controls page, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P7 done — ⛔ P8, the front-door soak and the close, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
@@ -63,11 +63,25 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   OPTIONS-from-pause is confirmed. The three "Atari" comments are reworded, and
   the built-file check now bans the word. 225 assertions; 5 of 5 mutations red.
 
+- **P7 (2026-09-13) — the Controls page.** The rows are MOUSE and TOUCH
+  SENSITIVITY, LEFT-HANDED TOUCH, TOUCH AUTO-FIRE, KEYBOARD ›, GAMEPAD ›, RESET
+  TO DEFAULTS and BACK. The two new pages give each of the five actions two
+  slots. Session-only.
+  - ✅ **Paul's four calls.** The range is ×0.5–×2.0 in ×0.1 steps. Fire arms a
+    slider, and any exit keeps its value. A refused key ends the capture with
+    its reason shown. A swap that would unbind an action is refused.
+  - kit-input **0.6.0**: `configure()` takes the sensitivities and the mirror;
+    new `setting()`, `setBindings`/`setGamepadButtons`, the getters and
+    `captureNext`. The pad map gained `left`/`right`.
+  - `test-cs008-p7.js`, 172 assertions. **22 of 22 mutations red.** No
+    baseline moved; one claim each in `test-cs008-p5.js` and `-p6.js` was
+    rewritten in place.
+
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 395.8 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 414.0 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **41 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **42 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -169,10 +183,11 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 - ⛔ **CS008 P6 — `Game.update()` calls `syncScreen()` TWICE: before and AFTER
   `input.sample()`.** A named action that changes the screen inside `sample()`
   (pause) makes that step the new screen's entry step. Remove the second call
-  and a Fire held in play confirms RESUME. P7's capture must respect it too.
+  and a Fire held in play confirms RESUME. A capture result also arrives inside
+  `sample()`, so that step's menu stop already sees the capture ended.
 - ⛔ **CS008 P6 — `frame()` drains `hitStopLeft` only while the screen is
   `"play"` or `"gameover"`.** Any other screen HOLDS a freeze, which is right
-  for pause and its pages. P7's CONTROLS page inherits it. A new screen that
+  for pause and its pages, KEYBOARD and GAMEPAD included. A new screen that
   should drain a freeze has to be added there by name.
 - ⛔ **CS008 P6 — `Game.draw()` must not name `Telemetry`** (`test-cs007-p4.js`).
   The OPTIONS row's ON/OFF detail is written in `update()`'s menu stop instead.
@@ -180,8 +195,15 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   included** (GDD §18.1; Paul, 2026-09-13). Write "the original's" instead.
 - ⚠ **The touch buttons, and P6's top-centre pause target, are not drawn.**
   The target is live in play only.
-- ⚠ **CS008 P4 — the HUD's mirror side reads `C.INPUT_MIRROR`** (`_hudView.mirror`
-  in `Game.draw()`). P7 re-points that one line at the input module.
+- ⛔ **CS008 P7 — `Game.reset()` now restores the controls** (`resetControls()`),
+  and so does every fixture that calls it. A test claiming a setting SURVIVES a
+  quit must use `Game.quitToTitle()` alone.
+- ⛔ **CS008 P7 — while a CONTROLS row owns the input, the menu model still
+  steps, and its answer is ignored** (`stepControlMode()`). Remove that and a
+  Purge held past a slider's exit backs out of the page. A future row mode
+  (CS009's volume, say) must do the same.
+- ⚠ **CS008 P7 — `C.MENU_COL_W` is 460** (was 420), so "MOUSE SENSITIVITY" clears
+  an adjusting detail. A longer row label needs the same arithmetic.
 - ⚠ **CS008 P4 — a dead craft is not drawn once the freeze is spent**, so the
   game-over board has no craft on it. That is the fragmentation finishing.
 - ⚠ **`drawFragments`, `drawHud` and `drawMenu` read `C` for sizes and colours.**
@@ -308,7 +330,7 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   the no-persistence rule; only the code-map line was updated.
 - ⚠ **PAUL REPLACES THE CREDITS COPY BEFORE SHIP.** `C.CREDITS_LINES` is U6's
   placeholder: "VECTOR VORTEX", "COINLESS GAMES", and a generated VERSION line.
-- Backport `kit-input` (`src/04-input.js`, **v0.5.0**) and, after P7, `kit-menu`
+- Backport `kit-input` (`src/04-input.js`, **v0.6.0**) and `kit-menu`
   (`src/15-render-hud.js`, v0.1.0) to coinless-kit. Each is a separate manual
   step, verified against that repo's own suite.
 - ⚠ **The leaderboard submission is CS011's** (`ROADMAP.md`). P5 built its seat:
@@ -323,37 +345,22 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — ⛔ P7, THE CONTROLS PAGE
+## Next up — ⛔ P8, THE FRONT-DOOR SOAK AND THE CLOSE
 
-⛔ **Paste P7's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
+⛔ **Paste P8's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
 session.** A build phase reads the document, not the planning conversation
 (`CLAUDE.md` rule 3c).
 
-**The sequence:** P1 · P1b · P2 · P3 · P4 · P5 · P6 pause and Options · **P7 the
-Controls page** · P8 the front-door soak and the close.
+**The sequence:** P1 · P1b · P2 · P3 · P4 · P5 · P6 · P7 the Controls page ·
+**P8 the front-door soak and the close**.
 
-⛔ **What P7–P8 must not lose:**
+⛔ **What P8 must not lose:**
 
-1. ⛔ **A baseline move in P7–P8 is a defect.** The hash is 1229033515 and
-   `GOLDEN_LANES` has its P1 +2 appended entries. P6 moved neither.
-2. ⚠ **kit-input is 0.5.0 (P6), so P7's bump is 0.6.0.** The plan's "0.5.0"
-   is stale by one. Both P5's and P6's version assertions accept any later
-   MINOR, so P7 edits neither.
-3. ⛔ **Reserved, and refused by P7's rebinding:** Escape (`back`, which pauses
-   in play), `p` (`pause`), gamepad button 9 (`C.GAMEPAD_PAUSE_BUTTON`), the
-   debug keys and the digits. `t` and `e` are bench keys; refuse them too.
-   The page going hidden is `autoPause` and has no key.
-4. ⚠ **`syncScreen()` writes three switches on every screen change.** It sets
-   `touchAutofire: C.TOUCH_AUTOFIRE` on entering play, and P7's TOUCH AUTO-FIRE
-   setting must be what it reads. It also sets `touchTapFire` and
-   `touchTopTarget`.
-5. ⚠ **The CONTROLS stub is `SCREENS.controls`** (`23-main.js`): the line NOT
-   BUILT YET and a BACK row to OPTIONS. P7 replaces it. OPTIONS' BACK returns
-   to `optionsFrom` (title or pause), and a page P7 adds under OPTIONS goes back
-   with `backToOptions`.
-6. ✅ **Paul's P6 calls:** the HUD draws over OPTIONS opened from pause
-   (`runOnScreen()`), and `p` and Start toggle on the pause screen only.
-   `resumeRun()` is the one resume.
-7. ⚠ **Nothing has been tuned against GDD §8.2's targets**, and P8 writes K2's
-   levels-1–4 ask.
-8. ⚠ **P7 must confirm the sensitivity slider range with Paul.**
+1. ⛔ **A baseline move in P8 is a defect.** The hash is 1229033515 and
+   `GOLDEN_LANES` has its P1 +2 appended entries. P7 moved neither.
+2. ⛔ **P8's sixth soak must stop pressing at the game-over stop** (Known issues,
+   P5) and **will hit the fire-holder's no-death wall** (Known issues, P1b).
+3. ⚠ **Nothing has been tuned against GDD §8.2's targets**, and P8 writes K2's
+   levels-1–4 ask to `PLAYTEST.md`. The Controls page wants a hardware pass as
+   well: the slider range on a real mouse and phone, and rebinding on a real pad.
+4. ⚠ **The close reviews `log/CS008.md` as a whole** and resets this file.

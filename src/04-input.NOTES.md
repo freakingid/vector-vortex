@@ -2,7 +2,7 @@
 
 **Module:** `src/04-input.js`
 **Vendored from:** *originated here (Vector Vortex), destined for coinless-kit as `kit-input`*
-**Current version:** `0.5.0`
+**Current version:** `0.6.0`
 **Depends on:** nothing
 
 ---
@@ -44,7 +44,7 @@ read it as "one unit of its discrete axis".
 | `gamepadSens` | yes | Lane units/sec at full stick deflection past the deadzone. |
 | `inputMirror` | yes (boolean) | Moves the Purge/Jump touch buttons to the left edge, for left-handed play. |
 | `worldW` / `worldH` | yes | World-space size the touch buttons and rotation zone live in — the same fixed space every entity uses, not the window's pixel size. |
-| `gamepadButtons` | no | `{ fire: [idx,...], jump: [idx,...], purge: [idx,...] }` override, wholesale, same pattern as `keys`. Default: `fire:[0]` (A), `jump:[4,6]` (LB/LT), `purge:[5,7]` (RB/RT). |
+| `gamepadButtons` | no | `{ fire, jump, purge, left, right: [idx,...] }` override, wholesale, same pattern as `keys`. Default: `fire:[0]` (A), `jump:[4,6]` (LB/LT), `purge:[5,7]` (RB/RT), `left:[14]` / `right:[15]` (the D-pad). A map that omits `left`/`right` keeps 14/15. |
 | `touchTapFire` | no (default `false`) | A touch that lands outside the rotation zone and both buttons holds `fire` while it is down. Off, such a touch does nothing (0.3.0's behaviour). |
 | `gamepadActions` | no | `{ actionName: [idx,...] }` — a named action queued on the **press edge** of any listed button, dispatched like an `actionKeys` press. A held button queues once. |
 | `touchTopAction` | no | Action name. A touch that starts within `touchButtonR` of `(worldW / 2, 1.5 × touchButtonR)` — the corner buttons' geometry, centred on the top edge, unmoved by `inputMirror` — queues it once and holds nothing. Live while the `touchTopTarget` switch is on (default). |
@@ -71,6 +71,12 @@ input.attach({ window, document, element: canvas });  // DOM adapter, optional
 input.sample(dt, hostStruct);   // writes {rotate,fire,purge,jump}, allocates nothing
 input.reset();                  // clears every held key and pending delta
 input.configure({ touchAutofire: false, touchTapFire: true, touchTopTarget: false });  // switches, at runtime
+input.configure({ mouseSens: 0.03, touchSens: 0.04, inputMirror: true });              // settings (0.6.0)
+input.setting("mouseSens");                     // the live value of any configure() key
+input.setBindings({ left: ["a"], right: ["d"], fire: ["q"], purge: ["x"], jump: ["c"] });
+input.setGamepadButtons({ fire: [0], jump: [4], purge: [5], left: [14], right: [15] });
+input.getBindings(); input.getGamepadButtons(); // copies, in the setters' shape
+input.captureNext(r => { /* r is { key } or { button } */ });  // captureNext(null) disarms
 input.detach();
 ```
 
@@ -257,5 +263,45 @@ whatever names the host gives, from a button index, a place on its own
 world-space screen, and the page's visibility. Nothing references a config
 object, game object or game function, and the host's suite still scans this
 module's slice for both.
+
+**Backport status.** `not yet`.
+
+### 2026-09-13 — runtime settings, rebinding and capture (`VERSION` 0.5.0 → 0.6.0)
+
+**What changed.** All additive; a host that calls none of it gets 0.5.0.
+- `configure()` also takes `mouseSens` and `touchSens` (finite numbers) and
+  `inputMirror` (boolean). Validation still runs before any write. The unlisted
+  and non-boolean messages are unchanged; a bad number throws
+  `configure: <key> must be a finite number`. ⛔ A sensitivity is still one
+  multiply in `sample()` — `configure()` swaps the factor and adds no curve.
+- `setting(name)` returns the live value of any `configure()` key. It allocates
+  nothing, so a host can read the mirror flag every frame.
+- `setBindings(keys)` and `setGamepadButtons(map)` replace a map wholesale.
+  Both validate first and throw on a non-array list, a bad entry, a duplicate,
+  and ⛔ **a key in `actionKeys` or a button in `gamepadActions`** (a key doing
+  two jobs). `setGamepadButtons` knows `fire`, `jump`, `purge`, `left` and
+  `right`. A direction held when its key is rebound away lets go without a tap
+  nudge. `getBindings()` / `getGamepadButtons()` return copies.
+- The gamepad map gained `left` and `right`, the D-pad's buttons, defaulting to
+  14 and 15. They still feed the keyboard's tap/hold model through the two
+  synthetic keys.
+- `captureNext(cb)` arms one capture. The next key press, or the next gamepad
+  button press edge, reaches `cb` during `sample()` as `{ key }` or
+  `{ button }`. ⛔ It never reaches the struct or a named action. The key or
+  button is swallowed until released, so its auto-repeat and its held level do
+  nothing either. Something already held when the capture arms is not a press.
+  `captureNext(null)` disarms. An armed capture survives `reset()`, which clears
+  only the swallowed sets.
+
+**Why.** Vector Vortex CS008 P7, the Controls page (Paul's U7, U8): two
+sensitivity sliders, left-handed touch, touch auto-fire, and keyboard and
+gamepad rebinding. §1.11 of that plan measured that 0.3.0 fixed all of these at
+creation.
+
+**Game-agnostic?** Yes. The module does not know what a settings page, a swap
+or a reserved key is. It refuses only its own double-binding, and it hands a
+captured key or button to whatever `cb` the host gives. Swapping, the reserved
+list and the "an action keeps one binding" rule live in the host. Nothing
+references a config object, game object or game function.
 
 **Backport status.** `not yet`.
