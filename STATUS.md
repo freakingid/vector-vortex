@@ -185,8 +185,8 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   also bans the text `ctx.fill` anywhere in `14-render-entities.js`.
 - ⚠ **CS008 P4 — the HUD's mirror side reads `C.INPUT_MIRROR`**, via
   `_hudView.mirror` in `Game.draw()`. P7 changes that one line to read the input
-  module. ⚠ `drawHud` is not screen-aware: P5 decides whether the title and
-  menus draw it.
+  module. ✅ H4 (Paul): P5 draws the HUD in play, pause, the dive and game
+  over, not on title, mode or Start Depth.
 - ⚠ **CS008 P4 — a dead craft is not drawn once the freeze is spent.** After the
   last life the game-over board has no craft on it. That is the fragmentation
   finishing, not a missing draw.

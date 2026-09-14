@@ -552,3 +552,20 @@ gamble, against GDD §4.6's "trade safety for score legibly". No code change;
 
 **What would change it.** A playtest finding that deep starts are farmed by
 dying freely in the starting well.
+
+
+---
+
+## 2026-09-13 — CS008 H4: the HUD shows during a run, not before one
+
+**The question.** P4 shipped `drawHud()` into `Game.draw()` unconditionally.
+Plan §6 does not say whether it draws behind P5's screens.
+
+**The call — Paul, on Claude's recommendation.** Draw it in play, pause, the
+dive and game over, where the game-over screen needs the final score and
+level. Don't draw it on title, mode or Start Depth: no run exists there, and the
+HUD would show the last run's stale numbers. Written into plan §0 as H4 and
+into P5's prompt.
+
+**What would change it.** An attract mode (GDD §12) that plays a demo run
+behind the title.

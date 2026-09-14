@@ -58,6 +58,7 @@ re-open them.
 | H1 | HUD lives | **Reserve craft icons** (`lives − 1`) |
 | H2 | HUD band | **"LEVEL n" in the band's colour**, no band name |
 | H3 | HUD on touch | **Inset beside the touch buttons** on whichever side they are |
+| H4 | HUD behind the screens (asked after P4, 2026-09-13) | **Shown in play, pause, the dive and game over; not on title, mode or Start Depth** — no run exists there, so the HUD would show a stale score |
 
 ### ⚠ Readings this plan takes and flags, and none is a call Paul left open
 

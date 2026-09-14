@@ -475,7 +475,8 @@ causes are measured.
 >
 > ⛔ **Answered: Rotate / Fire / Purge navigate (Esc also backs out), OVERDRIVE
 > is shown locked, and game over offers RESTART (same mode and depth, new
-> seed) and QUIT TO TITLE.**
+> seed) and QUIT TO TITLE.** ⛔ **And H4 (plan §0): `drawHud()` draws in play,
+> pause, the dive and game over, and NOT on title, mode or Start Depth.**
 >
 > **0. ⛔ MEASURE TOUCH FIRST** (plan §6, risk 2). Before writing the menu, drive
 > `touchStart`/`touchEnd` in the upper and lower screen and record whether a
@@ -493,6 +494,7 @@ causes are measured.
 > - Title, mode, Start Depth (P3's list, bonus per row, ⛔ no countdown), play,
 >   and game over over the frozen board.
 > - `quitToTitle()` with the CS011 ordering note and no submit.
+> - The HUD per H4; assert it in your test on every screen.
 > - Delete the `restart` action and its `r` binding.
 >
 > **2. ⛔ Closed file, IN PLACE: `test-cs003-p4.js:443–468`.** It asserts `r`
