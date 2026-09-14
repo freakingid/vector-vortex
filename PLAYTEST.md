@@ -56,9 +56,10 @@ on every one of them.
 
 ## The ⛔ asks — readability rules the suite cannot check
 
-Eight asks whose failure mode is *a death, or a wrong move, the player cannot
-account for*. Everything else in this file is tuning; these seven are
-correctness. One per phase that shipped something judgeable.
+Seven asks whose failure mode is *a death, or a wrong move, the player cannot
+account for* — those seven are correctness — then, after the rule, two about
+whether the run's pressure lands. Everything else in this file is tuning. One ⛔
+per phase that shipped something judgeable.
 
 **⛔ Are the two Drifter states separable at a GLANCE, on a busy well?** Press
 `5` a few times and watch one climb, then `0` for the full row. The read is
@@ -188,7 +189,14 @@ changeset owns yet.
 ---
 
 **⛔ CAN YOU NAME WHAT CHANGED AT LEVEL 5, AT 9, AT 13 — OR DOES IT JUST FEEL
-BUSIER?** CS007's whole reason to exist is GDD §1.1 pillar P3: *"Difficulty rises
+BUSIER?** ✅ **UNBLOCKED BY CS008 P1.** Until the rim fix, a Vaulter parked at the
+rim could be hit on one tick in four, so a player died in the Vaulter band and
+never met level 5. P1 made every arrival killable, and P1b made crossing a rim
+enemy with fire held kill it; a run from level 1 now gets there by playing. To
+start later instead, use START DEPTH (5 and 9 are on a fresh session's list;
+13 needs `levelRecord().noteCleared(13)` first, per the note at the top).
+
+CS007's whole reason to exist is GDD §1.1 pillar P3: *"Difficulty rises
 continuously from one clock, but every new **kind** of threat arrives at a
 specific, learnable level."* Play a run from level 1 without cycling wells, and
 at each death say out loud what is new. The suite can prove the schedule fired —
@@ -216,6 +224,26 @@ rows themselves. ⚠ **Moving a schedule row is the LAST resort**, not the first
 GDD §8.1's levels are compressed against a tuned ceiling of ~35–40 already, and
 `DIFFICULTY-NOTES.md` carries the curve, the clamps and the concurrency ladder's
 step levels so a change can be reasoned about before it is made.
+
+**⛔ DO LEVELS 1–4 STILL FEEL TENSE, NOW THAT HOLDING FIRE CANNOT DIE THERE?**
+CS008 P1b's rim sweep (Paul's K1 and K2, 2026-09-13): a Skimmer holding fire
+kills any rim enemy a shot could kill, on contact. Levels 1–4 release only
+Vaulters and Vaulter Carriers, so a player who holds fire there has no death
+path at all. MEASURED: **0 deaths in 20 runs × 60 s** from level 1 with fire
+held, against 15 on the build before the sweep (`PLANNED-FEATURES-CS008.md`
+§1.16, now in `archive/`). ⛔ **The rule is settled and this ask does not
+re-open it**: the sweep exists because losing to a crossing you could not
+control is not fun. The question is whether the first four wells are still
+worth playing. Is there any pressure, or are they a formality until the Weaver
+at 5? Play a run from level 1 holding fire the whole time, and a second one
+firing only when you mean to.
+
+⚠ The answer feeds GDD §8.2's tuning target (a first-time player reaches level
+4–6), not the sweep. Knobs, in order: `C.SPAWN_INTERVAL` and `C.ENEMY_CONCURRENT`
+(the level-1 pressure), then `C.HEAT_KNEE` (how early the ramp arrives), then
+`C.SPAWN_SCHEDULE`'s Weaver row at 5. ⛔ Moving the Weaver row earlier is a schedule
+change with its own consequences in `DIFFICULTY-NOTES.md`, and it is the last
+resort here as well. Press `t` at the start and `e` at the end.
 
 ## The Drifter — key `5`
 
@@ -293,13 +321,24 @@ step levels so a change can be reasoned about before it is made.
   `VAULTER_SIZE` 0.70 enough silhouette to see it coming?
 - Is `HIT_DEPTH_TOL` 0.05 generous enough that a shot fired at a climbing
   Vaulter connects when it looks like it should?
+- ⚠ **Does a parked enemy read as AT THE RIM?** Since CS008 P1 the Vaulter,
+  Carrier, Drifter and Surger stop climbing at `1 - C.RIM_CONTACT_DEPTH` (0.95),
+  not at 1. On screen that puts them 2–9 px inside the rim, depending on the
+  well and the lane. Press `1` and let one park, then try it on a small well and
+  a large one. If a parked enemy reads as "still coming" rather than "here", no
+  knob fixes it: the fix is to draw at 1 and collide at 0.95, and that is its own
+  call (`DECISIONS.md`, 2026-09-13).
 
 ## Death, respawn and pressure
 
-- Does the death sequence read? 1.2 s of hit-stop with no fragmentation and no
-  sound is a long time to look at a frozen board. CS008 adds the fragmentation
-  and CS009 the sound, but the freeze LENGTH is settled now and worth judging
-  bare.
+- **Does the fragmentation read as YOUR craft breaking?** Since CS008 P4, a death
+  breaks the Skimmer into its own outline segments. They drift outward, spin
+  slightly and fade over the 1.2 s freeze (Paul's U9). There is still no sound
+  (CS009). Two things to watch: whether the pieces read as the craft rather than
+  as an explosion that could be an enemy's, and whether 1.2 s is still a long
+  time to look at a frozen board now that something moves. Knobs: `C.FRAG_DRIFT`
+  (48 px), `C.FRAG_SPIN` (1.2 rad), then `C.HIT_STOP_DEATH` (1.2 s). All are
+  ⚠ provisional.
 - Is `RESPAWN_PUSH_DEPTH` 0.55 far enough? The clamp plus `RESPAWN_INVULN` 1.5 s
   is meant to guarantee a Vaulter cannot climb back into contact before the
   blink stops. Provable at `VAULT_CLIMB` 0.18; it stops being provable the
@@ -325,6 +364,7 @@ for the **global** glow constants (`GLOW_WIDE_W`, `GLOW_WIDE_ALPHA`,
 If answering the palette asks above turns into retuning those rather than the
 per-entity multipliers, that is the signal the lab has become load-bearing and
 the art pass needs a changeset.
+
 ## The screens — boot to game over and back (CS008 P5)
 
 ⚠ **The menu palette is provisional** (`C.MENU_COLOR`, `MENU_IDLE_COLOR`,
@@ -341,3 +381,31 @@ the art pass needs a changeset.
 - Game over appears when the death freeze ends and ignores anything pressed
   during it. Does a player mashing Fire through the death read that as the menu
   being unresponsive?
+- **The whole flow, once on each device** (the suite drives all four headless,
+  and `test-cs008-p8.js` plays twenty sessions on the keyboard; nobody has held
+  a real device). Go title → PLAY → CLASSIC → LEVEL 5 → play → die → RESTART →
+  die → QUIT TO TITLE, then pause and OPTIONS → CREDITS → back, on a mouse, a
+  keyboard, a gamepad and a phone. On each one, is there a step where you did
+  not know which input moves the cursor, confirms, or backs out? The pause
+  sources are Escape, `p`, gamepad Start, a tap at top centre in play, and
+  switching tabs.
+- **The Controls page (CS008 P7), on hardware.** Is ×0.5–×2.0 in ×0.1 steps the
+  right range for mouse and touch sensitivity? Try it on a real mouse and a
+  real phone (Paul's call, `C.SENS_MIN_MULT`, `C.SENS_MAX_MULT`, `C.SENS_STEP`).
+  Does rebinding a real pad's buttons work, and does a refused swap explain
+  itself? ⚠ Settings and bindings are session-only until CS011, so a reload
+  resets them. That is expected, not a bug.
+
+## The HUD (CS008 P4)
+
+⚠ Every HUD size is provisional: `C.HUD_MARGIN` 24 px, `C.HUD_TEXT_SIZE` 28,
+`C.HUD_ICON_SIZE` 30, `C.HUD_PURGE_SIZE` 30.
+
+- **On a phone:** the HUD insets beside the Purge and Jump buttons, on whichever
+  side they are, including with LEFT-HANDED TOUCH on (Paul's H3). Is anything
+  under a thumb? Does the score stay readable at arm's length? Knob:
+  `C.HUD_TOUCH_INSET_R` (2.5 button radii).
+- Do the reserve craft (`lives − 1`) read as lives, and does the dim Purge glyph
+  read as "one weak use left"? Knob: `C.HUD_PURGE_DIM_ALPHA` 0.35.
+- Does "LEVEL n" in the band's colour stay readable against every band,
+  including the dim band at 65?

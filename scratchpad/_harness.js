@@ -187,10 +187,15 @@ function buildGame(opts = {}) {
   // `opts.spy` wraps named top-level functions AFTER evaluation so every
   // internal caller reaches the wrapper, which counts calls in `.calls` and
   // otherwise passes through (test-cs008-p5.js: which screens draw the HUD).
+  // A test may set `.before` / `.after` on the wrapper: each is called with the
+  // same arguments around the real call (test-cs008-p8.js: the board as the
+  // shot pass sees it, and as it leaves it). Both default to null.
   const spies = (opts.spy || []).map(n =>
     `\n;if (typeof ${n} !== "function") throw new Error("spy: no function ${n}");` +
-    `\n${n} = (function (f) { const w = function () { w.calls++; return f.apply(this, arguments); };` +
-    ` w.calls = 0; return w; })(${n});`).join("");
+    `\n${n} = (function (f) { const w = function () { w.calls++;` +
+    ` if (w.before) w.before.apply(this, arguments); const r = f.apply(this, arguments);` +
+    ` if (w.after) w.after.apply(this, arguments); return r; };` +
+    ` w.calls = 0; w.before = null; w.after = null; return w; })(${n});`).join("");
   const tail = stubs + spies + "\n;return {" +
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +
     "};";

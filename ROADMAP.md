@@ -20,7 +20,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS005** | The Drifter and the Surger: the boundary lattice and `laneHop`'s fold-bound parameter, the discharge telegraph, the remaining two cargo rows | §6.1–6.3, §3.5, §6.5 |
 | **CS006** | The well ends: the Dive, well progression and the colour-band roll, `laneState` and the dim band, `throatOffset` and the two degenerate wells, GDD §4.5 item 5 | §3.3, §3.6–3.7, §5, §4.5 |
 | **CS007** | The run escalates: the heat clock and every value derived from it, GDD §8.1's introduction schedule, the spawner-stall call, telemetry as the tuning instrument | §8, §8.1, §15.6 |
-| **CS008** | The rim hit-window fix (P1), then front of house: scoring and extra lives, Start Depth and the mode, the HUD and death fragmentation, title → mode → Start Depth → play → game over → restart, pause, Options with a Controls page and rebinding. ⚠ Eight phases — Paul's scope call, 2026-09-13 | §4.2, §4.4, §4.6, §6.1, §7, §9, §10.4–10.5, §13 |
+| **CS008** | ✅ **Shipped 2026-09-13.** The rim fix (P1: every arrival killable) and the rim sweep (P1b: a fire-holding crossing kills), then front of house: scoring and extra lives, mode and Start Depth, one text path, the HUD and death fragmentation, title → mode → Start Depth → play → game over → restart, pause from five sources, Options, Credits, a Controls page with rebinding, and the sixth soak through the front door. ⚠ Nine phases — Paul's scope call, 2026-09-13, plus P1b | §4.2, §4.4, §4.6, §6.1, §7, §9, §10.4–10.5, §13, §17 items 8, 13, 14 |
 | **CS009** | Audio engine: `AudioSys` + `MusicSys`, per-frame lookahead scheduler, voices, `tools/music-lab.html` with the per-layer solo button, Classic SFX | §11.1–11.3, §11.7–11.8 |
 | **CS010** | The intensity director: live-danger signal, filter sweep, two or three earned layers, the solo audition | §11.4–11.6 |
 | **CS011** | Meta: kit profiles, local top-10 per mode, leaderboard wiring, achievements | §15.1–15.5 |
@@ -47,7 +47,7 @@ closed session believed, and correcting it is falsifying it. If you find another
 live pointer, it means the same thing both times: read it, decide what it
 *meant*, and correct it.
 
-**CS001 through CS007 are closed.** Their narratives are in `log/CS00#.md`;
+**CS001 through CS008 are closed.** Their narratives are in `log/CS00#.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -130,6 +130,38 @@ player's lane** (GDD §12's four-second promise is onboarding and is CS015's), a
 `C.TELEMETRY_PLACEHOLDER` shrinks rather than staying**: CS008 deletes two keys,
 Start Depth a third and the combo the fourth, and a key left there after its
 column has a real source is a column silently reporting zero.
+
+**CS008 held as ONE changeset and shipped its row in full, in nine phases, not
+the eight planned.** Paul played P1 and found that crossing a rim enemy with fire
+held still killed him. That re-opened R4, and P1b — the rim sweep — was planned
+and built between P1 and P2 with no renumber. Four more commits carried calls
+Paul made after a phase (P2, P3, P6, and H4 after P4). ⚠ **The planned P5/P6
+split was never needed.**
+
+**What CS008 shipped against the row.** ⛔ **The rim is fair**: an enemy arriving
+at the rim in a firing lane dies on every cooldown phase, which needed a float
+tolerance (`C.HIT_DEPTH_EPS`) nobody had predicted, and a fire-holding Skimmer
+kills any rim enemy a shot could kill on contact. ⛔ **Scoring has one writer**,
+`addScore()`, which also owns extra lives (20k, then every 40k, capped at 6). A
+stopped run scores but gains no life. **Start Depth** pays its bonus on clearing
+the starting well, from a session record. **One text path** (`drawText()`), a HUD
+that insets beside the touch buttons, and a fragmentation driven by the freeze
+itself. **The front door**: title, mode (OVERDRIVE shown, locked), START DEPTH,
+game over with RESTART, and pause from Escape, `p`, gamepad Start, a touch target
+and a hidden tab. OPTIONS, CREDITS, and a Controls page with two sensitivities,
+left-handed touch, auto-fire and keyboard and gamepad rebinding. Three kit
+modules moved: kit-input to 0.6.0, and first drafts of kit-menu and kit-fx.
+⛔ One baseline moved twice (P1, P1b) and `GOLDEN_LANES` gained two appended
+entries, each with one cause. Nothing else moved in P2–P8.
+
+⚠ **What CS008 deliberately left.** **No sound**: the over-cap life sound and
+OPTIONS' Sound/Music row are CS009's. **No persistence**: the Start Depth
+record, the settings and the bindings are session-only, and the `'quit'` and
+`'died'` submits have a seat in `quitToTitle()` but no call. All of that is
+CS011's. **No tuning**: a fire-holder has no death path on levels 1–4, and
+whether those wells still feel tense is a `PLAYTEST.md` ask that feeds GDD §8.2.
+The touch buttons are live but undrawn, and the Dive still has no visual.
+Neither has an owner.
 
 ---
 
@@ -245,11 +277,12 @@ question that only becomes reachable when the introduction schedule lands, which
 is why it is named against CS007 rather than left unowned. The last is the
 module seam, named against CS012 for the same reason.
 
-- ✅ **SCHEDULED — the rim hit-window defect is CS008 P1** (Paul, 2026-09-13; no
-  renumber). An enemy parked at depth 1.000 was hittable on 1 tick in 4. ⚠
-  CS008's planning re-measured the handover and corrected it: (A)+(B) is 75 %,
-  not 100 %, until a float tolerance is added, and the "62 % of deaths" figure
-  depends on the driver. `PLANNED-FEATURES-CS008.md` §1–§2.
+- ✅ **CLOSED by CS008 P1 and P1b — the rim hit-window defect.** An enemy parked
+  at depth 1.000 was hittable on 1 tick in 4. P1 made every arrival killable
+  ((A) + (B) + a float tolerance the handover had not predicted). P1b's rim sweep
+  made a fire-holding crossing kill, after Paul played P1 (`DECISIONS.md`,
+  2026-09-13). `test-cs008-p8.js` asserts the arrival property on played boards.
+  `log/CS008.md`; the spent plan is in `archive/`.
 
 - ✅ **CLOSED by CS006 P2 — GDD §3.3's `throatOffset` is defined.** It is a
   translation of the throat polygon in normalized rim space, applied **after**
@@ -297,7 +330,7 @@ module seam, named against CS012 for the same reason.
 
 | # | Decision | What would change it |
 |---|---|---|
-| 1 | Sixteen changesets, sized so each holds 3–5 phases of one session each | A phase that repeatedly overruns a session means the changeset was too coarse; split it rather than letting phases sprawl |
+| 1 | Sixteen changesets, sized so each holds 3–5 phases of one session each. ⚠ **CS008 held nine** (eight by Paul's U3 scope call, plus P1b) and four follow-up commits. Every phase landed in its own commit, and the planned P5/P6 split was never used. The guideline bent for a deliberate scope call and did not break | A phase that repeatedly overruns a session means the changeset was too coarse; split it rather than letting phases sprawl |
 | 2 | ✅ **Settled — enemies split across three changesets**, and the split was right. Spine plus one enemy (CS003), the three that fit the contract (CS004), the two that needed new machinery (CS005) | Originally two. CS004's scope check found a contract field missing, a `laneHop` degeneracy the Drifter is the first entity to reach, and two cargo rows that cannot be built before their cargo. The open question left here was whether CS005 was really two sessions; it was **five phases in one changeset and wanted no seam**, because P1 shipped geometry and no entity, which is what kept P2 and P3 to one entity each. ⛔ Nothing further changes this — the Classic roster is complete. The three Overdrive enemies are CS012 and CS013 and are scoped there |
 | 3 | Telemetry ships with the heat clock, not with the other meta systems. ⚠ Since CS006's split that is the **new CS007**, not CS006 — the same pairing it always had, one row further down | It is a tuning instrument, and the tuning it serves is difficulty. An instrument built one changeset *before* the thing it measures ships with a column list that has to be edited the moment heat lands, and `TELEMETRY_FIELDS` and `push()` must be edited together (GDD §15.6). If difficulty tuning turns out to need nothing beyond `feel-lab`, move it back to CS011 with the other meta systems |
 | 4 | Meta (CS011) sits after audio, not before | Meta's only external dependency is the Worker registry entry, which Paul can make in parallel today. If that registration proves slow, move CS011 earlier |
