@@ -27,7 +27,7 @@ Modelled on Orbital Overhaul's §0 read contract. A future session reads §0 + �
 | 8 | Difficulty | The heat clock, introduction schedule |
 | 9 | Controls | Any input path |
 | 10 | Visual design | Rendering, glow, HUD, readability |
-| 10.5 | Screens and menus | Title, mode, Start Depth, options, game over, pause; the screen state machine; the menu model; menu input on any device |
+| 10.5 | Screens and menus | Title, mode, Start Depth, options, credits, controls, game over, pause and its five sources; the screen state machine; the menu model; menu input on any device |
 | 11 | **Audio** | Music, SFX, the intensity director |
 | 12 | Onboarding | Prompts, attract mode, first-run |
 | 13 | Modes | Classic vs Overdrive gating |
@@ -854,17 +854,23 @@ Score top-left, lives bottom-left, level and band top-right, Purge charge bottom
 
 ⛔ **The touch-button side insets** by `TOUCH_BUTTON_R × HUD_TOUCH_INSET_R` (2.5) at all times, not only on detected touch (H3) — the buttons sit on exactly the right-hand corners (`C.INPUT_MIRROR` moves them left). The side comes from `view.mirror`; CS008 P7 sources it from the input module. A text rectangle is sized by `TEXT_CHAR_W`, not `measureText()`, so `test-cs008-p4.js` asserts arithmetically that every rectangle clears the throat zone (§10.3) on all sixteen wells and every touch-button point, mirrored and not. Combo is Overdrive's and not built.
 
-⛔ **H4 (Paul, 2026-09-13; shipped CS008 P5): the HUD draws in play (the Dive included) and over game over, and not on title, mode, Start Depth or options** — no run exists there, so it would show a stale or default score. P6's pause joins the first list.
+⛔ **H4 (Paul, 2026-09-13; shipped CS008 P5, extended P6): the HUD draws wherever a run is on screen — play (the Dive included), pause, game over, and Options (with its sub-pages) opened from pause — and not on title, mode, Start Depth or the title's Options**, where no run exists, so it would show a stale or default score. `runOnScreen()` in `23-main.js` is the one predicate. ⚠ Options-from-pause is P6's reading of H4's reason, not a listed case.
 
 ### 10.5 Screens and menus
 
-**Shipped, CS008 P5.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"options"`, `"play"`, `"gameover"`. P6 adds pause and fills in options.
+**Shipped, CS008 P5 and P6.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"play"`, `"pause"`, `"gameover"`, `"options"`, `"controls"`, `"credits"`.
 
 ```
 boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH ──row──► PLAY ──last life──► GAME OVER
           │  ◄──back───  │  ◄────back────     │                  ▲                  │  │
           └──OPTIONS──► OPTIONS                                  └────RESTART───────┘  │
                           │ ◄─back                    TITLE ◄──QUIT TO TITLE / back────┘
+
+PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
+                         ├──QUIT TO TITLE──► TITLE
+                         └──OPTIONS──► OPTIONS ──back──► wherever it was opened from (TITLE or PAUSE)
+                                         ├──CONTROLS──► CONTROLS (P7 stub) ──back──► OPTIONS
+                                         └──CREDITS───► CREDITS ─────────────back──► OPTIONS
 ```
 
 | Screen | Rows | Back |
@@ -872,13 +878,30 @@ boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH �
 | Title | PLAY, OPTIONS | — |
 | Mode | CLASSIC; OVERDRIVE shown locked (M1) | Title |
 | Start Depth | `startDepthOptions()` (§4.6), each row with its `startBonus()`. ⛔ No countdown | Mode |
-| Options | BACK (P6 fills it) | Title |
+| Pause | RESUME, OPTIONS, QUIT TO TITLE (U4), over the frozen board | RESUME |
+| Options | TELEMETRY (ON/OFF), EXPORT (TO CONSOLE), CONTROLS ›, CREDITS ›, BACK (U5). Sound and music are CS009's rows | Title or pause — wherever it was opened from |
+| Controls | The line NOT BUILT YET and BACK. ⛔ A stub says so on screen; CS008 P7 fills it | Options |
+| Credits | `C.CREDITS_LINES`, then `VERSION` + `C.GAME_VERSION` (U6). ⚠ Placeholder copy; Paul replaces it before ship. ⛔ §18: no mention of the original game or its publisher | Options |
 | Game over | SCORE and LEVEL lines, then RESTART and QUIT TO TITLE (U2) | Title, via `quitToTitle()` |
 
 - ⛔ **Every screen but play is a simulation stop** (§4.4). `Game.update()` samples input, runs the menu step and returns: no clock, no spawner, no entity pass.
 - ⛔ **Boot is the title, and no run exists until a Start Depth row calls `startGame(time seed, { mode, startDepth })`.** `newState().screen` stays `"play"`, because every closed test starts a run through `reset()` and `startGame()`.
 - **RESTART** is `startGame(time seed, { mode, startDepth })` with the run's own two parameters: same mode, same Start Depth, new seed (U2).
 - ⛔ **`quitToTitle()` overwrites the run with `newState()`**, so the title shows no stale board. CS011 adds the `'quit'` submit at its top, and §15.4's ordering is written at the function: whether the run was *playing* is read before the overwrite. Game over's QUIT row goes through it too, and must never submit `'quit'` for a run that already died.
+
+**Pause (Paul, U4; shipped CS008 P6).** Five sources, all live in play only (the Dive and a death freeze are play):
+- **Escape.** It stays the named action `back`, and `back` in play pauses. A key maps to one action, and Escape has to mean pause in play and back on a menu.
+- **`p`, gamepad Start (`C.GAMEPAD_PAUSE_BUTTON`, standard index 9), a touch target centred on the top edge, and the page going hidden.** These are the named action `pause`, which does nothing off play. ⛔ That is why the page going hidden is not `back`: a hidden tab must never back a player out of Start Depth.
+- The sources are kit-input **0.5.0**: `gamepadActions` (a press edge), `touchTopAction` (the corner buttons' radius and margin, centred) and `hiddenAction` (`visibilitychange` inside `attach()`). See `src/04-input.NOTES.md`. The touch target is switched off on every menu, where the upper screen is all confirm taps. ⚠ Like the corner buttons, it is not drawn.
+- ⛔ **`p`, Start and the touch target do not resume.** Plan §7 applies `pause` on play only. RESUME, Purge and Escape resume.
+
+Pause rules:
+- ⛔ **A pause freezes the hit-stop drain.** `Game.frame()` drains `hitStopLeft` only while the screen is `"play"` or `"gameover"`, the two screens a freeze belongs to. A pause taken inside a death freeze, or Options opened from that pause, holds the freeze and the fragmentation (§4.4). The menu's own steps still run.
+- ⛔ **The pausing step is the pause menu's entry step.** `update()` calls `syncScreen()` again after `input.sample()`, where a pause arrives. So a Fire held in play does not confirm RESUME.
+- ⛔ **Resume is instant** (§16.3: no countdown). The step after RESUME is a play step. ⛔ **Resume re-latches the Purge**, as `killSkimmer()` does across a freeze. Purge is how the pause menu backs out, and without the latch that press would spend the well's charge on the first play step.
+- **QUIT TO TITLE** goes through `quitToTitle()`. CS011's `'quit'` check reads `screen === "pause"` there, before the overwrite.
+
+**Options (Paul, U5; shipped CS008 P6).** TELEMETRY and EXPORT call the same two functions as the `t` and `e` bench keys (`toggleTelemetry()`, `exportTelemetry()` in `23-main.js`). The row's ON/OFF detail is written from the switch on every Options step, never in `draw()`. ⛔ Capture is still off at every launch and never persisted (§15.6). Options is reachable from the title and from pause, and its BACK returns there.
 
 **Navigation (Paul, U1).** Rotate moves the cursor, Fire confirms, Purge backs out, and Escape also backs out (a named action, `back`). The menu model is `createMenu()` in `15-render-hud.js`, kit-menu's draft (`src/15-render-hud.NOTES.md`). ⛔ It reads no game state: a screen is data (rows with a label, a detail, an enabled flag and an action name, plus a back action), a step takes the input struct and returns an action name, and `23-main.js` decides what each name does.
 - ⛔ **Fire and Purge are rising edges** against the previous step. The struct stays four levels (§9.5).
@@ -1220,7 +1243,7 @@ This is a tuning and debugging instrument. Because the simulation is determinist
 
 ⚠ The column names map one-to-one onto the seven `statsFields` the Worker registers for `vector-vortex` (§15.4), snake_case to camelCase, and the mapping is total.
 
-**The ring and the surface.** `C.TELEMETRY_CAP` rows, sampled every `C.TELEMETRY_INTERVAL` seconds of **simulation** time from `update()` — never from `draw()`, which runs on a frame clock. ⛔ **The ring latches `wrapped` on the first row it drops and the export reports it in the header block**; a total read off a silently wrapped buffer is wrong and nothing else would say so. The surface until CS008's Options screen is the debug bench: `t` toggles capture, `e` exports. ⛔ **Export writes the CSV to `console.log`** — the only path that works on `file://` — with a `navigator.clipboard` attempt beside it inside a try/catch. Never an `<a download>`, never a `fetch`.
+**The ring and the surface.** `C.TELEMETRY_CAP` rows, sampled every `C.TELEMETRY_INTERVAL` seconds of **simulation** time from `update()` — never from `draw()`, which runs on a frame clock. ⛔ **The ring latches `wrapped` on the first row it drops and the export reports it in the header block**; a total read off a silently wrapped buffer is wrong and nothing else would say so. **The surface is the Options screen's TELEMETRY and EXPORT rows plus the `t` / `e` bench keys** (CS008 P6, §10.5). Both call the same toggle and the same export. The bench keys stay until CS016's debug-key decision. ⛔ **Export writes the CSV to `console.log`** — the only path that works on `file://` — with a `navigator.clipboard` attempt beside it inside a try/catch. Never an `<a download>`, never a `fetch`.
 
 ⛔ **Nothing is persisted before CS011.** `kit-storage` owns the keyspace and `Profiles.keyFor(base)` is the one route to a key; `22-meta.js` has no keyspace and no `Profiles` yet (CS008 P3 put only the in-memory Start Depth record there), so writing rows today would mean the game choosing a raw `localStorage` key name. CS011 owns persistence, the profile scope and `read()`'s envelope-version rejection above.
 

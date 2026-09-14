@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.4 · Changeset: CS008 (P5 done — ⛔ P6, pause and Options, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.4 · Changeset: CS008 (P6 done — ⛔ P7, the Controls page, next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS008
 
@@ -46,11 +46,23 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   - **No baseline moved.** `test-cs003-p4.js` was rewritten in place; one new
     cause below. GDD §10.5 + its §0 row; the two parked asks un-parked.
 
+- **P6 (2026-09-13) — pause, Options, Credits.** A `"pause"` screen reached from
+  Escape (`back` in play), `p`, gamepad Start, a top-centre touch target, and
+  the page going hidden. Its rows are RESUME / OPTIONS / QUIT TO TITLE, and
+  resume is instant.
+  - ⛔ **`frame()` drains the freeze only on `play`/`gameover`.** OPTIONS
+    (TELEMETRY, EXPORT, CONTROLS stub, CREDITS) is reachable from the title
+    and from pause.
+  - kit-input **0.5.0**: `gamepadActions`, `touchTopAction`, `hiddenAction`,
+    `pageHidden()`, and `configure({ touchTopTarget })`.
+  - `test-cs008-p6.js`, 208 assertions. **16 of 16 mutations red.** No
+    baseline moved; `test-cs008-p5.js` has two claims rewritten in place.
+
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 384.9 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 395.1 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **40 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **41 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -149,6 +161,21 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `test-cs002-p3.js` also bans the text `ctx.fill` in `14-render-entities.js`.
   `test-cs002-p1.js` bans `e.key`, `.touches`, `getGamepads`, `clientX` and
   `addEventListener` outside `04-input.js`, and `C.`/`state.` inside it.
+- ⛔ **CS008 P6 — `Game.update()` calls `syncScreen()` TWICE: before and AFTER
+  `input.sample()`.** A named action that changes the screen inside `sample()`
+  (pause) makes that step the new screen's entry step. Remove the second call
+  and a Fire held in play confirms RESUME. P7's capture must respect it too.
+- ⛔ **CS008 P6 — `frame()` drains `hitStopLeft` only while the screen is
+  `"play"` or `"gameover"`.** Any other screen HOLDS a freeze, which is right
+  for pause and its pages. P7's CONTROLS page inherits it. A new screen that
+  should drain a freeze has to be added there by name.
+- ⛔ **CS008 P6 — `Game.draw()` must not name `Telemetry`** (`test-cs007-p4.js`).
+  The OPTIONS row's ON/OFF detail is written in `update()`'s menu stop instead.
+- ⚠ **CS008 P6 — the three "Atari" mentions in `14-render-entities.js`
+  comments.** GDD §18.1 says "no Atari marks anywhere — code, comments".
+  `CLAUDE.md`'s list does not name it, and P6 did not touch them. Paul's call.
+- ⚠ **The touch buttons, and P6's top-centre pause target, are not drawn.**
+  The target is live in play only.
 - ⚠ **CS008 P4 — the HUD's mirror side reads `C.INPUT_MIRROR`** (`_hudView.mirror`
   in `Game.draw()`). P7 re-points that one line at the input module.
 - ⚠ **CS008 P4 — a dead craft is not drawn once the freeze is spent**, so the
@@ -275,7 +302,9 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   system earns a rule in a 50 KB auto-loading file is Paul's call, not a build
   phase's. GDD §15.6 carries the shipped column table, the ring, the surface and
   the no-persistence rule; only the code-map line was updated.
-- Backport `kit-input` (`src/04-input.js`, **v0.4.0**) and, after P7, `kit-menu`
+- ⚠ **PAUL REPLACES THE CREDITS COPY BEFORE SHIP.** `C.CREDITS_LINES` is U6's
+  placeholder: "VECTOR VORTEX", "COINLESS GAMES", and a generated VERSION line.
+- Backport `kit-input` (`src/04-input.js`, **v0.5.0**) and, after P7, `kit-menu`
   (`src/15-render-hud.js`, v0.1.0) to coinless-kit. Each is a separate manual
   step, verified against that repo's own suite.
 - ⚠ **The leaderboard submission is CS011's** (`ROADMAP.md`). P5 built its seat:
@@ -290,35 +319,38 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `enemyKinds` is 9 (`ENEMY_KINDS` rows). ⛔ The next mover of either is an
   Overdrive enemy (GDD §6.4), not a cargo. **CS007 moved neither.**
 
-## Next up — ⛔ P6, PAUSE AND OPTIONS
+## Next up — ⛔ P7, THE CONTROLS PAGE
 
-⛔ **Paste P6's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
+⛔ **Paste P7's prompt from `IMPLEMENTATION-PHASES-CS008.md` into a fresh
 session.** A build phase reads the document, not the planning conversation
 (`CLAUDE.md` rule 3c).
 
-**The sequence:** P1 · P1b · P2 · P3 · P4 · P5 the screens · **P6 pause and
-Options** · P7 the Controls page · P8 the front-door soak and the close.
+**The sequence:** P1 · P1b · P2 · P3 · P4 · P5 · P6 pause and Options · **P7 the
+Controls page** · P8 the front-door soak and the close.
 
-⛔ **What P6–P8 must not lose:**
+⛔ **What P7–P8 must not lose:**
 
-1. ⛔ **A baseline move in P6–P8 is a defect.** The hash is 1229033515 and
-   `GOLDEN_LANES` has its P1 +2 appended entries.
-2. ⚠ **kit-input is already 0.4.0 (P5).** The plan's P6 0.4.0 and P7 0.5.0 are
-   now **0.5.0 and 0.6.0**. The criterion "bumped twice across P6 and P7" stands.
-3. ⚠ **Escape is bound to the named action `back`**, and a key maps to ONE named
-   action (`inputBuildBindings` is a `Map`). P6's `pause` on Escape cannot be a
-   second binding on the same key: one action has to mean pause in play and back
-   in a menu, or the plan's binding changes. `p` is free.
-4. ⚠ **`syncScreen()` (23-main.js) sets touch per screen on every change.** Pause
-   is "not play", so it gets the menu touch mode, the stop and a fresh entry step
-   for free. ⛔ **It writes `touchAutofire: C.TOUCH_AUTOFIRE` on entering play**:
-   P7's TOUCH AUTO-FIRE setting must be what it reads, or every screen change
-   resets the player's choice.
-5. ⚠ **The HUD predicate is `play || gameover`** in `Game.draw()`. P6 adds pause
-   (H4). **OPTIONS is a BACK-only stub whose back is the title**, and P6 must
-   return it to wherever it was opened from. `quitToTitle()` already clears
-   `hitStopLeft`, so a quit from a pause inside a freeze is safe. ⛔ The
-   hit-stop drain in `frame()` is still P6's (plan §7).
-6. ⚠ **Nothing has been tuned against GDD §8.2's targets**, and P8 writes K2's
+1. ⛔ **A baseline move in P7–P8 is a defect.** The hash is 1229033515 and
+   `GOLDEN_LANES` has its P1 +2 appended entries. P6 moved neither.
+2. ⚠ **kit-input is 0.5.0 (P6), so P7's bump is 0.6.0.** The plan's "0.5.0"
+   is stale by one. Both P5's and P6's version assertions accept any later
+   MINOR, so P7 edits neither.
+3. ⛔ **Reserved, and refused by P7's rebinding:** Escape (`back`, which pauses
+   in play), `p` (`pause`), gamepad button 9 (`C.GAMEPAD_PAUSE_BUTTON`), the
+   debug keys and the digits. `t` and `e` are bench keys; refuse them too.
+4. ⚠ **`syncScreen()` writes three switches on every screen change.** It sets
+   `touchAutofire: C.TOUCH_AUTOFIRE` on entering play, and P7's TOUCH AUTO-FIRE
+   setting must be what it reads. It also sets `touchTapFire` and
+   `touchTopTarget`.
+5. ⚠ **The CONTROLS stub is `SCREENS.controls`** (`23-main.js`): the line NOT
+   BUILT YET and a BACK row to OPTIONS. P7 replaces it. OPTIONS' BACK returns
+   to `optionsFrom` (title or pause), and a page P7 adds under OPTIONS goes back
+   with `backToOptions`.
+6. ⚠ **Two readings P6 took, flagged for Paul, and neither is built on:**
+   - the HUD draws over OPTIONS opened from pause (`runOnScreen()`), per H4's
+     reason: a run exists there;
+   - `p`, Start and the touch target pause but do not resume (plan §7:
+     `pause` applies on play only). RESUME, Purge and Escape resume.
+7. ⚠ **Nothing has been tuned against GDD §8.2's targets**, and P8 writes K2's
    levels-1–4 ask.
-7. ⚠ **P7 must confirm the sensitivity slider range with Paul.**
+8. ⚠ **P7 must confirm the sensitivity slider range with Paul.**

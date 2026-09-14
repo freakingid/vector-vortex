@@ -39,7 +39,7 @@
 // lets a headless test replay a recorded event list with no DOM at all, which
 // is what makes the determinism guarantee (GDD 17.1) testable.
 
-const INPUT_VERSION = "0.4.0";
+const INPUT_VERSION = "0.5.0";
 
 // Default bindings, matched case-insensitively. These are NOT tunables — a
 // keymap is this module's own default and a host replaces it wholesale through
@@ -119,6 +119,9 @@ function inputBuildBindings(src) {
 //     inputMirror,          // required — mirrors touch buttons for left-handed play
 //     pointerLockOffer,                                          // optional, default on
 //     touchTapFire,         // optional, default off — see touchStart (0.4.0)
+//     gamepadActions, // optional { actionName: [buttonIdx, ...] }, queued on a press edge (0.5.0)
+//     touchTopAction, // optional action name — a button centred on the top edge queues it (0.5.0)
+//     hiddenAction,   // optional action name — the page going hidden queues it (0.5.0)
 //     keys,        // optional binding override, shape of INPUT_KEYS_DEFAULT
 //     actionKeys,  // optional { actionName: ["key", ...] } for named actions
 //     onAction,    // optional (name) => void, called during sample()
@@ -149,6 +152,31 @@ function createInput(options) {
   const worldW = inputRequireNum(opts, "worldW");
   const worldH = inputRequireNum(opts, "worldH");
   const inputMirror = inputRequireBool(opts, "inputMirror");
+
+  // ---- three sources of a NAMED action (0.5.0) ------------------------------
+  // Each is optional, and a host that names none of them gets 0.4.0 exactly.
+  // All three only QUEUE the name; it is dispatched in sample(), in order, like
+  // an actionKeys press, so a replay and a freeze see them the same way.
+  const gamepadActions = opts.gamepadActions === undefined ? {} : opts.gamepadActions;
+  if (gamepadActions === null || typeof gamepadActions !== "object") {
+    throw new Error("createInput: options.gamepadActions must be an object");
+  }
+  const gamepadActionHeld = {};   // action name -> any of its buttons held at the last poll
+  function inputOptionalName(name) {
+    const v = opts[name];
+    if (v === undefined) return null;
+    if (typeof v !== "string" || v === "") throw new Error("createInput: options." + name + " must be an action name");
+    return v;
+  }
+  const touchTopAction = inputOptionalName("touchTopAction");
+  // ⛔ A SWITCH, like touchTapFire: a host whose screens want every upper touch
+  // to be a tap turns the target off there (configure below).
+  let touchTopTarget = true;
+  const hiddenAction = inputOptionalName("hiddenAction");
+  // ⛔ A FLAG, NOT A QUEUE ENTRY. However many hide events arrive, the host
+  // hears the name once; and the blur handler in attach() carries it across
+  // reset(), because browsers fire blur and visibilitychange in either order.
+  let hiddenPending = false;
 
   const bindings = inputBuildBindings(opts.keys || INPUT_KEYS_DEFAULT);
   const actions  = inputBuildBindings(opts.actionKeys || {});
@@ -252,6 +280,12 @@ function createInput(options) {
     return { purge: { x: worldW - m, y: m }, jump: { x: worldW - m, y: worldH - m } };
   }
 
+  // The top-edge target (0.5.0): the corner buttons' radius and margin, centred
+  // on the width, so mirroring cannot move it.
+  function touchTopCenter() {
+    return { x: worldW / 2, y: touchButtonR * 1.5 };
+  }
+
   function inCircle(x, y, c, r) {
     const dx = x - c.x, dy = y - c.y;
     return dx * dx + dy * dy <= r * r;
@@ -266,6 +300,13 @@ function createInput(options) {
     const c = touchButtonCenters();
     if (inCircle(x, y, c.purge, touchButtonR)) { touches.set(id, { kind: "purge" }); buttons.add("purge"); return; }
     if (inCircle(x, y, c.jump,  touchButtonR)) { touches.set(id, { kind: "jump" });  buttons.add("jump");  return; }
+    // ⛔ QUEUED ONCE, ON TOUCH-DOWN, AND IT HOLDS NOTHING. With the target
+    // switched off the touch falls through to the zones below, as in 0.4.0.
+    if (touchTopAction !== null && touchTopTarget && inCircle(x, y, touchTopCenter(), touchButtonR)) {
+      touches.set(id, { kind: "action" });
+      queued.push(touchTopAction);
+      return;
+    }
     if (y >= worldH * (1 - touchZoneFrac)) {
       touches.set(id, { kind: "drag", x: x });
       touchDragCount++;
@@ -293,7 +334,7 @@ function createInput(options) {
     if (t.kind === "purge") buttons.delete("purge");
     else if (t.kind === "jump") buttons.delete("jump");
     else if (t.kind === "tap") touchTapCount--;
-    else touchDragCount--;
+    else if (t.kind === "drag") touchDragCount--;
   }
 
   // Polled once per sample() (the Gamepad API has no motion events — a stick
@@ -310,6 +351,7 @@ function createInput(options) {
       if (gpDpadLeftDown)  { keyUp("gamepadleft");  gpDpadLeftDown = false; }
       if (gpDpadRightDown) { keyUp("gamepadright"); gpDpadRightDown = false; }
       gamepadHeld.fire = false; gamepadHeld.purge = false; gamepadHeld.jump = false;
+      for (const name of Object.keys(gamepadActionHeld)) gamepadActionHeld[name] = false;
       return;
     }
     const ax = gp.axes && typeof gp.axes[0] === "number" && isFinite(gp.axes[0]) ? gp.axes[0] : 0;
@@ -335,6 +377,25 @@ function createInput(options) {
       }
       gamepadHeld[name] = held;
     }
+
+    // Named actions (0.5.0) — an EDGE, not a level: a button held for a second
+    // queues its action once, exactly as a held key does not repeat one.
+    for (const name of Object.keys(gamepadActions)) {
+      const list = gamepadActions[name] || [];
+      let held = false;
+      for (let i = 0; i < list.length; i++) {
+        const b = gp.buttons && gp.buttons[list[i]];
+        if (b && b.pressed) { held = true; break; }
+      }
+      if (held && !gamepadActionHeld[name]) queued.push(name);
+      gamepadActionHeld[name] = held;
+    }
+  }
+
+  // The page went hidden (0.5.0). attach() calls this from visibilitychange;
+  // a headless host calls it directly. Nothing happens without hiddenAction.
+  function pageHidden() {
+    if (hiddenAction !== null) hiddenPending = true;
   }
 
   // Proportional past the deadzone, scaled by gamepadSens (GDD 9.4). Returns
@@ -421,6 +482,10 @@ function createInput(options) {
       if (onAction) for (let i = 0; i < queued.length; i++) onAction(queued[i]);
       queued.length = 0;
     }
+    if (hiddenPending) {
+      hiddenPending = false;
+      if (onAction) onAction(hiddenAction);
+    }
     return s;
   }
 
@@ -430,7 +495,7 @@ function createInput(options) {
   // touch behaviour (a menu, where a drag must not also be a press) flips these
   // on its own screen changes; the struct keeps its four fields either way.
   // reset() does NOT restore them — they are settings, not held input.
-  const CONFIGURABLE = { touchAutofire: true, touchTapFire: true };
+  const CONFIGURABLE = { touchAutofire: true, touchTapFire: true, touchTopTarget: true };
   function configure(partial) {
     const p = partial || {};
     const keys = Object.keys(p);
@@ -440,12 +505,15 @@ function createInput(options) {
     }
     if (p.touchAutofire !== undefined) touchAutofire = p.touchAutofire;
     if (p.touchTapFire !== undefined) touchTapFire = p.touchTapFire;
+    if (p.touchTopTarget !== undefined) touchTopTarget = p.touchTopTarget;
   }
 
   function reset() {
     pressed.clear();
     buttons.clear();
     queued.length = 0;
+    hiddenPending = false;
+    for (const name of Object.keys(gamepadActionHeld)) gamepadActionHeld[name] = false;
     for (const name of Object.keys(axis)) {
       const dir = axis[name];
       dir.down = false; dir.held = 0; dir.emitted = 0; dir.tap = false;
@@ -542,7 +610,20 @@ function createInput(options) {
     });
 
     // Losing focus mid-press otherwise leaves the rim spinning forever.
-    on(win || doc, "blur", function () { reset(); });
+    // ⛔ A PENDING HIDE SURVIVES IT (0.5.0): switching tabs fires blur and
+    // visibilitychange in a browser-dependent order, and reset() clears it.
+    on(win || doc, "blur", function () {
+      const hidden = hiddenPending;
+      reset();
+      hiddenPending = hidden;
+    });
+
+    // The page going hidden queues hiddenAction (0.5.0). No frame runs while it
+    // is hidden, so the host hears it on the first sample() after it returns —
+    // before any step of its simulation does.
+    on(doc, "visibilitychange", function () {
+      if (doc.visibilityState === "hidden" || doc.hidden === true) pageHidden();
+    });
 
     on(el, "touchstart", function (ev) {
       const list = ev.changedTouches || [];
@@ -580,7 +661,7 @@ function createInput(options) {
     VERSION: INPUT_VERSION,
     sample, reset, configure,
     keyDown, keyUp, mouseMove, setButton,
-    touchStart, touchMove, touchEnd, pollGamepads,
+    touchStart, touchMove, touchEnd, pollGamepads, pageHidden,
     attach, detach,
     isBound: function (k) {
       const n = inputNormKey(k);

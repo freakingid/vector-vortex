@@ -344,6 +344,12 @@ const Game = (function () {
     // ⛔ TAP-FIRE IS OFF AT CREATION, WHICH IS PLAY'S SETTING. syncScreen()
     // below is what turns it on, with auto-fire off, on every menu screen.
     touchTapFire:     false,
+    // ⛔ THE FOUR OTHER WAYS TO PAUSE (U4; CS008 P6), and every one is the same
+    // named action as `p`: gamepad Start, a touch target centred on the top
+    // edge, and the page going hidden. Escape is the fifth, through `back`.
+    gamepadActions:   { pause: [C.GAMEPAD_PAUSE_BUTTON] },
+    touchTopAction:   "pause",
+    hiddenAction:     "pause",
     // ⛔ NAMED ACTIONS, NEVER A SECOND LISTENER (GDD 9.5). See runAction().
     //
     // ⛔ DIGITS, and that is not a style choice. "w" cycles the well out from
@@ -356,9 +362,15 @@ const Game = (function () {
     actionKeys:       {
       // ⛔ THE MENUS' SECOND WAY BACK (U1; GDD 10.5). Purge is the first, read
       // off the struct; Escape is a named action because it is not one of the
-      // four fields. It only QUEUES a back — the menu step consumes it, so an
-      // Escape during a freeze or in play acts on nothing.
+      // four fields. On a menu it only QUEUES a back — the menu step consumes it,
+      // so an Escape during game over's freeze acts on nothing. In play it
+      // pauses (CS008 P6, below).
       back:         ["escape"],
+      // ⛔ ESCAPE STAYS `back`, AND `back` IN PLAY IS A PAUSE (runAction). A key
+      // maps to ONE action, and Escape has to mean pause in play and back in a
+      // menu. `pause` is everything that must NOT back out of a menu — above
+      // all the page going hidden on the START DEPTH screen.
+      pause:        ["p"],
       cycleWell:    ["w"],
       spawnVaulter: ["1"],
       spawnCarrier: ["2"],
@@ -471,10 +483,16 @@ const Game = (function () {
       // enemies on lanes the new well may not have.
       enterWell();
     }
-    // ⛔ QUEUED, NEVER ACTED ON HERE. Named actions are dispatched from
+    // ⛔ IN PLAY, ESCAPE PAUSES (U4); ON A MENU IT BACKS OUT (U1), and that back
+    // is QUEUED, NEVER ACTED ON HERE. Named actions are dispatched from
     // input.sample(), which also runs inside a freeze, and the game-over menu
-    // must be inert during the death freeze (GDD 10.5).
-    if (name === "back") menu.back();
+    // must be inert during the death freeze (GDD 10.5). A pause, by contrast,
+    // must land inside a freeze (plan §7).
+    if (name === "back") {
+      if (state.screen === "play") pauseRun();
+      else menu.back();
+    }
+    if (name === "pause") pauseRun();
 
     // The debug bench. ⚠ THE ⚠ TEMPORARY MARKER THAT USED TO OPEN THIS LINE IS
     // GONE, and CS007 P3 is where it stopped being true — see DEBUG_SPAWN_ACTIONS
@@ -489,16 +507,28 @@ const Game = (function () {
     if (kind !== undefined && state.skimmer) spawnEnemy(kind, state.skimmer.lane, 0);
     if (name === "spawnRow") spawnRow();
 
-    // ⛔ CAPTURE IS OFF AT EVERY LAUNCH AND IS NEVER PERSISTED (GDD 15.6), so
-    // this is the ONLY way it is ever turned on. The console line is the
-    // feedback — there is nothing on screen to show a switch with yet.
-    if (name === "telemetryToggle") {
-      console.log("telemetry capture: " + (Telemetry.toggle() ? "ON" : "off") +
-                  " (" + Telemetry.count + " rows)");
-    }
-    // ⛔ console.log, never an <a download> and never a fetch — see
-    // 21-telemetry.js. It is the only export path that works on file://.
-    if (name === "telemetryExport") Telemetry.exportCsv();
+    if (name === "telemetryToggle") toggleTelemetry();
+    if (name === "telemetryExport") exportTelemetry();
+  }
+
+  // ⛔ THE ONE TOGGLE AND THE ONE EXPORT, and the `t` / `e` keys and the OPTIONS
+  // rows both call these (CS008 P6). CAPTURE IS OFF AT EVERY LAUNCH AND IS NEVER
+  // PERSISTED (GDD 15.6): the OPTIONS row is a control surface over the same
+  // module-level switch, not a settings store for it.
+  function toggleTelemetry() {
+    console.log("telemetry capture: " + (Telemetry.toggle() ? "ON" : "off") +
+                " (" + Telemetry.count + " rows)");
+  }
+  // ⛔ console.log, never an <a download> and never a fetch — see
+  // 21-telemetry.js. It is the only export path that works on file://.
+  function exportTelemetry() { Telemetry.exportCsv(); }
+
+  // ⛔ PAUSE APPLIES ON "play" ONLY (plan §7) — a dive and a death freeze are
+  // both play. Called from inside input.sample(), which also runs in the
+  // freeze; update() notices the change right after the sample, and frame()
+  // stops draining the freeze from the next step.
+  function pauseRun() {
+    if (state.screen === "play") state.screen = "pause";
   }
 
   // ---- screens and menus (GDD 10.5; CS008 P5) -------------------------------
@@ -506,6 +536,7 @@ const Game = (function () {
   // ⛔ SCREENS ARE DATA, and the menu model never sees `state` (15-render-hud.js).
   // The game owns this table and what each action name does; the model owns
   // the cursor and the edges. `back` is the row Purge and Escape take.
+  const OPTIONS_TELEMETRY = { label: "TELEMETRY", detail: "OFF", enabled: true, action: "toggleTelemetry" };
   const SCREENS = {
     title: { title: "VECTOR VORTEX", lines: [], back: null, items: [
       { label: "PLAY",    detail: "", enabled: true, action: "toMode" },
@@ -520,9 +551,30 @@ const Game = (function () {
     ] },
     // Rows rebuilt on entry from startDepthOptions(). ⛔ NO COUNTDOWN (GDD 4.6).
     depth: { title: "START DEPTH", lines: [], back: "toMode", items: [] },
-    // ⛔ P6 FILLS THIS IN (plan §7). P5 makes it reachable and leavable only.
-    options: { title: "OPTIONS", lines: [], back: "toTitle", items: [
-      { label: "BACK", detail: "", enabled: true, action: "toTitle" },
+    // Over the frozen board (U4). ⛔ RESUME IS INSTANT — no countdown (GDD 16.3).
+    pause: { title: "PAUSED", lines: [], back: "resume", items: [
+      { label: "RESUME",        detail: "", enabled: true, action: "resume" },
+      { label: "OPTIONS",       detail: "", enabled: true, action: "pauseOptions" },
+      { label: "QUIT TO TITLE", detail: "", enabled: true, action: "quitToTitle" },
+    ] },
+    // U5. Opened from the title or from pause, and BACK returns to whichever.
+    // TELEMETRY's detail is written from the switch itself on every OPTIONS step
+    // (update()), so `t` pressed here shows too — ⛔ never in draw(), which must
+    // not name Telemetry (test-cs007-p4.js). Sound and music are CS009's rows.
+    options: { title: "OPTIONS", lines: [], back: "optionsBack", items: [
+      OPTIONS_TELEMETRY,
+      { label: "EXPORT",   detail: "TO CONSOLE", enabled: true, action: "exportTelemetry" },
+      { label: "CONTROLS", detail: "\u203A",     enabled: true, action: "toControls" },
+      { label: "CREDITS",  detail: "\u203A",     enabled: true, action: "toCredits" },
+      { label: "BACK",     detail: "",           enabled: true, action: "optionsBack" },
+    ] },
+    // ⛔ P7 FILLS THIS IN (plan §8). A row that does nothing says so on screen.
+    controls: { title: "CONTROLS", lines: ["NOT BUILT YET"], back: "backToOptions", items: [
+      { label: "BACK", detail: "", enabled: true, action: "backToOptions" },
+    ] },
+    credits: { title: "CREDITS", lines: C.CREDITS_LINES.concat("VERSION " + C.GAME_VERSION),
+               back: "backToOptions", items: [
+      { label: "BACK", detail: "", enabled: true, action: "backToOptions" },
     ] },
     // Over the frozen board. Its two lines are filled per frame by draw().
     gameover: { title: "GAME OVER", lines: ["", ""], back: "quitToTitle", items: [
@@ -534,6 +586,19 @@ const Game = (function () {
   // The mode the MODE screen chose, carried to the depth screen's startGame().
   // Not in state: no run exists yet, and startGame() rewrites state anyway.
   let pendingMode = "classic";
+
+  // Where OPTIONS was opened from, "title" or "pause" — its BACK goes there.
+  // Written by the two rows that open it; its sub-pages come back to OPTIONS.
+  let optionsFrom = "title";
+
+  // ⛔ A RUN IS ON SCREEN: play (the dive is play), pause, game over, and the
+  // OPTIONS pages opened from pause. H4's HUD reads this, because a run exists
+  // there; on the title's OPTIONS none does.
+  function runOnScreen() {
+    const s = state.screen;
+    if (s === "play" || s === "pause" || s === "gameover") return true;
+    return optionsFrom === "pause" && (s === "options" || s === "controls" || s === "credits");
+  }
 
   function buildDepthRows() {
     const list = startDepthOptions();
@@ -555,7 +620,9 @@ const Game = (function () {
   // overwrite below, because the overwrite destroys the answer. This is also
   // game over's QUIT TO TITLE row: that run already ended as 'died', so the check
   // is `screen === "play"` (and P6's pause), never "anything but title" — the
-  // double submit GDD 15.4 forbids. P5 submits nothing.
+  // double submit GDD 15.4 forbids. P5 submits nothing. ⛔ Since P6 a quit also
+  // comes from the pause menu, so the playing check is `screen === "pause"`
+  // there, read before the overwrite like the rest.
   function quitToTitle() {
     Object.assign(state, newState());
     state.screen = "title";
@@ -564,7 +631,22 @@ const Game = (function () {
 
   function menuAction(name, screen) {
     if (name === "toTitle")   state.screen = "title";
-    if (name === "toOptions") state.screen = "options";
+    if (name === "toOptions") { optionsFrom = "title"; state.screen = "options"; }
+    if (name === "pauseOptions") { optionsFrom = "pause"; state.screen = "options"; }
+    if (name === "optionsBack") state.screen = optionsFrom;
+    if (name === "backToOptions") state.screen = "options";
+    if (name === "toControls") state.screen = "controls";
+    if (name === "toCredits") state.screen = "credits";
+    if (name === "toggleTelemetry") toggleTelemetry();
+    if (name === "exportTelemetry") exportTelemetry();
+    // ⛔ INSTANT (U4): the next step simulates. ⛔ AND THE PURGE IS RE-LATCHED,
+    // exactly as killSkimmer() re-latches it across a freeze: Purge is how the
+    // pause menu backs out, so without this the press that resumed would be a
+    // rising edge on the first play step and spend the well's charge.
+    if (name === "resume") {
+      state.screen = "play";
+      state.purgeLatched = true;
+    }
     if (name === "toMode")    state.screen = "mode";
     if (name === "pickClassic") {
       pendingMode = "classic";
@@ -596,7 +678,10 @@ const Game = (function () {
     if (state.screen === syncedScreen) return;
     syncedScreen = state.screen;
     const inPlay = state.screen === "play";
-    input.configure({ touchAutofire: inPlay ? C.TOUCH_AUTOFIRE : false, touchTapFire: !inPlay });
+    // ⛔ The top-edge pause target is live in play only; on a menu the upper
+    // screen is all confirm taps and a dead spot there would fail silently.
+    input.configure({ touchAutofire: inPlay ? C.TOUCH_AUTOFIRE : false, touchTapFire: !inPlay,
+                      touchTopTarget: inPlay });
     menu.reset();
   }
 
@@ -613,6 +698,11 @@ const Game = (function () {
     // ⛔ ABOVE THE STOP, DELIBERATELY. This is the one input path (GDD 9.5), and
     // the menus below read the struct it writes.
     input.sample(dt, state.input);
+    // ⛔ AND AGAIN, BECAUSE A PAUSE ARRIVES INSIDE sample() (CS008 P6). This makes
+    // the pausing step the pause menu's ENTRY step, so a Fire the player was
+    // holding in play does not confirm RESUME on the same step. A no-op on
+    // every step whose screen did not change.
+    syncScreen();
 
     // ⛔ THE STOP, ON EVERY SCREEN BUT PLAY (GDD 4.4, 10.5). Exactly where the
     // game-over stop always was: no simulation clock, no entity pass, no
@@ -624,6 +714,8 @@ const Game = (function () {
         const action = menu.step(screen, state.input);
         if (action) menuAction(action, screen);
       }
+      // After the action, so the step that toggled it already shows it.
+      if (state.screen === "options") OPTIONS_TELEMETRY.detail = Telemetry.enabled() ? "ON" : "OFF";
       return;
     }
 
@@ -766,10 +858,11 @@ const Game = (function () {
     }
     // ⛔ THE HUD IS LAST and reads only this view (15-render-hud.js). The view
     // object is filled in place, never allocated per frame.
-    // ⛔ H4: IN PLAY (THE DIVE IS PLAY) AND OVER GAME OVER, NEVER ON TITLE, MODE,
-    // START DEPTH OR OPTIONS — no run exists there, so it would show a stale or
-    // default score. P6's pause joins the first list.
-    if (state.screen === "play" || state.screen === "gameover") {
+    // ⛔ H4: WHERE A RUN IS ON SCREEN (runOnScreen) — play, the dive, pause and
+    // game over, and OPTIONS opened from pause. Never on title, mode, START
+    // DEPTH or the title's OPTIONS: no run exists there, so it would show a
+    // stale or default score.
+    if (runOnScreen()) {
       _hudView.score = state.score;
       _hudView.lives = state.lives;
       _hudView.level = state.level;
@@ -813,7 +906,12 @@ const Game = (function () {
     while (accumulator >= C.FIXED_DT && steps < C.MAX_CATCHUP_STEPS) {
       accumulator -= C.FIXED_DT;
       steps++;
-      if (hitStopLeft > 0) {
+      // ⛔ THE FREEZE DRAINS ONLY ON THE TWO SCREENS A FREEZE BELONGS TO (CS008
+      // P6, plan §7). A pause inside a death freeze — or OPTIONS opened from that
+      // pause — must hold it, or the freeze and the fragmentation run out under
+      // the menu; and the menu's steps have to run, so they fall through to
+      // update(). Title, mode and START DEPTH never hold one (quitToTitle()).
+      if (hitStopLeft > 0 && (state.screen === "play" || state.screen === "gameover")) {
         // Frozen: the step is SPENT, not simulated. Draining the accumulator
         // here is what makes hit-stop cost nothing when it ends — the
         // alternative banks the whole freeze and pays it back as a lurch.

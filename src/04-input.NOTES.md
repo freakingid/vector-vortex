@@ -2,7 +2,7 @@
 
 **Module:** `src/04-input.js`
 **Vendored from:** *originated here (Vector Vortex), destined for coinless-kit as `kit-input`*
-**Current version:** `0.4.0`
+**Current version:** `0.5.0`
 **Depends on:** nothing
 
 ---
@@ -46,6 +46,9 @@ read it as "one unit of its discrete axis".
 | `worldW` / `worldH` | yes | World-space size the touch buttons and rotation zone live in — the same fixed space every entity uses, not the window's pixel size. |
 | `gamepadButtons` | no | `{ fire: [idx,...], jump: [idx,...], purge: [idx,...] }` override, wholesale, same pattern as `keys`. Default: `fire:[0]` (A), `jump:[4,6]` (LB/LT), `purge:[5,7]` (RB/RT). |
 | `touchTapFire` | no (default `false`) | A touch that lands outside the rotation zone and both buttons holds `fire` while it is down. Off, such a touch does nothing (0.3.0's behaviour). |
+| `gamepadActions` | no | `{ actionName: [idx,...] }` — a named action queued on the **press edge** of any listed button, dispatched like an `actionKeys` press. A held button queues once. |
+| `touchTopAction` | no | Action name. A touch that starts within `touchButtonR` of `(worldW / 2, 1.5 × touchButtonR)` — the corner buttons' geometry, centred on the top edge, unmoved by `inputMirror` — queues it once and holds nothing. Live while the `touchTopTarget` switch is on (default). |
+| `hiddenAction` | no | Action name, queued when the page goes hidden (`pageHidden()`; `attach()` wires `visibilitychange`). Several hides before a `sample()` are heard once. |
 | `pointerLockOffer` | no (default `true`) | Offer Pointer Lock on click. Never forced; refusal is a normal path. |
 | `keys` | no | Binding override, shape of `INPUT_KEYS_DEFAULT`. Matched case-insensitively. |
 | `actionKeys` | no | `{ actionName: ["key", …] }` — host-named actions (debug keys, screen toggles). |
@@ -67,13 +70,13 @@ const input = createInput({
 input.attach({ window, document, element: canvas });  // DOM adapter, optional
 input.sample(dt, hostStruct);   // writes {rotate,fire,purge,jump}, allocates nothing
 input.reset();                  // clears every held key and pending delta
-input.configure({ touchAutofire: false, touchTapFire: true });  // switches, at runtime
+input.configure({ touchAutofire: false, touchTapFire: true, touchTopTarget: false });  // switches, at runtime
 input.detach();
 ```
 
 Device events also enter directly through the sink — `keyDown(key)`,
 `keyUp(key)`, `mouseMove(dx)`, `setButton(name, down)`, `touchStart(id, x, y)`,
-`touchMove(id, x, y)`, `touchEnd(id)`, `pollGamepads(win)` — which `attach()`
+`touchMove(id, x, y)`, `touchEnd(id)`, `pollGamepads(win)`, `pageHidden()` — which `attach()`
 is a thin wrapper over (the touch trio takes world-space coordinates directly;
 `attach()` is what converts a real `Touch`'s client pixels into that space).
 **That split is the module's most important structural property:** everything
@@ -220,5 +223,39 @@ the struct keeps its four fields. Paul's call, 2026-09-13.
 geometry, and `fire` is the same opaque struct field it always was. The module
 does not know what a menu is; the host decides when to flip the switches. No
 config object, no game object, no game function is referenced.
+
+**Backport status.** `not yet`.
+
+### 2026-09-13 — three sources of a named action (`VERSION` 0.4.0 → 0.5.0)
+
+**What changed.** Three optional options, each a new way to queue a host-named
+action. Each only queues; `sample()` dispatches in order, exactly like an
+`actionKeys` press.
+- `gamepadActions: { name: [idx, …] }` is polled beside fire/purge/jump. It
+  queues on the press **edge**, so a held button queues once, and a pad that
+  disconnects clears it.
+- `touchTopAction: name` is a touch target with the corner buttons' radius and
+  margin, centred on the top edge. It queues on touch-down and holds nothing.
+  The new `configure()` key `touchTopTarget` (boolean, default on) switches it.
+  Off, that touch is classified as in 0.4.0.
+- `hiddenAction: name` is queued by the new sink `pageHidden()`. `attach()`
+  calls it from `visibilitychange` when the document is hidden. It is a flag,
+  not a queue entry, so several hides are heard once. `reset()` clears it, but
+  the blur handler carries it across its own `reset()`, because browsers fire
+  blur and `visibilitychange` in either order.
+
+`touchEnd()` now names the drag kind explicitly, so a target touch decrements
+nothing. With none of the three options, the module is 0.4.0 exactly.
+
+**Why.** Vector Vortex CS008 P6, pause (Paul's U4): Escape or `p`, gamepad
+Start, a top-centre touch target, and the tab going hidden. The host binds all
+four to one action. Its menus switch the target off, so the upper screen is all
+confirm taps there.
+
+**Game-agnostic?** Yes. The module does not know what a pause is. It queues
+whatever names the host gives, from a button index, a place on its own
+world-space screen, and the page's visibility. Nothing references a config
+object, game object or game function, and the host's suite still scans this
+module's slice for both.
 
 **Backport status.** `not yet`.

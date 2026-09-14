@@ -45,7 +45,10 @@ H.assert(!/["']restart["']/.test(script), "⛔ no \"restart\" action name anywhe
 H.assert(!/\brestart\s*:/.test(script), "⛔ and no restart binding key");
 H.eq(G.input.isBound("r"), false, "⛔ \"r\" is bound to nothing");
 H.eq(G.input.isBound("escape"), true, "Escape is bound (the named back action)");
-H.eq(G.input.VERSION, "0.4.0", "kit-input is 0.4.0 (MINOR: the tap source and configure())");
+// ⛔ REWRITTEN IN PLACE AT CS008 P6: the claim is that 0.4.0's tap source and
+// configure() are in, and a later MINOR (P6's 0.5.0, P7's) still carries them.
+const kitVer = G.input.VERSION.split(".").map(Number);
+H.assert(kitVer[0] > 0 || kitVer[1] >= 4, `kit-input is at least 0.4.0 (MINOR: the tap source and configure()) (got ${G.input.VERSION})`);
 H.assert(fs.existsSync(path.join(ROOT, "src", "15-render-hud.NOTES.md")),
          "src/15-render-hud.NOTES.md exists — kit-menu's backport packet");
 for (const n of ["createMenu", "drawMenu", "menuWindowStart"]) H.assert(X[n] !== null, `the build defines ${n}`);
@@ -274,11 +277,15 @@ for (const [label, backOut] of [["Purge", () => press(KB, "purge")],
   H.eq(state.screen, "title", `⛔ ${label} backs out of GAME OVER to the title`);
 }
 
-// Escape in play does nothing now, and is not banked for the next menu.
+// Escape in play is not banked for the next menu. ⛔ REWRITTEN IN PLACE AT CS008
+// P6: Escape in play now PAUSES (U4) and a second Escape resumes; the claim that
+// neither press reaches game over is unchanged.
 toTitle();
 press(KB, "fire"); press(KB, "fire"); press(KB, "fire");
 press(esc, "back");
-H.eq(state.screen, "play", "Escape in play changes no screen");
+H.eq(state.screen, "pause", "Escape in play pauses (CS008 P6)");
+press(esc, "back");
+H.eq(state.screen, "play", "and Escape on the pause menu resumes");
 die("banked Escape");
 runFreeze();
 steps(2);

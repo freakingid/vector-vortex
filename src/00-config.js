@@ -499,6 +499,7 @@ const C = {
   INPUT_MIRROR:         false,  // mirrors touch button corners for left-handed play
   GAMEPAD_DEADZONE:     0.15,   // stick units; below this, zero
   GAMEPAD_SENS:         12.0,   // lane-units/sec at full stick deflection
+  GAMEPAD_PAUSE_BUTTON: 9,      // standard mapping's Start — queues `pause` (CS008 P6, U4)
 
   // ---- Audio (GDD 11) -----------------------------------------------------
   MUSIC_LOOKAHEAD:      0.20,   // s. ⛔ per-frame; never setTimeout/setInterval.
@@ -606,6 +607,10 @@ const C = {
   MENU_CHEVRON_SIZE:    12,     // px, the cursor glyph's half-height
   MENU_CHEVRON_GAP:     20,     // px between the glyph and the row's label
   MENU_LINE_W:          2.0,    // px, the cursor glyph's stroke
+  // ⚠ PLACEHOLDER COPY (U6; CS008 P6) — Paul replaces it before ship. The
+  // CREDITS page appends a VERSION line from GAME_VERSION, so none is typed
+  // here. ⛔ GDD 18: no mention of the original game or its publisher.
+  CREDITS_LINES:        ["VECTOR VORTEX", "COINLESS GAMES"],
 
   // ---- The death fragmentation (GDD 4.4) — CS008 P4 -----------------------
   // ⛔ drawFragments() (14-render-entities.js) is a function of hit-stop
