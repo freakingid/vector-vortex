@@ -440,13 +440,28 @@ let clock = 0;
 function halfFrame() { clock += MS / 2; A.ctx.currentTime = clock / 1000; GY.frame(clock); }   // trap 2
 
 const R = CY.SFX.surgeCharge;
-const surgeVoices = () => rec.nodes.filter(n => n.kind === "gain" &&
-  rec.automation.some(a => a.node === n && a.param === "gain" && a.fn === "exponentialRampToValueAtTime" && a.v === R.gain));
 function oscsOf(g) {
   const into = rec.connections.filter(c => c.to === g).map(c => c.from);
   const flt = into.filter(n => n.kind === "biquad");
   return rec.connections.filter(c => flt.includes(c.to) && c.from.kind === "oscillator").map(c => c.from);
 }
+// ⛔ REPAIRED IN PLACE (CS010 P3). A voice was found as a gain ramping to exactly
+// R.gain, and pulse's notes at Paul's 0.450 (D3) matched it: nine assertions
+// red. A voice is now found by what it is: an envelope whose sources are the
+// recipe's oscillators (type and start frequency, at hold()'s pitch 1, through
+// its filter), routed into AudioSys.sfx. `recipeEnvelopes` drops the route, so
+// the SFX-bus assertion below still has something to catch.
+const startF = o => { const a = rec.automation.find(x => x.node === o && x.param === "frequency"); return a ? a.v : null; };
+const isRecipeVoice = g => { const o = oscsOf(g);
+  return o.length === R.osc.length && R.osc.every((r, i) => o[i].type === r.type && startF(o[i]) === r.f); };
+const recipeEnvelopes = () => {
+  const fedByFilter = new Set(rec.connections.filter(c => c.from.kind === "biquad" && c.to.kind === "gain").map(c => c.to));
+  return rec.nodes.filter(n => n.kind === "gain" && fedByFilter.has(n) && isRecipeVoice(n));
+};
+const surgeVoices = () => {
+  const toSfx = new Set(rec.connections.filter(c => c.to === A.sfx).map(c => c.from));
+  return rec.nodes.filter(n => n.kind === "gain" && toSfx.has(n) && isRecipeVoice(n));
+};
 const stopped = g => oscsOf(g).some(o => rec.stops.some(s => s.node === o));
 const liveVoices = () => surgeVoices().filter(g => !stopped(g));
 const telegraphing = () => SY.enemies.filter(e => !e.dead && e.phase === "telegraph" && typeof e.chargeTip === "function");
@@ -497,6 +512,8 @@ SY.enemies.push(u1, u2);
     let mono = seq.length > 5;
     for (let k = 1; k < seq.length; k++) if (seq[k] < seq[k - 1]) mono = false;
     if (mono && seq[seq.length - 1] > seq[0]) rises++;
+  }
+  for (const g of recipeEnvelopes()) {
     H.assert(rec.connections.some(c => c.from === g && c.to === A.sfx), "⛔ the tone feeds the SFX bus, never around it");
   }
   H.eq(rises, seenVoices.size, "⛔ every voice's frequency rises with chargeTip() over its telegraph");
@@ -550,7 +567,9 @@ SY.enemies.push(u1, u2);
   const vols = ["master", "music", "sfx"].map(b => A.vol[b]);
   H.assert(vols.every(v => v === CY.AUDIO_VOL_DEFAULT / CY.AUDIO_VOL_STEPS), "fixture: every bus at its default");
   const voice = surgeVoices()[0];
-  const tonePeak = rec.automation.find(a => a.node === voice && a.fn === "exponentialRampToValueAtTime").v * A.vol.sfx;
+  H.assert(voice !== undefined, "fixture: a Surger voice was found on the SFX bus");
+  const attack = rec.automation.find(a => a.node === voice && a.fn === "exponentialRampToValueAtTime");
+  const tonePeak = (attack ? attack.v : 0) * A.vol.sfx;
   H.eq(tonePeak, R.gain * A.vol.sfx, "the tone peaks at its recipe gain through the SFX bus");
   for (const name of ["pulse", "title"]) {
     GY.reset();

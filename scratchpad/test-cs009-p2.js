@@ -4,7 +4,8 @@
 // 16-audio-engine.js and 17-audio-tracks.js, character for character; the lab
 // renders SOLO, MUTE and the PASS / FAIL mark per layer, SOLO is
 // exclusive-additive, and COPY TABLE writes `audition`, `gain` and `cutoff`;
-// both tracks carry no tier, valid marks and real notes, `pulse` runs >= 36
+// both tracks carry a tier only on a PASS layer, in 1..4, with the track's
+// `bar` (CS010 P3), valid marks and real notes, `pulse` runs >= 36
 // bars (Paul's tempo call, 2026-09-16), and the worst step stays under
 // C.MUSIC_STEP_NODE_MAX.
 //
@@ -194,9 +195,10 @@ const { C, MUSIC_TRACKS } = X;
 
   for (const name of names) {
     const t = MUSIC_TRACKS[name];
-    let tiers = 0, badMarks = 0, badFreq = 0, badCell = 0, badRows = 0, notes = 0;
+    let badTiers = 0, badMarks = 0, badFreq = 0, badCell = 0, badRows = 0, notes = 0;
     for (const L of t.layers) {
-      if ("tier" in L) tiers++;
+      if ("tier" in L && (L.audition !== "pass" || !Number.isInteger(L.tier) || L.tier < 1 || L.tier > 4 ||
+                          !Number.isInteger(t.bar) || t.steps % t.bar !== 0)) badTiers++;
       if (L.audition !== undefined && L.audition !== "pass" && L.audition !== "fail") badMarks++;
       if (!Array.isArray(L.steps) || L.steps.length !== t.steps) badRows++;
       for (const c of L.steps) {
@@ -208,7 +210,9 @@ const { C, MUSIC_TRACKS } = X;
     }
     const secs = t.steps * t.stepDur;
     H.assert(t.layers.length > 0 && notes > 0, `${name}: ${t.layers.length} layers, ${notes} notes, ${secs} s`);
-    H.eq(tiers, 0, `⛔ ${name}: no layer carries a tier (A6)`);
+    // ⛔ REWRITTEN IN PLACE (CS010 P3). This was "no layer carries a tier (A6)".
+    // CS010 tiers PASS layers only (GDD 11.5), on a track with a bar line.
+    H.eq(badTiers, 0, `⛔ ${name}: a tier only on a PASS layer, in 1..4, on a track with \`bar\``);
     H.eq(badMarks, 0, `⛔ ${name}: every audition is absent, "pass" or "fail"`);
     H.eq(badRows, 0, `${name}: every layer's row is the track's length`);
     H.eq(badFreq, 0, `⛔ ${name}: every note frequency is finite and > 0`);

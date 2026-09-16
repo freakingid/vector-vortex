@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.6 · Changeset: CS010 (P2 done 2026-09-16 — P3 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.6 · Changeset: CS010 (P3 done 2026-09-16 — P4 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS010
 
@@ -13,12 +13,13 @@ rules, 2026-08-31).
 |---|---|---|
 | P1 | `8bf9110` | kit-audio 0.3.0: optional `gating` (bar-latched `setIntensity`), `sweep`, `limiter`, `duck` (`setDuck`, `dip`), `onBeat`; the fake's compressor; the headroom gate is D16's model (0.3350 / 0.3359). Nothing drives them yet. 7 of 7 red |
 | P2 | `2e89263`, `d1501ef` | The director: kit-audio `createDirector` (asymmetric, audio clock), top-level `dangerInputs(state, out)`, `audioFrame()` driving `setIntensity`/`setSweep` in play (a Dive reads 0; run entry resets; pause side holds; title opens the sweep), `duckFor()` on the pause side, `sfx()` dips on D9's four. `INT_HEAT_MAX` deleted. 10 of 10 red. Follow-up: `Director.hold()` on the pause side, so a resume skips the pause (Paul); 11 of 11 |
+| P3 | this commit | The earned layers: `cycle` tier 2, `tick` tier 3, `bar` on both tables; `pulse` at Paul's lab gains and `title`'s ground 0.45, behind the limiter (render 0.454 / −24.30 dB, 0.413 / −25.37 dB, plan §1.6 exactly; model 0.3512 / 0.3408). music-lab's INTENSITY and TIER, COPY TABLE writes `tier`; sfx-lab passes `gating`. p2's tier assertion and p5's Surger-voice fixture repaired in place. `test-cs010-p3.js`: the articulation gate, COPY TABLE's tempo and tier rewrites. 14 of 14 red |
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 487.3 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 487.5 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **51 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **52 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -64,8 +65,10 @@ rules, 2026-08-31).
   voice per telegraphing Surger, keyed in a `Map` in `19-sfx.js` (never a field
   on the entity), and `set(chargeTip())` each frame. ⛔ The headroom gate
   (`test-cs009-p5.js`, `HEADROOM_RATIO` 1.0, ⚠ provisional) is **D16's limiter
-  curve model since CS010 P1**: 0.450 against 0.3350 `pulse` (0.4184 in) and
-  0.3359 `title` (0.4404 in). ⛔ It holds only at the rendered settings, so
+  curve model since CS010 P1**: 0.450 against **0.3512 `pulse` (1.0771 in) and
+  0.3408 `title` (0.5904 in)** at Paul's gains since P3. Its fixture finds a
+  Surger voice by its route into `AudioSys.sfx` and the recipe's oscillators,
+  never by gain (P3). ⛔ It holds only at the rendered settings, so
   `test-cs010-p1.js` pins `C.MUSIC_LIMIT` to D2's literals (threshold −18 left
   the model green, `log/CS010.md`).
 - ⚠ **SETTLED — MUSIC IS STRUCK, NEVER SWELLED** (Paul, 2026-09-16; `CLAUDE.md`
@@ -76,10 +79,8 @@ rules, 2026-08-31).
 - ✅ **PAUL'S LAB PICKS ARE PORTED (2026-09-16): 120 BPM on both tracks, every
   layer PASS**, and his balance, with `title`'s ground and `pulse`'s bassline,
   heart and tick then raised to 0.450 at his ask (the lab slider now reaches
-  0.6). ⚠ **`pulse` is trimmed 8.2 dB as a whole** to hold the SETTLED headroom
-  gate (1.0771 → 0.4184). The game's `pulse` is under his lab levels (gated
-  −33.5 dB, peak 0.346); `title`
-  ports as he set it (−29.6 dB, 0.446, headroom 0.4404). ⚠ **`pulse` loops at
+  0.6). ✅ **Since CS010 P3 both play at exactly his lab gains behind the
+  limiter** (`title`'s ground 0.45, Paul's D4): the 8.2 dB trim is gone. ⚠ **`pulse` loops at
   72 s**: Paul chose the tempo over the 90 s target, which is now read as ≥ 36
   bars (Claude's reading, `DECISIONS.md`; `test-cs009-p2.js` rewritten in
   place, plus one fixture repair).
@@ -176,8 +177,6 @@ rules, 2026-08-31).
   - **`19-sfx.js`'s code may not name `state`** (`test-cs009-p1.js:489`).
   - **A new REQUIRED `createMusic` option makes `test-cs009-p1.js` throw**, so
     new engine options are optional groups.
-  - **`test-cs009-p5.js` finds a Surger voice by a gain equal to 0.45.** Music
-    notes at 0.450 collide (nine assertions red). P3 repairs the fixture.
   - **A duck in front of a limiter is swallowed**: 6 dB in, 1.9 dB out.
   - ⚠ **The Surger tone alone renders at sample peak 1.106** at unity, which
     clips at the destination. No changeset owns it.
@@ -339,11 +338,6 @@ rules, 2026-08-31).
   whose `stepDur` is not a binary fraction (e.g. 138 BPM), a back-to-back note
   pair reads as an overlap (0.5377 against 0.4201 with a 1e-9 tolerance). 120
   BPM is exact (0.125). A future tempo port repairs that fixture in place.
-- ⚠ **COPY TABLE's tempo rewrite has no suite test.** A throwaway check and a
-  headless click-through covered it (`log/CS009.md`). ⛔ CS010 P3 adds it
-  (`test-cs010-p3.js`).
-- ✅ **Paul (D4): `title`'s ground goes to 0.45 in CS010 P3**, behind the
-  limiter. It sits at 0.300 until then.
 - ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
   2 → 3.
@@ -355,12 +349,22 @@ rules, 2026-08-31).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS010 P3
+## Next up — ⛔ CS010 P4
 
-⛔ **Paste P3's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: the earned
-layers (`cycle` tier 2, `tick` tier 3, `bar: 16`), Paul's `pulse` gains and
-`title`'s ground at 0.45, and music-lab's INTENSITY and TIER. The director
-already drives `setIntensity` from play, so a tier added in P3 is heard at once.
+⛔ **Paste P4's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: the rim pulse on
+`heart`'s onsets. P3 left three things P4 meets:
+
+- ⛔ **`heart`'s `beat: true` is a hand edit in three files** (COPY TABLE does
+  not write it). Put it BEFORE `tier` and `audition` on the layer's one line
+  (after `rel`): COPY TABLE inserts `tier` just before `audition`, and a later
+  audition edit re-inserts the mark before `steps`, so a field after the mark
+  would be reordered past it.
+- ⛔ **`test-cs010-p3.js` pins both labs' `LAB` copies to `C`**: music-lab's
+  `limit`, `gating`, `sweep` and sfx-lab's `gating`. A change to
+  `C.MUSIC_LIMIT`, `C.LAYER_THRESHOLD`, `C.LAYER_CROSSFADE` or `C.FILTER_*` is a
+  three-file edit.
+- ⚠ **`CLAUDE.md`'s music-lab bullet** ("Design instruments") predates
+  INTENSITY and TIER. P5's close should add them.
 
 ⛔ **What every CS010 phase must not lose** (plan §0, answered by Paul
 2026-09-16):
@@ -369,8 +373,8 @@ already drives `setIntensity` from play, so a tier added in P3 is heard at once.
    (0.40).** The foundation is `melody`, `swell`, `bassline` and `heart`.
    `title` is untiered. There is no danger layer.
 2. ✅ **The limiter: −24 dB, knee 0, ratio 20, 1 ms, 100 ms**, on the path
-   gate → track gain → sweep → limiter → duck → dip → `music`. `pulse` returns
-   to Paul's lab gains, `title`'s ground goes to 0.45, and music-lab plays
+   gate → track gain → sweep → limiter → duck → dip → `music`. `pulse` is at
+   Paul's lab gains and `title`'s ground at 0.45 (P3), and music-lab plays
    limited.
 3. ⚠ **SETTLED — the Surger tone is audible over music at every tier.** After
    the limiter, the gate is the curve model with the settings pinned (D16):
@@ -382,6 +386,6 @@ already drives `setIntensity` from play, so a tier added in P3 is heard at once.
    none of it, and draws nothing.** Counts are live and non-anchored; heat comes
    through `heatT()`; combo is 0 in Classic. Intensity acts in play only, a Dive
    reads 0, and a run starts from 0.
-6. ⚠ **SETTLED — struck, never swelled.** P3 adds the articulation gate and
-   COPY TABLE's tempo test.
+6. ⚠ **SETTLED — struck, never swelled.** ✅ The articulation gate and COPY
+   TABLE's tempo and tier tests are in `test-cs010-p3.js` (P3).
 7. ✅ **`pulse`'s length target is ≥ 36 bars** (Paul, D13).

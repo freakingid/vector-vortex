@@ -8,19 +8,37 @@
   character, against the built file:
     BLOCK A  src/16-audio-engine.js, whole (kit-audio: the engine and scheduler)
     BLOCK B  src/17-audio-tracks.js, whole (the track builders and MUSIC_TRACKS)
-  What you hear is therefore exactly what the game plays. Everything below
-  BLOCK B is lab UI, and none of it ships.
+  Everything below BLOCK B is lab UI, and none of it ships.
+
+  ⛔ WHAT YOU HEAR IS WHAT THE GAME PLAYS. The same engine and tables, through
+  the same limiter (Paul's D3), the same tier gates and the same sweep, built
+  from LAB's preview copies of the game's values (CS010).
+
+  ⛔ INTENSITY DRIVES BLOCK A's OWN setIntensity() AND setSweep(), as the
+  director does in play (GDD 11.4, 11.5). A layer's gate opens or closes on the
+  NEXT BAR LINE, never on the slider's move; the sweep follows at once. The
+  readout gives the tier the gates have latched, the change waiting, and the
+  bars to the next line. It starts at 1: every layer open, the sweep open.
+  INTENSITY is a preview. COPY TABLE never writes it.
 
   ⛔ SOLO AND MUTE LIVE OUTSIDE BLOCK A. They are two gain nodes per layer,
   hung on createMusic()'s `layerSink` option. SOLO is exclusive-additive: while
   any layer is soloed, every unsoloed layer is silent. SOLO is the instrument of
   GDD 11.4(c)'s audition: a layer that is not recognisable played alone fails.
+  A closed gate silences a soloed layer too, so audition at INTENSITY 1.
+
+  ⛔ TIER (—, 2, 3, 4) IS OFFERED ONLY ON A PASS LAYER, and a layer that leaves
+  PASS loses its tier. — is the always-on foundation. A tier enters at the
+  game's threshold for it (LAB.gating), heard from the next bar line.
+  ⛔ The melody is never tiered (CLAUDE.md, Audio); the suite fails a port
+  that tiers it.
 
   THE ROUTE BACK INTO THE REPO. Move a gain or cutoff slider, mark a layer PASS
-  or FAIL, step the TEMPO, press COPY TABLE, and paste the text over
-  src/17-audio-tracks.js. COPY TABLE rewrites only what changed: an edited
-  `gain` or `cutoff`, each layer's `audition` mark, and a track's `stepDur`
-  when its tempo moved. Then rebuild (`node build.js`) and run the suite.
+  or FAIL, set a TIER, step the TEMPO, press COPY TABLE, and paste the text
+  over src/17-audio-tracks.js. COPY TABLE rewrites only what changed: an edited
+  `gain` or `cutoff`, each layer's `audition` mark and `tier` (removed for —),
+  and a track's `stepDur` when its tempo moved. Then copy the file into both
+  labs' BLOCK B, rebuild (`node build.js`) and run the suite.
   ⛔ Never re-tune a value in src/ by hand (CLAUDE.md, Audio).
 
   To change BLOCK A, change src/16-audio-engine.js and copy it here whole.
@@ -74,7 +92,7 @@
 <body>
 <div class="wrap">
   <h1>music-lab</h1>
-  <p class="sub">VECTOR VORTEX · CS009 · BLOCK A = src/16-audio-engine.js · BLOCK B = src/17-audio-tracks.js</p>
+  <p class="sub">VECTOR VORTEX · CS010 · BLOCK A = src/16-audio-engine.js · BLOCK B = src/17-audio-tracks.js</p>
 
   <div class="row" id="picker"></div>
 
@@ -94,12 +112,17 @@
     <span class="readout" id="floorOut"></span>
   </div>
 
+  <div class="row">
+    <label class="readout">intensity <input type="range" id="intensity" min="0" max="1" step="0.01" value="1"> <span class="val" id="intVal">1.00</span></label>
+    <span class="readout" id="intOut">—</span>
+  </div>
+
   <div id="blurb"></div>
   <p class="readout">Loop ribbon — click to jump to that bar. Section marks A / B / C.</p>
   <svg id="ribbon" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true"></svg>
 
   <table id="layers">
-    <thead><tr><th>Layer</th><th>Voice</th><th>Solo</th><th>Mute</th><th>Gain</th><th>Cutoff</th><th>Audition</th></tr></thead>
+    <thead><tr><th>Layer</th><th>Voice</th><th>Solo</th><th>Mute</th><th>Gain</th><th>Cutoff</th><th>Audition</th><th>Tier</th></tr></thead>
     <tbody></tbody>
   </table>
 
@@ -111,8 +134,11 @@
 
   <div class="foot">
     <b>The solo test (GDD 11.4(c)).</b> SOLO one layer. If it is not recognisable played alone — a tune, a line,
-    a figure, a groove — mark it FAIL. A layer marked FAIL may never be tiered (Paul's A6). SOLO is additive:
-    solo two layers to hear them as a pair. Marks, gains, cutoffs and tempo travel back only through COPY TABLE.<br>
+    a figure, a groove — mark it FAIL. Only a PASS layer may be tiered. SOLO is additive: solo two layers to hear
+    them as a pair. Marks, tiers, gains, cutoffs and tempo travel back only through COPY TABLE.<br>
+    <b>Intensity and tier.</b> INTENSITY is the director's level, 0 to 1. A tiered layer's gate opens at its
+    threshold (<span id="thresholds"></span>) and closes below it, on the next bar line. The sweep (a low-pass,
+    <span id="sweepRange"></span>) follows at once. The limiter is always on, as in the game.<br>
     <b>Tempo.</b> − and + step along the metronome's ladder, live. The slowest step offered is the slowest at which every
     note still decays from its onset (GDD 11.3). A faster tempo shortens the loop; the length target is in bars.
   </div>
@@ -875,10 +901,15 @@ function createSfxPlayer(engine, options) {
 // a gain here: move the slider in the lab, press COPY TABLE, and paste what it
 // prints over this file.
 //
-// ⛔ NO LAYER CARRIES A `tier` (Paul's A6). Every layer is foundation and always
-// on, so the melody is never gated. `audition` is the lab's PASS / FAIL mark
-// and the scheduler never reads it. ✅ Paul marked every layer PASS in the lab
-// (2026-09-16), after the articulation pass below.
+// ⛔ A `tier` ONLY ON A LAYER MARKED PASS, and only on a track with `bar` (steps
+// per bar): a tier change waits for the bar line (GDD 11.5). A layer with no
+// tier is the always-on foundation, and ⛔ THE MELODY IS ALWAYS FOUNDATION.
+// `pulse` earns two layers (Paul's D1, CS010): `cycle` at tier 2, the hook, and
+// `tick` at tier 3, the groove. `title` is untiered. `audition` is the lab's
+// PASS / FAIL mark; the scheduler reads neither it nor `tier`. ✅ Paul marked
+// every layer PASS in the lab (2026-09-16), after the articulation pass below.
+// The music plays through a limiter (CS010), so these gains are Paul's lab
+// balance as he set it.
 //
 // ⛔ EVERY LAYER IS WRITTEN AS A PART, to be recognisable played solo (GDD
 // 11.4(c)): a tune, a line, a figure or a groove. Never texture.
@@ -950,11 +981,11 @@ function buildTitleTrack() {
     trackNote(ground, s0, ch[0], GATE.ground, 1);
     trackNote(ground, s0 + 12, ch[0] + 7, GATE.ground, 0.7);
   }
-  return { stepDur: 60 / 120 / 4, steps: STEPS, layers: [
+  return { stepDur: 60 / 120 / 4, steps: STEPS, bar: BAR, layers: [
     { name: "theme", type: "triangle", detune: 5, gain: 0.090, atk: 0.004, rel: 0.75, audition: "pass", steps: theme },
     { name: "bells", type: "triangle", gain: 0.086, atk: 0.004, rel: 0.25, audition: "pass", steps: bells },
     { name: "glow", type: "sawtooth", cutoff: 1600, cutoffTo: 900, detune: 8, gain: 0.056, atk: 0.004, rel: 0.5, audition: "pass", steps: glow },
-    { name: "ground", type: "triangle", gain: 0.300, atk: 0.004, rel: 0.5, audition: "pass", steps: ground },
+    { name: "ground", type: "triangle", gain: 0.450, atk: 0.004, rel: 0.5, audition: "pass", steps: ground },
   ]};
 }
 
@@ -1064,16 +1095,13 @@ function buildPulseTrack() {
     for (const n of sec.beat) trackNote(heart, s0 + n[0], 45, GATE.heart, n[1]);
     if (b >= 4) for (const n of sec.ticks) trackNote(tick, s0 + n[0], 69, GATE.tick, n[1]);
   }
-  // Gains: Paul's balance from the lab (2026-09-16), with bassline, heart and
-  // tick at 0.450, all trimmed together by 8.2 dB so the Surger charge tone
-  // stays above the loudest moment (GDD 11.8). A limiter is CS010's (Paul).
-  return { stepDur: 60 / 120 / 4, steps: STEPS, layers: [
-    { name: "melody", type: "triangle", detune: 4, gain: 0.027, atk: 0.004, rel: 0.5625, audition: "pass", steps: melody },
-    { name: "swell", type: "sawtooth", cutoff: 1400, cutoffTo: 700, detune: 9, gain: 0.019, atk: 0.004, rel: 0.375, audition: "pass", steps: swell },
-    { name: "bassline", type: "triangle", gain: 0.175, atk: 0.004, rel: 0.375, audition: "pass", steps: bassline },
-    { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.027, atk: 0.005, rel: 0.1875, audition: "pass", steps: cycle },
-    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.175, atk: 0.003, rel: 0.14, audition: "pass", steps: heart },
-    { name: "tick", noise: true, hp: 7000, gain: 0.175, atk: 0.001, rel: 0.1875, audition: "pass", steps: tick },
+  return { stepDur: 60 / 120 / 4, steps: STEPS, bar: BAR, layers: [
+    { name: "melody", type: "triangle", detune: 4, gain: 0.070, atk: 0.004, rel: 0.5625, audition: "pass", steps: melody },
+    { name: "swell", type: "sawtooth", cutoff: 1400, cutoffTo: 700, detune: 9, gain: 0.049, atk: 0.004, rel: 0.375, audition: "pass", steps: swell },
+    { name: "bassline", type: "triangle", gain: 0.450, atk: 0.004, rel: 0.375, audition: "pass", steps: bassline },
+    { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.070, atk: 0.005, rel: 0.1875, tier: 2, audition: "pass", steps: cycle },
+    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.450, atk: 0.003, rel: 0.14, audition: "pass", steps: heart },
+    { name: "tick", noise: true, hp: 7000, gain: 0.450, atk: 0.001, rel: 0.1875, tier: 3, audition: "pass", steps: tick },
   ]};
 }
 
@@ -1092,7 +1120,9 @@ const MUSIC_TRACKS = {
 // Preview copies of the game's values (src/00-config.js, src/01-rng.js). A drift
 // here changes what the lab previews, never the build.
 const LAB = { lookahead: 0.20, crossfade: 0.60, fadeOut: 1.00, volRamp: 0.03, noiseSeed: 0x5EED0A0D,
-              limit: { threshold: -24, knee: 0, ratio: 20, attack: 0.001, release: 0.10 } };
+              limit: { threshold: -24, knee: 0, ratio: 20, attack: 0.001, release: 0.10 },
+              gating: { thresholds: { 2: 0.25, 3: 0.40, 4: 0.80 }, ramp: 0.03 },
+              sweep: { minHz: 600, maxHz: 18000, q: -3.0103, tc: 0.05 } };
 function labRng(seed) {
   let a = seed >>> 0;
   return function () {
@@ -1118,7 +1148,7 @@ const LAB_TRACKS = {
 // What each layer held at load, so COPY TABLE rewrites only what changed.
 const ORIGINAL = {}, ORIGINAL_STEP = {};
 for (const key of Object.keys(LAB_TRACKS)) {
-  ORIGINAL[key] = MUSIC_TRACKS[key].layers.map(L => ({ gain: L.gain, cutoff: L.cutoff, audition: L.audition }));
+  ORIGINAL[key] = MUSIC_TRACKS[key].layers.map(L => ({ gain: L.gain, cutoff: L.cutoff, audition: L.audition, tier: L.tier }));
   ORIGINAL_STEP[key] = MUSIC_TRACKS[key].stepDur;
 }
 
@@ -1174,6 +1204,8 @@ const music = createMusic(engine, {
   fadeOut: LAB.fadeOut,
   noise: labRng(LAB.noiseSeed),
   limiter: LAB.limit,   // ⛔ the game's limiter (Paul's D3): what the lab plays is what ships
+  gating: LAB.gating,   // ⛔ the game's tier gates and sweep (CS010 P3): INTENSITY drives both
+  sweep: LAB.sweep,
   // ⛔ The lab's SOLO and MUTE nodes, hung outside BLOCK A.
   layerSink: ({ ctx, index, out }) => {
     const mute = ctx.createGain(), solo = ctx.createGain();
@@ -1269,14 +1301,69 @@ $("vol").oninput = e => {
   engine.setVol("music", +e.target.value);
 };
 
+// ⛔ INTENSITY GOES THROUGH BLOCK A's OWN SETTERS, as the director's level does
+// in play: the gates latch to the next bar line, and the sweep follows. Held
+// before the first Play, so a track starts with its gates built at this level.
+function setLabIntensity(f) {
+  music.setIntensity(f);
+  music.setSweep(f);
+  $("intVal").textContent = f.toFixed(2);
+}
+$("intensity").oninput = e => setLabIntensity(+e.target.value);
+setLabIntensity(+$("intensity").value);
+$("thresholds").textContent = [2, 3, 4].map(k => "tier " + k + " at " + LAB.gating.thresholds[k].toFixed(2)).join(", ");
+$("sweepRange").textContent = LAB.sweep.minHz + " Hz at 0 to " + LAB.sweep.maxHz / 1000 + " kHz at 1";
+
+// Each layer's gate off BLOCK A's own record, or null when the current track
+// is not playing. A gate whose bar line has not come yet still sounds `from`.
+function gateStates() {
+  const t = MUSIC_TRACKS[current];
+  if (!playing || !engine.ctx || music.track !== t || !music.layerGates) return null;
+  const now = engine.ctx.currentTime;
+  return music.layerGates.map(lg => ({ tier: lg.tier, on: lg.at > now ? lg.from : lg.target,
+                                       target: lg.target, at: lg.at > now ? lg.at : null }));
+}
+
+// The readout: the tier the gates have latched, the change waiting for its bar
+// line, and the bars to the next line.
+function tierReadout() {
+  const t = MUSIC_TRACKS[current], gates = gateStates();
+  if (!t.layers.some(L => L.tier > 1)) return "untiered: every layer always on";
+  if (!gates) return "tiers: stopped";
+  const now = engine.ctx.currentTime, barLen = LAB_TRACKS[current].bar * t.stepDur;
+  let latched = 1, wanted = 1, at = null;
+  for (const g of gates) {
+    if (g.on && g.tier > latched) latched = g.tier;
+    if (g.target && g.tier > wanted) wanted = g.tier;
+    if (g.at !== null) at = g.at;
+  }
+  const next = at !== null ? at : music.nextBar(now);
+  return `latched tier <b>${latched}</b>` + (at !== null ? ` → <b>${wanted}</b> at the bar line` : "") +
+    ` · next bar line in <b>${((next - now) / barLen).toFixed(2)}</b> bar`;
+}
+
+// ⛔ A TIER ONLY ON A PASS LAYER. Written on the layer's data, which COPY TABLE
+// reads, and on its live gate, so BLOCK A's setter latches the change to the
+// next bar line like any other.
+function setTier(i, tier) {
+  const t = MUSIC_TRACKS[current], L = t.layers[i];
+  if (tier !== null && L.audition !== "pass") return;
+  if (tier === null) delete L.tier; else L.tier = tier;
+  if (music.track === t && music.layerGates) {
+    music.layerGates[i].tier = L.tier || 1;
+    music.setIntensity(music.intensity);
+  }
+}
+
 function voiceOf(L) {
   if (L.noise) return "noise" + (L.hp ? " hp" + L.hp : "");
   return L.type + (L.detune ? " ±" + L.detune + "¢" : "") + (L.drop ? " ↓" + L.drop : "") +
     (L.cutoffTo ? " lp→" + L.cutoffTo : "") + (L.q ? " Q" + L.q : "");
 }
 
-// ⛔ ONE ROW PER LAYER: SOLO, MUTE, gain, cutoff (when the layer has one), and
-// the PASS / FAIL / — mark. test-cs009-p2.js reads this function's markup.
+// ⛔ ONE ROW PER LAYER: SOLO, MUTE, gain, cutoff (when the layer has one), the
+// PASS / FAIL / — mark, and TIER (—, 2, 3, 4), enabled only on a PASS layer.
+// test-cs009-p2.js and test-cs010-p3.js read this function's markup.
 function renderLayers() {
   const layers = MUSIC_TRACKS[current].layers, orig = ORIGINAL[current];
   const levels = gateLevels(layers.length, soloed, muted);
@@ -1290,6 +1377,10 @@ function renderLayers() {
       ? `<input type="range" class="cutoff" data-i="${i}" min="100" max="8000" step="10" value="${L.cutoff}">` +
         `<span class="val${L.cutoff !== orig[i].cutoff ? " edited" : ""}">${Math.round(L.cutoff)}</span>`
       : "—";
+    const pass = L.audition === "pass", tier = L.tier === undefined ? null : L.tier;
+    const tiers = [null, 2, 3, 4].map(v =>
+      `<button class="tier" data-i="${i}" data-tier="${v === null ? "none" : v}" aria-pressed="${tier === v}"` +
+      `${pass ? "" : " disabled"}>${v === null ? "—" : v}</button>`).join(" ");
     tr.innerHTML =
       `<td class="nm">${L.name}</td><td>${voiceOf(L)}</td>` +
       `<td><button class="solo" data-i="${i}" aria-pressed="${soloed.has(i)}">SOLO</button></td>` +
@@ -1299,7 +1390,9 @@ function renderLayers() {
       `<td>${cut}</td>` +
       `<td><button class="mark" data-i="${i}" data-mark="pass" aria-pressed="${mark === "pass"}">PASS</button> ` +
       `<button class="mark" data-i="${i}" data-mark="fail" aria-pressed="${mark === "fail"}">FAIL</button> ` +
-      `<button class="mark" data-i="${i}" data-mark="none" aria-pressed="${mark === "none"}">—</button></td>`;
+      `<button class="mark" data-i="${i}" data-mark="none" aria-pressed="${mark === "none"}">—</button></td>` +
+      `<td>${tiers}${L.tier !== orig[i].tier ? ' <span class="edited">edited</span>' : ""}` +
+      ` <span class="val gate" data-i="${i}"></span></td>`;
     tb.appendChild(tr);
   });
   tb.querySelectorAll("button.solo").forEach(b => b.onclick = () => toggle(soloed, +b.dataset.i));
@@ -1307,6 +1400,11 @@ function renderLayers() {
   tb.querySelectorAll("button.mark").forEach(b => b.onclick = () => {
     const L = layers[+b.dataset.i];
     if (b.dataset.mark === "none") delete L.audition; else L.audition = b.dataset.mark;
+    if (L.audition !== "pass" && L.tier !== undefined) setTier(+b.dataset.i, null);   // a tier only on PASS
+    renderLayers();
+  });
+  tb.querySelectorAll("button.tier").forEach(b => b.onclick = () => {
+    setTier(+b.dataset.i, b.dataset.tier === "none" ? null : +b.dataset.tier);
     renderLayers();
   });
   // The engine reads gain and cutoff at each note, so an edit is heard from the next note.
@@ -1392,16 +1490,24 @@ function tick() {
   } else {
     $("pos").textContent = "stopped";
   }
+  $("intOut").innerHTML = tierReadout();
+  const gates = gateStates();
+  document.querySelectorAll("span.gate").forEach(el => {
+    const g = gates && gates[+el.dataset.i];
+    el.textContent = !g || g.tier === 1 ? "" : g.at !== null ? (g.target ? "opens" : "closes") : (g.on ? "open" : "closed");
+  });
   requestAnimationFrame(tick);
 }
 
 // ⛔ COPY TABLE's rewrite. Pure: BLOCK B's text and a list of edits in, the new
-// text out. A layer edit is { builder, name, gain?, cutoff?, audition? }: `gain`
-// and `cutoff` are the text to write, and `audition` is "pass", "fail", or null
-// to remove the mark. A field left undefined is not touched. Each layer is one
-// line in its builder, found by `{ name: "<name>",`. A tempo edit is
+// text out. A layer edit is { builder, name, gain?, cutoff?, audition?, tier? }:
+// `gain` and `cutoff` are the text to write, `audition` is "pass", "fail", or
+// null to remove the mark, and `tier` is 2, 3 or 4, written just before the
+// mark, or null to remove it. A field left undefined is not touched. Each layer
+// is one line in its builder, found by `{ name: "<name>",`. A tempo edit is
 // { builder, stepDur } with no name: the text after the builder's `stepDur: `,
-// up to its comma, becomes `stepDur`. test-cs009-p2.js runs this.
+// up to its comma, becomes `stepDur`. test-cs009-p2.js and test-cs010-p3.js
+// run this.
 function rewriteBlockB(src, edits) {
   let out = src;
   for (const e of edits) {
@@ -1426,6 +1532,11 @@ function rewriteBlockB(src, edits) {
       line = line.replace(/ audition: "[a-z]+",/, "");
       if (e.audition !== null) line = line.replace(" steps: ", " audition: \"" + e.audition + "\", steps: ");
     }
+    if (e.tier !== undefined) {
+      line = line.replace(/ tier: [0-9]+,/, "");
+      const before = line.includes(" audition: ") ? " audition: " : " steps: ";
+      if (e.tier !== null) line = line.replace(before, " tier: " + e.tier + "," + before);
+    }
     out = out.slice(0, ls) + line + out.slice(le);
   }
   return out;
@@ -1446,6 +1557,7 @@ function labEdits() {
       if (L.gain !== o.gain) { e.gain = L.gain.toFixed(3); changed = true; }
       if (L.cutoff !== o.cutoff) { e.cutoff = String(Math.round(L.cutoff)); changed = true; }
       if (L.audition !== o.audition) { e.audition = L.audition || null; changed = true; }
+      if (L.tier !== o.tier) { e.tier = L.tier === undefined ? null : L.tier; changed = true; }
       if (changed) edits.push(e);
     });
   }

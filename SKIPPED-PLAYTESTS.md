@@ -220,3 +220,35 @@ for.
   inside its own 1.1 s sound).
 - **Knobs:** `C.MUSIC_DUCK_GAIN`, `C.MUSIC_DUCK_RAMP`, `C.MUSIC_DIP_GAIN`,
   `C.MUSIC_DIP_HOLD`.
+
+### CS010 P3 — the tiered `pulse` in play
+- **Would have done:** played Start Depth 1, 13 and 23 with `pulse`, holding fire,
+  through a well clear and a Dive, then let a board fill and died down to the
+  last life.
+- **Trying to learn:** whether `cycle` (the hook) entering at 0.25 and `tick`
+  (the groove) at 0.40 read as the music answering the board, or as layers
+  flickering; whether a layer that enters on the bar line ever sounds late to
+  the danger that called it; whether the 30 ms gate ramp clicks; whether the
+  Dive's release, dropping both at bar lines, reads as relief.
+- **Knobs:** `C.LAYER_THRESHOLD` (2 and 3), `C.LAYER_CROSSFADE`, the two `tier`
+  fields (re-set in music-lab, COPY TABLE), `C.INT_ATTACK`, `C.INT_RELEASE`.
+
+### CS010 P3 — the limiter on hardware, in three browsers
+- **Would have done:** played `pulse` and `title` at unity on laptop speakers,
+  headphones and a phone, in Chrome, Firefox and Safari, with a Surger
+  telegraphing over the loudest bars of `pulse`'s C section.
+- **Trying to learn:** whether −24 dB at ratio 20 pumps or breathes audibly on
+  the struck beats; whether Firefox's and Safari's compressors (their detector
+  and makeup, which the spec does not pin; plan §11 R3) come out louder or
+  softer than Chromium's render (`pulse` −24.30 dB, peak 0.454); and whether the
+  Surger tone still stands clear of the music in each.
+- **Knobs:** `C.MUSIC_LIMIT` (threshold, ratio, attack, release; ⛔ the knee stays
+  0 and the headroom gate pins the rest), the layer gains in music-lab.
+
+### CS010 P3 — `title` at ground 0.45
+- **Would have done:** sat on the title, MODE and START DEPTH screens for two
+  loops of `title`, on speakers and headphones.
+- **Trying to learn:** whether the ground at 0.45 behind the limiter still sits
+  under the theme rather than swallowing it, and whether it booms on small
+  speakers.
+- **Knobs:** `title`'s `ground` gain (music-lab, COPY TABLE).

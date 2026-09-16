@@ -5,10 +5,15 @@
 // a gain here: move the slider in the lab, press COPY TABLE, and paste what it
 // prints over this file.
 //
-// ⛔ NO LAYER CARRIES A `tier` (Paul's A6). Every layer is foundation and always
-// on, so the melody is never gated. `audition` is the lab's PASS / FAIL mark
-// and the scheduler never reads it. ✅ Paul marked every layer PASS in the lab
-// (2026-09-16), after the articulation pass below.
+// ⛔ A `tier` ONLY ON A LAYER MARKED PASS, and only on a track with `bar` (steps
+// per bar): a tier change waits for the bar line (GDD 11.5). A layer with no
+// tier is the always-on foundation, and ⛔ THE MELODY IS ALWAYS FOUNDATION.
+// `pulse` earns two layers (Paul's D1, CS010): `cycle` at tier 2, the hook, and
+// `tick` at tier 3, the groove. `title` is untiered. `audition` is the lab's
+// PASS / FAIL mark; the scheduler reads neither it nor `tier`. ✅ Paul marked
+// every layer PASS in the lab (2026-09-16), after the articulation pass below.
+// The music plays through a limiter (CS010), so these gains are Paul's lab
+// balance as he set it.
 //
 // ⛔ EVERY LAYER IS WRITTEN AS A PART, to be recognisable played solo (GDD
 // 11.4(c)): a tune, a line, a figure or a groove. Never texture.
@@ -80,11 +85,11 @@ function buildTitleTrack() {
     trackNote(ground, s0, ch[0], GATE.ground, 1);
     trackNote(ground, s0 + 12, ch[0] + 7, GATE.ground, 0.7);
   }
-  return { stepDur: 60 / 120 / 4, steps: STEPS, layers: [
+  return { stepDur: 60 / 120 / 4, steps: STEPS, bar: BAR, layers: [
     { name: "theme", type: "triangle", detune: 5, gain: 0.090, atk: 0.004, rel: 0.75, audition: "pass", steps: theme },
     { name: "bells", type: "triangle", gain: 0.086, atk: 0.004, rel: 0.25, audition: "pass", steps: bells },
     { name: "glow", type: "sawtooth", cutoff: 1600, cutoffTo: 900, detune: 8, gain: 0.056, atk: 0.004, rel: 0.5, audition: "pass", steps: glow },
-    { name: "ground", type: "triangle", gain: 0.300, atk: 0.004, rel: 0.5, audition: "pass", steps: ground },
+    { name: "ground", type: "triangle", gain: 0.450, atk: 0.004, rel: 0.5, audition: "pass", steps: ground },
   ]};
 }
 
@@ -194,16 +199,13 @@ function buildPulseTrack() {
     for (const n of sec.beat) trackNote(heart, s0 + n[0], 45, GATE.heart, n[1]);
     if (b >= 4) for (const n of sec.ticks) trackNote(tick, s0 + n[0], 69, GATE.tick, n[1]);
   }
-  // Gains: Paul's balance from the lab (2026-09-16), with bassline, heart and
-  // tick at 0.450, all trimmed together by 8.2 dB so the Surger charge tone
-  // stays above the loudest moment (GDD 11.8). A limiter is CS010's (Paul).
-  return { stepDur: 60 / 120 / 4, steps: STEPS, layers: [
-    { name: "melody", type: "triangle", detune: 4, gain: 0.027, atk: 0.004, rel: 0.5625, audition: "pass", steps: melody },
-    { name: "swell", type: "sawtooth", cutoff: 1400, cutoffTo: 700, detune: 9, gain: 0.019, atk: 0.004, rel: 0.375, audition: "pass", steps: swell },
-    { name: "bassline", type: "triangle", gain: 0.175, atk: 0.004, rel: 0.375, audition: "pass", steps: bassline },
-    { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.027, atk: 0.005, rel: 0.1875, audition: "pass", steps: cycle },
-    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.175, atk: 0.003, rel: 0.14, audition: "pass", steps: heart },
-    { name: "tick", noise: true, hp: 7000, gain: 0.175, atk: 0.001, rel: 0.1875, audition: "pass", steps: tick },
+  return { stepDur: 60 / 120 / 4, steps: STEPS, bar: BAR, layers: [
+    { name: "melody", type: "triangle", detune: 4, gain: 0.070, atk: 0.004, rel: 0.5625, audition: "pass", steps: melody },
+    { name: "swell", type: "sawtooth", cutoff: 1400, cutoffTo: 700, detune: 9, gain: 0.049, atk: 0.004, rel: 0.375, audition: "pass", steps: swell },
+    { name: "bassline", type: "triangle", gain: 0.450, atk: 0.004, rel: 0.375, audition: "pass", steps: bassline },
+    { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.070, atk: 0.005, rel: 0.1875, tier: 2, audition: "pass", steps: cycle },
+    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.450, atk: 0.003, rel: 0.14, audition: "pass", steps: heart },
+    { name: "tick", noise: true, hp: 7000, gain: 0.450, atk: 0.001, rel: 0.1875, tier: 3, audition: "pass", steps: tick },
   ]};
 }
 
