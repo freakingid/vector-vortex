@@ -603,6 +603,11 @@ game logic it needs; drift here can only produce a bad *preview*, never a bad
   the home of the **per-layer solo button** that enforces the audition gate:
   SOLO, MUTE, the PASS/FAIL mark and COPY TABLE. Its BLOCK A and BLOCK B are
   `16-audio-engine.js` and `17-audio-tracks.js` verbatim (`test-cs009-p2.js`).
+- **`tools/sfx-lab.html`** — ⛔ the porting source for every `C.SFX` recipe:
+  2–3 candidates per event, ▶ alone, ▶ in context, a picked mark and COPY OUT.
+  ⛔ **The build ships the picked candidate; port verbatim** (candidate A until
+  Paul picks). Its BLOCK A, BLOCK B and BLOCK SFX are `16-audio-engine.js`,
+  `17-audio-tracks.js` and `00-config.js`'s SFX group (`test-cs009-p4.js`).
 - **`tools/well-lab.html`** — the sixteen well polygons and the perspective
   curve.
 - **`tools/glow-lab.html`** — line weight, glow falloff, and the readability

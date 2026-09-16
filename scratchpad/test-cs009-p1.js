@@ -97,7 +97,7 @@ function inputOpts(C, extra) {
   const X = H.buildGame();
   const { C, AudioSys, MusicSys } = X;
   H.assert(X._audio === null, "the default build installs no fake");
-  H.eq(X.AUDIO_VERSION, "0.1.0", "kit-audio is 0.1.0");
+  H.eq(X.AUDIO_VERSION, "0.2.0", "kit-audio is 0.2.0");   // CS009 P4: the SFX player, MINOR
   H.assert(AudioSys && MusicSys, "AudioSys and MusicSys exist");
   for (const k of ["AUDIO_NOISE_SEED", "AUDIO_VOL_RAMP"]) hasKnob(X, k, null, H);
   hasKnob(X, "AUDIO_VOL_STEPS", { def: 10 }, H);

@@ -543,6 +543,39 @@ const C = {
   // CS012 appends "drive".
   MUSIC_TRACK_CHOICES:  ["auto", "pulse"],
 
+  // ---- SFX (GDD 11.8) -----------------------------------------------------
+  // ⛔ PORTED VERBATIM FROM tools/sfx-lab.html (CS009 P4, Paul's A7). Each
+  // recipe is the lab's picked candidate, which is candidate A until Paul picks
+  // another, and test-cs009-p4.js holds this group identical to the lab's
+  // candidate-A block. ⛔ Never re-tune a value here by hand: pick in the lab,
+  // copy out, paste over this group. One recipe per event (plan §7; A8: no spawn
+  // cues). The fields are createSfxPlayer's (16-audio-engine.js).
+  SFX: {
+    fire:           { osc: [{ type: "square", f: 1480, to: 370 }], glide: 0.07, filter: { type: "lowpass", f: 5000, to: 1200 }, sweep: 0.07, atk: 0.002, hold: 0.01, rel: 0.06, gain: 0.12 },
+    kill:           { noise: true, filter: { type: "lowpass", f: 3000, to: 200 }, sweep: 0.25, atk: 0.002, hold: 0.02, rel: 0.25, gain: 0.3 },
+    split:          { osc: [{ type: "square", f: 660, to: 990 }, { type: "square", f: 440, to: 330 }], glide: 0.12, atk: 0.002, hold: 0.04, rel: 0.1, gain: 0.12 },
+    chip:           { osc: [{ type: "square", f: 3000, to: 2400 }], glide: 0.02, atk: 0.001, hold: 0.005, rel: 0.03, gain: 0.07 },
+    bolt:           { osc: [{ type: "sawtooth", f: 900, to: 1800 }], glide: 0.1, filter: { type: "lowpass", f: 3000 }, atk: 0.005, hold: 0.03, rel: 0.08, gain: 0.12 },
+    cross:          { osc: [{ type: "triangle", f: 330, to: 660 }], glide: 0.15, atk: 0.01, hold: 0.05, rel: 0.12, gain: 0.16 },
+    surgeCharge:    { osc: [{ type: "sawtooth", f: 110, to: 880 }, { type: "square", f: 111, to: 886 }], glide: 0.45, filter: { type: "lowpass", f: 1200, to: 5000, q: 2 }, sweep: 0.45, atk: 0.01, hold: 0.44, rel: 0.04, gain: 0.45 },
+    surgeDischarge: { noise: true, filter: { type: "lowpass", f: 6000, to: 400 }, sweep: 0.3, atk: 0.002, hold: 0.08, rel: 0.25, gain: 0.35 },
+    death:          { noise: true, filter: { type: "lowpass", f: 4000, to: 120 }, sweep: 1, atk: 0.002, hold: 0.1, rel: 1, gain: 0.45 },
+    gameOver:       { osc: [{ type: "triangle", f: 392, to: 98 }, { type: "triangle", f: 294, to: 73.5 }], glide: 1.6, atk: 0.02, hold: 0.4, rel: 1.4, gain: 0.28 },
+    respawn:        { osc: [{ type: "triangle", f: 220, to: 880 }], glide: 0.3, atk: 0.01, hold: 0.1, rel: 0.2, gain: 0.18 },
+    purge:          { noise: true, filter: { type: "lowpass", f: 400, to: 8000 }, sweep: 0.35, atk: 0.01, hold: 0.15, rel: 0.5, gain: 0.45 },
+    purgeWeak:      { noise: true, filter: { type: "lowpass", f: 400, to: 1200 }, sweep: 0.15, atk: 0.01, hold: 0.03, rel: 0.15, gain: 0.12 },
+    extraLife:      { osc: [{ type: "triangle", f: 784, to: 1568 }, { type: "triangle", f: 1175, to: 2350 }], glide: 0.08, atk: 0.005, hold: 0.2, rel: 0.4, gain: 0.18 },
+    lifeLost:       { osc: [{ type: "square", f: 784, to: 392 }, { type: "square", f: 1175, to: 587 }], glide: 0.25, filter: { type: "lowpass", f: 2500 }, atk: 0.005, hold: 0.1, rel: 0.3, gain: 0.12 },
+    wellClear:      { osc: [{ type: "triangle", f: 523, to: 1047 }, { type: "triangle", f: 659, to: 1319 }], glide: 0.2, atk: 0.01, hold: 0.15, rel: 0.45, gain: 0.2 },
+    dive:           { osc: [{ type: "sawtooth", f: 80, to: 1600 }], glide: 2.25, filter: { type: "lowpass", f: 600, to: 5000 }, sweep: 2.25, atk: 0.3, hold: 1.9, rel: 0.4, gain: 0.18 },
+    diveStrike:     { osc: [{ type: "square", f: 1200, to: 300 }, { type: "square", f: 1650, to: 410 }], glide: 0.15, atk: 0.002, hold: 0.02, rel: 0.2, gain: 0.16 },
+    menuMove:       { osc: [{ type: "square", f: 880 }], atk: 0.001, hold: 0.01, rel: 0.03, gain: 0.06 },
+    menuConfirm:    { osc: [{ type: "square", f: 880, to: 1760 }], glide: 0.05, atk: 0.002, hold: 0.03, rel: 0.08, gain: 0.08 },
+    menuBack:       { osc: [{ type: "square", f: 880, to: 440 }], glide: 0.06, atk: 0.002, hold: 0.02, rel: 0.07, gain: 0.08 },
+  },
+  // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
+  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6 },
+
   // ---- Overdrive (GDD 14) -------------------------------------------------
   MAX_TOKENS:           2,      // ⛔ readability cap on powerups on screen
   TOKEN_LIFE:           9.0,    // s. ⛔ counts UP toward this. GDD 16.3.

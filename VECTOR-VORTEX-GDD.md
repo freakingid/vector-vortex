@@ -1060,6 +1060,8 @@ Node counts are MEASURED on the harness's recording fake against `C.MUSIC_STEP_N
 
 Every entry point is `if (!AudioSys.ctx) return;`-guarded, headless-safe.
 
+**Shipped, CS009 P4 — the player and the recipes, not yet the seats.** A sound is a **recipe**, plain data in `C.SFX`: one or two oscillators or noise, a glide, an optional low- or high-pass filter with a sweep, an attack/hold/release envelope and a peak gain. `createSfxPlayer()` (`16-audio-engine.js`, kit-audio 0.2.0) plays one with `play(recipe, { pitch })`, and holds one with `hold(recipe)`, whose `set(t01)` moves its pitch and whose `stop()` releases it. That held voice is the Surger's charge tone. `C.SFX` has one recipe for each of the 21 events in `PLANNED-FEATURES-CS009.md` §7, and no spawn cues (Paul's A8). The kill sound is one recipe, and `C.SFX_KILL_PITCH` gives each of the seven `sfxVoice` values its own pitch (A9). ⛔ **Every recipe is ported verbatim from `tools/sfx-lab.html`**, which offers 2–3 candidates per event. The build ships the picked one, which is candidate A until Paul picks (A7). The lab plays `surgeCharge` as a held voice driven 0 → 1 over `SURGE_TELEGRAPH` with `pulse` playing, and `purgeWeak` beside `purge`. ⚠ Candidate A's `surgeCharge` peaks at 0.45, above `pulse`'s loudest summed step (0.434, MEASURED at P4). P5's headroom gate is the check. ⛔ No seat plays anything until CS009 P5.
+
 ---
 
 ## 12. Onboarding

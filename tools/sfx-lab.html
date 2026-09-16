@@ -1,106 +1,106 @@
 <!DOCTYPE html>
 <!--
-  tools/music-lab.html — Vector Vortex design instrument, NOT shipped code
+  tools/sfx-lab.html — Vector Vortex design instrument, NOT shipped code
   (CLAUDE.md, "Design instruments"). Opens from file:// by double-click.
 
-  ⛔ THE PORTING SOURCE FOR EVERY TRACK TABLE (GDD 11.3). Two blocks are the
-  build's own text, and scratchpad/test-cs009-p2.js asserts both, character for
-  character, against the built file:
-    BLOCK A  src/16-audio-engine.js, whole (kit-audio: the engine and scheduler)
-    BLOCK B  src/17-audio-tracks.js, whole (the track builders and MUSIC_TRACKS)
-  What you hear is therefore exactly what the game plays. Everything below
-  BLOCK B is lab UI, and none of it ships.
+  ⛔ THE PORTING SOURCE FOR EVERY SFX RECIPE (Paul's A7). Two to three candidates
+  per event, A first. ⛔ The build ships the PICKED candidate, ported verbatim,
+  and until Paul picks, that is A. scratchpad/test-cs009-p4.js asserts, against
+  the built file, character for character:
+    BLOCK A    src/16-audio-engine.js, whole (kit-audio: createSfxPlayer plays
+               every candidate here, so what you hear is what the game plays)
+    BLOCK B    src/17-audio-tracks.js, whole (the `pulse` builder, for the
+               Surger charge tone's audition against the music)
+    BLOCK SFX  src/00-config.js's SFX group: every candidate A
+  Candidates B and C live in the CANDIDATES block, and none of it ships.
 
-  ⛔ SOLO AND MUTE LIVE OUTSIDE BLOCK A. They are two gain nodes per layer,
-  hung on createMusic()'s `layerSink` option. SOLO is exclusive-additive: while
-  any layer is soloed, every unsoloed layer is silent. SOLO is the instrument of
-  GDD 11.4(c)'s audition: a layer that is not recognisable played alone fails.
+  THE ROUTE BACK INTO THE REPO. Mark a candidate "picked" in a row, press COPY
+  OUT, and paste the text over src/00-config.js's SFX group. COPY OUT rewrites
+  only the lines of rows whose pick is not A. Then copy the group into BLOCK SFX
+  here, rebuild (`node build.js`) and run the suite. ⛔ Never re-tune a recipe in
+  src/ by hand (CLAUDE.md, Design instruments).
 
-  THE ROUTE BACK INTO THE REPO. Move a gain or cutoff slider, mark a layer PASS
-  or FAIL, press COPY TABLE, and paste the text over src/17-audio-tracks.js.
-  COPY TABLE rewrites only what changed: an edited `gain` or `cutoff`, and each
-  layer's `audition` mark. Then rebuild (`node build.js`) and run the suite.
-  ⛔ Never re-tune a value in src/ by hand (CLAUDE.md, Audio).
-
-  To change BLOCK A, change src/16-audio-engine.js and copy it here whole.
+  To change BLOCK A or BLOCK B, change the src/ file and copy it here whole.
+  music-lab carries the same two blocks and the same rule.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Vector Vortex — music-lab</title>
+<title>Vector Vortex — sfx-lab</title>
 <style>
   :root { --bg:#05060a; --panel:#0b0e16; --line:#1f2636; --text:#cfe9f5; --dim:#5f7390;
           --cyan:#3FE0FF; --gold:#ffd24a; --pass:#6dff9a; --fail:#ff5a6a; }
   * { box-sizing: border-box; }
   body { margin: 0; padding: 20px 16px 40px; background: var(--bg); color: var(--text);
          font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-  .wrap { max-width: 1080px; margin: 0 auto; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
   h1 { margin: 0; font-size: 15px; font-weight: 400; letter-spacing: .3em; color: var(--cyan); text-transform: uppercase; }
   .sub { margin: 2px 0 16px; color: var(--dim); font-size: 11px; letter-spacing: .1em; }
-  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 10px 0; }
   button { appearance: none; cursor: pointer; background: var(--panel); color: var(--text);
-           border: 1px solid var(--line); font: inherit; padding: 5px 12px; letter-spacing: .08em; }
+           border: 1px solid var(--line); font: inherit; padding: 5px 12px; letter-spacing: .04em; }
   button:hover { border-color: var(--cyan); }
   button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
-  button.tk { min-width: 150px; text-align: left; padding: 9px 12px; }
-  button.tk small { display: block; color: var(--dim); font-size: 10px; }
+  button.playing { border-color: var(--pass); color: var(--pass); }
+  button.ctx { border-style: dashed; }
   .readout { color: var(--dim); font-size: 12px; }
   .readout b { color: var(--text); font-weight: 400; }
-  #blurb { border-left: 2px solid var(--cyan); padding: 6px 12px; font-size: 11px; min-height: 20px; }
-  #ribbon { width: 100%; display: block; background: var(--panel); border: 1px solid var(--line); cursor: pointer; }
+  input[type=range] { width: 120px; accent-color: var(--cyan); vertical-align: middle; }
+  .val { display: inline-block; min-width: 40px; text-align: right; color: var(--dim); }
+  select { background: var(--panel); color: var(--text); border: 1px solid var(--line); font: inherit; padding: 2px 4px; }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 11px; }
   th { text-align: left; font-weight: 400; color: var(--dim); text-transform: uppercase; letter-spacing: .1em;
        border-bottom: 1px solid var(--line); padding: 5px 6px; font-size: 10px; }
-  td { padding: 4px 6px; border-bottom: 1px solid #121826; white-space: nowrap; }
-  td button { padding: 2px 8px; font-size: 10px; }
-  button.solo[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
-  button.mute[aria-pressed="true"] { border-color: var(--fail); color: var(--fail); }
-  button.mark[data-mark="pass"][aria-pressed="true"] { border-color: var(--pass); color: var(--pass); }
-  button.mark[data-mark="fail"][aria-pressed="true"] { border-color: var(--fail); color: var(--fail); }
-  button.mark[data-mark="none"][aria-pressed="true"] { border-color: var(--text); }
-  tr.silent td.nm { opacity: .4; }
-  input[type=range] { width: 120px; accent-color: var(--cyan); vertical-align: middle; }
-  .val { display: inline-block; min-width: 48px; text-align: right; color: var(--dim); }
-  .edited { color: var(--gold); }
-  textarea { width: 100%; height: 220px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
-             font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; margin-top: 8px; }
+  td { padding: 6px; border-bottom: 1px solid #121826; vertical-align: top; }
+  td.nm { color: var(--cyan); white-space: nowrap; }
+  td.brief { color: var(--dim); max-width: 280px; }
+  td.cand { white-space: nowrap; }
+  td.cand button { width: 100%; text-align: left; font-size: 11px; padding: 3px 8px; }
+  td.cand label { display: block; margin-top: 3px; color: var(--dim); font-size: 10px; cursor: pointer; }
+  td.cand label.on { color: var(--pass); }
+  td.cand input { margin: 0 4px 0 0; vertical-align: -1px; }
+  td .hint { color: var(--dim); font-size: 10px; margin-top: 3px; white-space: normal; max-width: 220px; }
+  tr.pair td { background: #080b12; }
+  #err { color: var(--fail); white-space: pre-wrap; }
+  #picks { color: var(--pass); font-size: 11px; }
+  textarea { width: 100%; height: 260px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+             font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; margin-top: 8px; white-space: pre; }
   .foot { margin-top: 16px; color: var(--dim); font-size: 11px; border-left: 2px solid var(--line); padding: 6px 12px; }
   .foot b { color: var(--text); font-weight: 400; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>music-lab</h1>
-  <p class="sub">VECTOR VORTEX · CS009 · BLOCK A = src/16-audio-engine.js · BLOCK B = src/17-audio-tracks.js</p>
-
-  <div class="row" id="picker"></div>
+  <h1>sfx-lab</h1>
+  <p class="sub">VECTOR VORTEX · CS009 · BLOCK A = src/16-audio-engine.js · BLOCK B = src/17-audio-tracks.js · BLOCK SFX = src/00-config.js SFX</p>
 
   <div class="row">
-    <button id="play">Play</button>
-    <button id="stop">Stop</button>
-    <label class="readout">music <input type="range" id="vol" min="0" max="1" step="0.05" value="1"> <span class="val" id="volOut">1.00</span></label>
-    <span class="readout" id="pos">—</span>
+    <label class="readout">master <input type="range" id="volMaster" min="0" max="1" step="0.1" value="1"> <span class="val" id="volMasterOut">1.0</span></label>
+    <label class="readout">sfx <input type="range" id="volSfx" min="0" max="1" step="0.1" value="1"> <span class="val" id="volSfxOut">1.0</span></label>
+    <label class="readout">music <input type="range" id="volMusic" min="0" max="1" step="0.1" value="1"> <span class="val" id="volMusicOut">1.0</span></label>
+    <button id="music" aria-pressed="false">PULSE UNDER EVERYTHING</button>
+    <span class="readout" id="status">Audio starts on the first click. Levels are linear; 1.0 is the game's default.</span>
   </div>
+  <div id="err"></div>
 
-  <div id="blurb"></div>
-  <p class="readout">Loop ribbon — click to jump to that bar. Section marks A / B / C.</p>
-  <svg id="ribbon" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true"></svg>
-
-  <table id="layers">
-    <thead><tr><th>Layer</th><th>Voice</th><th>Solo</th><th>Mute</th><th>Gain</th><th>Cutoff</th><th>Audition</th></tr></thead>
-    <tbody></tbody>
+  <table id="grid">
+    <thead><tr><th>Event</th><th>Brief</th><th>Candidate A</th><th>Candidate B</th><th>Candidate C</th><th>In context</th></tr></thead>
+    <tbody id="rows"></tbody>
   </table>
 
   <div class="row">
-    <button id="copy">COPY TABLE</button>
+    <button id="copy">COPY OUT</button>
     <span class="readout" id="copyOut"></span>
   </div>
-  <textarea id="table" spellcheck="false" readonly placeholder="COPY TABLE prints src/17-audio-tracks.js here, with your edits."></textarea>
+  <div id="picks"></div>
+  <textarea id="out" spellcheck="false" readonly placeholder="COPY OUT prints src/00-config.js's SFX group here, with your picks."></textarea>
 
   <div class="foot">
-    <b>The solo test (GDD 11.4(c)).</b> SOLO one layer. If it is not recognisable played alone — a tune, a line,
-    a figure, a groove — mark it FAIL. A layer marked FAIL may never be tiered (Paul's A6). SOLO is additive:
-    solo two layers to hear them as a pair. Marks, gains and cutoffs travel back only through COPY TABLE.
+    <b>How to judge.</b> Set the three levels to what you play at. Play each candidate alone, then in context: the
+    neighbours it sounds among, played with the <b>picked</b> candidate of each neighbour. <b>surgeCharge</b> is a held
+    voice driven 0 → 1 over the Surger's telegraph with <b>pulse</b> playing; it must stay audible over the music
+    (GDD 11.8, SETTLED). <b>purgeWeak</b> plays beside <b>purge</b>: the second use must sound distinctly feeble
+    (GDD 4.3). Picks live in this browser only, until COPY OUT carries them into the repo.
   </div>
 </div>
 
@@ -845,13 +845,180 @@ const MUSIC_TRACKS = {
 // ===== BLOCK B END =====
 </script>
 
+<script type="text/plain" id="block-sfx">
+// ===== BLOCK SFX BEGIN — src/00-config.js's SFX group, verbatim =====
+  // ---- SFX (GDD 11.8) -----------------------------------------------------
+  // ⛔ PORTED VERBATIM FROM tools/sfx-lab.html (CS009 P4, Paul's A7). Each
+  // recipe is the lab's picked candidate, which is candidate A until Paul picks
+  // another, and test-cs009-p4.js holds this group identical to the lab's
+  // candidate-A block. ⛔ Never re-tune a value here by hand: pick in the lab,
+  // copy out, paste over this group. One recipe per event (plan §7; A8: no spawn
+  // cues). The fields are createSfxPlayer's (16-audio-engine.js).
+  SFX: {
+    fire:           { osc: [{ type: "square", f: 1480, to: 370 }], glide: 0.07, filter: { type: "lowpass", f: 5000, to: 1200 }, sweep: 0.07, atk: 0.002, hold: 0.01, rel: 0.06, gain: 0.12 },
+    kill:           { noise: true, filter: { type: "lowpass", f: 3000, to: 200 }, sweep: 0.25, atk: 0.002, hold: 0.02, rel: 0.25, gain: 0.3 },
+    split:          { osc: [{ type: "square", f: 660, to: 990 }, { type: "square", f: 440, to: 330 }], glide: 0.12, atk: 0.002, hold: 0.04, rel: 0.1, gain: 0.12 },
+    chip:           { osc: [{ type: "square", f: 3000, to: 2400 }], glide: 0.02, atk: 0.001, hold: 0.005, rel: 0.03, gain: 0.07 },
+    bolt:           { osc: [{ type: "sawtooth", f: 900, to: 1800 }], glide: 0.1, filter: { type: "lowpass", f: 3000 }, atk: 0.005, hold: 0.03, rel: 0.08, gain: 0.12 },
+    cross:          { osc: [{ type: "triangle", f: 330, to: 660 }], glide: 0.15, atk: 0.01, hold: 0.05, rel: 0.12, gain: 0.16 },
+    surgeCharge:    { osc: [{ type: "sawtooth", f: 110, to: 880 }, { type: "square", f: 111, to: 886 }], glide: 0.45, filter: { type: "lowpass", f: 1200, to: 5000, q: 2 }, sweep: 0.45, atk: 0.01, hold: 0.44, rel: 0.04, gain: 0.45 },
+    surgeDischarge: { noise: true, filter: { type: "lowpass", f: 6000, to: 400 }, sweep: 0.3, atk: 0.002, hold: 0.08, rel: 0.25, gain: 0.35 },
+    death:          { noise: true, filter: { type: "lowpass", f: 4000, to: 120 }, sweep: 1, atk: 0.002, hold: 0.1, rel: 1, gain: 0.45 },
+    gameOver:       { osc: [{ type: "triangle", f: 392, to: 98 }, { type: "triangle", f: 294, to: 73.5 }], glide: 1.6, atk: 0.02, hold: 0.4, rel: 1.4, gain: 0.28 },
+    respawn:        { osc: [{ type: "triangle", f: 220, to: 880 }], glide: 0.3, atk: 0.01, hold: 0.1, rel: 0.2, gain: 0.18 },
+    purge:          { noise: true, filter: { type: "lowpass", f: 400, to: 8000 }, sweep: 0.35, atk: 0.01, hold: 0.15, rel: 0.5, gain: 0.45 },
+    purgeWeak:      { noise: true, filter: { type: "lowpass", f: 400, to: 1200 }, sweep: 0.15, atk: 0.01, hold: 0.03, rel: 0.15, gain: 0.12 },
+    extraLife:      { osc: [{ type: "triangle", f: 784, to: 1568 }, { type: "triangle", f: 1175, to: 2350 }], glide: 0.08, atk: 0.005, hold: 0.2, rel: 0.4, gain: 0.18 },
+    lifeLost:       { osc: [{ type: "square", f: 784, to: 392 }, { type: "square", f: 1175, to: 587 }], glide: 0.25, filter: { type: "lowpass", f: 2500 }, atk: 0.005, hold: 0.1, rel: 0.3, gain: 0.12 },
+    wellClear:      { osc: [{ type: "triangle", f: 523, to: 1047 }, { type: "triangle", f: 659, to: 1319 }], glide: 0.2, atk: 0.01, hold: 0.15, rel: 0.45, gain: 0.2 },
+    dive:           { osc: [{ type: "sawtooth", f: 80, to: 1600 }], glide: 2.25, filter: { type: "lowpass", f: 600, to: 5000 }, sweep: 2.25, atk: 0.3, hold: 1.9, rel: 0.4, gain: 0.18 },
+    diveStrike:     { osc: [{ type: "square", f: 1200, to: 300 }, { type: "square", f: 1650, to: 410 }], glide: 0.15, atk: 0.002, hold: 0.02, rel: 0.2, gain: 0.16 },
+    menuMove:       { osc: [{ type: "square", f: 880 }], atk: 0.001, hold: 0.01, rel: 0.03, gain: 0.06 },
+    menuConfirm:    { osc: [{ type: "square", f: 880, to: 1760 }], glide: 0.05, atk: 0.002, hold: 0.03, rel: 0.08, gain: 0.08 },
+    menuBack:       { osc: [{ type: "square", f: 880, to: 440 }], glide: 0.06, atk: 0.002, hold: 0.02, rel: 0.07, gain: 0.08 },
+  },
+  // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
+  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6 },
+// ===== BLOCK SFX END =====
+</script>
+
+<script id="candidates">
+"use strict";
+// ===== CANDIDATES BEGIN — lab only; none of this ships =====
+// Each row's brief: what the sound is for, and the seat it will play from
+// (PLANNED-FEATURES-CS009.md §7).
+const SFX_BRIEFS = {
+  fire: "One per shot, so it repeats fast. Short, bright, never tiring.",
+  kill: "An enemy destroyed. One recipe; its pitch comes from SFX_KILL_PITCH by sfxVoice.",
+  split: "A Carrier breaks into two. Something coming apart, not something dying.",
+  chip: "A shot shortens a Thorn. Per chip, so small and dry.",
+  bolt: "A Weaver fires at the rim. A threat you should turn toward.",
+  cross: "A Drifter opens to cross: the moment it can be shot (GDD 6.3).",
+  surgeCharge: "HELD: the Surger's fuse, driven 0 to 1 over its telegraph. SETTLED: audible over music at every tier.",
+  surgeDischarge: "The fuse reaches the rim and the lane goes live.",
+  death: "The Skimmer is destroyed. Plays under the 1.2 s freeze.",
+  gameOver: "The last life. Final, and it lands as the music fades.",
+  respawn: "The craft is back at the rim, invulnerable for 1.5 s.",
+  purge: "First Purge in the well: every enemy gone. The biggest cue you trigger.",
+  purgeWeak: "Second Purge: one enemy. GDD 4.3: distinctly feeble, so the downgrade is felt.",
+  extraLife: "A life awarded at a score milestone.",
+  lifeLost: "A milestone crossed at the reserve cap: the life is refused. GDD 4.4: never silently swallowed.",
+  wellClear: "The last enemy in the well is gone; the Dive follows.",
+  dive: "The rising sweep through the Dive (GDD 5). It should feel like exhaling.",
+  diveStrike: "The craft hits a Thorn in the Dive. The death cue follows it.",
+  menuMove: "The menu cursor moves, or an adjusting row steps.",
+  menuConfirm: "Fire on a menu row.",
+  menuBack: "Back out of a screen.",
+};
+
+// Candidate A's label. Its recipe is C.SFX, read from BLOCK SFX.
+const SFX_A_LABELS = {
+  fire: "square zip",
+  kill: "noise burst",
+  split: "square fork",
+  chip: "square flick",
+  bolt: "saw rise",
+  cross: "triangle open",
+  surgeCharge: "saw + square climb",
+  surgeDischarge: "noise slam",
+  death: "noise collapse",
+  gameOver: "triangle pair fall",
+  respawn: "triangle rise",
+  purge: "noise bloom",
+  purgeWeak: "noise puff",
+  extraLife: "triangle fifth lift",
+  lifeLost: "square fifth sag",
+  wellClear: "triangle third lift",
+  dive: "saw doppler",
+  diveStrike: "square clang",
+  menuMove: "square blip",
+  menuConfirm: "square up",
+  menuBack: "square down",
+};
+
+// Candidates B and C, in the recipe format of createSfxPlayer.
+const SFX_ALTS = {
+  fire: [
+    { label: "triangle tick", recipe: { osc: [{ type: "triangle", f: 2200, to: 660 }], glide: 0.05, atk: 0.001, hold: 0.005, rel: 0.05, gain: 0.16 } },
+    { label: "noise spit", recipe: { noise: true, filter: { type: "highpass", f: 3500, to: 1500 }, sweep: 0.05, atk: 0.001, hold: 0.005, rel: 0.05, gain: 0.14 } },
+  ],
+  kill: [
+    { label: "saw drop", recipe: { osc: [{ type: "sawtooth", f: 440, to: 55 }], glide: 0.2, filter: { type: "lowpass", f: 2400, to: 300 }, sweep: 0.2, atk: 0.002, hold: 0.02, rel: 0.2, gain: 0.2 } },
+    { label: "square pair drop", recipe: { osc: [{ type: "square", f: 330, to: 66 }, { type: "square", f: 334, to: 67 }], glide: 0.18, atk: 0.002, hold: 0.02, rel: 0.18, gain: 0.12 } },
+  ],
+  split: [
+    { label: "triangle leap", recipe: { osc: [{ type: "triangle", f: 520, to: 1040 }], glide: 0.08, atk: 0.002, hold: 0.03, rel: 0.12, gain: 0.18 } },
+  ],
+  chip: [
+    { label: "noise tick", recipe: { noise: true, filter: { type: "highpass", f: 4000 }, atk: 0.001, hold: 0.005, rel: 0.03, gain: 0.1 } },
+  ],
+  bolt: [
+    { label: "sine chirp", recipe: { osc: [{ type: "sine", f: 1200, to: 2400 }], glide: 0.06, atk: 0.003, hold: 0.03, rel: 0.06, gain: 0.18 } },
+    { label: "square rise", recipe: { osc: [{ type: "square", f: 700, to: 1400 }], glide: 0.1, filter: { type: "lowpass", f: 2500 }, atk: 0.005, hold: 0.02, rel: 0.08, gain: 0.1 } },
+  ],
+  cross: [
+    { label: "sine third", recipe: { osc: [{ type: "sine", f: 440 }, { type: "sine", f: 554 }], atk: 0.01, hold: 0.06, rel: 0.15, gain: 0.12 } },
+  ],
+  surgeCharge: [
+    { label: "square climb", recipe: { osc: [{ type: "square", f: 220, to: 1760 }], glide: 0.45, atk: 0.01, hold: 0.44, rel: 0.04, gain: 0.45 } },
+    { label: "triangle + sine climb", recipe: { osc: [{ type: "triangle", f: 330, to: 1320 }, { type: "sine", f: 332, to: 1328 }], glide: 0.45, atk: 0.01, hold: 0.44, rel: 0.04, gain: 0.5 } },
+  ],
+  surgeDischarge: [
+    { label: "saw fall", recipe: { osc: [{ type: "sawtooth", f: 1760, to: 110 }], glide: 0.3, atk: 0.002, hold: 0.05, rel: 0.3, gain: 0.25 } },
+  ],
+  death: [
+    { label: "saw pair dive", recipe: { osc: [{ type: "sawtooth", f: 440, to: 40 }, { type: "sawtooth", f: 443, to: 41 }], glide: 1.1, atk: 0.002, hold: 0.05, rel: 1.1, gain: 0.25 } },
+    { label: "square fall", recipe: { osc: [{ type: "square", f: 880, to: 55 }], glide: 0.9, filter: { type: "lowpass", f: 3000, to: 200 }, sweep: 0.9, atk: 0.002, hold: 0.05, rel: 0.9, gain: 0.25 } },
+  ],
+  gameOver: [
+    { label: "sine long fall", recipe: { osc: [{ type: "sine", f: 220, to: 55 }], glide: 2, atk: 0.02, hold: 0.5, rel: 1.5, gain: 0.35 } },
+  ],
+  respawn: [
+    { label: "sine fifth rise", recipe: { osc: [{ type: "sine", f: 330, to: 990 }, { type: "sine", f: 495, to: 1485 }], glide: 0.25, atk: 0.01, hold: 0.1, rel: 0.2, gain: 0.14 } },
+  ],
+  purge: [
+    { label: "saw pair surge", recipe: { osc: [{ type: "sawtooth", f: 110, to: 1760 }, { type: "sawtooth", f: 55, to: 880 }], glide: 0.4, filter: { type: "lowpass", f: 800, to: 6000 }, sweep: 0.4, atk: 0.01, hold: 0.2, rel: 0.4, gain: 0.3 } },
+  ],
+  purgeWeak: [
+    { label: "square phut", recipe: { osc: [{ type: "square", f: 330, to: 220 }], glide: 0.12, atk: 0.005, hold: 0.02, rel: 0.1, gain: 0.08 } },
+  ],
+  extraLife: [
+    { label: "sine octave lift", recipe: { osc: [{ type: "sine", f: 1047, to: 2093 }], glide: 0.15, atk: 0.005, hold: 0.15, rel: 0.5, gain: 0.22 } },
+  ],
+  lifeLost: [
+    { label: "triangle sag", recipe: { osc: [{ type: "triangle", f: 523, to: 262 }], glide: 0.3, atk: 0.005, hold: 0.1, rel: 0.3, gain: 0.18 } },
+  ],
+  wellClear: [
+    { label: "sine + square lift", recipe: { osc: [{ type: "sine", f: 392, to: 784 }, { type: "square", f: 588, to: 1176 }], glide: 0.2, filter: { type: "lowpass", f: 3000 }, atk: 0.01, hold: 0.15, rel: 0.4, gain: 0.14 } },
+  ],
+  dive: [
+    { label: "sine pair doppler", recipe: { osc: [{ type: "sine", f: 110, to: 880 }, { type: "sine", f: 111, to: 888 }], glide: 2.4, atk: 0.4, hold: 1.8, rel: 0.4, gain: 0.22 } },
+  ],
+  diveStrike: [
+    { label: "noise crack", recipe: { noise: true, filter: { type: "highpass", f: 2000 }, atk: 0.002, hold: 0.02, rel: 0.15, gain: 0.3 } },
+  ],
+  menuMove: [
+    { label: "triangle blip", recipe: { osc: [{ type: "triangle", f: 1320 }], atk: 0.001, hold: 0.01, rel: 0.04, gain: 0.1 } },
+  ],
+  menuConfirm: [
+    { label: "triangle fifth", recipe: { osc: [{ type: "triangle", f: 660 }, { type: "triangle", f: 990 }], atk: 0.002, hold: 0.05, rel: 0.12, gain: 0.1 } },
+  ],
+  menuBack: [
+    { label: "triangle down", recipe: { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 } },
+  ],
+};
+// ===== CANDIDATES END =====
+</script>
+
 <script>
 "use strict";
 // ===== LAB UI — none of this ships =====
 
-// Preview copies of the game's values (src/00-config.js, src/01-rng.js). A drift
-// here changes what the lab previews, never the build.
-const LAB = { lookahead: 0.20, crossfade: 0.60, fadeOut: 1.00, volRamp: 0.03, noiseSeed: 0x5EED0A0D };
+// Preview copies of the game's values (src/00-config.js). A drift here changes
+// what the lab previews, never the build. test-cs009-p4.js holds telegraph to
+// C.SURGE_TELEGRAPH.
+const LAB = { lookahead: 0.20, crossfade: 0.60, fadeOut: 1.00, volRamp: 0.03, noiseSeed: 0x5EED0A0D,
+              telegraph: 0.45, hitStop: 1.20 };
 function labRng(seed) {
   let a = seed >>> 0;
   return function () {
@@ -862,295 +1029,234 @@ function labRng(seed) {
   };
 }
 
-// The picker. `sections` are [mark, first bar]; `builder` is the function in
-// BLOCK B that COPY TABLE rewrites for this track.
-const LAB_TRACKS = {
-  title: { label: "Title", builder: "buildTitleTrack", bar: 16, sections: [["A", 0], ["B", 4]],
-    blurb: "The title screens. G major, 60 BPM, 8 bars. A states the theme; B answers it higher and falls home." },
-  pulse: { label: "Pulse", builder: "buildPulseTrack", bar: 16, sections: [["A", 0], ["B", 12], ["C", 24]],
-    blurb: "Classic's gameplay track. E minor, 80 BPM, 36 bars. A: the tune low and plain. B: an octave up, heart doubles. C: the peak, then the opening motif returns and a B major bar pulls back to the top." },
-};
+const $ = id => document.getElementById(id);
+const LETTERS = ["A", "B", "C"];
 
-// What each layer held at load, so COPY TABLE rewrites only what changed.
-const ORIGINAL = {};
-for (const key of Object.keys(LAB_TRACKS)) {
-  ORIGINAL[key] = MUSIC_TRACKS[key].layers.map(L => ({ gain: L.gain, cutoff: L.cutoff, audition: L.audition }));
+// A recipe as the one line of text C.SFX holds. Keys in the object's own order.
+function sfxText(v) {
+  if (Array.isArray(v)) return "[" + v.map(sfxText).join(", ") + "]";
+  if (v && typeof v === "object") return "{ " + Object.keys(v).map(k => k + ": " + sfxText(v[k])).join(", ") + " }";
+  return JSON.stringify(v);
 }
 
-let current = "pulse";
-let playing = false;
-const soloed = new Set(), muted = new Set();
-let sinks = [];
+// One event's line in the SFX group.
+function sfxLine(name, recipe) {
+  return "    " + (name + ":").padEnd(16) + sfxText(recipe) + ",";
+}
 
-// ⛔ SOLO IS EXCLUSIVE-ADDITIVE. Returns each layer's [mute, solo] gain: muted
-// layers are 0; while any layer is soloed, every unsoloed layer is 0.
-function gateLevels(n, soloSet, muteSet) {
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    out.push([muteSet.has(i) ? 0 : 1, soloSet.size > 0 && !soloSet.has(i) ? 0 : 1]);
+// ⛔ COPY OUT's rewrite. Pure: BLOCK SFX's text and { name: recipe } in, the new
+// text out. Each named event's line is replaced; every other line, comments
+// included, is untouched. test-cs009-p4.js runs this.
+function rewriteSfxBlock(src, picked) {
+  const lines = src.split("\n");
+  for (const name of Object.keys(picked)) {
+    const at = lines.findIndex(l => l.startsWith("    " + name + ":"));
+    if (at < 0) throw new Error("COPY OUT: no line for " + name + " in the SFX group");
+    lines[at] = sfxLine(name, picked[name]);
   }
-  return out;
+  return lines.join("\n");
 }
 
+// BLOCK SFX's own text, between the markers, and the values it declares.
+function blockSfxText() {
+  const s = $("block-sfx").textContent;
+  const a = s.indexOf("\n", s.indexOf("// ===== BLOCK SFX BEGIN")) + 1;
+  return s.slice(a, s.lastIndexOf("// ===== BLOCK SFX END"));
+}
+const SHIPPED = new Function("return {\n" + blockSfxText() + "\n};")();
+const EVENTS = Object.keys(SHIPPED.SFX);
+const VOICES = Object.keys(SHIPPED.SFX_KILL_PITCH);
+
+function candidates(name) {
+  return [{ label: SFX_A_LABELS[name], recipe: SHIPPED.SFX[name] }].concat(SFX_ALTS[name] || []);
+}
+
+{
+  const problems = [];
+  for (const name of EVENTS) {
+    const list = candidates(name);
+    if (list.length < 2 || list.length > 3) problems.push(name + ": " + list.length + " candidates");
+    list.forEach((c, k) => {
+      try { sfxCheckRecipe(c.recipe); } catch (err) { problems.push(name + " " + LETTERS[k] + ": " + err.message); }
+    });
+  }
+  $("err").textContent = problems.join("\n");
+}
+
+// ---- picks -----------------------------------------------------------------
+const PICK_KEY = "vv_sfx_lab_picks_v1";
+const picks = {};
+for (const name of EVENTS) picks[name] = 0;
+try {
+  const saved = JSON.parse(localStorage.getItem(PICK_KEY) || "{}");
+  for (const name of EVENTS) {
+    if (Number.isInteger(saved[name]) && saved[name] >= 0 && saved[name] < candidates(name).length) picks[name] = saved[name];
+  }
+} catch (err) { /* no storage: picks live for this page only */ }
+
+function setPick(name, k) {
+  picks[name] = k;
+  try { localStorage.setItem(PICK_KEY, JSON.stringify(picks)); } catch (err) { /* ignore */ }
+  refreshPicks();
+}
+
+// ---- the engine: the build's own code --------------------------------------
 const engine = createAudioEngine({ volRamp: LAB.volRamp, vol: { master: 1, music: 1, sfx: 1, voice: 1 } });
 const music = createMusic(engine, {
-  tracks: MUSIC_TRACKS,
-  lookahead: LAB.lookahead,
-  crossfade: LAB.crossfade,
-  fadeOut: LAB.fadeOut,
+  tracks: { pulse: MUSIC_TRACKS.pulse },
+  lookahead: LAB.lookahead, crossfade: LAB.crossfade, fadeOut: LAB.fadeOut,
   noise: labRng(LAB.noiseSeed),
-  // ⛔ The lab's SOLO and MUTE nodes, hung outside BLOCK A.
-  layerSink: ({ ctx, index, out }) => {
-    const mute = ctx.createGain(), solo = ctx.createGain();
-    mute.connect(solo);
-    solo.connect(out);
-    sinks[index] = { mute, solo };
-    return mute;
-  },
 });
+const player = createSfxPlayer(engine, { noise: labRng(LAB.noiseSeed) });
 
-function applyGates() {
-  const levels = gateLevels(MUSIC_TRACKS[current].layers.length, soloed, muted);
-  if (!engine.ctx) return;
-  const t = engine.ctx.currentTime;
-  levels.forEach((lv, i) => {
-    const s = sinks[i];
-    if (!s) return;
-    s.mute.gain.setTargetAtTime(lv[0], t, 0.01);
-    s.solo.gain.setTargetAtTime(lv[1], t, 0.01);
-  });
+function ensure() {
+  if (!engine.unlock()) { $("status").textContent = "no audio context in this browser"; return false; }
+  return true;
 }
 
-const $ = id => document.getElementById(id);
+function recipeOf(name, k) { return candidates(name)[k === undefined ? picks[name] : k].recipe; }
+function killPitch() { return SHIPPED.SFX_KILL_PITCH[$("voice").value] || 1; }
 
-function renderPicker() {
-  const el = $("picker");
-  el.innerHTML = "";
-  for (const key of Object.keys(LAB_TRACKS)) {
-    const t = MUSIC_TRACKS[key], info = LAB_TRACKS[key];
-    const b = document.createElement("button");
-    b.className = "tk";
-    b.setAttribute("aria-pressed", String(key === current));
-    b.innerHTML = info.label + "<small>" + (t.steps * t.stepDur).toFixed(1) + " s · " +
-      t.layers.length + " layers · " + info.sections.map(s => s[0]).join("→") + "</small>";
-    b.onclick = () => select(key);
-    el.appendChild(b);
-  }
+// Play `name` (candidate k, or the picked one) `dt` seconds from now.
+function at(dt, name, k, pitch) {
+  player.play(recipeOf(name, k), { pitch: pitch || 1, when: engine.now() + dt });
 }
 
-function select(key) {
-  current = key;
-  soloed.clear();
-  muted.clear();
-  if (playing) start();
-  renderPicker();
-  $("blurb").textContent = LAB_TRACKS[key].blurb;
-  drawRibbon();
-  renderLayers();
+// ⛔ A HELD VOICE IS DRIVEN FROM THE FRAME LOOP, exactly as the game drives the
+// Surger's: set(t01) once a frame, t01 = elapsed / telegraph, then stop().
+const drives = [];
+function charge(k, delay, then) {
+  drives.push({ recipe: recipeOf("surgeCharge", k), start: engine.now() + delay, handle: null, then });
 }
-
-// setState() is idempotent for the playing name, so a restart names a silence
-// first; the old track crossfades out as the new one starts at bar 1.
-function start() {
-  if (!engine.unlock()) { $("pos").textContent = "no audio context in this browser"; return; }
-  sinks = [];
-  music.setState("lab-silence");
-  music.setState(current);
-  applyGates();
-  playing = true;
-}
-
-$("play").onclick = () => start();
-$("stop").onclick = () => { music.setState("lab-silence"); playing = false; };
-$("vol").oninput = e => {
-  $("volOut").textContent = (+e.target.value).toFixed(2);
-  engine.setVol("music", +e.target.value);
-};
-
-function voiceOf(L) {
-  if (L.noise) return "noise" + (L.hp ? " hp" + L.hp : "");
-  return L.type + (L.detune ? " ±" + L.detune + "¢" : "") + (L.drop ? " ↓" + L.drop : "") +
-    (L.cutoffTo ? " lp→" + L.cutoffTo : "") + (L.q ? " Q" + L.q : "");
-}
-
-// ⛔ ONE ROW PER LAYER: SOLO, MUTE, gain, cutoff (when the layer has one), and
-// the PASS / FAIL / — mark. test-cs009-p2.js reads this function's markup.
-function renderLayers() {
-  const layers = MUSIC_TRACKS[current].layers, orig = ORIGINAL[current];
-  const levels = gateLevels(layers.length, soloed, muted);
-  const tb = $("layers").tBodies[0];
-  tb.innerHTML = "";
-  layers.forEach((L, i) => {
-    const tr = document.createElement("tr");
-    if (levels[i][0] * levels[i][1] === 0) tr.className = "silent";
-    const mark = L.audition || "none";
-    const cut = L.cutoff
-      ? `<input type="range" class="cutoff" data-i="${i}" min="100" max="8000" step="10" value="${L.cutoff}">` +
-        `<span class="val${L.cutoff !== orig[i].cutoff ? " edited" : ""}">${Math.round(L.cutoff)}</span>`
-      : "—";
-    tr.innerHTML =
-      `<td class="nm">${L.name}</td><td>${voiceOf(L)}</td>` +
-      `<td><button class="solo" data-i="${i}" aria-pressed="${soloed.has(i)}">SOLO</button></td>` +
-      `<td><button class="mute" data-i="${i}" aria-pressed="${muted.has(i)}">MUTE</button></td>` +
-      `<td><input type="range" class="gain" data-i="${i}" min="0" max="0.3" step="0.001" value="${L.gain}">` +
-      `<span class="val${L.gain !== orig[i].gain ? " edited" : ""}">${L.gain.toFixed(3)}</span></td>` +
-      `<td>${cut}</td>` +
-      `<td><button class="mark" data-i="${i}" data-mark="pass" aria-pressed="${mark === "pass"}">PASS</button> ` +
-      `<button class="mark" data-i="${i}" data-mark="fail" aria-pressed="${mark === "fail"}">FAIL</button> ` +
-      `<button class="mark" data-i="${i}" data-mark="none" aria-pressed="${mark === "none"}">—</button></td>`;
-    tb.appendChild(tr);
-  });
-  tb.querySelectorAll("button.solo").forEach(b => b.onclick = () => toggle(soloed, +b.dataset.i));
-  tb.querySelectorAll("button.mute").forEach(b => b.onclick = () => toggle(muted, +b.dataset.i));
-  tb.querySelectorAll("button.mark").forEach(b => b.onclick = () => {
-    const L = layers[+b.dataset.i];
-    if (b.dataset.mark === "none") delete L.audition; else L.audition = b.dataset.mark;
-    renderLayers();
-  });
-  // The engine reads gain and cutoff at each note, so an edit is heard from the next note.
-  tb.querySelectorAll("input.gain").forEach(el => el.oninput = () => {
-    layers[+el.dataset.i].gain = +el.value;
-    el.nextElementSibling.textContent = (+el.value).toFixed(3);
-  });
-  tb.querySelectorAll("input.cutoff").forEach(el => el.oninput = () => {
-    layers[+el.dataset.i].cutoff = +el.value;
-    el.nextElementSibling.textContent = el.value;
-  });
-  tb.querySelectorAll("input").forEach(el => el.onchange = () => renderLayers());
-}
-
-function toggle(set, i) {
-  if (set.has(i)) set.delete(i); else set.add(i);
-  applyGates();
-  renderLayers();
-  drawRibbon();
-}
-
-const NS = "http://www.w3.org/2000/svg";
-const RIB_W = 1000, RIB_LANE = 16, RIB_TOP = 18;
-function svgEl(name, attrs) {
-  const e = document.createElementNS(NS, name);
-  for (const k of Object.keys(attrs)) e.setAttribute(k, attrs[k]);
-  return e;
-}
-
-function drawRibbon() {
-  const svg = $("ribbon"), t = MUSIC_TRACKS[current], info = LAB_TRACKS[current];
-  const bars = t.steps / info.bar, levels = gateLevels(t.layers.length, soloed, muted);
-  const H = RIB_TOP + t.layers.length * RIB_LANE + 6;
-  svg.innerHTML = "";
-  svg.setAttribute("viewBox", `0 0 ${RIB_W} ${H}`);
-  svg.style.height = H + "px";
-  const x = step => (step / t.steps) * RIB_W;
-  for (let b = 0; b < bars; b++) {
-    svg.appendChild(svgEl("line", { x1: x(b * info.bar), x2: x(b * info.bar), y1: RIB_TOP, y2: H,
-      stroke: b % 4 === 0 ? "#2a3550" : "#161c2a" }));
-  }
-  for (const [mark, bar] of info.sections) {
-    svg.appendChild(svgEl("line", { x1: x(bar * info.bar), x2: x(bar * info.bar), y1: 0, y2: H, stroke: "#ffd24a" }));
-    const label = svgEl("text", { x: x(bar * info.bar) + 4, y: 13, fill: "#ffd24a", "font-size": 12 });
-    label.textContent = mark;
-    svg.appendChild(label);
-  }
-  t.layers.forEach((L, i) => {
-    const on = levels[i][0] * levels[i][1] > 0, y = RIB_TOP + i * RIB_LANE;
-    for (let s = 0; s < t.steps; s++) {
-      const c = L.steps[s];
-      if (!c) continue;
-      svg.appendChild(svgEl("rect", { x: x(s), y: y + 3, width: Math.max(1.2, x(c.dur) - 0.6),
-        height: 4 + 6 * c.g, fill: on ? "#3FE0FF" : "#26324a", opacity: on ? 0.8 : 0.5 }));
-    }
-  });
-  svg.appendChild(svgEl("line", { id: "playhead", x1: 0, x2: 0, y1: 0, y2: H, stroke: "#ffffff", "stroke-width": 1.5 }));
-}
-
-$("ribbon").onclick = e => {
-  const t = MUSIC_TRACKS[current], info = LAB_TRACKS[current], r = $("ribbon").getBoundingClientRect();
-  const bar = Math.floor(((e.clientX - r.left) / r.width) * (t.steps / info.bar));
-  if (!playing || music.state !== current) start();
-  music.step = Math.max(0, bar) * info.bar;
-  music.nextStepTime = engine.now();
-};
-
-function sectionAt(bar) {
-  let name = "";
-  for (const [mark, first] of LAB_TRACKS[current].sections) if (bar >= first) name = mark;
-  return name;
-}
-
 function tick() {
-  music.update();
-  const t = MUSIC_TRACKS[current], info = LAB_TRACKS[current];
-  if (playing && music.track === t) {
-    const step = music.step, bar = Math.floor(step / info.bar);
-    $("pos").innerHTML = `bar <b>${bar + 1}</b> / ${t.steps / info.bar} · step <b>${(step % info.bar) + 1}</b> / ${info.bar}` +
-      ` · section <b>${sectionAt(bar)}</b> · <b>${(step * t.stepDur).toFixed(1)}</b> / ${(t.steps * t.stepDur).toFixed(1)} s`;
-    const ph = $("playhead");
-    if (ph) { const px = (step / t.steps) * RIB_W; ph.setAttribute("x1", px); ph.setAttribute("x2", px); }
-  } else {
-    $("pos").textContent = "stopped";
+  const now = engine.now();
+  for (let i = drives.length - 1; i >= 0; i--) {
+    const d = drives[i];
+    if (now < d.start) continue;
+    if (!d.handle) d.handle = player.hold(d.recipe);
+    const t01 = (now - d.start) / LAB.telegraph;
+    d.handle.set(t01);
+    if (t01 >= 1) {
+      d.handle.stop();
+      drives.splice(i, 1);
+      if (d.then) d.then();
+    }
   }
+  music.update();
   requestAnimationFrame(tick);
 }
 
-// ⛔ COPY TABLE's rewrite. Pure: BLOCK B's text and a list of edits in, the new
-// text out. An edit is { builder, name, gain?, cutoff?, audition? }: `gain` and
-// `cutoff` are the text to write, and `audition` is "pass", "fail", or null to
-// remove the mark. A field left undefined is not touched. Each layer is one
-// line in its builder, found by `{ name: "<name>",`. test-cs009-p2.js runs this.
-function rewriteBlockB(src, edits) {
-  let out = src;
-  for (const e of edits) {
-    const at = out.indexOf("function " + e.builder + "(");
-    if (at < 0) throw new Error("COPY TABLE: no function " + e.builder + " in BLOCK B");
-    const end = out.indexOf("\n}\n", at);
-    const ls = out.indexOf("{ name: \"" + e.name + "\",", at);
-    if (ls < 0 || ls > end) throw new Error("COPY TABLE: no layer " + e.name + " in " + e.builder);
-    const le = out.indexOf("\n", ls);
-    let line = out.slice(ls, le);
-    if (e.gain !== undefined) line = line.replace(/\bgain: [0-9.]+/, "gain: " + e.gain);
-    if (e.cutoff !== undefined) line = line.replace(/\bcutoff: [0-9.]+/, "cutoff: " + e.cutoff);
-    if (e.audition !== undefined) {
-      line = line.replace(/ audition: "[a-z]+",/, "");
-      if (e.audition !== null) line = line.replace(" steps: ", " audition: \"" + e.audition + "\", steps: ");
+function setMusic(on) {
+  if (!ensure()) return;
+  music.setState(on ? "pulse" : "lab-silence");
+  $("music").setAttribute("aria-pressed", String(on));
+}
+
+// ---- the rows ----------------------------------------------------------------
+// Each: what "in context" plays, as the hint says. Neighbours are PICKED.
+const CONTEXT = {
+  fire:           ["fire ×4, then a kill (voice below)", k => { for (let i = 0; i < 4; i++) at(i * 0.11, "fire", k); at(0.36, "kill", undefined, killPitch()); at(0.55, "fire", k); }],
+  kill:           ["fire → kill, through all seven voices", k => { VOICES.forEach((v, i) => { at(i * 0.5, "fire"); at(i * 0.5 + 0.08, "kill", k, SHIPPED.SFX_KILL_PITCH[v]); }); }],
+  split:          ["fire → split → fire → kill", k => { at(0, "fire"); at(0.08, "split", k); at(0.4, "fire"); at(0.48, "kill", undefined, killPitch()); }],
+  chip:           ["fire → chip, three times", k => { for (let i = 0; i < 3; i++) { at(i * 0.18, "fire"); at(i * 0.18 + 0.06, "chip", k); } }],
+  bolt:           ["bolt → fire → kill (the bolt's voice)", k => { at(0, "bolt", k); at(0.3, "fire"); at(0.38, "kill", undefined, SHIPPED.SFX_KILL_PITCH.weaverBolt); }],
+  cross:          ["cross → fire → kill (the Drifter's voice)", k => { at(0, "cross", k); at(0.25, "fire"); at(0.33, "kill", undefined, SHIPPED.SFX_KILL_PITCH.drifter); }],
+  surgeCharge:    ["⛔ pulse plays; four fuses, each → discharge", k => {
+    setMusic(true);
+    let n = 0;
+    const next = () => { if (n++ < 4) charge(k, 1.2, () => { at(0, "surgeDischarge"); next(); }); };
+    next();
+  }],
+  surgeDischarge: ["charge over the telegraph → discharge", k => { charge(undefined, 0, () => at(0, "surgeDischarge", k)); }],
+  death:          ["fire → death", k => { at(0, "fire"); at(0.08, "death", k); }],
+  gameOver:       ["death → game over", k => { at(0, "death"); at(0.6, "gameOver", k); }],
+  respawn:        ["death → respawn after the freeze", k => { at(0, "death"); at(LAB.hitStop, "respawn", k); }],
+  purge:          ["⛔ purge → a second use (purgeWeak)", k => { at(0, "purge", k); at(1.2, "purgeWeak"); }],
+  purgeWeak:      ["⛔ purge → purgeWeak, side by side", k => { at(0, "purge"); at(1.2, "purgeWeak", k); }],
+  extraLife:      ["kill → extra life", k => { at(0, "kill", undefined, killPitch()); at(0.15, "extraLife", k); }],
+  lifeLost:       ["extra life → a life refused at the cap", k => { at(0, "extraLife"); at(1.0, "lifeLost", k); }],
+  wellClear:      ["kill → well clear → dive", k => { at(0, "kill", undefined, killPitch()); at(0.15, "wellClear", k); at(0.8, "dive"); }],
+  dive:           ["well clear → dive", k => { at(0, "wellClear"); at(0.6, "dive", k); }],
+  diveStrike:     ["dive → strike → death", k => { at(0, "dive"); at(1.2, "diveStrike", k); at(1.2, "death"); }],
+  menuMove:       ["move ×3 → confirm", k => { for (let i = 0; i < 3; i++) at(i * 0.15, "menuMove", k); at(0.5, "menuConfirm"); }],
+  menuConfirm:    ["move ×2 → confirm", k => { at(0, "menuMove"); at(0.15, "menuMove"); at(0.35, "menuConfirm", k); }],
+  menuBack:       ["move → back", k => { at(0, "menuMove"); at(0.2, "menuBack", k); }],
+};
+
+function flash(id) {
+  const b = $(id);
+  if (!b) return;
+  b.classList.add("playing");
+  setTimeout(() => b.classList.remove("playing"), 250);   // lab chrome, never a note
+}
+
+function audition(name, k) {
+  if (!ensure()) return;
+  if (name === "surgeCharge") charge(k, 0, null);
+  else if (name === "kill") at(0, name, k, killPitch());
+  else at(0, name, k);
+  flash("btn-" + name + "-" + k);
+}
+
+function buildGrid() {
+  const tb = $("rows");
+  for (const name of EVENTS) {
+    const tr = document.createElement("tr");
+    if (name === "purge" || name === "purgeWeak") tr.className = "pair";
+    const list = candidates(name);
+    let html = `<td class="nm">${name}`;
+    if (name === "kill") {
+      html += `<div class="hint">sfxVoice <select id="voice">${VOICES.map(v => `<option>${v}</option>`).join("")}</select></div>`;
     }
-    out = out.slice(0, ls) + line + out.slice(le);
+    html += `</td><td class="brief">${SFX_BRIEFS[name]}</td>`;
+    for (let k = 0; k < 3; k++) {
+      const c = list[k];
+      if (!c) { html += "<td></td>"; continue; }
+      html += `<td class="cand"><button id="btn-${name}-${k}" data-play="${name}" data-k="${k}" title="${sfxText(c.recipe).replace(/"/g, "&quot;")}">▶ ${LETTERS[k]} · ${c.label}</button>` +
+        `<label id="lab-${name}-${k}"><input type="radio" name="pick-${name}" data-pick="${name}" data-k="${k}">picked</label></td>`;
+    }
+    html += `<td><button class="ctx" data-ctx="${name}">▶ in context</button><div class="hint">${CONTEXT[name][0]}</div></td>`;
+    tr.innerHTML = html;
+    tb.appendChild(tr);
   }
+  tb.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    if (b.dataset.play) audition(b.dataset.play, Number(b.dataset.k));
+    else if (b.dataset.ctx && ensure()) CONTEXT[b.dataset.ctx][1](picks[b.dataset.ctx]);
+  });
+  tb.addEventListener("change", e => {
+    const r = e.target;
+    if (r.dataset && r.dataset.pick) setPick(r.dataset.pick, Number(r.dataset.k));
+  });
+}
+
+// ---- copy out ---------------------------------------------------------------
+function pickedEdits() {
+  const out = {};
+  for (const name of EVENTS) if (picks[name] !== 0) out[name] = recipeOf(name);
   return out;
 }
-
-// Every change since load, across both tracks.
-function labEdits() {
-  const edits = [];
-  for (const key of Object.keys(LAB_TRACKS)) {
-    MUSIC_TRACKS[key].layers.forEach((L, i) => {
-      const o = ORIGINAL[key][i], e = { builder: LAB_TRACKS[key].builder, name: L.name };
-      let changed = false;
-      if (L.gain !== o.gain) { e.gain = L.gain.toFixed(3); changed = true; }
-      if (L.cutoff !== o.cutoff) { e.cutoff = String(Math.round(L.cutoff)); changed = true; }
-      if (L.audition !== o.audition) { e.audition = L.audition || null; changed = true; }
-      if (changed) edits.push(e);
-    });
+function refreshPicks() {
+  for (const name of EVENTS) {
+    for (let k = 0; k < candidates(name).length; k++) {
+      const lab = $("lab-" + name + "-" + k);
+      lab.querySelector("input").checked = picks[name] === k;
+      lab.classList.toggle("on", picks[name] === k);
+    }
   }
-  return edits;
-}
-
-// BLOCK B's own text, from its script element, between the markers.
-function blockBText() {
-  const s = $("block-b").textContent;
-  const a = s.indexOf("\n", s.indexOf("// ===== BLOCK B BEGIN")) + 1;
-  const b = s.lastIndexOf("// ===== BLOCK B END");
-  return s.slice(a, b);
+  $("picks").textContent = "picked: " + EVENTS.map(n => n + " " + LETTERS[picks[n]]).join(" · ");
+  $("out").value = rewriteSfxBlock(blockSfxText(), pickedEdits());
 }
 
 $("copy").onclick = () => {
-  const edits = labEdits();
-  const text = rewriteBlockB(blockBText(), edits);
-  $("table").value = text;
-  $("table").select();
+  const edits = Object.keys(pickedEdits()).length;
+  const text = rewriteSfxBlock(blockSfxText(), pickedEdits());
+  $("out").value = text;
+  $("out").select();
   const say = copied => {
-    $("copyOut").textContent = edits.length + " layer edit(s) · " +
-      (copied ? "copied — paste over src/17-audio-tracks.js" : "select the text below and copy it");
+    $("copyOut").textContent = edits + " pick(s) other than A · " +
+      (copied ? "copied — paste over src/00-config.js's SFX group" : "select the text below and copy it");
   };
   const fallback = () => {
     let copied = false;
@@ -1158,14 +1264,23 @@ $("copy").onclick = () => {
     say(copied);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    say(false);   // until the clipboard answers, which it may never do
+    say(false);
     navigator.clipboard.writeText(text).then(() => say(true), fallback);
   } else {
     fallback();
   }
 };
 
-select(current);
+$("music").onclick = () => setMusic($("music").getAttribute("aria-pressed") !== "true");
+for (const [id, bus] of [["volMaster", "master"], ["volSfx", "sfx"], ["volMusic", "music"]]) {
+  $(id).oninput = e => {
+    $(id + "Out").textContent = (+e.target.value).toFixed(1);
+    engine.setVol(bus, +e.target.value);
+  };
+}
+
+buildGrid();
+refreshPicks();
 requestAnimationFrame(tick);
 </script>
 </body>

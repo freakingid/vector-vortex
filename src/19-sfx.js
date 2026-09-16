@@ -33,6 +33,13 @@ const MusicSys = createMusic(AudioSys, {
   noise:     mulberry32(C.AUDIO_NOISE_SEED),
 });
 
+// The SFX player (CS009 P4). Its noise is a SECOND instance of the audio seed's
+// stream, so it shares no draws with MusicSys's buffer or with the run. ⛔ No
+// seat plays it yet: the recipes are C.SFX, and the seats are CS009 P5's.
+const Sfx = createSfxPlayer(AudioSys, {
+  noise: mulberry32(C.AUDIO_NOISE_SEED),
+});
+
 // ⛔ MUSIC BY SCREEN (CS009 P3; plan §0's reading). PURE: four arguments in, a
 // MusicSys state name out, and nothing read but C. 23-main.js's audioFrame()
 // calls it every frame with the screen, where OPTIONS was opened from, the run's

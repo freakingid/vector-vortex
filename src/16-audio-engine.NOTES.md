@@ -2,17 +2,19 @@
 
 **Module:** `src/16-audio-engine.js`
 **Vendored from:** *originated here (Vector Vortex), destined for coinless-kit as `kit-audio`*
-**Current version:** `0.1.0`
+**Current version:** `0.2.0`
 **Depends on:** nothing. The host supplies a noise generator and calls `unlock()` from a user gesture.
 
 ---
 
 ## Contract summary
 
-Two factories. `createAudioEngine(opts)` owns the audio context and four
+Three factories. `createAudioEngine(opts)` owns the audio context and four
 buses: `master`, `music`, `sfx` and `voice`. `createMusic(engine, opts)` is a
 step-sequencer that plays **data** tables into the `music` bus. It uses
 per-frame lookahead scheduling on the context's own clock and never a timer.
+`createSfxPlayer(engine, opts)` (0.2.0) plays one-shot and held voices built
+from **recipe** data into the `sfx` bus.
 
 **⛔ The module reads no host global.** No config object, no game object, no
 game function, in either direction. Numeric tunables are **required** and throw
@@ -86,6 +88,33 @@ music.setState(screen === "title" ? "title" : "off");
 music.update();
 ```
 
+### `createSfxPlayer(engine, opts)` (0.2.0)
+
+| Option | Required | Meaning |
+|---|---|---|
+| `noise` | yes | `() => number in [0, 1)`. Fills a 1 s noise buffer once, on the first noise recipe. Pass a seeded generator. |
+
+| Surface | Meaning |
+|---|---|
+| `play(recipe, { pitch, when })` | Sounds a recipe once. `pitch` (default 1, > 0) multiplies every frequency in it, the filter's included. `when` is an absolute context time; one in the past, or absent, means now. ⛔ Every source it starts is stopped at `atk + hold + rel` plus a 0.02 s tail. Throws on a bad recipe, even with no context. |
+| `hold(recipe)` | Starts a voice that attacks to `gain` and sustains. Returns `{ set(t01), stop() }`. `set` clamps `t01` to 0..1 and moves every frequency to `f · (to / f)^t01` with a 0.01 s time constant (`glide`, `sweep` and `hold` are not read). `stop` releases over `rel`, then stops every source; a second `stop`, and any `set` after it, do nothing. With no context it returns a handle whose calls do nothing. |
+
+**Recipe contract (DATA):**
+
+```js
+{ osc: [ { type, f, to } ],            // one or two; type sine | square | sawtooth | triangle
+  noise: true,                         // instead of osc: the injected noise, looped
+  glide,                               // s, f -> to; required when any osc has `to`
+  filter: { type, f, to, q },          // optional; lowpass | highpass
+  sweep,                               // s, filter f -> to; required when the filter has `to`
+  atk, hold, rel, gain }               // envelope (atk, rel > 0; hold >= 0) and linear peak
+```
+
+Exactly one of `osc` and `noise`. An unknown field throws (`sfxCheckRecipe`),
+so a typo in a host's table fails loudly. **Nodes per sound:** one gain, at
+most one filter, one or two sources. Signal path: sources → [filter] → envelope
+gain → `sfx` bus.
+
 **Three behaviours worth knowing before wiring it**
 
 1. ⛔ **`scheduleStep` never consults intensity.** Every layer is always
@@ -138,3 +167,22 @@ the game's globals.
 
 **Backport status.** `not yet`. The intensity director (CS010) will change the
 surface.
+
+### 2026-09-16 — the SFX player (`VERSION` 0.1.0 → 0.2.0)
+
+**What changed.** Additive. `createSfxPlayer(engine, { noise })` with `play`
+and `hold`, and `sfxCheckRecipe(recipe)`, which both call. New, not a port:
+Orbital Overhaul's sound effects are hand-written methods, one per event, and a
+kit module cannot hold a host's events. Here a sound is data the host owns.
+Nothing in `createAudioEngine` or `createMusic` changed.
+
+**Why.** Vector Vortex CS009 P4 (GDD §11.8). The game's `C.SFX` table holds one
+recipe per event and its `tools/sfx-lab.html` auditions 2–3 candidates each,
+playing them through this code verbatim.
+
+**Game-agnostic?** Yes. It names no event, no entity and no config. The recipe
+table, the pitch map and when to hold a voice belong to the host. The host's
+suite checks this slice for `C.`, its game globals and a platform random call.
+
+**Backport status.** `not yet`.
+

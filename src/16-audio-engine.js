@@ -1,4 +1,4 @@
-// 16-audio-engine.js — kit-audio (draft). The context, four buses, and the music scheduler.
+// 16-audio-engine.js — kit-audio (draft). The context, four buses, the music scheduler, and the SFX player.
 //
 // ⛔ THIS MODULE READS NO GAME GLOBAL. Not the config object, not the mutable
 // game object, not a game function, in either direction. Every tunable arrives
@@ -33,8 +33,11 @@
 //      code.
 // Not ported (0.1.0): the intensity setter and menu ducking. Every layer gate
 // and the duck node are built at unity.
+//
+// createSfxPlayer() (0.2.0) is new here, not a port: one-shot and held voices
+// built from recipe DATA, into the sfx bus. Its noise is injected too.
 
-const AUDIO_VERSION = "0.1.0";
+const AUDIO_VERSION = "0.2.0";
 
 // The four buses, in build order. master goes to the output; the other three
 // go to master. A bus nothing feeds yet is still built, so its volume row works.
@@ -355,4 +358,177 @@ function createMusic(engine, options) {
       g.connect(this.layerGates[layerIndex].node);   // through this layer's gate
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// The SFX player (0.2.0). A sound is a RECIPE, plain data:
+//   { osc: [ { type, f, to } ] | noise: true, glide, filter: { type, f, to, q },
+//     sweep, atk, hold, rel, gain }
+//   osc     one or two oscillators; type is a wave name, f the start frequency
+//           and `to` (optional) the end frequency, reached over `glide` s
+//   noise   true instead of osc: the injected generator's buffer, looped
+//   filter  optional; type "lowpass" or "highpass", f -> `to` over `sweep` s
+//   atk / hold / rel  s: the envelope, rising to `gain` (linear peak)
+// A recipe names exactly one of osc and noise. A `to` needs its glide or sweep.
+//
+// play(recipe, { pitch, when }) sounds it once. `pitch` multiplies every
+// frequency in it, the filter's included, so one recipe serves many voices.
+// `when` is an absolute context time (default: now). Every source stops itself
+// at the end of the release.
+//
+// hold(recipe) starts a voice that sustains at `gain` until stop(). It returns
+// { set(t01), stop() }: set() moves every frequency to f + (to - f) * t01 on an
+// exponential curve (glide and sweep are not read), and stop() releases over
+// `rel` and stops every source. Held before a context exists, it returns a
+// handle whose calls do nothing.
+const SFX_WAVES = ["sine", "square", "sawtooth", "triangle"];
+const SFX_FILTERS = ["lowpass", "highpass"];
+const SFX_RECIPE_FIELDS = ["osc", "noise", "glide", "filter", "sweep", "atk", "hold", "rel", "gain"];
+const SFX_FLOOR = 0.0001;     // an exponential ramp's silence: it cannot reach 0
+const SFX_TAIL = 0.02;        // s a source outlives its release, so it never clicks off
+const SFX_SET_TC = 0.01;      // s time constant of a held voice's set()
+
+function sfxPositive(v) { return typeof v === "number" && isFinite(v) && v > 0; }
+
+// Throws on a recipe the player cannot build, naming the field.
+function sfxCheckRecipe(r) {
+  const bad = why => { throw new Error("sfx recipe: " + why); };
+  if (!r || typeof r !== "object") bad("must be an object");
+  for (const k of Object.keys(r)) if (SFX_RECIPE_FIELDS.indexOf(k) < 0) bad("unknown field " + k);
+  const hasOsc = r.osc !== undefined, hasNoise = r.noise === true;
+  if (r.noise !== undefined && r.noise !== true) bad("noise must be true or absent");
+  if (hasOsc === hasNoise) bad("needs exactly one of osc and noise");
+  let glides = false;
+  if (hasOsc) {
+    if (!Array.isArray(r.osc) || r.osc.length < 1 || r.osc.length > 2) bad("osc must hold one or two oscillators");
+    for (const o of r.osc) {
+      if (!o || SFX_WAVES.indexOf(o.type) < 0) bad("osc type must be one of " + SFX_WAVES.join(", "));
+      if (!sfxPositive(o.f)) bad("osc f must be > 0");
+      if (o.to !== undefined) { if (!sfxPositive(o.to)) bad("osc to must be > 0"); glides = true; }
+    }
+  }
+  if (glides && !sfxPositive(r.glide)) bad("an osc `to` needs glide > 0");
+  if (r.filter !== undefined) {
+    const fl = r.filter;
+    if (!fl || SFX_FILTERS.indexOf(fl.type) < 0) bad("filter type must be one of " + SFX_FILTERS.join(", "));
+    if (!sfxPositive(fl.f)) bad("filter f must be > 0");
+    if (fl.q !== undefined && !sfxPositive(fl.q)) bad("filter q must be > 0");
+    if (fl.to !== undefined) {
+      if (!sfxPositive(fl.to)) bad("filter to must be > 0");
+      if (!sfxPositive(r.sweep)) bad("a filter `to` needs sweep > 0");
+    }
+  }
+  if (!sfxPositive(r.atk)) bad("atk must be > 0");
+  if (typeof r.hold !== "number" || !isFinite(r.hold) || r.hold < 0) bad("hold must be >= 0");
+  if (!sfxPositive(r.rel)) bad("rel must be > 0");
+  if (!sfxPositive(r.gain)) bad("gain must be > 0");
+}
+
+// createSfxPlayer(engine, { noise })
+//   noise  () => number in [0, 1) — fills the noise buffer once
+// Signal path: sources -> [filter] -> envelope gain -> engine.sfx
+function createSfxPlayer(engine, options) {
+  if (!engine || typeof engine.unlock !== "function") {
+    throw new Error("createSfxPlayer: engine must come from createAudioEngine()");
+  }
+  const opts = options || {};
+  if (typeof opts.noise !== "function") throw new Error("createSfxPlayer: options.noise must be a function");
+  const noise = opts.noise;
+  let noiseBuf = null;
+
+  // A cached 1 s mono white-noise buffer, filled from the injected generator.
+  function ensureNoiseBuf() {
+    if (noiseBuf || !engine.ctx) return;
+    const ctx = engine.ctx, n = ctx.sampleRate;
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = noise() * 2 - 1;
+    noiseBuf = buf;
+  }
+
+  // The node set: one gain, at most one filter, one or two sources. Started at
+  // t, connected to the sfx bus, envelope attack scheduled; never stopped here.
+  function voice(r, pitch, t) {
+    const ctx = engine.ctx;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(SFX_FLOOR, t);
+    g.gain.exponentialRampToValueAtTime(r.gain, t + r.atk);
+    g.connect(engine.sfx);
+    let sink = g, filter = null;
+    if (r.filter) {
+      filter = ctx.createBiquadFilter();
+      filter.type = r.filter.type;
+      filter.Q.value = r.filter.q || 1;
+      filter.frequency.setValueAtTime(r.filter.f * pitch, t);
+      filter.connect(g);
+      sink = filter;
+    }
+    const sources = [], oscs = [];
+    if (r.noise) {
+      ensureNoiseBuf();
+      const s = ctx.createBufferSource();
+      s.buffer = noiseBuf; s.loop = true;
+      s.connect(sink); s.start(t);
+      sources.push(s);
+    } else {
+      for (const o of r.osc) {
+        const s = ctx.createOscillator();
+        s.type = o.type;
+        s.frequency.setValueAtTime(o.f * pitch, t);
+        s.connect(sink); s.start(t);
+        sources.push(s); oscs.push(s);
+      }
+    }
+    return { g, filter, sources, oscs };
+  }
+
+  function play(recipe, o) {
+    sfxCheckRecipe(recipe);
+    const po = o || {};
+    const pitch = po.pitch === undefined ? 1 : po.pitch;
+    if (!sfxPositive(pitch)) throw new Error("sfx play: pitch must be > 0");
+    if (!engine.ctx || !engine.sfx) return;
+    const now = engine.ctx.currentTime;
+    const t = typeof po.when === "number" && po.when > now ? po.when : now;
+    const v = voice(recipe, pitch, t);
+    const end = t + recipe.atk + recipe.hold + recipe.rel;
+    recipe.osc && recipe.osc.forEach((osc, i) => {
+      if (osc.to !== undefined) v.oscs[i].frequency.exponentialRampToValueAtTime(osc.to * pitch, t + recipe.glide);
+    });
+    if (v.filter && recipe.filter.to !== undefined) {
+      v.filter.frequency.exponentialRampToValueAtTime(recipe.filter.to * pitch, t + recipe.sweep);
+    }
+    v.g.gain.setValueAtTime(recipe.gain, t + recipe.atk + recipe.hold);
+    v.g.gain.exponentialRampToValueAtTime(SFX_FLOOR, end);
+    for (const s of v.sources) s.stop(end + SFX_TAIL);
+  }
+
+  function hold(recipe) {
+    sfxCheckRecipe(recipe);
+    if (!engine.ctx || !engine.sfx) return { set() {}, stop() {} };
+    const ctx = engine.ctx;
+    const v = voice(recipe, 1, ctx.currentTime);
+    let stopped = false;
+    const along = (a, b, k) => (b === undefined ? a : a * Math.pow(b / a, k));
+    return {
+      set(t01) {
+        if (stopped || typeof t01 !== "number" || !isFinite(t01)) return;
+        const k = Math.min(1, Math.max(0, t01)), now = ctx.currentTime;
+        recipe.osc && recipe.osc.forEach((osc, i) => {
+          v.oscs[i].frequency.setTargetAtTime(along(osc.f, osc.to, k), now, SFX_SET_TC);
+        });
+        if (v.filter) v.filter.frequency.setTargetAtTime(along(recipe.filter.f, recipe.filter.to, k), now, SFX_SET_TC);
+      },
+      stop() {
+        if (stopped) return;
+        stopped = true;
+        const now = ctx.currentTime, gain = v.g.gain;
+        gain.cancelScheduledValues(now);
+        gain.setValueAtTime(Math.max(gain.value, SFX_FLOOR), now);
+        gain.exponentialRampToValueAtTime(SFX_FLOOR, now + recipe.rel);
+        for (const s of v.sources) s.stop(now + recipe.rel + SFX_TAIL);
+      },
+    };
+  }
+
+  return { VERSION: AUDIO_VERSION, play, hold };
 }

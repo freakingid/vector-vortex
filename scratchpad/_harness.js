@@ -253,6 +253,8 @@ function buildGame(opts = {}) {
     // kit-audio and the game's instances (16/19, CS009 P1)
     "AUDIO_VERSION", "AUDIO_BUSES", "createAudioEngine", "createMusic",
     "AudioSys", "MusicSys", "MUSIC_TRACKS",
+    // the SFX player (16/19, CS009 P4)
+    "createSfxPlayer", "sfxCheckRecipe", "Sfx",
     // music by screen (19-sfx.js, CS009 P3)
     "musicStateFor", "MUSIC_SILENCE",
   ];
