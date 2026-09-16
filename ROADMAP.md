@@ -21,10 +21,10 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS006** | The well ends: the Dive, well progression and the colour-band roll, `laneState` and the dim band, `throatOffset` and the two degenerate wells, GDD §4.5 item 5 | §3.3, §3.6–3.7, §5, §4.5 |
 | **CS007** | The run escalates: the heat clock and every value derived from it, GDD §8.1's introduction schedule, the spawner-stall call, telemetry as the tuning instrument | §8, §8.1, §15.6 |
 | **CS008** | ✅ **Shipped 2026-09-13.** The rim fix (P1: every arrival killable) and the rim sweep (P1b: a fire-holding crossing kills), then front of house: scoring and extra lives, mode and Start Depth, one text path, the HUD and death fragmentation, title → mode → Start Depth → play → game over → restart, pause from five sources, Options, Credits, a Controls page with rebinding, and the sixth soak through the front door. ⚠ Nine phases — Paul's scope call, 2026-09-13, plus P1b | §4.2, §4.4, §4.6, §6.1, §7, §9, §10.4–10.5, §13, §17 items 8, 13, 14 |
-| **CS009** | Audio engine: `AudioSys` + `MusicSys`, per-frame lookahead scheduler, voices, `tools/music-lab.html` with the per-layer solo button, Classic SFX | §11.1–11.3, §11.7–11.8 |
+| **CS009** | ✅ **Shipped 2026-09-16.** The audio engine: kit-audio (`AudioSys`, `MusicSys` with a stall-resyncing per-frame lookahead scheduler, the SFX player), the gesture unlock, `tools/music-lab.html` with SOLO, MUTE and PASS / FAIL per layer, the untiered `title` and `pulse` tracks, music by screen, OPTIONS' four volumes and MUSIC TRACK, `tools/sfx-lab.html`, the Classic SFX at their seats with the held Surger tone and the over-cap life sound, and the seventh soak (audio on and off, one hash). ⚠ Six phases plus a port commit; `drive` moved to CS012 | §4.4, §6.5, §10.5, §11.1–11.3, §11.7–11.8, §17 item 9 |
 | **CS010** | The intensity director: live-danger signal, filter sweep, two or three earned layers, the solo audition | §11.4–11.6 |
 | **CS011** | Meta: kit profiles, local top-10 per mode, leaderboard wiring, achievements | §15.1–15.5 |
-| **CS012** | Overdrive core: mode flags, Jump, combo multiplier, the Reaver | §13, §14.2, §14.4, §14.6 |
+| **CS012** | Overdrive core: mode flags, Jump, combo multiplier, the Reaver, and the `drive` track (Overdrive's AUTO default, from CS009) | §11.7, §13, §14.2, §14.4, §14.6 |
 | **CS013** | Overdrive tokens and the remaining enemies: five powerups, the Warden, the Mimic on probation | §14.1, §14.6 |
 | **CS014** | The ring-flight Dive, hard-capped at 4 s / 6 rings | §14.5 |
 | **CS015** | Onboarding: first-run prompts, attract mode, the teach-in-four-seconds pass on level 1 | §12 |
@@ -47,7 +47,7 @@ closed session believed, and correcting it is falsifying it. If you find another
 live pointer, it means the same thing both times: read it, decide what it
 *meant*, and correct it.
 
-**CS001 through CS008 are closed.** Their narratives are in `log/CS00#.md`;
+**CS001 through CS009 are closed.** Their narratives are in `log/CS00#.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -163,6 +163,39 @@ whether those wells still feel tense is logged in `SKIPPED-PLAYTESTS.md`.
 The touch buttons are live but undrawn, and the Dive still has no visual.
 Neither has an owner.
 
+**CS009 held as ONE changeset and shipped its row, less one track.** Six
+phases: the engine (P1), music-lab and two tracks (P2), music in the game and
+the OPTIONS rows (P3), sfx-lab and the SFX player (P4), the seats (P5), and the
+seventh soak plus the close (P6). One port commit carried Paul's sfx-lab picks.
+⚠ Six is one past the guideline, as plan R6 predicted, and its P4/P4b fallback
+was never needed.
+
+**What CS009 shipped against the row.** ⛔ **kit-audio** (`16-audio-engine.js`,
+0.2.0): four buses, Orbital Overhaul's scheduler ported with a **stall resync**,
+and an SFX player that plays recipes as DATA and holds a voice. Orbital Overhaul
+burst 931 notes after a 60 s stall. Here, the frame after a hidden minute
+schedules 2 steps. ⛔ **No sound before a gesture**: kit-input 0.7.0's
+`onGesture` creates the context. **Two untiered tracks**, `title` (32 s) and
+`pulse` (108 s, A→B→C), composed in `tools/music-lab.html`, which binds to the
+build by text identity. **Music follows the screen.** OPTIONS gained MASTER,
+MUSIC, SFX and VOICE VOLUME, and MUSIC TRACK. **21 SFX recipes**, Paul's picks
+from `tools/sfx-lab.html`, sound at 23 seats, and `sfxVoice` is the eighth
+contract field. The Surger charge tone is a held voice that follows the fuse,
+passes a headless headroom gate over both tracks, and stops on any frozen or
+off-play frame. An award past the life cap now sounds. ⛔ **The seventh soak
+plays one front-door session with audio on and with audio off, and the state
+hash is identical on every frame.** No baseline moved in any phase.
+
+⚠ **What CS009 deliberately left.** **`drive` is CS012's** (Paul's A5): it has
+nothing to play under until Overdrive exists. **The director is CS010's**: no
+intensity, no tiers, no sweep, no ducking and no rim pulse. The tracks are
+untiered, and the duck is a unity node. That also means the "at every tier" half
+of the Surger tone guarantee cannot be tested before CS010. **No persistence**:
+the volumes and the track setting are session-only, and that is CS011's.
+**Nothing is auditioned**: no layer is marked PASS, and Paul's music-lab feedback
+is still to come. The VOICE bus is live and nothing feeds it (A3). A pad-only
+player is silent until a key, click or tap, and no changeset owns that.
+
 ---
 
 ## Why this order
@@ -247,9 +280,9 @@ different control model and the highest build cost, so it sits alone, late, and
 cuttable in one commit.
 
 ⛔ **Cut order under schedule pressure, in this order:** CS014 (ring-flight
-falls back to the Classic thorn-dodge), then the Mimic in CS013, then CS009's
-third track — `title` plus one gameplay track is a shippable floor. None of
-these three cuts touches another changeset's code.
+falls back to the Classic thorn-dodge), then the Mimic in CS013, then CS012's
+`drive` track — `title` plus `pulse` is a shippable floor. None of these three
+cuts touches another changeset's code.
 
 ---
 
@@ -264,7 +297,7 @@ these three cuts touches another changeset's code.
 | #4 Achievements | Local-only. The evaluator returns a payload-shaped object from day one, so server-backing later is wiring rather than a rewrite. | CS011 |
 | #5 Aggregate telemetry | Strictly local CSV export. Nothing is posted anywhere. It is a tuning instrument and explicitly not anti-cheat; a destination adds a privacy surface for no tuning benefit. | CS007 P4 — **shipped**; ⛔ persistence is CS011's |
 | #6 Mimic | Build it. ~100 lines against an existing shot path, and the probation verdict needs a playtest rather than an argument. Cut it in CS016, without ceremony, if it reads cheap. | CS013, verdict in CS016 |
-| #7 Track count | Three at launch: `title`, `pulse`, `drive`. `deep` and `rush` are new table entries with no code change, so they are post-ship content, not a scope cut. | CS009 |
+| #7 Track count | Three at launch: `title`, `pulse`, `drive`. `deep` and `rush` are new table entries with no code change, so they are post-ship content, not a scope cut. | `title`, `pulse`: CS009 — **shipped**. `drive`: **CS012** (Paul's A5, 2026-09-16) |
 
 ---
 
@@ -330,7 +363,7 @@ module seam, named against CS012 for the same reason.
 
 | # | Decision | What would change it |
 |---|---|---|
-| 1 | Sixteen changesets, sized so each holds 3–5 phases of one session each. ⚠ **CS008 held nine** (eight by Paul's U3 scope call, plus P1b) and four follow-up commits. Every phase landed in its own commit, and the planned P5/P6 split was never used. The guideline bent for a deliberate scope call and did not break | A phase that repeatedly overruns a session means the changeset was too coarse; split it rather than letting phases sprawl |
+| 1 | Sixteen changesets, sized so each holds 3–5 phases of one session each. ⚠ **CS008 held nine** (eight by Paul's U3 scope call, plus P1b) and four follow-up commits. Every phase landed in its own commit, and the planned P5/P6 split was never used. The guideline bent for a deliberate scope call and did not break. ⚠ **CS009 held six** plus one port commit, which its plan's R6 predicted | A phase that repeatedly overruns a session means the changeset was too coarse; split it rather than letting phases sprawl |
 | 2 | ✅ **Settled — enemies split across three changesets**, and the split was right. Spine plus one enemy (CS003), the three that fit the contract (CS004), the two that needed new machinery (CS005) | Originally two. CS004's scope check found a contract field missing, a `laneHop` degeneracy the Drifter is the first entity to reach, and two cargo rows that cannot be built before their cargo. The open question left here was whether CS005 was really two sessions; it was **five phases in one changeset and wanted no seam**, because P1 shipped geometry and no entity, which is what kept P2 and P3 to one entity each. ⛔ Nothing further changes this — the Classic roster is complete. The three Overdrive enemies are CS012 and CS013 and are scoped there |
 | 3 | Telemetry ships with the heat clock, not with the other meta systems. ⚠ Since CS006's split that is the **new CS007**, not CS006 — the same pairing it always had, one row further down | It is a tuning instrument, and the tuning it serves is difficulty. An instrument built one changeset *before* the thing it measures ships with a column list that has to be edited the moment heat lands, and `TELEMETRY_FIELDS` and `push()` must be edited together (GDD §15.6). If difficulty tuning turns out to need nothing beyond `feel-lab`, move it back to CS011 with the other meta systems |
 | 4 | Meta (CS011) sits after audio, not before | Meta's only external dependency is the Worker registry entry, which Paul can make in parallel today. If that registration proves slow, move CS011 earlier |

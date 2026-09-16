@@ -578,10 +578,13 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     11-dive.js         the Dive: the beat, the Thorn strike, the loop guard
     12-scoring.js
     13-render-well.js  14-render-entities.js  15-render-hud.js
-    16-audio-engine.js AudioSys + MusicSys: transport, voices, buses
+    16-audio-engine.js kit-audio: the context and four buses, the lookahead
+                       scheduler, the SFX player. Reads no game global
     17-audio-tracks.js track tables (DATA, ported from music-lab)
-    18-audio-director.js intensity -> tier + filter sweep
-    19-sfx.js          20-achievements.js
+    18-audio-director.js intensity -> tier + filter sweep (CS010; empty)
+    19-sfx.js          AudioSys / MusicSys / Sfx built from C; sfx(), the ONE
+                       seat call; the Surger tone; musicStateFor()
+    20-achievements.js
     21-telemetry.js    TELEMETRY_FIELDS + the ring. Capture is a SESSION switch,
                        OFF at every launch; sampled from update(), never draw()
     22-meta.js         profiles, scores, leaderboard wiring

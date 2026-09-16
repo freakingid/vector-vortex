@@ -1,55 +1,17 @@
 # Vector Vortex — STATUS
-Version: 0.0.5 · Changeset: CS009 (P5 done 2026-09-16 — P6 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.6 · Changeset: CS010 (not started — planning next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
-## Phase ledger — CS009
+## Phase ledger — CS010
 
-One line per phase here; ⛔ **reasoning goes to `log/CS009.md` as the phase
-goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
-
-| Phase | Commit | One line |
-|---|---|---|
-| P1 | `edfc2e1` | The engine: kit-input 0.7.0 `onGesture`, kit-audio 0.1.0 (four buses, the scheduler with the stall resync), the harness fake. No sound yet. 6 of 6 mutations red |
-| P2 | `3809eba` | `tools/music-lab.html` (SOLO, MUTE, gain/cutoff, PASS/FAIL, COPY TABLE) and the `title` (32 s) and `pulse` (108 s, A→B→C) tables. Lab BLOCK A/B identical to `16`/`17`. 8 of 8 mutations red |
-| P3 | `88befdb` | Music by screen (`musicStateFor()`, `audioFrame()` once per frame) and OPTIONS' MASTER / MUSIC / SFX / VOICE VOLUME and MUSIC TRACK rows, one generalised row mode. `test-cs008-p6.js`'s three assertions rewritten in place. 9 of 9 mutations red |
-| P4 | `0458601` | kit-audio 0.2.0 `createSfxPlayer` (`play` / `hold`), `C.SFX` (21 recipes, candidate A) and `C.SFX_KILL_PITCH`, `tools/sfx-lab.html` (2–3 candidates, ▶ in context, picked, COPY OUT). No seat plays yet. 10 of 10 mutations red |
-| P4 port | `310d716` | ✅ Paul's sfx-lab picks, ported verbatim: 13 of 21 events changed. In the lab each pick is now candidate A, and the picks key is v2 |
-| P5 | this commit | The Classic SFX at their seats: `sfx(name, voice)`, `sfxVoice` (the eighth contract field), the held Surger tone, and the headroom gate (0.450 vs 0.434 `pulse`, 0.3005 `title`). `test-cs004-p1.js`'s field list rewritten in place. No baseline moved. 12 of 12 mutations red |
+Nothing built yet. One line per phase here; ⛔ **reasoning goes to
+`log/CS010.md` as the phase goes**, not to this file (`CLAUDE.md`, Session
+rules, 2026-08-31).
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules, 467.1 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **48 test files, all green, zero skips.**
-- **CS009 P1 — the engine.** `16-audio-engine.js` is kit-audio **0.1.0**
-  (`.NOTES.md`). `19-sfx.js` builds `AudioSys` / `MusicSys` from `C`, and
-  `AudioSys.unlock()` is kit-input **0.7.0**'s `onGesture`. ⛔ `ctx` is null
-  until a key, click or lifted touch, and every entry point returns early on it.
-  ⛔ `buildGame({ audio: true })` installs the recording fake (`X._audio`). The
-  default is still no audio API.
-- **CS009 P2 — music-lab and two tracks.** `tools/music-lab.html` plays
-  `MUSIC_TRACKS` (`17-audio-tracks.js`): `title` 32 s, `pulse` 108 s (A→B→C),
-  no `tier`, worst step 9 and 14 nodes of 16. ⚠ **The tracks are unauditioned;
-  the lab is where Paul judges them (A6).** Nothing waits on it.
-- **CS009 P3 — music in the game and the sound rows.** `musicStateFor()`
-  (`19-sfx.js`, pure) picks `title`, the gameplay track or silence from the
-  screen; `audioFrame()` runs it once per `Game.frame()`, after the steps and
-  before `draw()`. OPTIONS has MASTER / MUSIC / SFX / VOICE VOLUME and MUSIC
-  TRACK (AUTO / PULSE) after CREDITS, session-only in the `sound` object beside
-  `controls`. ⛔ One row mode: `adjusting` is the row's `adjust` key into
-  `ADJUST` (`23-main.js`), the sensitivity rows included.
-- **CS009 P4 — the SFX player and sfx-lab.** `Sfx` (`19-sfx.js`) is
-  `createSfxPlayer(AudioSys, { noise })`: `play(recipe, { pitch, when })`, and
-  `hold(recipe)` → `{ set(t01), stop() }`. Recipes are `C.SFX`, one per plan §7
-  event; the kill's pitch is `C.SFX_KILL_PITCH[sfxVoice]`. ⛔ **Every recipe is
-  Paul's pick (2026-09-16), ported verbatim**, and each is now the lab's candidate A.
-- **CS009 P5 — the seats.** Every seat is one `sfx(name, voice)` call (`19-sfx.js`;
-  GDD §11.8's table). ⛔ It writes no `state` and draws nothing. The kill's pitch
-  is `C.SFX_KILL_PITCH[e.sfxVoice]`. `lifeLost` plays only at the cap on a live
-  run. `purgeWeak` is use 2, and use 3+ is silent. The Dive's termination kill is
-  silent. ⛔ **The Surger tone is `reconcileSurgeTones()`**, run from `audioFrame()`:
-  one held voice per telegraphing Surger, in a `Map`, `set(chargeTip())`. Every
-  voice stops when the frame ends frozen or off play. ⛔ The headroom gate is in
-  `test-cs009-p5.js` (`HEADROOM_RATIO` 1.0, ⚠ provisional).
+- `node scratchpad/run-all.js`: **49 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -78,11 +40,30 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   **0.6.0**, kit-menu **0.1.0** (`src/15-render-hud.js`), kit-fx's first draft
   (`src/14-render-entities.NOTES.md`). Phase ledger, mutation records, baseline
   ledger, closed-file edits and the §10 and §19 verdicts are in `log/CS008.md`.
+- **CS009 closed 2026-09-16 — the audio engine.** kit-audio **0.2.0**
+  (`src/16-audio-engine.js`: four buses, the lookahead scheduler with the stall
+  resync, the SFX player) and kit-input **0.7.0**'s `onGesture`. `title` and
+  `pulse`, untiered, from `tools/music-lab.html`. Music by screen
+  (`musicStateFor()`, `audioFrame()` once per frame). OPTIONS' MASTER / MUSIC /
+  SFX / VOICE VOLUME and MUSIC TRACK, session-only. `C.SFX` (Paul's 21 picks from
+  `tools/sfx-lab.html`) at 23 `sfx(name, voice)` seats, `sfxVoice` as the eighth
+  contract field, the held Surger tone and the over-cap life sound. Phase ledger,
+  mutation records, baseline ledger and the §10 verdicts are in `log/CS009.md`;
+  GDD §19's Audio verdict is in GDD §19.
+- ⛔ **`AudioSys.ctx` is null until a key, click or lifted touch**, and every
+  audio entry point returns early on it. `buildGame({ audio: true })` installs
+  the recording fake (`X._audio`); the default is still no audio API.
+- ⛔ **A seat writes no `state` and draws nothing.** The Surger tone is one held
+  voice per telegraphing Surger, keyed in a `Map` in `19-sfx.js` (never a field
+  on the entity), and `set(chargeTip())` each frame. ⛔ The headroom gate
+  (`test-cs009-p5.js`, `HEADROOM_RATIO` 1.0, ⚠ provisional) measures the
+  UNTIERED tracks: 0.450 against 0.434 `pulse`, 0.3005 `title`.
+- ⚠ **Both tracks are unauditioned**: no layer carries an `audition` mark.
 - ⛔ **Read GDD §6.5 before adding an enemy.** Eight contract fields (plus
   `points()`, CS008 P2), the wiring points, the one array / one spawn entry /
   one well entry / one collision pass rule, and the Dive: an entity that is
   `blocksClear: false` and not `anchored` must decide whether it survives a dive.
-- ⛔ **SIX SOAKS, AND THEY PROVE DIFFERENT THINGS ON DIFFERENT BOARDS.**
+- ⛔ **SEVEN SOAKS, AND THEY PROVE DIFFERENT THINGS ON DIFFERENT BOARDS.**
   `test-cs003-p5.js` is the Vaulter soak (level 2, the per-tick lane SPEED
   bound). `test-cs004-p5.js` runs the three-kind band (level 7, the exact-lane
   form). `test-cs005-p5.js` and `test-cs006-p5.js` run the full board (level 23);
@@ -91,8 +72,14 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   that enters through the FRONT DOOR**: one session from the boot title, twenty
   cases through START DEPTH 1 / 5 / 9, RESTART and QUIT TO TITLE, driven by key
   presses and `Game.frame()`. It asserts item 8 played, the Start Depth bonus at
-  most once, and the rim-arrival property at the shot pass. ⛔ A future changeset
-  extends the pattern with a seventh file rather than widening a closed one.
+  most once, and the rim-arrival property at the shot pass. ⛔
+  **`test-cs009-p6.js` plays one front-door session twice, audio on and audio
+  off, and compares a whole-board hash on every frame** (104,107). It also holds
+  the node ceiling, the stall bound after a 60 s hidden gap, held voices ≤
+  telegraphing Surgers, and every §7 event sounded. It stages the Start Depth
+  record (23) and one run's lives at the cap, in both sessions. ⛔ A future
+  changeset extends the pattern with an eighth file rather than widening a
+  closed one.
 - ⛔ **`test-cs006-p5.js` carries the count-based form of the no-draw rule**, a
   function of the LEVEL: `spawnEnemy`'s 1 plus `pickSpawnLane`'s bounded
   `[1, C.SPAWN_LANE_TRIES]`, plus +0 at levels 1–2 and +1 from level 3. It needs
@@ -109,6 +96,10 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   assertion**, checked against the draws-per-spawn count.
 - ⛔ **On a boundary rider the LATTICE is where §17 item 3 stands, not the speed
   bound** (CS005 close; `RATIONALE.md#boundary-lattice`).
+- `tools/music-lab.html` (SOLO, MUTE, PASS / FAIL, COPY TABLE) and
+  `tools/sfx-lab.html` (2–3 candidates per event, COPY OUT) are the porting
+  sources for `17-audio-tracks.js` and `C.SFX`, bound to the build by text
+  identity (`test-cs009-p2.js`, `-p4.js`).
 - `tools/well-lab.html` (the sixteen polygons, `throatOffset` sliders, a
   Legibility readout; ⛔ the visual audition has not happened) and
   `tools/feel-lab.html` (traverse-and-stop, reachable over LAN via `npm run
@@ -119,7 +110,7 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 - ⚠ **R2 — A PAD-ONLY PLAYER IS SILENT UNTIL A KEY, CLICK OR TAP** (PREDICTED:
   a gamepad button is not browser user activation). kit-input's `onGesture`
   fires on `keydown`, `mousedown` and `touchend` only. No changeset owns a fix.
-- ⛔ **CS009 TRAPS IN AUDIO CODE** (plan §1.4, §1.5, §1.13). (1) Never write the
+- ⛔ **CS009 TRAPS IN AUDIO CODE** (`archive/PLANNED-FEATURES-CS009.md` §1.4, §1.5, §1.13). (1) Never write the
   vocabulary scan's banned word, even as "… Audio" in a comment:
   `test-cs008-p6.js` scans the whole built file. (2) Never write `.key` after
   an identifier ending in `e` (`tone.key`): `test-cs002-p1.js` bans the
@@ -127,9 +118,9 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `// 21-telemetry.js` or `// 22-meta.js`. (4) No platform RNG: the noise is
   `mulberry32(C.AUDIO_NOISE_SEED)`.
 - ⛔ **`test-cs009-p3.js` PINS THE TEXT `function audioFrame()` AND ITS CALL
-  `audioFrame()`.** So P5 passes the frame's play-step count through a closure
-  variable (`playSteps`), not a parameter. A signature change turns P3's seat
-  assertions red.
+  `audioFrame()`.** So CS009 P5 passes the frame's play-step count through a
+  closure variable (`playSteps`), not a parameter. A signature change turns
+  `test-cs009-p3.js`'s seat assertions red.
 - ⛔ **THE SURGER TONE IS DECIDED AT FRAME END** (`audioFrame()`). If the frame ends
   frozen (`hitStopLeft > 0`) or off play, every voice stops. If the run is live and
   no step ran, the voices hold, so a 120 Hz display does not chop the tone. ⛔ Do not
@@ -142,6 +133,13 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 - ⚠ **Every seat call is `sfx(`, and `test-cs009-p5.js` scans the built file for
   them.** Each call must name its `C.SFX` event as a string literal, and its
   arguments must hold no assignment.
+- ⚠ **GDD §11.5 names `MUSIC_LAYER_CROSSFADE`; `C` has `LAYER_CROSSFADE`.**
+  Neither is read. CS010 reconciles the name when it reads one.
+- ⛔ **EVERY CS010 CONSTANT IS ALREADY IN `C` AND UNREAD** (MEASURED at the
+  CS009 close, a grep of `src/` for `C.<key>`): the ten `INT_*` keys,
+  `LAYER_THRESHOLD`, `LAYER_CROSSFADE`, `FILTER_MIN_HZ`, `FILTER_MAX_HZ`,
+  `MUSIC_DUCK_GAIN`, `MUSIC_DUCK_RAMP`. `INT_W_COMBO` has no source before
+  CS012's combo.
 - ⛔ **`MusicSys.setState()` BEFORE THE FIRST GESTURE IS DROPPED** (ported
   as-is: it returns on a null `ctx` without recording the name). That is why
   `audioFrame()` calls it every frame. ⛔ Never move it onto a screen change.
@@ -276,35 +274,43 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   call.
 - ⚠ **Paul replaces `C.CREDITS_LINES` before ship.**
 - ⚠ **Paul has music-lab feedback he has not yet put into words** (2026-09-16):
-  he dislikes some things in the tracks. Ask him at CS009's close (P6), before
-  ROADMAP #7 is edited. Nothing waits on it.
-- Backport kit-input (**0.7.0**), kit-menu (0.1.0), kit-fx and kit-audio (0.1.0) to coinless-kit —
-  each a separate manual step, verified against that repo's own suite.
+  he dislikes some things in the tracks. Asked at CS009's close; the answer is
+  pending. Nothing waits on it, but CS010's plan tiers layers of those tracks.
+- ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
+  `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
+  2 → 3.
+- Backport kit-input (**0.7.0**), kit-menu (0.1.0), kit-fx and kit-audio
+  (**0.2.0**) to coinless-kit — each a separate manual step, verified against
+  that repo's own suite.
 - The Overdrive `PTS_REAVER`, `PTS_MIMIC`, `PTS_WARDEN` are unread — CS012's.
 - ⛔ **The seven debug spawn actions ship until CS016** (Paul's H5 call).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS009 P6, the seventh soak, the docs, the close
+## Next up — ⛔ CS010 PLANNING
 
-⛔ **CS009 is planned** (2026-09-16, at `d1847e2`): `PLANNED-FEATURES-CS009.md`
-and `IMPLEMENTATION-PHASES-CS009.md`, six phases. Every design call is
-answered (plan §0, A1–A9; `DECISIONS.md` pointer written in P1). Paste P6's
-prompt from `IMPLEMENTATION-PHASES-CS009.md`. ⛔ Every seat is live, so P6's
-audio-on and audio-off sessions are the proof that a seat spends no draw
-(acceptance 12).
+⛔ **CS010 is the intensity director** (`ROADMAP.md`): the live-danger signal,
+the filter sweep, two or three earned layers and the solo audition (GDD
+§11.4–11.6). A planning session writes `PLANNED-FEATURES-CS010.md` and
+`IMPLEMENTATION-PHASES-CS010.md`, marks every claim MEASURED or PREDICTED, and
+writes no code.
 
-⛔ **What the plan measured that every CS009 phase must respect:**
+⛔ **What CS010's plan must not lose:**
 
-1. ⛔ **Three whole-file scans bite audio code** (plan §1.4, §1.5): no platform
-   RNG (the noise buffer takes its own `mulberry32` stream), no `\bweb\b` even
-   in a comment, and `test-cs002-p1.js` bans the SUBSTRING `e.key` outside
-   `04-input.js`. `C` already holds a comment naming the timers, so a
-   `setTimeout` scan must strip comments.
-2. ⛔ **Orbital Overhaul's scheduler bursts 931 notes after a 60 s stall**
-   (plan §1.3); a hidden tab is a shipped pause source here. ✅ P1 resyncs.
-3. ✅ **The OPTIONS rows went after CREDITS** (P3). Above TELEMETRY they turn 99
-   closed assertions red (plan §1.8).
-4. ⚠ SETTLED — the Surger charge tone stays audible over music at every tier;
-   ✅ P5's headless headroom gate (`test-cs009-p5.js`) stands in for the hardware check.
-5. ⛔ No baseline moves in CS009 (plan §9).
+1. ⛔ **CS010 may tier only a layer marked PASS (Paul's A6), and no layer is
+   marked.** A PASS is Paul's mark in `tools/music-lab.html`; a lab is not a
+   playtest. What CS010 does with no marks is a call for Paul, and so is his
+   unworded track feedback (Carried tasks). The plan names both and stops.
+2. ⚠ **SETTLED — the Surger charge tone is audible over music at every tier.**
+   `test-cs009-p5.js`'s gate measures untiered tracks. A sweep or a tier
+   re-runs it.
+3. ⛔ **The loader throws on any `tier` twice over.** CS010 deletes the "not
+   supported" throw and keeps the `1..4` range throw. ⛔ `scheduleStep` still
+   never reads intensity: gating is a gain node (`test-cs009-p1.js` M2, M3).
+4. ⛔ **The director reads `state` and writes none of it, and draws nothing.**
+   `test-cs009-p6.js`'s frame-by-frame hash is the proof shape.
+5. ⛔ **Tier changes latch to the bar line**, and the menu duck and the 6 dB dips
+   ramp, never a bare set (GDD §11.5, §11.6). The `duck` node already exists at
+   unity. GDD §17 item 9's two remaining clauses become testable here.
+6. ⛔ Every audio edit obeys the known issues above: the three-file rule, the
+   pinned `function audioFrame()` text, and the banned substrings.

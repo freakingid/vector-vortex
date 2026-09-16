@@ -781,7 +781,7 @@ const C = {
   TELEMETRY_PLACEHOLDER: { maxCombo: 0 },
 
   // ---- Build / debug ------------------------------------------------------
-  GAME_VERSION:         "0.0.5",   // ⚠ 0.0.2 was never written here — see log/CS006.md
+  GAME_VERSION:         "0.0.6",   // ⚠ 0.0.2 was never written here — see log/CS006.md
   GAME_ID:              "vector-vortex",   // must match the Worker registry
 };
 
@@ -6949,7 +6949,7 @@ function createMusic(engine, options) {
 // at the end of the release.
 //
 // hold(recipe) starts a voice that sustains at `gain` until stop(). It returns
-// { set(t01), stop() }: set() moves every frequency to f + (to - f) * t01 on an
+// { set(t01), stop() }: set() moves every frequency to f * (to / f)^t01 on an
 // exponential curve (glide and sweep are not read), and stop() releases over
 // `rel` and stops every source. Held before a context exists, it returns a
 // handle whose calls do nothing.

@@ -377,7 +377,7 @@ function createMusic(engine, options) {
 // at the end of the release.
 //
 // hold(recipe) starts a voice that sustains at `gain` until stop(). It returns
-// { set(t01), stop() }: set() moves every frequency to f + (to - f) * t01 on an
+// { set(t01), stop() }: set() moves every frequency to f * (to / f)^t01 on an
 // exponential curve (glide and sweep are not read), and stop() releases over
 // `rel` and stops every source. Held before a context exists, it returns a
 // handle whose calls do nothing.

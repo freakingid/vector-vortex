@@ -957,7 +957,7 @@ note envelopes → layerGate → trackGain (crossfaded) → duck → AudioSys.mu
 SFX ───────────────────────────────────────────────────────→ AudioSys.sfx → master
 ```
 
-**Shipped, CS009 P1 — the engine, with no track and no sound.** `src/16-audio-engine.js` is kit-audio 0.1.0 (`src/16-audio-engine.NOTES.md`): `createAudioEngine(opts)` and `createMusic(engine, opts)`. It reads no `C` and no `state`, and it is ported from Orbital Overhaul `5abd37a`. `src/19-sfx.js` builds the two instances from `C`. ⛔ **Four buses**: `master` → destination, and `music`, `sfx` and `voice` → `master` (`voice` is fed by nothing, Paul's A3). Each is built at `C.AUDIO_VOL_DEFAULT / C.AUDIO_VOL_STEPS` (unity), and `setVol` ramps over `C.AUDIO_VOL_RAMP`, never a bare `.value` set. ⛔ **`AudioSys.ctx` is null until a user gesture.** kit-input 0.7.0's `onGesture` calls `AudioSys.unlock()` inside `keydown`, `mousedown` and `touchend`. Every entry point returns early while `ctx` is null, which is the whole headless suite's path. ⚠ PREDICTED, not measured: a gamepad button is not a browser gesture, so a pad-only player is silent until a key, click or tap. The duck node and every layer gate are built at unity, and §11.6's ducking and §11.4's setter are CS010's. ⛔ **The track loader refuses any `tier` in CS009** (Paul's A6), and a `tier` outside `1..4` always. The noise buffer is `mulberry32(C.AUDIO_NOISE_SEED)`, its own stream, never the run's.
+**Shipped, CS009 P1 — the engine, with no track and no sound.** `src/16-audio-engine.js` is kit-audio 0.1.0 (`src/16-audio-engine.NOTES.md`; **0.2.0 since P4**, which added `createSfxPlayer`, §11.8): `createAudioEngine(opts)` and `createMusic(engine, opts)`. It reads no `C` and no `state`, and it is ported from Orbital Overhaul `5abd37a`. `src/19-sfx.js` builds the two instances from `C`. ⛔ **Four buses**: `master` → destination, and `music`, `sfx` and `voice` → `master` (`voice` is fed by nothing, Paul's A3). Each is built at `C.AUDIO_VOL_DEFAULT / C.AUDIO_VOL_STEPS` (unity), and `setVol` ramps over `C.AUDIO_VOL_RAMP`, never a bare `.value` set. ⛔ **`AudioSys.ctx` is null until a user gesture.** kit-input 0.7.0's `onGesture` calls `AudioSys.unlock()` inside `keydown`, `mousedown` and `touchend`. Every entry point returns early while `ctx` is null, which is the whole headless suite's path. ⚠ PREDICTED, not measured: a gamepad button is not a browser gesture, so a pad-only player is silent until a key, click or tap. The duck node and every layer gate are built at unity, and §11.6's ducking and §11.4's setter are CS010's. ⛔ **The track loader refuses any `tier` in CS009** (Paul's A6), and a `tier` outside `1..4` always. The noise buffer is `mulberry32(C.AUDIO_NOISE_SEED)`, its own stream, never the run's.
 
 ### 11.2 ⛔ Scheduler
 
@@ -966,6 +966,8 @@ SFX ─────────────────────────�
 ⛔ **`scheduleStep` never consults intensity.** Every layer is always scheduled; gating is entirely a downstream gain node. That is what makes a track's note timing provably fixed regardless of what the director is doing.
 
 **Shipped, CS009 P1 — and ⛔ the scheduler RESYNCS after a stall.** Orbital Overhaul clamps a late step to `currentTime`, and after a 60 s gap one update fired 931 notes at the same instant (measured, plan §1.3). Here a hidden tab is a shipped pause source (§10.5), so the gap is routine. When `nextStepTime` is more than one lookahead behind the clock, `update()` advances the cursor and the clock together by the whole number of missed steps. Bar phase holds, and nothing that should already have sounded is played. `scratchpad/test-cs009-p1.js` asserts the following on a synthetic table. Each `update()` schedules exactly the steps inside the window. Every step starts within 1e-6 s of `t0 + k × stepDur` over 10 simulated minutes. One post-gap `update()` schedules at most `ceil(lookahead / stepDur) + 1` steps (353 with the resync deleted). Every layer is scheduled whatever its `audition` mark, and no layer's `audition`, `tier` or intensity is read. The worst step's node count is under `C.MUSIC_STEP_NODE_MAX` (16, ⚠ provisional). The built file's code, comments stripped, has no timer call.
+
+**Played, CS009 P6.** `scratchpad/test-cs009-p6.js` hides the page mid-run, runs no frame for 60 s, and brings it back with `pulse` live and the scheduler 59.8 s behind. The one frame after the gap schedules **2 steps against a bound of 3** (320 with the resync deleted), and Escape resumes the run.
 
 ### 11.3 ⛔ Tracks are DATA
 
@@ -980,7 +982,7 @@ Generic step-sequencer table, consumed unmodified by the scheduler:
 
 **Length target.** Orbital Overhaul's tracks run 21.8–48 s (`zen` longest). Vector Vortex targets **≥ 90 s before the loop point** for the two flagship tracks, achieved through A→B→C sections — the same technique `drift` and `warehouse` already use for their A→B, extended.
 
-**Shipped, CS009 P2 — the lab and the first two tables.** `tools/music-lab.html` opens from `file://`. ⛔ **Its BLOCK A is `src/16-audio-engine.js` whole and its BLOCK B is `src/17-audio-tracks.js` whole, character for character** (`scratchpad/test-cs009-p2.js`, against the built file), so what the lab plays is what the game plays. Per layer it has **SOLO** (exclusive-additive: while any layer is soloed, every unsoloed layer is silent), **MUTE**, a gain slider, a cutoff slider when the layer has a `cutoff`, and a **PASS / FAIL / —** mark. SOLO and MUTE are two gain nodes hung on `createMusic`'s `layerSink`, never inside BLOCK A. A loop ribbon draws every note with its A / B / C section marks and seeks on click; the readout gives bar, step, section and seconds. ⛔ **COPY TABLE is the one route back**: it prints BLOCK B with every changed `gain` and `cutoff` rewritten and each marked layer's `audition` written (`"pass"`, `"fail"`, or removed for —), to paste over `17-audio-tracks.js`. ⛔ **No layer carries `tier`** (Paul's A6), so the table shape above ships without it, plus `audition`, `q`, `cutoffTime`, `hp`, `drop`, `dropTime` and `noise` (kit-audio 0.1.0's track contract). `audition` is a mark for whoever tiers a track later (CS010 may tier only a PASS layer); the scheduler never reads it. ⚠ **Both tracks are unauditioned**: no layer is marked, and the lab is where Paul judges them. Nothing waits on that.
+**Shipped, CS009 P2 — the lab and the first two tables.** `tools/music-lab.html` opens from `file://`. ⛔ **Its BLOCK A is `src/16-audio-engine.js` whole and its BLOCK B is `src/17-audio-tracks.js` whole, character for character** (`scratchpad/test-cs009-p2.js`, against the built file), so what the lab plays is what the game plays. Per layer it has **SOLO** (exclusive-additive: while any layer is soloed, every unsoloed layer is silent), **MUTE**, a gain slider, a cutoff slider when the layer has a `cutoff`, and a **PASS / FAIL / —** mark. SOLO and MUTE are two gain nodes hung on `createMusic`'s `layerSink`, never inside BLOCK A. A loop ribbon draws every note with its A / B / C section marks and seeks on click; the readout gives bar, step, section and seconds. ⛔ **COPY TABLE is the one route back**: it prints BLOCK B with every changed `gain` and `cutoff` rewritten and each marked layer's `audition` written (`"pass"`, `"fail"`, or removed for —), to paste over `17-audio-tracks.js`. ⛔ **No layer carries `tier`** (Paul's A6), so the table shape above ships without it, plus `audition`, `q`, `cutoffTime`, `hp`, `drop`, `dropTime` and `noise` (kit-audio 0.1.0's track contract). `audition` is a mark for whoever tiers a track later (CS010 may tier only a PASS layer); the scheduler never reads it. ⚠ **Both tracks are unauditioned**: no layer is marked, and the lab is where Paul judges them. Nothing waits on that. Since CS009 P4, `tools/sfx-lab.html` carries the same two files as its own BLOCK A and BLOCK B (`test-cs009-p4.js`), so an edit to either is a three-file edit.
 
 ### 11.4 The intensity director — the new work
 
@@ -1004,6 +1006,8 @@ Smoothed **asymmetrically** — attack ~0.4 s so danger registers immediately, r
 
 **(c) ⛔ P5 — the standalone test.** *Every layer above the foundation must be recognizable played solo, with the rest of the track muted.* A layer that only makes sense inside the stack is texture, and texture is what produced the mud. `music-lab` gains a **solo button per layer**, and a layer that fails the solo audition does not ship. This is an audition gate, not a code rule, and it is the thing that was missing last time.
 
+**CS009 — not built; CS010's.** No director exists: `src/18-audio-director.js` is a one-line placeholder, and kit-audio has no intensity setter. What CS009 did ship for (c) is the solo button itself, with MUTE and a PASS / FAIL mark per layer (§11.3). ⚠ No layer is marked yet.
+
 ### 11.5 ⛔ Scope: sweep plus two or three earned layers
 
 Deliberately narrower than the five-tier design that failed.
@@ -1017,11 +1021,15 @@ Deliberately narrower than the five-tier design that failed.
 
 ⛔ **A layer's `tier`, if set, must be in `1..4`.** `LAYER_THRESHOLD` has no key for 5+, and `f >= undefined` is always false, so a tier-5 layer would be permanently silent.
 
+**CS009 — not built; CS010's.** ⛔ Both shipped tracks carry **no `tier`**, and kit-audio's loader throws on one (Paul's A6), so every layer gate is always open and CS009 already stands in the retreat position above. There is no sweep: `C.FILTER_MIN_HZ`, `C.FILTER_MAX_HZ` and `C.LAYER_THRESHOLD` are unread. CS010 deletes the loader's "not supported" throw when it ports the setter, keeps the `1..4` range throw, and may tier only a layer marked PASS.
+
 ### 11.6 Ducking and reactive visuals
 
 `duck` ramps to 0.5 while a menu is open and dips 6 dB on Purge, death, and extra life — always `linearRampToValueAtTime`, never a bare `.value` set.
 
 The scheduler emits kick and snare events to the render layer; the rim pulses on the kick. ⛔ **Driven by the scheduler, not an `AnalyserNode`** — an analyser adds latency, and tightness is the point.
+
+**CS009 — the node only; the rest is CS010's.** `createMusic` builds `duck` between the track gain and the music bus, at unity, because §11.1's signal path contains it. Nothing ramps it: no menu duck (`C.MUSIC_DUCK_GAIN` and `C.MUSIC_DUCK_RAMP` are unread), no 6 dB dips, and no kick or snare events.
 
 ### 11.7 Tracks
 
@@ -1042,7 +1050,7 @@ Selectable in Options, persisted per profile, cycled exactly like Orbital Overha
 | `title` | G major, 60 BPM, 16 steps a bar | 8 bars, **32 s** | A bars 0–3 (the theme), B 4–7 (the answer, falling home) | `theme`, `bells`, `glow`, `ground` | 9 |
 | `pulse` | E minor, 80 BPM, 16 steps a bar | 36 bars, **108 s** | A bars 0–11 (the tune low and plain), B 12–23 (an octave up, heart doubles), C 24–35 (the peak; the opening motif returns at bar 32, and a B major bar pulls back to the top) | `melody`, `swell`, `bassline`, `cycle`, `heart`, `tick` | 14 |
 
-Node counts are MEASURED on the harness's recording fake against `C.MUSIC_STEP_NODE_MAX` 16. MEASURED in headless Chromium by rendering each table offline through BLOCK A: the full mix peaks at 0.32 (`title`) and 0.30 (`pulse`) of full scale, which leaves headroom for the SFX bus.
+Node counts are MEASURED on the harness's recording fake against `C.MUSIC_STEP_NODE_MAX` 16. MEASURED in headless Chromium by rendering each table offline through BLOCK A: the full mix peaks at 0.32 (`title`) and 0.30 (`pulse`) of full scale, which leaves headroom for the SFX bus. ⚠ **That is a rendered sample peak, and it is not §11.8's headroom figure.** The gate there sums the envelope peaks of every note sounding at once (0.434 `pulse`, 0.3005 `title`). That sum is an upper bound, because waveforms sounding together do not all crest at the same sample.
 
 **Shipped, CS009 P3 — which track plays where.** `musicStateFor(screen, optionsFrom, mode, trackSetting)` in `src/19-sfx.js` is pure. `Game.frame()` calls `audioFrame()` once per frame, after the steps and before `draw()`. It passes the result to `MusicSys.setState()` (idempotent) and then calls `MusicSys.update()`. ⛔ **It runs every frame**, because a `setState()` before the first gesture is dropped. It writes no `state` and draws nothing.
 
@@ -1061,9 +1069,9 @@ Node counts are MEASURED on the harness's recording fake against `C.MUSIC_STEP_N
 
 Every entry point is `if (!AudioSys.ctx) return;`-guarded, headless-safe.
 
-**Shipped, CS009 P4 — the player and the recipes.** A sound is a **recipe**, plain data in `C.SFX`: one or two oscillators or noise, a glide, an optional low- or high-pass filter with a sweep, an attack/hold/release envelope and a peak gain. `createSfxPlayer()` (`16-audio-engine.js`, kit-audio 0.2.0) plays one with `play(recipe, { pitch })`, and holds one with `hold(recipe)`, whose `set(t01)` moves its pitch and whose `stop()` releases it. That held voice is the Surger's charge tone. `C.SFX` has one recipe for each of the 21 events in `PLANNED-FEATURES-CS009.md` §7, and no spawn cues (Paul's A8). The kill sound is one recipe, and `C.SFX_KILL_PITCH` gives each of the seven `sfxVoice` values its own pitch (A9). ⛔ **Every recipe is ported verbatim from `tools/sfx-lab.html`**, which offers 2–3 candidates per event. The build ships the picked one (A7). ✅ **Paul picked all 21 on 2026-09-16**, and the lab now lists each pick as its candidate A. The lab plays `surgeCharge` as a held voice driven 0 → 1 over `SURGE_TELEGRAPH` with `pulse` playing, and `purgeWeak` beside `purge`. ⚠ Candidate A's `surgeCharge` peaks at 0.45, above `pulse`'s loudest summed step (0.434, MEASURED at P4). P5's headroom gate is the check.
+**Shipped, CS009 P4 — the player and the recipes.** A sound is a **recipe**, plain data in `C.SFX`: one or two oscillators or noise, a glide, an optional low- or high-pass filter with a sweep, an attack/hold/release envelope and a peak gain. `createSfxPlayer()` (`16-audio-engine.js`, kit-audio 0.2.0) plays one with `play(recipe, { pitch })`, and holds one with `hold(recipe)`, whose `set(t01)` moves its pitch and whose `stop()` releases it. That held voice is the Surger's charge tone. `C.SFX` has one recipe for each of the 21 events in `PLANNED-FEATURES-CS009.md` §7, and no spawn cues (Paul's A8). The kill sound is one recipe, and `C.SFX_KILL_PITCH` gives each of the seven `sfxVoice` values its own pitch (A9). ⛔ **Every recipe is ported verbatim from `tools/sfx-lab.html`**, which offers 2–3 candidates per event. The build ships the picked one (A7). ✅ **Paul picked all 21 on 2026-09-16**, and the lab now lists each pick as its candidate A. The lab plays `surgeCharge` as a held voice driven 0 → 1 over `SURGE_TELEGRAPH` with `pulse` playing, and `purgeWeak` beside `purge`. `surgeCharge` peaks at 0.45, above `pulse`'s loudest summed step (0.434, MEASURED at P4). Paul's pick left it unchanged, and P5's headroom gate passed it.
 
-**Shipped, CS009 P5 — the seats.** Every seat makes one call, `sfx(name, voice)` (`19-sfx.js`). It returns at once with no context, reads only `C`, writes no `state`, and draws nothing from the run's stream. P6's audio-on soak is the proof that a run's hash does not move. The seats (`PLANNED-FEATURES-CS009.md` §7):
+**Shipped, CS009 P5 — the seats.** Every seat makes one call, `sfx(name, voice)` (`19-sfx.js`). It returns at once with no context, reads only `C`, writes no `state`, and draws nothing from the run's stream. There are 23 call sites (MEASURED, a grep of `src/`). P6's audio-on soak is the proof that a run's hash does not move. The seats (`PLANNED-FEATURES-CS009.md` §7):
 
 | Event | Seat |
 |---|---|
@@ -1080,7 +1088,9 @@ Every entry point is `if (!AudioSys.ctx) return;`-guarded, headless-safe.
 
 ⛔ **The charge tone is held, not played.** `audioFrame()` calls `reconcileSurgeTones(state.enemies, live)` once per frame. Each entity in `telegraph` that has a `chargeTip()` gets one voice, keyed in a `Map` in `19-sfx.js`, never a field on the entity, and `set(chargeTip())`. A voice stops when its Surger leaves `telegraph`, dies or is filtered. `live` comes from `Game.frame()`, which counts its play steps. If the frame ends frozen or off play (pause, any menu, game over, the death freeze), every voice stops. If the run is live but no step ran (a display faster than 60 Hz), the voices hold. Otherwise they follow the fuse.
 
-⛔ **The headroom gate (`scratchpad/test-cs009-p5.js`)** runs at the default volumes. The tone's peak at `master` (recipe gain × SFX bus) must be at least the loudest overlap of note peaks at `master` over a whole loop. It must hold for `pulse` and for `title`. MEASURED: 0.450 against 0.434 on `pulse` and 0.3005 on `title`. ⚠ The 0 dB ratio is provisional. The hardware check is a skipped playtest (`SKIPPED-PLAYTESTS.md`).
+⛔ **The headroom gate (`scratchpad/test-cs009-p5.js`)** runs at the default volumes. The tone's peak at `master` (recipe gain × SFX bus) must be at least the loudest overlap of note peaks at `master` over a whole loop. It must hold for `pulse` and for `title`. MEASURED: 0.450 against 0.434 on `pulse` and 0.3005 on `title`. ⚠ The 0 dB ratio is provisional. The hardware check is a skipped playtest (`SKIPPED-PLAYTESTS.md`). ⚠ **"At every intensity tier" is untested until tiers exist.** CS009's tracks are untiered, which is the loudest a track can be, and CS010's sweep and layers re-run the gate.
+
+⛔ **Played, CS009 P6 — the seventh soak (`scratchpad/test-cs009-p6.js`).** One front-door session is played twice: once on the recording fake, unlocked by the first key press through the input's DOM handler, and once with no audio API. The session starts at the title and runs to game over and RESTART at Start Depths 1, 13 and 23. ⛔ **The state hash is identical on all 104,107 frames**, and every seat fires the same number of times in both. In the audio session, all 20 one-shot events sounded, every `sfx()` call reached the player, and the Surger tone was held 27 times. Held voices never exceeded telegraphing Surgers on any frame, and no voice sounded on a frame that ended frozen or off play. Across 4,600 played steps, the worst was 14 nodes against 16. `lifeLost` is staged in both sessions, because no played board reaches the cap: one run starts with `C.LIVES_MAX` lives and its score one point short of a milestone.
 
 ---
 
@@ -1406,7 +1416,7 @@ vector-vortex/
 ├── IMPLEMENTATION-PHASES-CS0##.md
 ├── build.js                     # Node concat src/ → dist/
 ├── src/                         # numbered modules, concat order
-├── tools/                       # design instruments — music-lab, art labs
+├── tools/                       # design instruments — music-lab, sfx-lab, well-lab, feel-lab
 ├── scratchpad/                  # tests: _harness.js, run-all.js, test-registry.js
 ├── log/CS0##.md                 # per-changeset narrative + version history
 ├── archive/                     # spent planning docs
@@ -1456,7 +1466,7 @@ Required coverage:
 6. **Carrier splits** — correct count and type per variant.
 7. **Heat monotonicity** — `heat(n+1) > heat(n)` for n in 1..200; every derived value inside its clamp.
 8. **Scoring** — total equals the sum of logged events. ⛔ **Shipped, CS008 P2, with no event log**: on eight played boards (levels 1–23, 120,000 steps), every step's score delta equals that step's events observed off the board. Those events are each kill priced from §7's table, each Thorn chip decoded from its length, and each clear's bonuses. `test-cs008-p2.js`, mutation-checked.
-9. **Audio** — intensity stays in `[0,1]`; tier changes land only on bar boundaries; ⛔ worst-case node creation for a single scheduled step asserted under a ceiling, as Orbital Overhaul does.
+9. **Audio** — intensity stays in `[0,1]`; tier changes land only on bar boundaries; ⛔ worst-case node creation for a single scheduled step asserted under a ceiling, as Orbital Overhaul does. ⛔ **The node ceiling shipped in CS009**: `C.MUSIC_STEP_NODE_MAX` 16 (⚠ provisional), asserted on a synthetic table (`test-cs009-p1.js`), on every step of both tracks (`test-cs009-p2.js`: worst 9 `title`, 14 `pulse`, and +1 node on three layers is red), and on a played session (`test-cs009-p6.js`: worst 14 over 4,600 steps, and +1 node per note is red). The intensity range and bar-line latching are CS010's, because neither an intensity nor a tier exists yet.
 10. **Achievements** — every predicate reachable; none throws on empty state; tiers monotonic.
 11. **Telemetry** — `TELEMETRY_FIELDS` and `push()` agree in length and order.
 12. **Soak** — 100 seeded runs to game over, no exception, no NaN, no unbounded array.
@@ -1489,6 +1499,15 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 **Overdrive** — five tokens, max two on screen; Jump with cooldown and unmistakable airborne state on three channels; combo builds, decays, displays, feeds the director; Reaver and Warden correct; Mimic present and flagged for playtest; ring-flight inside its 4 s / 6 ring cap.
 
 **Audio** — per-frame lookahead scheduling, no `setTimeout`/`setInterval` for notes, no audible drift over 10 minutes; flagship tracks ≥ 90 s before loop; ⛔ **every gated layer passes the solo audition**; tier changes only on bar boundaries; intensity rises ~0.4 s and falls ~2.5 s; filter sweep audible end to end; Surger charge audible over music at every tier, verified by ear on hardware; volume sliders persist per profile.
+
+⛔ **Audio at the CS009 close (2026-09-16).**
+- ✅ **Met — lookahead scheduling with no timers.** `audioFrame()` runs once per frame, and the built file's code has no timer call (`test-cs009-p1.js`, `test-cs009-p3.js`).
+- ✅ **Met headless — no drift over 10 minutes.** Every step is within 1e-6 s of its grid (`test-cs009-p1.js`). ⚠ "Audible" is a hardware claim, and the suite does not make it.
+- ◐ **Half met — flagship length.** `pulse` runs 108 s (`test-cs009-p2.js`). `drive` is CS012's.
+- ◐ **Vacuous in CS009 — every gated layer passes solo.** No layer is gated (Paul's A6). The solo button ships, and no layer is marked PASS. CS010 may tier only a PASS layer.
+- ✗ **CS010's — bar-line tier changes, the intensity attack and release, and the filter sweep.**
+- ◐ **Proxy met — the Surger tone over music.** The headroom gate passes on both untiered tracks (`test-cs009-p5.js`), and the played session keeps voices within telegraphing Surgers (`test-cs009-p6.js`). "At every tier" is re-checked at CS010. "By ear on hardware" is a skipped playtest.
+- ◐ **Half met — volume sliders.** The four volumes and MUSIC TRACK ship on OPTIONS (`test-cs009-p3.js`). Persisting them per profile is CS011's.
 
 **Meta** — profiles with `keyFor` routing and no storage enumeration; `playerId` minted once with the secure-context fallback; local top-10 per mode; separate online boards; `vector-vortex` registered with stats keys read from the real registry; achievements with monotonic tiers and UTC ISO weeks; telemetry opt-in and off at launch, `TELEMETRY_FIELDS` and `push()` in agreement.
 
