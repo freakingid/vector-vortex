@@ -192,9 +192,11 @@ intensity, no tiers, no sweep, no ducking and no rim pulse. The tracks are
 untiered, and the duck is a unity node. That also means the "at every tier" half
 of the Surger tone guarantee cannot be tested before CS010. **No persistence**:
 the volumes and the track setting are session-only, and that is CS011's.
-**Nothing is auditioned**: no layer is marked PASS. Paul's first music-lab note
-came after the close, "struck, never swelled", and both tracks were
-re-articulated to it, at a cost of 5–8 dB of loudness. The VOICE bus is live and nothing feeds it (A3). A pad-only
+After the close, Paul's music-lab work came in. "Struck, never swelled" meant
+both tracks were re-articulated. Then he picked **120 BPM** for both and marked
+**every layer PASS**. `pulse` now loops at 72 s (36 bars), and it is 5.3 dB
+under the level he set, to hold the Surger tone's headroom gate. Buying that
+level back is CS010's mix call. The VOICE bus is live and nothing feeds it (A3). A pad-only
 player is silent until a key, click or tap, and no changeset owns that.
 
 ---

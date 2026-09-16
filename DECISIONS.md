@@ -689,3 +689,28 @@ is in `CLAUDE.md` (Audio) and GDD §11.3. The port and its measurements are in
 **What would change it.** Paul hearing the struck version in `tools/music-lab.html`
 and wanting some ring back on a specific layer. That is a data change through
 the lab, and the rule's numbers move with it.
+
+---
+
+## 2026-09-16 — `pulse`'s tempo over its 90 s length target
+
+**The question.** Paul's music-lab pick is 120 BPM for both tracks, with every
+layer PASS and four rhythm gains at the slider's top. At 120 BPM, `pulse`'s 36
+bars loop at 72 s, under GDD §11.3's "≥ 90 s before the loop point", which
+`test-cs009-p2.js` asserted. His gains also put `pulse`'s loudest moment at
+0.7771, over the Surger tone's 0.45 (§11.8, SETTLED).
+
+**The call — Paul, on the tempo.** "I want this tempo." He saw the 72 s warning
+and chose the tempo anyway.
+
+**Claude's readings, flagged.** (1) The length target is read in bars, as ≥ 36
+bars in A→B→C sections. That is independent of tempo, and it is the form the
+seconds figure stood for. The p2 assertion was rewritten in place to it.
+Paul may prefer more bars instead; that is composition, and a later changeset's.
+(2) `pulse`'s six gains are trimmed together by 5.3 dB so the SETTLED gate
+holds. His balance holds and the level drops. `title` ports exactly as he set it
+(0.4404). Buying the level back (a limiter, the SFX bus, the gate ratio) is
+CS010's mix call.
+
+**What would change it.** Paul asking for a 90 s `pulse`, which means nine
+more bars of music at 120 BPM, or deciding the mix call in CS010.

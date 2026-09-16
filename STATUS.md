@@ -63,9 +63,16 @@ rules, 2026-08-31).
   Audio, GDD §11.3). Both tracks were re-articulated after the close: attack
   ≤ 0.005 s, decay from the onset, a per-layer `GATE` in steps, and closing filter
   sweeps. The balance was restored by a gated offline render (`log/CS009.md`,
-  "After the close"). ⚠ **Both mixes are 5–8 dB quieter at unity**, and each
-  peaks at 0.42.
-- ⚠ **Both tracks are unauditioned**: no layer carries an `audition` mark.
+  "After the close").
+- ✅ **PAUL'S LAB PICKS ARE PORTED (2026-09-16): 120 BPM on both tracks, every
+  layer PASS**, and his balance, with `title`'s ground and `pulse`'s bassline,
+  heart and tick at the slider's 0.300 top. ⚠ **`pulse` is trimmed 5.3 dB as a
+  whole** to hold the SETTLED headroom gate (0.7771 → 0.4196). The game's
+  `pulse` is quieter than he heard it (gated −33.6 dB, peak 0.347); `title`
+  ports as he set it (−29.6 dB, 0.446, headroom 0.4404). ⚠ **`pulse` loops at
+  72 s**: Paul chose the tempo over the 90 s target, which is now read as ≥ 36
+  bars (Claude's reading, `DECISIONS.md`; `test-cs009-p2.js` rewritten in
+  place, plus one fixture repair).
 - ⛔ **Read GDD §6.5 before adding an enemy.** Eight contract fields (plus
   `points()`, CS008 P2), the wiring points, the one array / one spawn entry /
   one well entry / one collision pass rule, and the Dive: an entity that is
@@ -282,17 +289,15 @@ rules, 2026-08-31).
 - ⚠ **Paul replaces `C.CREDITS_LINES` before ship.**
 - ✅ **Paul's music-lab note is in and ported** (2026-09-16): struck, never
   swelled (above). Paul hears the struck tracks as better, and likely all PASS.
-- ⛔ **PAUL IS PICKING TEMPOS in music-lab's new TEMPO ladder** (2026-09-16: both
-  tracks too slow). His COPY TABLE comes back as `stepDur: 60 / BPM / 4` lines,
-  and possibly PASS marks. The port is a three-file edit, as always. ⚠ **At the
-  port:** (1) `pulse` above 96 BPM is under the 90 s target that
-  `test-cs009-p2.js` asserts, so ask Paul: more bars, or a new target. (2)
-  `test-cs009-p5.js`'s headroom sort compares exact floats, and at a
-  non-binary `stepDur` (e.g. 138) a back-to-back note pair reads as an overlap
-  (0.5377 against 0.4201 with a 1e-9 tolerance). Repair that fixture in place.
-  (3) GDD §11.7's tempo column and the builders' header comments name 60 and
-  80 BPM. ⚠ COPY TABLE's tempo rewrite has no suite test: a throwaway check and a
+- ⚠ **`test-cs009-p5.js`'s headroom sort compares exact floats.** At a tempo
+  whose `stepDur` is not a binary fraction (e.g. 138 BPM), a back-to-back note
+  pair reads as an overlap (0.5377 against 0.4201 with a 1e-9 tolerance). 120
+  BPM is exact (0.125). A future tempo port repairs that fixture in place.
+- ⚠ **COPY TABLE's tempo rewrite has no suite test.** A throwaway check and a
   headless click-through covered it (`log/CS009.md`).
+- ⚠ **Four gains sit at music-lab's 0.300 slider top** in Paul's lab picks
+  (`pulse`'s now read 0.162 after the trim). Whether he wanted them higher
+  still is unknown.
 - ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
   2 → 3.
@@ -314,10 +319,8 @@ writes no code.
 
 ⛔ **What CS010's plan must not lose:**
 
-1. ⛔ **CS010 may tier only a layer marked PASS (Paul's A6), and no layer is
-   marked.** A PASS is Paul's mark in `tools/music-lab.html`; a lab is not a
-   playtest. What CS010 does with no marks is a call for Paul. The plan names
-   it and stops.
+1. ✅ **Every layer of both tracks is marked PASS** (Paul, 2026-09-16), so
+   CS010 may tier any of them (A6). Which ones is Paul's call.
 2. ⚠ **SETTLED — the Surger charge tone is audible over music at every tier.**
    `test-cs009-p5.js`'s gate measures untiered tracks. A sweep or a tier
    re-runs it.
@@ -333,6 +336,10 @@ writes no code.
    pinned `function audioFrame()` text, and the banned substrings.
 7. ⚠ **SETTLED — struck, never swelled.** Every earned layer obeys the rule, and
    the rule has no test yet. CS010 adds that gate in its own file.
-8. ⚠ **The struck mixes are 5–8 dB quieter at unity**, limited by the headroom
-   gate and a 0.42 sample peak. Whether to buy level back (a master limiter, a
-   lower SFX bus, a different gate) is a mix call for Paul.
+8. ⚠ **`pulse` is 5.3 dB quieter in the game than Paul set it**, because the
+   SETTLED headroom gate trimmed his balance as a whole; with the struck pass,
+   it sits about 9 dB under CS009's P2 level. Whether to buy level back (a
+   master limiter, a lower SFX bus, a different gate ratio) is a mix call for
+   Paul, and his rhythm gains at the slider's top say he wanted punch.
+9. ⚠ **`pulse` loops at 72 s (36 bars at 120 BPM).** The length target is now
+   read in bars (Claude's reading). Paul confirms it, or asks for more bars.

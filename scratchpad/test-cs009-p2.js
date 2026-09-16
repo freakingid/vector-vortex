@@ -4,8 +4,9 @@
 // 16-audio-engine.js and 17-audio-tracks.js, character for character; the lab
 // renders SOLO, MUTE and the PASS / FAIL mark per layer, SOLO is
 // exclusive-additive, and COPY TABLE writes `audition`, `gain` and `cutoff`;
-// both tracks carry no tier, valid marks and real notes, `pulse` runs >= 90 s,
-// and the worst step stays under C.MUSIC_STEP_NODE_MAX.
+// both tracks carry no tier, valid marks and real notes, `pulse` runs >= 36
+// bars (Paul's tempo call, 2026-09-16), and the worst step stays under
+// C.MUSIC_STEP_NODE_MAX.
 //
 // ⛔ TRAPS.
 //  1. The identity check reads dist/, never src/ (CLAUDE.md): the build strips
@@ -149,7 +150,9 @@ H.assert(mods["17-audio-tracks.js"].includes("function buildTitleTrack(") &&
       if (L.audition === (i % 2 === 0 ? "pass" : "fail")) auditions++;
       if (L.gain === 0.123) gains++;
       if (!was.cutoff || L.cutoff === 4321) cutoffs++;
-      const rest = Object.keys(was).filter(k => !["gain", "cutoff", "steps"].includes(k));
+      // ⛔ `audition` is an EDITED field, counted above. Since Paul's PASS marks
+      // (2026-09-16) the base carries one, so it is left out of "the rest".
+      const rest = Object.keys(was).filter(k => !["gain", "cutoff", "audition", "steps"].includes(k));
       if (rest.every(k => was[k] === L[k]) && L.cutoffTo === was.cutoffTo) untouched++;
       if (JSON.stringify(L.steps) === JSON.stringify(was.steps)) cells++;
     });
@@ -210,7 +213,10 @@ const { C, MUSIC_TRACKS } = X;
     H.eq(badRows, 0, `${name}: every layer's row is the track's length`);
     H.eq(badFreq, 0, `⛔ ${name}: every note frequency is finite and > 0`);
     H.eq(badCell, 0, `${name}: every note's duration and gain are finite and > 0`);
-    if (name === "pulse") H.assert(secs >= 90, `⛔ pulse runs >= 90 s before its loop point (${secs} s)`);
+    // ⛔ REWRITTEN IN PLACE (2026-09-16). This was ">= 90 s". Paul picked
+    // 120 BPM over that target, so the flagship length is now read in bars
+    // (GDD 11.3): tempo-independent, and the A→B→C form it was always about.
+    if (name === "pulse") H.assert(t.steps / 16 >= 36, `⛔ pulse runs >= 36 bars before its loop point (${t.steps / 16} bars, ${secs} s)`);
   }
 }
 
