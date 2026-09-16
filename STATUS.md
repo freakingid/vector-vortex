@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.5 · Changeset: CS009 (not started — planning next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.5 · Changeset: CS009 (planned 2026-09-16 — P1 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS009
 
@@ -194,25 +194,24 @@ rules, 2026-08-31).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS009 PLANNING
+## Next up — ⛔ CS009 P1, the engine
 
-⛔ **CS009 is the audio engine** (`ROADMAP.md`): `AudioSys` + `MusicSys`, the
-per-frame lookahead scheduler, voices, `tools/music-lab.html` with the per-layer
-solo button, and Classic SFX (GDD §11.1–11.3, §11.7–11.8). A planning session
-writes `PLANNED-FEATURES-CS009.md` and `IMPLEMENTATION-PHASES-CS009.md`, marks
-every claim MEASURED or PREDICTED, and writes no code.
+⛔ **CS009 is planned** (2026-09-16, at `d1847e2`): `PLANNED-FEATURES-CS009.md`
+and `IMPLEMENTATION-PHASES-CS009.md`, six phases. Every design call is
+answered (plan §0, A1–A9); P1 writes the `DECISIONS.md` pointer. Paste P1's
+prompt from `IMPLEMENTATION-PHASES-CS009.md`.
 
-⛔ **What CS009's plan must not lose:**
+⛔ **What the plan measured that every CS009 phase must respect:**
 
-1. The two carried tasks above: the over-cap life sound, and the Sound/Music row.
-2. ⚠ **SETTLED — the Surger charge tone is a gameplay cue**, audible over music
-   at every tier.
-3. ⛔ **Every audio entry point is `if (!AudioSys.ctx) return;`-guarded** — the
-   headless suite has no `AudioContext`, and nothing may start before a gesture.
-4. ⛔ **Nothing audio-side may spend `state.rng()` or read the frame clock into
-   the simulation**, or the hash moves.
-5. ⚠ Nothing has been tuned against GDD §8.2, and there will be no playtest to
-   tune against (`SKIPPED-PLAYTESTS.md` records what was skipped).
-6. ✅ **The music solo-audition gate stands.** Paul judges it in
-   `tools/music-lab.html`, and a lab is not a playtest (Paul, 2026-09-16).
-   CS009's plan scopes the lab so that he can listen, solo layers, and tweak.
+1. ⛔ **Three whole-file scans bite audio code** (plan §1.4, §1.5): no platform
+   RNG (the noise buffer takes its own `mulberry32` stream), no `\bweb\b` even
+   in a comment, and `test-cs002-p1.js` bans the SUBSTRING `e.key` outside
+   `04-input.js`. `C` already holds a comment naming the timers, so a
+   `setTimeout` scan must strip comments.
+2. ⛔ **Orbital Overhaul's scheduler bursts 931 notes after a 60 s stall**
+   (plan §1.3); a hidden tab is a shipped pause source here. P1 resyncs.
+3. ⛔ **The OPTIONS rows go after CREDITS** — above TELEMETRY they turn 99 closed
+   assertions red (plan §1.8).
+4. ⚠ SETTLED — the Surger charge tone stays audible over music at every tier;
+   P5's headless headroom gate stands in for the hardware check.
+5. ⛔ No baseline moves in CS009 (plan §9).
