@@ -12,9 +12,8 @@
 // has no audio API, runs every call as a no-op. The context is created by
 // AudioSys.unlock(), which 23-main.js passes to createInput() as onGesture.
 
-// ⚠ EMPTY IN CS009 P1: the engine is tested on a synthetic table, and no track
-// exists yet. P2 composes `title` and `pulse`.
-const MUSIC_TRACKS = {};
+// The tracks are MUSIC_TRACKS, declared in 17-audio-tracks.js (the lab's BLOCK
+// B). Nothing here edits them.
 
 const AudioSys = createAudioEngine({
   volRamp: C.AUDIO_VOL_RAMP,

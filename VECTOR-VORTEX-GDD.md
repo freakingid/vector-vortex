@@ -973,6 +973,8 @@ Generic step-sequencer table, consumed unmodified by the scheduler:
 
 **Length target.** Orbital Overhaul's tracks run 21.8–48 s (`zen` longest). Vector Vortex targets **≥ 90 s before the loop point** for the two flagship tracks, achieved through A→B→C sections — the same technique `drift` and `warehouse` already use for their A→B, extended.
 
+**Shipped, CS009 P2 — the lab and the first two tables.** `tools/music-lab.html` opens from `file://`. ⛔ **Its BLOCK A is `src/16-audio-engine.js` whole and its BLOCK B is `src/17-audio-tracks.js` whole, character for character** (`scratchpad/test-cs009-p2.js`, against the built file), so what the lab plays is what the game plays. Per layer it has **SOLO** (exclusive-additive: while any layer is soloed, every unsoloed layer is silent), **MUTE**, a gain slider, a cutoff slider when the layer has a `cutoff`, and a **PASS / FAIL / —** mark. SOLO and MUTE are two gain nodes hung on `createMusic`'s `layerSink`, never inside BLOCK A. A loop ribbon draws every note with its A / B / C section marks and seeks on click; the readout gives bar, step, section and seconds. ⛔ **COPY TABLE is the one route back**: it prints BLOCK B with every changed `gain` and `cutoff` rewritten and each marked layer's `audition` written (`"pass"`, `"fail"`, or removed for —), to paste over `17-audio-tracks.js`. ⛔ **No layer carries `tier`** (Paul's A6), so the table shape above ships without it, plus `audition`, `q`, `cutoffTime`, `hp`, `drop`, `dropTime` and `noise` (kit-audio 0.1.0's track contract). `audition` is a mark for whoever tiers a track later (CS010 may tier only a PASS layer); the scheduler never reads it. ⚠ **Both tracks are unauditioned**: no layer is marked, and the lab is where Paul judges them. Nothing waits on that.
+
 ### 11.4 The intensity director — the new work
 
 **What failed in Orbital Overhaul, recorded so we do not repeat it.** Layers were gated on `musicIntensity(wave) = 1 − e^-(w-1)/8`, a smooth curve over wave number. Two findings: the tier-4 threshold at 0.70 first crossed at **wave 11**, so no track had an audible melody for most of a typical run; and re-tiering was then tried and rejected on audition, because on every track the preferred mix was the foundation alone — the thickening read as clutter.
@@ -1025,6 +1027,15 @@ The scheduler emits kick and snare events to the render layer; the rim pulses on
 | `deep` | Both | ~124 BPM, dubby, wide |
 
 Selectable in Options, persisted per profile, cycled exactly like Orbital Overhaul's `settings.musicTrack`.
+
+**Shipped, CS009 P2 — `title` and `pulse`**, in `src/17-audio-tracks.js` (`buildTitleTrack`, `buildPulseTrack`, `MUSIC_TRACKS`). `drive` is CS012's (Paul's A5); `rush` and `deep` are post-ship. ⛔ Every layer is written as a part, to pass §11.4(c) played solo, and the tune is in the foundation because every layer is. The music plays nowhere in the game until CS009 P3.
+
+| Track | Key, tempo | Length | Sections | Layers | Worst nodes / step |
+|---|---|---|---|---|---|
+| `title` | G major, 60 BPM, 16 steps a bar | 8 bars, **32 s** | A bars 0–3 (the theme), B 4–7 (the answer, falling home) | `theme`, `bells`, `glow`, `ground` | 9 |
+| `pulse` | E minor, 80 BPM, 16 steps a bar | 36 bars, **108 s** | A bars 0–11 (the tune low and plain), B 12–23 (an octave up, heart doubles), C 24–35 (the peak; the opening motif returns at bar 32, and a B major bar pulls back to the top) | `melody`, `swell`, `bassline`, `cycle`, `heart`, `tick` | 14 |
+
+Node counts are MEASURED on the harness's recording fake against `C.MUSIC_STEP_NODE_MAX` 16. MEASURED in headless Chromium by rendering each table offline through BLOCK A: the full mix peaks at 0.32 (`title`) and 0.30 (`pulse`) of full scale, which leaves headroom for the SFX bus.
 
 ### 11.8 SFX
 

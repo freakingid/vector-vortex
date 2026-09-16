@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<!--
+  tools/music-lab.html — Vector Vortex design instrument, NOT shipped code
+  (CLAUDE.md, "Design instruments"). Opens from file:// by double-click.
+
+  ⛔ THE PORTING SOURCE FOR EVERY TRACK TABLE (GDD 11.3). Two blocks are the
+  build's own text, and scratchpad/test-cs009-p2.js asserts both, character for
+  character, against the built file:
+    BLOCK A  src/16-audio-engine.js, whole (kit-audio: the engine and scheduler)
+    BLOCK B  src/17-audio-tracks.js, whole (the track builders and MUSIC_TRACKS)
+  What you hear is therefore exactly what the game plays. Everything below
+  BLOCK B is lab UI, and none of it ships.
+
+  ⛔ SOLO AND MUTE LIVE OUTSIDE BLOCK A. They are two gain nodes per layer,
+  hung on createMusic()'s `layerSink` option. SOLO is exclusive-additive: while
+  any layer is soloed, every unsoloed layer is silent. SOLO is the instrument of
+  GDD 11.4(c)'s audition: a layer that is not recognisable played alone fails.
+
+  THE ROUTE BACK INTO THE REPO. Move a gain or cutoff slider, mark a layer PASS
+  or FAIL, press COPY TABLE, and paste the text over src/17-audio-tracks.js.
+  COPY TABLE rewrites only what changed: an edited `gain` or `cutoff`, and each
+  layer's `audition` mark. Then rebuild (`node build.js`) and run the suite.
+  ⛔ Never re-tune a value in src/ by hand (CLAUDE.md, Audio).
+
+  To change BLOCK A, change src/16-audio-engine.js and copy it here whole.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vector Vortex — music-lab</title>
+<style>
+  :root { --bg:#05060a; --panel:#0b0e16; --line:#1f2636; --text:#cfe9f5; --dim:#5f7390;
+          --cyan:#3FE0FF; --gold:#ffd24a; --pass:#6dff9a; --fail:#ff5a6a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 16px 40px; background: var(--bg); color: var(--text);
+         font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { margin: 0; font-size: 15px; font-weight: 400; letter-spacing: .3em; color: var(--cyan); text-transform: uppercase; }
+  .sub { margin: 2px 0 16px; color: var(--dim); font-size: 11px; letter-spacing: .1em; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+  button { appearance: none; cursor: pointer; background: var(--panel); color: var(--text);
+           border: 1px solid var(--line); font: inherit; padding: 5px 12px; letter-spacing: .08em; }
+  button:hover { border-color: var(--cyan); }
+  button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+  button.tk { min-width: 150px; text-align: left; padding: 9px 12px; }
+  button.tk small { display: block; color: var(--dim); font-size: 10px; }
+  .readout { color: var(--dim); font-size: 12px; }
+  .readout b { color: var(--text); font-weight: 400; }
+  #blurb { border-left: 2px solid var(--cyan); padding: 6px 12px; font-size: 11px; min-height: 20px; }
+  #ribbon { width: 100%; display: block; background: var(--panel); border: 1px solid var(--line); cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 11px; }
+  th { text-align: left; font-weight: 400; color: var(--dim); text-transform: uppercase; letter-spacing: .1em;
+       border-bottom: 1px solid var(--line); padding: 5px 6px; font-size: 10px; }
+  td { padding: 4px 6px; border-bottom: 1px solid #121826; white-space: nowrap; }
+  td button { padding: 2px 8px; font-size: 10px; }
+  button.solo[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+  button.mute[aria-pressed="true"] { border-color: var(--fail); color: var(--fail); }
+  button.mark[data-mark="pass"][aria-pressed="true"] { border-color: var(--pass); color: var(--pass); }
+  button.mark[data-mark="fail"][aria-pressed="true"] { border-color: var(--fail); color: var(--fail); }
+  button.mark[data-mark="none"][aria-pressed="true"] { border-color: var(--text); }
+  tr.silent td.nm { opacity: .4; }
+  input[type=range] { width: 120px; accent-color: var(--cyan); vertical-align: middle; }
+  .val { display: inline-block; min-width: 48px; text-align: right; color: var(--dim); }
+  .edited { color: var(--gold); }
+  textarea { width: 100%; height: 220px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+             font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; margin-top: 8px; }
+  .foot { margin-top: 16px; color: var(--dim); font-size: 11px; border-left: 2px solid var(--line); padding: 6px 12px; }
+  .foot b { color: var(--text); font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>music-lab</h1>
+  <p class="sub">VECTOR VORTEX · CS009 · BLOCK A = src/16-audio-engine.js · BLOCK B = src/17-audio-tracks.js</p>
+
+  <div class="row" id="picker"></div>
+
+  <div class="row">
+    <button id="play">Play</button>
+    <button id="stop">Stop</button>
+    <label class="readout">music <input type="range" id="vol" min="0" max="1" step="0.05" value="1"> <span class="val" id="volOut">1.00</span></label>
+    <span class="readout" id="pos">—</span>
+  </div>
+
+  <div id="blurb"></div>
+  <p class="readout">Loop ribbon — click to jump to that bar. Section marks A / B / C.</p>
+  <svg id="ribbon" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+
+  <table id="layers">
+    <thead><tr><th>Layer</th><th>Voice</th><th>Solo</th><th>Mute</th><th>Gain</th><th>Cutoff</th><th>Audition</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="row">
+    <button id="copy">COPY TABLE</button>
+    <span class="readout" id="copyOut"></span>
+  </div>
+  <textarea id="table" spellcheck="false" readonly placeholder="COPY TABLE prints src/17-audio-tracks.js here, with your edits."></textarea>
+
+  <div class="foot">
+    <b>The solo test (GDD 11.4(c)).</b> SOLO one layer. If it is not recognisable played alone — a tune, a line,
+    a figure, a groove — mark it FAIL. A layer marked FAIL may never be tiered (Paul's A6). SOLO is additive:
+    solo two layers to hear them as a pair. Marks, gains and cutoffs travel back only through COPY TABLE.
+  </div>
+</div>
+
+<script id="block-a">
+"use strict";
+// ===== BLOCK A BEGIN — src/16-audio-engine.js, verbatim =====
+// 16-audio-engine.js — kit-audio (draft). The context, four buses, and the music scheduler.
+//
+// ⛔ THIS MODULE READS NO GAME GLOBAL. Not the config object, not the mutable
+// game object, not a game function, in either direction. Every tunable arrives
+// through the factories' options, and 19-sfx.js is what passes them in. The
+// noise source is an injected function, so this file draws from no generator
+// of its own. That is CLAUDE.md's boundary contract ("Kit modules and
+// extraction"). Backport packet: src/16-audio-engine.NOTES.md.
+//
+// ⛔ NOTHING STARTS BEFORE A USER GESTURE. `engine.ctx` is null until unlock()
+// runs inside one (the host calls it from kit-input's onGesture), and EVERY
+// entry point below returns early while it is null. A host with no audio API
+// at all (the headless suite) therefore runs every call as a no-op.
+//
+// ⛔ THE MUSIC SCHEDULER IS PER-FRAME LOOKAHEAD, NEVER A TIMER (GDD 11.2). Each
+// update() schedules every step that starts inside the lookahead window, at an
+// absolute context time. Note timing is then sample-accurate and has nothing
+// to do with the frame rate.
+//
+// ⛔ scheduleStep NEVER CONSULTS INTENSITY, and never reads a layer's
+// `audition` mark. Every layer is always scheduled; gating is a downstream
+// gain node. That is what keeps a track's note timing provably fixed whatever
+// a director does later.
+//
+// createMusic() is Orbital Overhaul's music system (commit 5abd37a), ported.
+// It departs from that source in exactly four places, each marked DEPARTURE
+// below and each asserted by test-cs009-p1.js:
+//   1. the noise buffer is filled from the injected generator;
+//   2. update() RESYNCS after a stall instead of bursting every missed note;
+//   3. no comment names the browser audio API by the word the host's
+//      vocabulary scan bans;
+//   4. opts.layerSink, so a lab's per-layer SOLO/MUTE nodes live outside this
+//      code.
+// Not ported (0.1.0): the intensity setter and menu ducking. Every layer gate
+// and the duck node are built at unity.
+
+const AUDIO_VERSION = "0.1.0";
+
+// The four buses, in build order. master goes to the output; the other three
+// go to master. A bus nothing feeds yet is still built, so its volume row works.
+const AUDIO_BUSES = ["master", "music", "sfx", "voice"];
+
+// ⛔ Numeric tunables are REQUIRED, never defaulted (kit-input's rule): a
+// default here would be a second tuning surface competing with the host's.
+function audioRequireNum(opts, owner, name) {
+  const v = opts[name];
+  if (typeof v !== "number" || !isFinite(v)) {
+    throw new Error(owner + ": options." + name + " must be a finite number");
+  }
+  return v;
+}
+
+// A bus level is linear gain: 0 is silence, 1 is unity.
+function audioCheckVol(where, v) {
+  if (typeof v !== "number" || !isFinite(v) || v < 0) {
+    throw new Error(where + " must be a finite number >= 0");
+  }
+  return v;
+}
+
+// The platform's context class, or null. Looked up at unlock() time, not at
+// load, so a host (or a test) that installs one late is still heard.
+function audioContextClass() {
+  if (typeof AudioContext === "function") return AudioContext;
+  if (typeof window !== "undefined" && window && typeof window.webkitAudioContext === "function") {
+    return window.webkitAudioContext;
+  }
+  return null;
+}
+
+// createAudioEngine({ volRamp, vol: { master, music, sfx, voice } })
+function createAudioEngine(options) {
+  const opts = options || {};
+  const volRamp = audioRequireNum(opts, "createAudioEngine", "volRamp");
+  if (!opts.vol || typeof opts.vol !== "object") {
+    throw new Error("createAudioEngine: options.vol must be an object");
+  }
+  // ⛔ HELD FROM BOOT. The levels exist before the context does, so a host
+  // can set them from its settings long before the first gesture, and unlock()
+  // builds each bus at the level held.
+  const vol = {};
+  for (let i = 0; i < AUDIO_BUSES.length; i++) {
+    const bus = AUDIO_BUSES[i];
+    vol[bus] = audioCheckVol("createAudioEngine: options.vol." + bus, opts.vol[bus]);
+  }
+
+  const engine = {
+    VERSION: AUDIO_VERSION,
+    ctx: null,
+    vol,
+    master: null, music: null, sfx: null, voice: null,
+    unlock, setVol, now,
+  };
+
+  // Call from inside a user gesture. The first call creates the context and
+  // the buses; every call resumes a suspended context. Returns whether a
+  // context exists. ⛔ A context that cannot be created is the normal silent
+  // path, not an error: the game plays without sound.
+  function unlock() {
+    if (!engine.ctx) {
+      const Ctor = audioContextClass();
+      if (!Ctor) return false;
+      let ctx;
+      try { ctx = new Ctor(); } catch (err) { return false; }
+      engine.ctx = ctx;
+      for (let i = 0; i < AUDIO_BUSES.length; i++) {
+        const bus = AUDIO_BUSES[i];
+        const g = ctx.createGain();
+        g.gain.value = vol[bus];      // built before anything plays: a level, not a change
+        g.connect(bus === "master" ? ctx.destination : engine.master);
+        engine[bus] = g;
+      }
+    }
+    if (engine.ctx.state === "suspended" && typeof engine.ctx.resume === "function") {
+      const p = engine.ctx.resume();
+      if (p && typeof p.catch === "function") p.catch(function () {});
+    }
+    return true;
+  }
+
+  // Set a bus level. Held always; pushed to the graph if it exists. ⛔ A RAMP
+  // over volRamp, never a bare .value set: a stepped gain clicks.
+  function setVol(bus, v) {
+    if (AUDIO_BUSES.indexOf(bus) < 0) throw new Error("setVol: no bus named " + bus);
+    vol[bus] = audioCheckVol("setVol: " + bus, v);
+    if (!engine.ctx) return;
+    const param = engine[bus].gain, t = engine.ctx.currentTime;
+    param.cancelScheduledValues(t);
+    param.setValueAtTime(param.value, t);
+    param.linearRampToValueAtTime(vol[bus], t + volRamp);
+  }
+
+  function now() { return engine.ctx ? engine.ctx.currentTime : 0; }
+
+  return engine;
+}
+
+// The track loader. A track is DATA (GDD 11.3):
+//   { stepDur, steps, layers: [ { name, type, cutoff, cutoffTo, cutoffTime, q,
+//     hp, detune, drop, dropTime, noise, gain, atk, rel, audition,
+//     steps: [cell | null] } ] }      cell = { f, dur, g }
+// A track may be null: a named silence.
+// ⛔ `tier` IS REFUSED IN 0.1.0. A tier outside 1..4 is always an error (a
+// threshold table has no key for it, so the layer would be silent forever).
+// Any tier at all is an error until the intensity setter is ported: without
+// it, a tier would be a gate nobody opens or closes.
+// `audition` is "pass", "fail" or absent. It is a mark for whoever tiers the
+// track later, and the scheduler never reads it.
+function audioCheckTracks(tracks) {
+  if (!tracks || typeof tracks !== "object") throw new Error("createMusic: options.tracks must be an object");
+  const names = Object.keys(tracks);
+  for (let n = 0; n < names.length; n++) {
+    const track = tracks[names[n]];
+    if (track === null) continue;
+    const at = "createMusic: track " + names[n];
+    if (!track || typeof track !== "object") throw new Error(at + " must be an object or null");
+    if (typeof track.stepDur !== "number" || !(track.stepDur > 0)) throw new Error(at + ": stepDur must be > 0");
+    if (!Number.isInteger(track.steps) || track.steps < 1) throw new Error(at + ": steps must be a positive integer");
+    if (!Array.isArray(track.layers)) throw new Error(at + ": layers must be an array");
+    for (let i = 0; i < track.layers.length; i++) {
+      const layer = track.layers[i];
+      const la = at + " layer " + i;
+      if (!layer || !Array.isArray(layer.steps)) throw new Error(la + ": steps must be an array");
+      if (layer.tier !== undefined) {
+        if (!Number.isInteger(layer.tier) || layer.tier < 1 || layer.tier > 4) {
+          throw new Error(la + ": tier must be an integer in 1..4");
+        }
+        throw new Error(la + ": tier is not supported in kit-audio " + AUDIO_VERSION + " (no intensity gating)");
+      }
+      if (layer.audition !== undefined && layer.audition !== "pass" && layer.audition !== "fail") {
+        throw new Error(la + ": audition must be \"pass\", \"fail\" or absent");
+      }
+    }
+  }
+}
+
+// createMusic(engine, { tracks, lookahead, crossfade, fadeOut, noise, layerSink })
+//   tracks     { name: track | null }, checked by audioCheckTracks
+//   lookahead  s — each update(), schedule every step starting inside this window
+//   crossfade  s — track-to-track fade on setState()
+//   fadeOut    s — the fade when setState() names a silence
+//   noise      () => number in [0, 1) — fills the noise buffer
+//   layerSink  optional ({ ctx, track, index, layer, out }) => node | null
+//
+// Signal path: note envelopes -> layer gate -> [track gain, crossfaded] -> duck -> engine.music
+function createMusic(engine, options) {
+  if (!engine || typeof engine.unlock !== "function") {
+    throw new Error("createMusic: engine must come from createAudioEngine()");
+  }
+  const opts = options || {};
+  const lookahead = audioRequireNum(opts, "createMusic", "lookahead");
+  const crossfade = audioRequireNum(opts, "createMusic", "crossfade");
+  const fadeOut   = audioRequireNum(opts, "createMusic", "fadeOut");
+  // DEPARTURE 1: the noise source is injected, so a host keeps its own seeded
+  // stream and the build holds no unseeded draw.
+  if (typeof opts.noise !== "function") throw new Error("createMusic: options.noise must be a function");
+  const noise = opts.noise;
+  // DEPARTURE 4: a host's per-layer insert. Returns the node a layer's gate
+  // should feed (which the host has connected onward to `out`), or null for
+  // the plain path. A lab hangs SOLO and MUTE here; a game passes none.
+  const layerSink = typeof opts.layerSink === "function" ? opts.layerSink : null;
+  const tracks = opts.tracks === undefined ? {} : opts.tracks;
+  audioCheckTracks(tracks);
+
+  return {
+    duck: null,          // GainNode: track graph -> engine.music. ⛔ unity in 0.1.0
+    trackGain: null,     // GainNode for the currently-scheduled track; replaced (crossfaded) on setState
+    state: "off",        // current track name, or a name with no track (silence)
+    track: null,         // the active step table, or null for a silence
+    step: 0,             // scheduler cursor into track.steps
+    nextStepTime: 0,     // absolute ctx time of the next step to schedule
+    layerGates: null,    // [{ node }] parallel to this.track.layers, or null
+    noiseBuf: null,      // lazily-built 2 s mono white-noise buffer, for `noise: true` layers
+
+    // Lazily build the duck node once the bus graph exists (first user gesture).
+    ensureGraph() {
+      if (this.duck || !engine.ctx || !engine.music) return;
+      this.duck = engine.ctx.createGain();
+      this.duck.gain.value = 1.0;
+      this.duck.connect(engine.music);
+    },
+
+    // Crossfade to a named track. Fades out and retires the previous track's
+    // gain (already-scheduled notes ring out and nothing new feeds it), and
+    // starts a fresh gain ramping up for the new one. A name with no track
+    // fades to silence over fadeOut and leaves trackGain null, so the
+    // scheduler idles.
+    setState(s) {
+      if (!engine.ctx) return;
+      this.ensureGraph();
+      if (s === this.state) return;
+      const ctx = engine.ctx, t = ctx.currentTime;
+      const next = tracks[s] || null;
+      if (this.trackGain) {
+        const g = this.trackGain, fade = next ? crossfade : fadeOut;
+        g.gain.cancelScheduledValues(t);
+        g.gain.setValueAtTime(g.gain.value, t);
+        g.gain.linearRampToValueAtTime(0.0001, t + fade);
+        this.trackGain = null;
+      }
+      this.state = s;
+      this.track = next;
+      this.step = 0;
+      this.layerGates = null;
+      if (this.track && this.duck) {
+        this.nextStepTime = t;                    // start scheduling from now, never in the past
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(1, t + crossfade);
+        g.connect(this.duck);
+        this.trackGain = g;
+        // One persistent gate per layer, open. The track-level crossfade above
+        // fades the whole track in, so a gate needs no ramp of its own.
+        this.layerGates = this.track.layers.map((layer, index) => {
+          const node = ctx.createGain();
+          node.gain.value = 1;
+          const sink = layerSink ? layerSink({ ctx, track: s, index, layer, out: g }) : null;
+          node.connect(sink || g);
+          return { node };
+        });
+      }
+    },
+
+    // The lookahead scheduler: once per frame, schedule every step whose start
+    // time falls inside the next `lookahead` seconds, on the context's clock.
+    update() {
+      if (!engine.ctx) return;
+      this.ensureGraph();
+      if (!this.track || !this.trackGain) return;
+      const ctx = engine.ctx, now = ctx.currentTime, horizon = now + lookahead;
+      const stepDur = this.track.stepDur;
+      // DEPARTURE 2: ⛔ STALL RESYNC. No frame runs while a tab is hidden, and
+      // a hidden tab is a shipped pause source, so a long gap is routine. The
+      // source clamped every missed step to `now` and fired them all at once
+      // (931 notes after 60 s). Past one lookahead behind, skip the whole
+      // missed steps instead: the cursor and the clock advance together, so bar
+      // phase holds, and nothing that should already have sounded is played.
+      if (this.nextStepTime < now - lookahead) {
+        const missed = Math.floor((now - this.nextStepTime) / stepDur);
+        this.nextStepTime += missed * stepDur;
+        this.step = (this.step + missed) % this.track.steps;
+      }
+      let guard = 1024;                           // bound catch-up (never dump the loop)
+      while (this.nextStepTime < horizon && guard-- > 0) {
+        this.scheduleStep(this.step, this.nextStepTime);
+        this.nextStepTime += stepDur;
+        this.step = (this.step + 1) % this.track.steps;
+      }
+    },
+
+    scheduleStep(step, tStep) {
+      if (!engine.ctx || !this.track || !this.layerGates) return;
+      const t = Math.max(tStep, engine.ctx.currentTime); // a late step must not schedule into the past
+      const layers = this.track.layers;
+      // Every layer is scheduled unconditionally, whatever its mark and
+      // whatever the intensity. Gating is a downstream GAIN gate
+      // (this.layerGates), never a scheduling omission.
+      for (let i = 0; i < layers.length; i++) {
+        const cell = layers[i].steps[step];
+        if (cell) this.playNote(layers[i], cell, t, i);
+      }
+    },
+
+    // Lazily build a cached 2 s mono white-noise buffer, for `noise: true` layers.
+    ensureNoiseBuf() {
+      if (this.noiseBuf || !engine.ctx) return;
+      const ctx = engine.ctx, n = ctx.sampleRate * 2;
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = noise() * 2 - 1;   // DEPARTURE 1
+      this.noiseBuf = buf;
+    },
+
+    playNote(layer, cell, t, layerIndex) {
+      if (!engine.ctx || !this.track || !this.layerGates) return;
+      const ctx = engine.ctx, dur = cell.dur * this.track.stepDur;
+      const peak = (cell.g == null ? 1 : cell.g) * layer.gain;
+      const atk = Math.min(layer.atk == null ? 0.4 : layer.atk, dur * 0.5);
+      const rel = Math.min(layer.rel == null ? 0.5 : layer.rel, dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + atk);
+      g.gain.setValueAtTime(peak, t + Math.max(atk, dur - rel));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      let sink = g;
+      if (layer.cutoff) {
+        const f = ctx.createBiquadFilter();
+        f.type = "lowpass";
+        f.Q.value = layer.q || 1;
+        f.frequency.setValueAtTime(layer.cutoff, t);
+        if (layer.cutoffTo)
+          f.frequency.exponentialRampToValueAtTime(layer.cutoffTo, t + Math.min(layer.cutoffTime || dur, dur));
+        f.connect(sink); sink = f;
+      }
+      if (layer.hp) {
+        const f = ctx.createBiquadFilter();
+        f.type = "highpass"; f.frequency.value = layer.hp;
+        f.connect(sink); sink = f;
+      }
+      if (layer.noise) {
+        this.ensureNoiseBuf();
+        const s = ctx.createBufferSource();
+        s.buffer = this.noiseBuf; s.connect(sink);
+        s.start(t); s.stop(t + dur + 0.05);
+      } else {
+        const freqs = layer.detune ? [cell.f, cell.f * Math.pow(2, layer.detune / 1200)] : [cell.f];
+        for (const fr of freqs) {
+          const o = ctx.createOscillator();
+          o.type = layer.type; o.frequency.setValueAtTime(fr, t);
+          if (layer.drop)
+            o.frequency.exponentialRampToValueAtTime(Math.max(24, fr * Math.pow(2, -layer.drop / 12)),
+                                                     t + (layer.dropTime || 0.06));
+          o.connect(sink); o.start(t); o.stop(t + dur + 0.1);
+        }
+      }
+      g.connect(this.layerGates[layerIndex].node);   // through this layer's gate
+    },
+  };
+}
+// ===== BLOCK A END =====
+</script>
+
+<script id="block-b">
+"use strict";
+// ===== BLOCK B BEGIN — src/17-audio-tracks.js, verbatim =====
+// 17-audio-tracks.js — the music, as DATA: `title` and `pulse` (GDD 11.3, 11.7).
+//
+// ⛔ COMPOSED IN tools/music-lab.html AND PORTED VERBATIM. This whole file is
+// the lab's BLOCK B, character for character (test-cs009-p2.js). Never re-tune
+// a gain here: move the slider in the lab, press COPY TABLE, and paste what it
+// prints over this file.
+//
+// ⛔ NO LAYER CARRIES A `tier` (Paul's A6). Every layer is foundation and always
+// on, so the melody is never gated. `audition` is the lab's PASS / FAIL mark
+// and the scheduler never reads it. ⚠ Unauditioned: no layer is marked yet.
+//
+// ⛔ EVERY LAYER IS WRITTEN AS A PART, to be recognisable played solo (GDD
+// 11.4(c)): a tune, a line, a figure or a groove. Never texture.
+//
+// ⛔ THIS FILE READS NO GAME GLOBAL. The lab runs it with no config object.
+
+// MIDI note number to Hz. 69 is A4.
+function midiHz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+
+// One layer's empty step row.
+function trackRow(n) { return new Array(n).fill(null); }
+
+// Writes one note into a row. `dur` is in steps; `g` scales the layer's gain.
+// A noise layer reads no pitch, so its cells pass 69 and `f` stays positive.
+function trackNote(row, step, m, dur, g) { row[step] = { f: midiHz(m), dur: dur, g: g }; }
+
+// ---------------------------------------------------------------------------
+// TITLE. G major, 60 BPM, 16 steps to a bar, 8 bars: 32 s to the loop point.
+// A (bars 0-3) states a four-bar theme that settles on A over D. B (bars 4-7)
+// answers it, climbing to G5 and falling home to F#4, which leans back into
+// bar 0's G. Four layers:
+//   theme   the tune, and nothing else carries it
+//   bells   a four-note falling figure on each bar's second half, high
+//   glow    a two-note-a-bar chorale line under the tune
+//   ground  root for three beats, fifth on the fourth
+// ---------------------------------------------------------------------------
+function buildTitleTrack() {
+  const BAR = 16, BARS = 8, STEPS = BAR * BARS;
+  const theme = trackRow(STEPS), bells = trackRow(STEPS), glow = trackRow(STEPS), ground = trackRow(STEPS);
+  // Each chord: [ground's root, bells' four falling tones, glow's two tones].
+  const CHORD = {
+    G:  [43, [91, 86, 83, 79], [59, 62]],
+    Em: [40, [88, 83, 79, 76], [59, 55]],
+    C:  [36, [88, 84, 79, 76], [60, 64]],
+    D:  [38, [90, 86, 81, 78], [62, 57]],
+    Bm: [47, [90, 86, 83, 78], [62, 59]],
+  };
+  const PROG = ["G", "Em", "C", "D", "G", "Bm", "C", "D"];
+  // The tune: one row per bar, each note [step, midi, dur].
+  const TUNE = [
+    [[0, 71, 8], [8, 74, 4], [12, 71, 4]],
+    [[0, 76, 8], [8, 74, 4], [12, 71, 4]],
+    [[0, 72, 6], [6, 71, 2], [8, 67, 8]],
+    [[0, 69, 16]],
+    [[0, 71, 8], [8, 74, 4], [12, 79, 4]],
+    [[0, 78, 8], [8, 74, 8]],
+    [[0, 76, 6], [6, 74, 2], [8, 72, 4], [12, 71, 4]],
+    [[0, 69, 8], [8, 66, 8]],
+  ];
+  for (let b = 0; b < BARS; b++) {
+    const s0 = b * BAR, ch = CHORD[PROG[b]];
+    for (const n of TUNE[b]) trackNote(theme, s0 + n[0], n[1], n[2], n[0] === 0 ? 1 : 0.85);
+    for (let i = 0; i < 4; i++) trackNote(bells, s0 + 8 + i * 2, ch[1][i], 2, i === 0 ? 0.9 : 0.65);
+    trackNote(glow, s0, ch[2][0], 8, 0.9);
+    trackNote(glow, s0 + 8, ch[2][1], 8, 0.8);
+    trackNote(ground, s0, ch[0], 12, 1);
+    trackNote(ground, s0 + 12, ch[0] + 7, 4, 0.7);
+  }
+  return { stepDur: 0.25, steps: STEPS, layers: [
+    { name: "theme", type: "triangle", detune: 5, gain: 0.075, atk: 0.10, rel: 0.9, steps: theme },
+    { name: "bells", type: "triangle", gain: 0.075, atk: 0.004, rel: 0.45, steps: bells },
+    { name: "glow", type: "sawtooth", cutoff: 900, cutoffTo: 1600, detune: 8, gain: 0.085, atk: 1.0, rel: 1.2, steps: glow },
+    { name: "ground", type: "triangle", gain: 0.090, atk: 0.20, rel: 0.8, steps: ground },
+  ]};
+}
+
+// ---------------------------------------------------------------------------
+// PULSE. Classic's gameplay track (GDD 13). E minor, 80 BPM, 16 steps to a
+// bar, 36 bars: 108 s to the loop point. Sparse, tonal, near-ambient.
+//   A (bars 0-11)   the tune stated low and plain over Em Cmaj7 G D, twice,
+//                   then a four-bar answer. Heart once a bar; ticks from bar 4.
+//   B (bars 12-23)  the tune lifts an octave into the relative major's colours
+//                   (Cmaj7 D Bm7 Em). Heart twice a bar; the bassline walks.
+//   C (bars 24-35)  the peak: the busiest bassline and ticks, the tune at its
+//                   highest, then the opening motif returns (bar 32) and a B
+//                   major bar pulls back to bar 0's Em.
+// Six layers:
+//   melody    the tune, and nothing else carries it
+//   swell     a two-note-a-bar chorale line
+//   bassline  the root's rhythm, a different figure per section
+//   cycle     three chord tones against eight eighths, so the figure shifts
+//   heart     lub-dub
+//   tick      a syncopated noise figure, never on a bar's downbeat
+// ---------------------------------------------------------------------------
+function buildPulseTrack() {
+  const BAR = 16, BARS = 36, STEPS = BAR * BARS;
+  const melody = trackRow(STEPS), swell = trackRow(STEPS), bassline = trackRow(STEPS),
+        cycle = trackRow(STEPS), heart = trackRow(STEPS), tick = trackRow(STEPS);
+  // Each chord: [bassline's root, cycle's three tones, swell's two tones].
+  const CHORD = {
+    Em:    [40, [52, 59, 62], [55, 59]],
+    Cmaj7: [36, [48, 55, 64], [60, 59]],
+    G:     [43, [55, 62, 71], [62, 59]],
+    D:     [38, [50, 57, 64], [57, 54]],
+    Am7:   [45, [57, 64, 67], [57, 60]],
+    Bm7:   [47, [59, 62, 66], [62, 57]],
+    B:     [47, [59, 63, 66], [59, 63]],
+  };
+  const PROG = [
+    "Em", "Cmaj7", "G", "D", "Em", "Cmaj7", "G", "D", "Am7", "Cmaj7", "Em", "D",       // A
+    "Cmaj7", "D", "Bm7", "Em", "Cmaj7", "D", "G", "G", "Am7", "Bm7", "Cmaj7", "D",     // B
+    "Em", "D", "Cmaj7", "G", "Am7", "Em", "Cmaj7", "D", "Em", "Cmaj7", "Am7", "B",     // C
+  ];
+  // The tune: one row per bar, each note [step, midi, dur].
+  const TUNE = [
+    [[0, 76, 6], [6, 74, 2], [8, 71, 8]],                   // A
+    [[0, 67, 4], [4, 71, 4], [8, 76, 8]],
+    [[0, 74, 6], [6, 72, 2], [8, 71, 8]],
+    [[0, 69, 12], [12, 66, 4]],
+    [[0, 76, 6], [6, 74, 2], [8, 71, 6], [14, 67, 2]],
+    [[0, 67, 4], [4, 71, 4], [8, 76, 4], [12, 79, 4]],
+    [[0, 78, 6], [6, 74, 2], [8, 71, 8]],
+    [[0, 69, 16]],
+    [[0, 72, 8], [8, 76, 8]],
+    [[0, 74, 4], [4, 71, 12]],
+    [[0, 67, 8], [8, 71, 4], [12, 69, 4]],
+    [[0, 66, 16]],
+    [[0, 79, 8], [8, 76, 8]],                               // B
+    [[0, 78, 6], [6, 76, 2], [8, 74, 8]],
+    [[0, 83, 8], [8, 81, 4], [12, 78, 4]],
+    [[0, 79, 12]],
+    [[0, 76, 4], [4, 79, 4], [8, 83, 8]],
+    [[0, 81, 6], [6, 78, 2], [8, 74, 8]],
+    [[0, 79, 16]],
+    [[8, 74, 4], [12, 71, 4]],
+    [[0, 72, 6], [6, 76, 2], [8, 81, 8]],
+    [[0, 78, 6], [6, 74, 2], [8, 71, 8]],
+    [[0, 76, 8], [8, 79, 8]],
+    [[0, 78, 8], [8, 81, 8]],
+    [[0, 79, 6], [6, 78, 2], [8, 76, 8]],                   // C
+    [[0, 78, 6], [6, 76, 2], [8, 74, 8]],
+    [[0, 76, 4], [4, 79, 4], [8, 83, 8]],
+    [[0, 81, 6], [6, 79, 2], [8, 74, 8]],
+    [[0, 76, 8], [8, 72, 8]],
+    [[0, 71, 6], [6, 74, 2], [8, 76, 8]],
+    [[0, 79, 8], [8, 76, 8]],
+    [[0, 78, 16]],
+    [[0, 76, 6], [6, 74, 2], [8, 71, 8]],
+    [[0, 67, 4], [4, 71, 4], [8, 76, 8]],
+    [[0, 72, 8], [8, 69, 8]],
+    [[0, 71, 8], [8, 75, 8]],
+  ];
+  // Per section: the bassline's [step, semitones above the root, dur, g], the
+  // cycle's tone order over eight eighths, the heart's [step, g], and the
+  // tick's [step, g].
+  const SECTION = [
+    { bass: [[0, 0, 6, 1], [6, 7, 2, 0.7], [8, 0, 8, 0.85]],
+      order: [0, 1, 2, 0, 1, 2, 0, 1],
+      beat: [[0, 1], [2, 0.55]],
+      ticks: [[4, 0.35], [12, 0.5]] },
+    { bass: [[0, 0, 6, 1], [6, 12, 2, 0.7], [8, 7, 4, 0.8], [12, 0, 4, 0.75]],
+      order: [0, 2, 1, 2, 0, 2, 1, 2],
+      beat: [[0, 1], [2, 0.55], [8, 0.8], [10, 0.45]],
+      ticks: [[4, 0.35], [7, 0.2], [12, 0.5], [14, 0.25]] },
+    { bass: [[0, 0, 4, 1], [4, 0, 2, 0.6], [6, 7, 2, 0.7], [8, 12, 4, 0.85], [12, 7, 2, 0.7], [14, 0, 2, 0.6]],
+      order: [0, 1, 2, 1, 0, 1, 2, 1],
+      beat: [[0, 1], [2, 0.55], [8, 0.8], [10, 0.45]],
+      ticks: [[2, 0.2], [4, 0.4], [7, 0.2], [10, 0.25], [12, 0.55], [14, 0.3]] },
+  ];
+  for (let b = 0; b < BARS; b++) {
+    const s0 = b * BAR, ch = CHORD[PROG[b]], sec = SECTION[Math.floor(b / 12)];
+    for (const n of TUNE[b]) trackNote(melody, s0 + n[0], n[1], n[2], n[0] === 0 ? 1 : 0.85);
+    const two = sec === SECTION[1] ? [ch[2][1], ch[2][0]] : ch[2];
+    trackNote(swell, s0, two[0], 8, 0.9);
+    trackNote(swell, s0 + 8, two[1], 8, 0.8);
+    for (const n of sec.bass) trackNote(bassline, s0 + n[0], ch[0] + n[1], n[2], n[3]);
+    for (let i = 0; i < 8; i++) trackNote(cycle, s0 + i * 2, ch[1][sec.order[i]], 2, i === 0 ? 0.9 : 0.6);
+    for (const n of sec.beat) trackNote(heart, s0 + n[0], 45, 1, n[1]);
+    if (b >= 4) for (const n of sec.ticks) trackNote(tick, s0 + n[0], 69, 1, n[1]);
+  }
+  return { stepDur: 0.1875, steps: STEPS, layers: [
+    { name: "melody", type: "triangle", detune: 4, gain: 0.070, atk: 0.08, rel: 0.6, steps: melody },
+    { name: "swell", type: "sawtooth", cutoff: 700, cutoffTo: 1400, detune: 9, gain: 0.085, atk: 0.6, rel: 0.9, steps: swell },
+    { name: "bassline", type: "triangle", gain: 0.098, atk: 0.01, rel: 0.25, steps: bassline },
+    { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.055, atk: 0.005, rel: 0.3, steps: cycle },
+    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.140, atk: 0.003, rel: 0.14, steps: heart },
+    { name: "tick", noise: true, hp: 7000, gain: 0.050, atk: 0.001, rel: 0.04, steps: tick },
+  ]};
+}
+
+// Keys are the track names a host hands to setState(). `drive` is CS012's (A5).
+const MUSIC_TRACKS = {
+  title: buildTitleTrack(),
+  pulse: buildPulseTrack(),
+};
+// ===== BLOCK B END =====
+</script>
+
+<script>
+"use strict";
+// ===== LAB UI — none of this ships =====
+
+// Preview copies of the game's values (src/00-config.js, src/01-rng.js). A drift
+// here changes what the lab previews, never the build.
+const LAB = { lookahead: 0.20, crossfade: 0.60, fadeOut: 1.00, volRamp: 0.03, noiseSeed: 0x5EED0A0D };
+function labRng(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// The picker. `sections` are [mark, first bar]; `builder` is the function in
+// BLOCK B that COPY TABLE rewrites for this track.
+const LAB_TRACKS = {
+  title: { label: "Title", builder: "buildTitleTrack", bar: 16, sections: [["A", 0], ["B", 4]],
+    blurb: "The title screens. G major, 60 BPM, 8 bars. A states the theme; B answers it higher and falls home." },
+  pulse: { label: "Pulse", builder: "buildPulseTrack", bar: 16, sections: [["A", 0], ["B", 12], ["C", 24]],
+    blurb: "Classic's gameplay track. E minor, 80 BPM, 36 bars. A: the tune low and plain. B: an octave up, heart doubles. C: the peak, then the opening motif returns and a B major bar pulls back to the top." },
+};
+
+// What each layer held at load, so COPY TABLE rewrites only what changed.
+const ORIGINAL = {};
+for (const key of Object.keys(LAB_TRACKS)) {
+  ORIGINAL[key] = MUSIC_TRACKS[key].layers.map(L => ({ gain: L.gain, cutoff: L.cutoff, audition: L.audition }));
+}
+
+let current = "pulse";
+let playing = false;
+const soloed = new Set(), muted = new Set();
+let sinks = [];
+
+// ⛔ SOLO IS EXCLUSIVE-ADDITIVE. Returns each layer's [mute, solo] gain: muted
+// layers are 0; while any layer is soloed, every unsoloed layer is 0.
+function gateLevels(n, soloSet, muteSet) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push([muteSet.has(i) ? 0 : 1, soloSet.size > 0 && !soloSet.has(i) ? 0 : 1]);
+  }
+  return out;
+}
+
+const engine = createAudioEngine({ volRamp: LAB.volRamp, vol: { master: 1, music: 1, sfx: 1, voice: 1 } });
+const music = createMusic(engine, {
+  tracks: MUSIC_TRACKS,
+  lookahead: LAB.lookahead,
+  crossfade: LAB.crossfade,
+  fadeOut: LAB.fadeOut,
+  noise: labRng(LAB.noiseSeed),
+  // ⛔ The lab's SOLO and MUTE nodes, hung outside BLOCK A.
+  layerSink: ({ ctx, index, out }) => {
+    const mute = ctx.createGain(), solo = ctx.createGain();
+    mute.connect(solo);
+    solo.connect(out);
+    sinks[index] = { mute, solo };
+    return mute;
+  },
+});
+
+function applyGates() {
+  const levels = gateLevels(MUSIC_TRACKS[current].layers.length, soloed, muted);
+  if (!engine.ctx) return;
+  const t = engine.ctx.currentTime;
+  levels.forEach((lv, i) => {
+    const s = sinks[i];
+    if (!s) return;
+    s.mute.gain.setTargetAtTime(lv[0], t, 0.01);
+    s.solo.gain.setTargetAtTime(lv[1], t, 0.01);
+  });
+}
+
+const $ = id => document.getElementById(id);
+
+function renderPicker() {
+  const el = $("picker");
+  el.innerHTML = "";
+  for (const key of Object.keys(LAB_TRACKS)) {
+    const t = MUSIC_TRACKS[key], info = LAB_TRACKS[key];
+    const b = document.createElement("button");
+    b.className = "tk";
+    b.setAttribute("aria-pressed", String(key === current));
+    b.innerHTML = info.label + "<small>" + (t.steps * t.stepDur).toFixed(1) + " s · " +
+      t.layers.length + " layers · " + info.sections.map(s => s[0]).join("→") + "</small>";
+    b.onclick = () => select(key);
+    el.appendChild(b);
+  }
+}
+
+function select(key) {
+  current = key;
+  soloed.clear();
+  muted.clear();
+  if (playing) start();
+  renderPicker();
+  $("blurb").textContent = LAB_TRACKS[key].blurb;
+  drawRibbon();
+  renderLayers();
+}
+
+// setState() is idempotent for the playing name, so a restart names a silence
+// first; the old track crossfades out as the new one starts at bar 1.
+function start() {
+  if (!engine.unlock()) { $("pos").textContent = "no audio context in this browser"; return; }
+  sinks = [];
+  music.setState("lab-silence");
+  music.setState(current);
+  applyGates();
+  playing = true;
+}
+
+$("play").onclick = () => start();
+$("stop").onclick = () => { music.setState("lab-silence"); playing = false; };
+$("vol").oninput = e => {
+  $("volOut").textContent = (+e.target.value).toFixed(2);
+  engine.setVol("music", +e.target.value);
+};
+
+function voiceOf(L) {
+  if (L.noise) return "noise" + (L.hp ? " hp" + L.hp : "");
+  return L.type + (L.detune ? " ±" + L.detune + "¢" : "") + (L.drop ? " ↓" + L.drop : "") +
+    (L.cutoffTo ? " lp→" + L.cutoffTo : "") + (L.q ? " Q" + L.q : "");
+}
+
+// ⛔ ONE ROW PER LAYER: SOLO, MUTE, gain, cutoff (when the layer has one), and
+// the PASS / FAIL / — mark. test-cs009-p2.js reads this function's markup.
+function renderLayers() {
+  const layers = MUSIC_TRACKS[current].layers, orig = ORIGINAL[current];
+  const levels = gateLevels(layers.length, soloed, muted);
+  const tb = $("layers").tBodies[0];
+  tb.innerHTML = "";
+  layers.forEach((L, i) => {
+    const tr = document.createElement("tr");
+    if (levels[i][0] * levels[i][1] === 0) tr.className = "silent";
+    const mark = L.audition || "none";
+    const cut = L.cutoff
+      ? `<input type="range" class="cutoff" data-i="${i}" min="100" max="8000" step="10" value="${L.cutoff}">` +
+        `<span class="val${L.cutoff !== orig[i].cutoff ? " edited" : ""}">${Math.round(L.cutoff)}</span>`
+      : "—";
+    tr.innerHTML =
+      `<td class="nm">${L.name}</td><td>${voiceOf(L)}</td>` +
+      `<td><button class="solo" data-i="${i}" aria-pressed="${soloed.has(i)}">SOLO</button></td>` +
+      `<td><button class="mute" data-i="${i}" aria-pressed="${muted.has(i)}">MUTE</button></td>` +
+      `<td><input type="range" class="gain" data-i="${i}" min="0" max="0.3" step="0.001" value="${L.gain}">` +
+      `<span class="val${L.gain !== orig[i].gain ? " edited" : ""}">${L.gain.toFixed(3)}</span></td>` +
+      `<td>${cut}</td>` +
+      `<td><button class="mark" data-i="${i}" data-mark="pass" aria-pressed="${mark === "pass"}">PASS</button> ` +
+      `<button class="mark" data-i="${i}" data-mark="fail" aria-pressed="${mark === "fail"}">FAIL</button> ` +
+      `<button class="mark" data-i="${i}" data-mark="none" aria-pressed="${mark === "none"}">—</button></td>`;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll("button.solo").forEach(b => b.onclick = () => toggle(soloed, +b.dataset.i));
+  tb.querySelectorAll("button.mute").forEach(b => b.onclick = () => toggle(muted, +b.dataset.i));
+  tb.querySelectorAll("button.mark").forEach(b => b.onclick = () => {
+    const L = layers[+b.dataset.i];
+    if (b.dataset.mark === "none") delete L.audition; else L.audition = b.dataset.mark;
+    renderLayers();
+  });
+  // The engine reads gain and cutoff at each note, so an edit is heard from the next note.
+  tb.querySelectorAll("input.gain").forEach(el => el.oninput = () => {
+    layers[+el.dataset.i].gain = +el.value;
+    el.nextElementSibling.textContent = (+el.value).toFixed(3);
+  });
+  tb.querySelectorAll("input.cutoff").forEach(el => el.oninput = () => {
+    layers[+el.dataset.i].cutoff = +el.value;
+    el.nextElementSibling.textContent = el.value;
+  });
+  tb.querySelectorAll("input").forEach(el => el.onchange = () => renderLayers());
+}
+
+function toggle(set, i) {
+  if (set.has(i)) set.delete(i); else set.add(i);
+  applyGates();
+  renderLayers();
+  drawRibbon();
+}
+
+const NS = "http://www.w3.org/2000/svg";
+const RIB_W = 1000, RIB_LANE = 16, RIB_TOP = 18;
+function svgEl(name, attrs) {
+  const e = document.createElementNS(NS, name);
+  for (const k of Object.keys(attrs)) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+function drawRibbon() {
+  const svg = $("ribbon"), t = MUSIC_TRACKS[current], info = LAB_TRACKS[current];
+  const bars = t.steps / info.bar, levels = gateLevels(t.layers.length, soloed, muted);
+  const H = RIB_TOP + t.layers.length * RIB_LANE + 6;
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox", `0 0 ${RIB_W} ${H}`);
+  svg.style.height = H + "px";
+  const x = step => (step / t.steps) * RIB_W;
+  for (let b = 0; b < bars; b++) {
+    svg.appendChild(svgEl("line", { x1: x(b * info.bar), x2: x(b * info.bar), y1: RIB_TOP, y2: H,
+      stroke: b % 4 === 0 ? "#2a3550" : "#161c2a" }));
+  }
+  for (const [mark, bar] of info.sections) {
+    svg.appendChild(svgEl("line", { x1: x(bar * info.bar), x2: x(bar * info.bar), y1: 0, y2: H, stroke: "#ffd24a" }));
+    const label = svgEl("text", { x: x(bar * info.bar) + 4, y: 13, fill: "#ffd24a", "font-size": 12 });
+    label.textContent = mark;
+    svg.appendChild(label);
+  }
+  t.layers.forEach((L, i) => {
+    const on = levels[i][0] * levels[i][1] > 0, y = RIB_TOP + i * RIB_LANE;
+    for (let s = 0; s < t.steps; s++) {
+      const c = L.steps[s];
+      if (!c) continue;
+      svg.appendChild(svgEl("rect", { x: x(s), y: y + 3, width: Math.max(1.2, x(c.dur) - 0.6),
+        height: 4 + 6 * c.g, fill: on ? "#3FE0FF" : "#26324a", opacity: on ? 0.8 : 0.5 }));
+    }
+  });
+  svg.appendChild(svgEl("line", { id: "playhead", x1: 0, x2: 0, y1: 0, y2: H, stroke: "#ffffff", "stroke-width": 1.5 }));
+}
+
+$("ribbon").onclick = e => {
+  const t = MUSIC_TRACKS[current], info = LAB_TRACKS[current], r = $("ribbon").getBoundingClientRect();
+  const bar = Math.floor(((e.clientX - r.left) / r.width) * (t.steps / info.bar));
+  if (!playing || music.state !== current) start();
+  music.step = Math.max(0, bar) * info.bar;
+  music.nextStepTime = engine.now();
+};
+
+function sectionAt(bar) {
+  let name = "";
+  for (const [mark, first] of LAB_TRACKS[current].sections) if (bar >= first) name = mark;
+  return name;
+}
+
+function tick() {
+  music.update();
+  const t = MUSIC_TRACKS[current], info = LAB_TRACKS[current];
+  if (playing && music.track === t) {
+    const step = music.step, bar = Math.floor(step / info.bar);
+    $("pos").innerHTML = `bar <b>${bar + 1}</b> / ${t.steps / info.bar} · step <b>${(step % info.bar) + 1}</b> / ${info.bar}` +
+      ` · section <b>${sectionAt(bar)}</b> · <b>${(step * t.stepDur).toFixed(1)}</b> / ${(t.steps * t.stepDur).toFixed(1)} s`;
+    const ph = $("playhead");
+    if (ph) { const px = (step / t.steps) * RIB_W; ph.setAttribute("x1", px); ph.setAttribute("x2", px); }
+  } else {
+    $("pos").textContent = "stopped";
+  }
+  requestAnimationFrame(tick);
+}
+
+// ⛔ COPY TABLE's rewrite. Pure: BLOCK B's text and a list of edits in, the new
+// text out. An edit is { builder, name, gain?, cutoff?, audition? }: `gain` and
+// `cutoff` are the text to write, and `audition` is "pass", "fail", or null to
+// remove the mark. A field left undefined is not touched. Each layer is one
+// line in its builder, found by `{ name: "<name>",`. test-cs009-p2.js runs this.
+function rewriteBlockB(src, edits) {
+  let out = src;
+  for (const e of edits) {
+    const at = out.indexOf("function " + e.builder + "(");
+    if (at < 0) throw new Error("COPY TABLE: no function " + e.builder + " in BLOCK B");
+    const end = out.indexOf("\n}\n", at);
+    const ls = out.indexOf("{ name: \"" + e.name + "\",", at);
+    if (ls < 0 || ls > end) throw new Error("COPY TABLE: no layer " + e.name + " in " + e.builder);
+    const le = out.indexOf("\n", ls);
+    let line = out.slice(ls, le);
+    if (e.gain !== undefined) line = line.replace(/\bgain: [0-9.]+/, "gain: " + e.gain);
+    if (e.cutoff !== undefined) line = line.replace(/\bcutoff: [0-9.]+/, "cutoff: " + e.cutoff);
+    if (e.audition !== undefined) {
+      line = line.replace(/ audition: "[a-z]+",/, "");
+      if (e.audition !== null) line = line.replace(" steps: ", " audition: \"" + e.audition + "\", steps: ");
+    }
+    out = out.slice(0, ls) + line + out.slice(le);
+  }
+  return out;
+}
+
+// Every change since load, across both tracks.
+function labEdits() {
+  const edits = [];
+  for (const key of Object.keys(LAB_TRACKS)) {
+    MUSIC_TRACKS[key].layers.forEach((L, i) => {
+      const o = ORIGINAL[key][i], e = { builder: LAB_TRACKS[key].builder, name: L.name };
+      let changed = false;
+      if (L.gain !== o.gain) { e.gain = L.gain.toFixed(3); changed = true; }
+      if (L.cutoff !== o.cutoff) { e.cutoff = String(Math.round(L.cutoff)); changed = true; }
+      if (L.audition !== o.audition) { e.audition = L.audition || null; changed = true; }
+      if (changed) edits.push(e);
+    });
+  }
+  return edits;
+}
+
+// BLOCK B's own text, from its script element, between the markers.
+function blockBText() {
+  const s = $("block-b").textContent;
+  const a = s.indexOf("\n", s.indexOf("// ===== BLOCK B BEGIN")) + 1;
+  const b = s.lastIndexOf("// ===== BLOCK B END");
+  return s.slice(a, b);
+}
+
+$("copy").onclick = () => {
+  const edits = labEdits();
+  const text = rewriteBlockB(blockBText(), edits);
+  $("table").value = text;
+  $("table").select();
+  const say = copied => {
+    $("copyOut").textContent = edits.length + " layer edit(s) · " +
+      (copied ? "copied — paste over src/17-audio-tracks.js" : "select the text below and copy it");
+  };
+  const fallback = () => {
+    let copied = false;
+    try { copied = document.execCommand("copy"); } catch (err) { copied = false; }
+    say(copied);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    say(false);   // until the clipboard answers, which it may never do
+    navigator.clipboard.writeText(text).then(() => say(true), fallback);
+  } else {
+    fallback();
+  }
+};
+
+select(current);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

@@ -11,7 +11,7 @@
 const COUNTS = {
   wells: 16,        // GDD 3.4 — the sixteen well shapes
   openWells: 6,     // of those, open topology
-  tracks: 0,        // GDD 11.7 — raise as tracks land
+  tracks: 2,        // GDD 11.7 — raise as tracks land. CS009 P2: title, pulse
   enemies: 6,       // GDD 6.1 — raise as enemies land. CS005 P3: the Surger,
                     // which completes the Classic roster
   // ⛔ NOT THE SAME NUMBER AS `enemies`, AND FROM CS004 P3 ON IT IS LARGER.
