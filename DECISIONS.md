@@ -657,7 +657,8 @@ it, and the shipped values stand. Older entries in this file that say "a
 playtest would change it" now mean that nothing will, unless Paul raises it
 himself.
 
-**Open, for CS009 planning to raise.** `CLAUDE.md`'s music solo-audition gate
-is a listening test. CS009's plan asks Paul how it is judged.
+**Labs are not playtests (Paul, same day).** A `tools/` lab that lets Paul
+listen and adjust values, `music-lab` included, is allowed. The music
+solo-audition gate stands, and he judges it in the lab.
 
 **What would change it.** Paul choosing to play something.

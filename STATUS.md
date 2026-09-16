@@ -213,6 +213,6 @@ every claim MEASURED or PREDICTED, and writes no code.
    the simulation**, or the hash moves.
 5. ⚠ Nothing has been tuned against GDD §8.2, and there will be no playtest to
    tune against (`SKIPPED-PLAYTESTS.md` records what was skipped).
-6. ⛔ **The music solo-audition gate (`CLAUDE.md`, Audio) is a listening test, and
-   Paul does no playtests.** CS009 builds the solo button; the plan must raise
-   with Paul who, if anyone, judges "recognizable played alone" before CS010.
+6. ✅ **The music solo-audition gate stands.** Paul judges it in
+   `tools/music-lab.html`, and a lab is not a playtest (Paul, 2026-09-16).
+   CS009's plan scopes the lab so that he can listen, solo layers, and tweak.

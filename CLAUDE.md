@@ -161,6 +161,9 @@ to play, listen or look, and no work waits on it. A phase that ships something
 only a person could judge appends one entry to `SKIPPED-PLAYTESTS.md`
 (changeset, phase, what he would have done, what it was trying to learn, knobs)
 and moves on. The shipped values stand. Never put these entries in this file.
+⛔ **A lab in `tools/` is NOT a playtest** (Paul, 2026-09-16). Building a lab
+for Paul to listen to or tweak values in is allowed, including `music-lab`'s
+solo audition. Its results are ported in as data.
 
 ---
 
