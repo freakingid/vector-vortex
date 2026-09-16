@@ -1,11 +1,13 @@
 # Vector Vortex — STATUS
-Version: 0.0.6 · Changeset: CS010 (not started — planning next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.6 · Changeset: CS010 (planned 2026-09-16 — P1 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS010
 
-Nothing built yet. One line per phase here; ⛔ **reasoning goes to
-`log/CS010.md` as the phase goes**, not to this file (`CLAUDE.md`, Session
-rules, 2026-08-31).
+**Planned at `d40f222`** (`PLANNED-FEATURES-CS010.md`,
+`IMPLEMENTATION-PHASES-CS010.md`): five phases, every call answered by Paul in
+the planning session (D1–D16). Nothing built yet. One line per phase here; ⛔
+**reasoning goes to `log/CS010.md` as the phase goes**, not to this file
+(`CLAUDE.md`, Session rules, 2026-08-31).
 
 ## Working / verified
 
@@ -148,7 +150,29 @@ rules, 2026-08-31).
 - ⚠ **Every seat call is `sfx(`, and `test-cs009-p5.js` scans the built file for
   them.** Each call must name its `C.SFX` event as a string literal, and its
   arguments must hold no assignment.
+- ⛔ **CS010 PLANNING FOUND THESE (MEASURED at `d40f222`, plan §1.4–1.6). Each
+  phase that meets one acts on it.**
+  - **A director that WRITES `state` passes every closed test.** It happens in
+    both of `test-cs009-p6.js`'s sessions and outside `audioFrame()`'s body, so
+    no hash sees it. The eighth soak spies `dangerInputs` (P5).
+  - **Any new `heat(` call turns `test-cs007-p2.js` red.** Read heat through
+    `heatT()`.
+  - **`19-sfx.js`'s code may not name `state`** (`test-cs009-p1.js:489`).
+  - **A new REQUIRED `createMusic` option makes `test-cs009-p1.js` throw**, so
+    new engine options are optional groups.
+  - **The fake has no `createDynamicsCompressor`.** A limiter without it turns
+    five files red.
+  - **A limiter on the path leaves `test-cs009-p5.js`'s headroom gate GREEN while
+    it measures the wrong thing.** P1 rewrites the gate.
+  - **`test-cs009-p5.js` finds a Surger voice by a gain equal to 0.45.** Music
+    notes at 0.450 collide (nine assertions red). P3 repairs the fixture.
+  - **A duck in front of a limiter is swallowed**: 6 dB in, 1.9 dB out.
+  - ⚠ **The Surger tone alone renders at sample peak 1.106** at unity, which
+    clips at the destination. No changeset owns it.
+  - `IIRFilterNode` cannot be swept (no automatable parameter), so the sweep is
+    a biquad.
 - ⚠ **GDD §11.5 names `MUSIC_LAYER_CROSSFADE`; `C` has `LAYER_CROSSFADE`.**
+  ✅ Paul (D11): `C.LAYER_CROSSFADE` survives at 0.03 s; CS010 P1 edits the GDD.
   Neither is read. CS010 reconciles the name when it reads one.
 - ⛔ **EVERY CS010 CONSTANT IS ALREADY IN `C` AND UNREAD** (MEASURED at the
   CS009 close, a grep of `src/` for `C.<key>`): the ten `INT_*` keys,
@@ -295,9 +319,10 @@ rules, 2026-08-31).
   pair reads as an overlap (0.5377 against 0.4201 with a 1e-9 tolerance). 120
   BPM is exact (0.125). A future tempo port repairs that fixture in place.
 - ⚠ **COPY TABLE's tempo rewrite has no suite test.** A throwaway check and a
-  headless click-through covered it (`log/CS009.md`).
-- ⚠ **`title`'s ground sits at 0.300**, the old slider top, and Paul has not
-  said whether he wants it at 0.45 like `pulse`'s three.
+  headless click-through covered it (`log/CS009.md`). ⛔ CS010 P3 adds it
+  (`test-cs010-p3.js`).
+- ✅ **Paul (D4): `title`'s ground goes to 0.45 in CS010 P3**, behind the
+  limiter. It sits at 0.300 until then.
 - ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
   2 → 3.
@@ -309,38 +334,33 @@ rules, 2026-08-31).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS010 PLANNING
+## Next up — ⛔ CS010 P1
 
-⛔ **CS010 is the intensity director** (`ROADMAP.md`): the live-danger signal,
-the filter sweep, two or three earned layers and the solo audition (GDD
-§11.4–11.6). A planning session writes `PLANNED-FEATURES-CS010.md` and
-`IMPLEMENTATION-PHASES-CS010.md`, marks every claim MEASURED or PREDICTED, and
-writes no code.
+⛔ **Paste P1's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: kit-audio
+0.3.0. It adds the tier gates with the bar-line latch, the sweep, the limiter,
+the duck and dip, `onBeat`, and the fake's compressor, and it rewrites the headroom gate
+to D16's curve model. P1 writes the `DECISIONS.md` pointer to plan §0.
 
-⛔ **What CS010's plan must not lose:**
+⛔ **What every CS010 phase must not lose** (plan §0, answered by Paul
+2026-09-16):
 
-1. ✅ **Every layer of both tracks is marked PASS** (Paul, 2026-09-16), so
-   CS010 may tier any of them (A6). Which ones is Paul's call.
-2. ⚠ **SETTLED — the Surger charge tone is audible over music at every tier.**
-   `test-cs009-p5.js`'s gate measures untiered tracks. A sweep or a tier
-   re-runs it.
-3. ⛔ **The loader throws on any `tier` twice over.** CS010 deletes the "not
-   supported" throw and keeps the `1..4` range throw. ⛔ `scheduleStep` still
-   never reads intensity: gating is a gain node (`test-cs009-p1.js` M2, M3).
-4. ⛔ **The director reads `state` and writes none of it, and draws nothing.**
-   `test-cs009-p6.js`'s frame-by-frame hash is the proof shape.
-5. ⛔ **Tier changes latch to the bar line**, and the menu duck and the 6 dB dips
-   ramp, never a bare set (GDD §11.5, §11.6). The `duck` node already exists at
-   unity. GDD §17 item 9's two remaining clauses become testable here.
-6. ⛔ Every audio edit obeys the known issues above: the three-file rule, the
-   pinned `function audioFrame()` text, and the banned substrings.
-7. ⚠ **SETTLED — struck, never swelled.** Every earned layer obeys the rule, and
-   the rule has no test yet. CS010 adds that gate in its own file.
-8. ✅ **Paul's call (2026-09-16): a LIMITER on the music, in CS010.** `pulse` is
-   8.2 dB under his lab levels, because the SETTLED headroom gate trims his
-   balance (rhythm at 0.450) as a whole; it sits about 9 dB under CS009's P2
-   level. The limiter lets the track get louder while its peaks stay under the
-   Surger tone. Where it sits, its settings, and how the gate measures after it
-   are the plan's to measure and put to Paul.
-9. ⚠ **`pulse` loops at 72 s (36 bars at 120 BPM).** The length target is now
-   read in bars (Claude's reading). Paul confirms it, or asks for more bars.
+1. ✅ **Two earned layers on `pulse`: `cycle` tier 2 (0.25) and `tick` tier 3
+   (0.40).** The foundation is `melody`, `swell`, `bassline` and `heart`.
+   `title` is untiered. There is no danger layer.
+2. ✅ **The limiter: −24 dB, knee 0, ratio 20, 1 ms, 100 ms**, on the path
+   gate → track gain → sweep → limiter → duck → dip → `music`. `pulse` returns
+   to Paul's lab gains, `title`'s ground goes to 0.45, and music-lab plays
+   limited.
+3. ⚠ **SETTLED — the Surger tone is audible over music at every tier.** After
+   the limiter, the gate is the curve model with the settings pinned (D16):
+   `pulse` 0.3512 and `title` 0.3408 against 0.45. The render peaks at 0.454 and
+   0.413.
+4. ⛔ **`scheduleStep` never reads intensity.** Tier changes latch to the bar
+   line in the SETTER. `LAYER_CROSSFADE` is 0.03 s, on the gate, never on a note.
+5. ⛔ **The director reads `state` through one top-level `dangerInputs`, writes
+   none of it, and draws nothing.** Counts are live and non-anchored; heat comes
+   through `heatT()`; combo is 0 in Classic. Intensity acts in play only, a Dive
+   reads 0, and a run starts from 0.
+6. ⚠ **SETTLED — struck, never swelled.** P3 adds the articulation gate and
+   COPY TABLE's tempo test.
+7. ✅ **`pulse`'s length target is ≥ 36 bars** (Paul, D13).
