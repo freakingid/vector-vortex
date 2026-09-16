@@ -11,7 +11,8 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 | P1 | `edfc2e1` | The engine: kit-input 0.7.0 `onGesture`, kit-audio 0.1.0 (four buses, the scheduler with the stall resync), the harness fake. No sound yet. 6 of 6 mutations red |
 | P2 | `3809eba` | `tools/music-lab.html` (SOLO, MUTE, gain/cutoff, PASS/FAIL, COPY TABLE) and the `title` (32 s) and `pulse` (108 s, A→B→C) tables. Lab BLOCK A/B identical to `16`/`17`. 8 of 8 mutations red |
 | P3 | `88befdb` | Music by screen (`musicStateFor()`, `audioFrame()` once per frame) and OPTIONS' MASTER / MUSIC / SFX / VOICE VOLUME and MUSIC TRACK rows, one generalised row mode. `test-cs008-p6.js`'s three assertions rewritten in place. 9 of 9 mutations red |
-| P4 | this commit | kit-audio 0.2.0 `createSfxPlayer` (`play` / `hold`), `C.SFX` (21 recipes, candidate A) and `C.SFX_KILL_PITCH`, `tools/sfx-lab.html` (2–3 candidates, ▶ in context, picked, COPY OUT). No seat plays yet. 10 of 10 mutations red |
+| P4 | `0458601` | kit-audio 0.2.0 `createSfxPlayer` (`play` / `hold`), `C.SFX` (21 recipes, candidate A) and `C.SFX_KILL_PITCH`, `tools/sfx-lab.html` (2–3 candidates, ▶ in context, picked, COPY OUT). No seat plays yet. 10 of 10 mutations red |
+| P4 port | this commit | ✅ Paul's sfx-lab picks, ported verbatim: 13 of 21 events changed. In the lab each pick is now candidate A, and the picks key is v2 |
 
 ## Working / verified
 
@@ -39,7 +40,7 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `createSfxPlayer(AudioSys, { noise })`: `play(recipe, { pitch, when })`, and
   `hold(recipe)` → `{ set(t01), stop() }`. Recipes are `C.SFX`, one per plan §7
   event; the kill's pitch is `C.SFX_KILL_PITCH[sfxVoice]`. ⛔ **Every recipe is
-  the lab's candidate A, ported verbatim**; Paul may pick another (A7).
+  Paul's pick (2026-09-16), ported verbatim**, and each is now the lab's candidate A.
   ⚠ `surgeCharge` A peaks at 0.45 against `pulse`'s loudest step, 0.434
   (MEASURED). The gate itself is P5's.
 - CS001 closed — 16 wells, the depth model, the well renderer.
@@ -253,6 +254,9 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 - ⚠ **`CLAUDE.md` carries no telemetry rule**; whether it earns one is Paul's
   call.
 - ⚠ **Paul replaces `C.CREDITS_LINES` before ship.**
+- ⚠ **Paul has music-lab feedback he has not yet put into words** (2026-09-16):
+  he dislikes some things in the tracks. Ask him at CS009's close (P6), before
+  ROADMAP #7 is edited. Nothing waits on it.
 - Backport kit-input (**0.7.0**), kit-menu (0.1.0), kit-fx and kit-audio (0.1.0) to coinless-kit —
   each a separate manual step, verified against that repo's own suite.
 - The Overdrive `PTS_REAVER`, `PTS_MIMIC`, `PTS_WARDEN` are unread — CS012's.

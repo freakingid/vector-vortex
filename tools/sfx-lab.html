@@ -856,26 +856,26 @@ const MUSIC_TRACKS = {
   // cues). The fields are createSfxPlayer's (16-audio-engine.js).
   SFX: {
     fire:           { osc: [{ type: "square", f: 1480, to: 370 }], glide: 0.07, filter: { type: "lowpass", f: 5000, to: 1200 }, sweep: 0.07, atk: 0.002, hold: 0.01, rel: 0.06, gain: 0.12 },
-    kill:           { noise: true, filter: { type: "lowpass", f: 3000, to: 200 }, sweep: 0.25, atk: 0.002, hold: 0.02, rel: 0.25, gain: 0.3 },
-    split:          { osc: [{ type: "square", f: 660, to: 990 }, { type: "square", f: 440, to: 330 }], glide: 0.12, atk: 0.002, hold: 0.04, rel: 0.1, gain: 0.12 },
+    kill:           { osc: [{ type: "square", f: 330, to: 66 }, { type: "square", f: 334, to: 67 }], glide: 0.18, atk: 0.002, hold: 0.02, rel: 0.18, gain: 0.12 },
+    split:          { osc: [{ type: "triangle", f: 520, to: 1040 }], glide: 0.08, atk: 0.002, hold: 0.03, rel: 0.12, gain: 0.18 },
     chip:           { osc: [{ type: "square", f: 3000, to: 2400 }], glide: 0.02, atk: 0.001, hold: 0.005, rel: 0.03, gain: 0.07 },
     bolt:           { osc: [{ type: "sawtooth", f: 900, to: 1800 }], glide: 0.1, filter: { type: "lowpass", f: 3000 }, atk: 0.005, hold: 0.03, rel: 0.08, gain: 0.12 },
-    cross:          { osc: [{ type: "triangle", f: 330, to: 660 }], glide: 0.15, atk: 0.01, hold: 0.05, rel: 0.12, gain: 0.16 },
+    cross:          { osc: [{ type: "sine", f: 440 }, { type: "sine", f: 554 }], atk: 0.01, hold: 0.06, rel: 0.15, gain: 0.12 },
     surgeCharge:    { osc: [{ type: "sawtooth", f: 110, to: 880 }, { type: "square", f: 111, to: 886 }], glide: 0.45, filter: { type: "lowpass", f: 1200, to: 5000, q: 2 }, sweep: 0.45, atk: 0.01, hold: 0.44, rel: 0.04, gain: 0.45 },
     surgeDischarge: { noise: true, filter: { type: "lowpass", f: 6000, to: 400 }, sweep: 0.3, atk: 0.002, hold: 0.08, rel: 0.25, gain: 0.35 },
-    death:          { noise: true, filter: { type: "lowpass", f: 4000, to: 120 }, sweep: 1, atk: 0.002, hold: 0.1, rel: 1, gain: 0.45 },
+    death:          { osc: [{ type: "sawtooth", f: 440, to: 40 }, { type: "sawtooth", f: 443, to: 41 }], glide: 1.1, atk: 0.002, hold: 0.05, rel: 1.1, gain: 0.25 },
     gameOver:       { osc: [{ type: "triangle", f: 392, to: 98 }, { type: "triangle", f: 294, to: 73.5 }], glide: 1.6, atk: 0.02, hold: 0.4, rel: 1.4, gain: 0.28 },
-    respawn:        { osc: [{ type: "triangle", f: 220, to: 880 }], glide: 0.3, atk: 0.01, hold: 0.1, rel: 0.2, gain: 0.18 },
-    purge:          { noise: true, filter: { type: "lowpass", f: 400, to: 8000 }, sweep: 0.35, atk: 0.01, hold: 0.15, rel: 0.5, gain: 0.45 },
-    purgeWeak:      { noise: true, filter: { type: "lowpass", f: 400, to: 1200 }, sweep: 0.15, atk: 0.01, hold: 0.03, rel: 0.15, gain: 0.12 },
+    respawn:        { osc: [{ type: "sine", f: 330, to: 990 }, { type: "sine", f: 495, to: 1485 }], glide: 0.25, atk: 0.01, hold: 0.1, rel: 0.2, gain: 0.14 },
+    purge:          { osc: [{ type: "sawtooth", f: 110, to: 1760 }, { type: "sawtooth", f: 55, to: 880 }], glide: 0.4, filter: { type: "lowpass", f: 800, to: 6000 }, sweep: 0.4, atk: 0.01, hold: 0.2, rel: 0.4, gain: 0.3 },
+    purgeWeak:      { osc: [{ type: "square", f: 330, to: 220 }], glide: 0.12, atk: 0.005, hold: 0.02, rel: 0.1, gain: 0.08 },
     extraLife:      { osc: [{ type: "triangle", f: 784, to: 1568 }, { type: "triangle", f: 1175, to: 2350 }], glide: 0.08, atk: 0.005, hold: 0.2, rel: 0.4, gain: 0.18 },
-    lifeLost:       { osc: [{ type: "square", f: 784, to: 392 }, { type: "square", f: 1175, to: 587 }], glide: 0.25, filter: { type: "lowpass", f: 2500 }, atk: 0.005, hold: 0.1, rel: 0.3, gain: 0.12 },
-    wellClear:      { osc: [{ type: "triangle", f: 523, to: 1047 }, { type: "triangle", f: 659, to: 1319 }], glide: 0.2, atk: 0.01, hold: 0.15, rel: 0.45, gain: 0.2 },
-    dive:           { osc: [{ type: "sawtooth", f: 80, to: 1600 }], glide: 2.25, filter: { type: "lowpass", f: 600, to: 5000 }, sweep: 2.25, atk: 0.3, hold: 1.9, rel: 0.4, gain: 0.18 },
-    diveStrike:     { osc: [{ type: "square", f: 1200, to: 300 }, { type: "square", f: 1650, to: 410 }], glide: 0.15, atk: 0.002, hold: 0.02, rel: 0.2, gain: 0.16 },
+    lifeLost:       { osc: [{ type: "triangle", f: 523, to: 262 }], glide: 0.3, atk: 0.005, hold: 0.1, rel: 0.3, gain: 0.18 },
+    wellClear:      { osc: [{ type: "sine", f: 392, to: 784 }, { type: "square", f: 588, to: 1176 }], glide: 0.2, filter: { type: "lowpass", f: 3000 }, atk: 0.01, hold: 0.15, rel: 0.4, gain: 0.14 },
+    dive:           { osc: [{ type: "sine", f: 110, to: 880 }, { type: "sine", f: 111, to: 888 }], glide: 2.4, atk: 0.4, hold: 1.8, rel: 0.4, gain: 0.22 },
+    diveStrike:     { noise: true, filter: { type: "highpass", f: 2000 }, atk: 0.002, hold: 0.02, rel: 0.15, gain: 0.3 },
     menuMove:       { osc: [{ type: "square", f: 880 }], atk: 0.001, hold: 0.01, rel: 0.03, gain: 0.06 },
-    menuConfirm:    { osc: [{ type: "square", f: 880, to: 1760 }], glide: 0.05, atk: 0.002, hold: 0.03, rel: 0.08, gain: 0.08 },
-    menuBack:       { osc: [{ type: "square", f: 880, to: 440 }], glide: 0.06, atk: 0.002, hold: 0.02, rel: 0.07, gain: 0.08 },
+    menuConfirm:    { osc: [{ type: "triangle", f: 660 }, { type: "triangle", f: 990 }], atk: 0.002, hold: 0.05, rel: 0.12, gain: 0.1 },
+    menuBack:       { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6 },
@@ -914,26 +914,26 @@ const SFX_BRIEFS = {
 // Candidate A's label. Its recipe is C.SFX, read from BLOCK SFX.
 const SFX_A_LABELS = {
   fire: "square zip",
-  kill: "noise burst",
-  split: "square fork",
+  kill: "square pair drop",
+  split: "triangle leap",
   chip: "square flick",
   bolt: "saw rise",
-  cross: "triangle open",
+  cross: "sine third",
   surgeCharge: "saw + square climb",
   surgeDischarge: "noise slam",
-  death: "noise collapse",
+  death: "saw pair dive",
   gameOver: "triangle pair fall",
-  respawn: "triangle rise",
-  purge: "noise bloom",
-  purgeWeak: "noise puff",
+  respawn: "sine fifth rise",
+  purge: "saw pair surge",
+  purgeWeak: "square phut",
   extraLife: "triangle fifth lift",
-  lifeLost: "square fifth sag",
-  wellClear: "triangle third lift",
-  dive: "saw doppler",
-  diveStrike: "square clang",
+  lifeLost: "triangle sag",
+  wellClear: "sine + square lift",
+  dive: "sine pair doppler",
+  diveStrike: "noise crack",
   menuMove: "square blip",
-  menuConfirm: "square up",
-  menuBack: "square down",
+  menuConfirm: "triangle fifth",
+  menuBack: "triangle down",
 };
 
 // Candidates B and C, in the recipe format of createSfxPlayer.
@@ -944,10 +944,10 @@ const SFX_ALTS = {
   ],
   kill: [
     { label: "saw drop", recipe: { osc: [{ type: "sawtooth", f: 440, to: 55 }], glide: 0.2, filter: { type: "lowpass", f: 2400, to: 300 }, sweep: 0.2, atk: 0.002, hold: 0.02, rel: 0.2, gain: 0.2 } },
-    { label: "square pair drop", recipe: { osc: [{ type: "square", f: 330, to: 66 }, { type: "square", f: 334, to: 67 }], glide: 0.18, atk: 0.002, hold: 0.02, rel: 0.18, gain: 0.12 } },
+    { label: "noise burst", recipe: { noise: true, filter: { type: "lowpass", f: 3000, to: 200 }, sweep: 0.25, atk: 0.002, hold: 0.02, rel: 0.25, gain: 0.3 } },
   ],
   split: [
-    { label: "triangle leap", recipe: { osc: [{ type: "triangle", f: 520, to: 1040 }], glide: 0.08, atk: 0.002, hold: 0.03, rel: 0.12, gain: 0.18 } },
+    { label: "square fork", recipe: { osc: [{ type: "square", f: 660, to: 990 }, { type: "square", f: 440, to: 330 }], glide: 0.12, atk: 0.002, hold: 0.04, rel: 0.1, gain: 0.12 } },
   ],
   chip: [
     { label: "noise tick", recipe: { noise: true, filter: { type: "highpass", f: 4000 }, atk: 0.001, hold: 0.005, rel: 0.03, gain: 0.1 } },
@@ -957,7 +957,7 @@ const SFX_ALTS = {
     { label: "square rise", recipe: { osc: [{ type: "square", f: 700, to: 1400 }], glide: 0.1, filter: { type: "lowpass", f: 2500 }, atk: 0.005, hold: 0.02, rel: 0.08, gain: 0.1 } },
   ],
   cross: [
-    { label: "sine third", recipe: { osc: [{ type: "sine", f: 440 }, { type: "sine", f: 554 }], atk: 0.01, hold: 0.06, rel: 0.15, gain: 0.12 } },
+    { label: "triangle open", recipe: { osc: [{ type: "triangle", f: 330, to: 660 }], glide: 0.15, atk: 0.01, hold: 0.05, rel: 0.12, gain: 0.16 } },
   ],
   surgeCharge: [
     { label: "square climb", recipe: { osc: [{ type: "square", f: 220, to: 1760 }], glide: 0.45, atk: 0.01, hold: 0.44, rel: 0.04, gain: 0.45 } },
@@ -967,44 +967,44 @@ const SFX_ALTS = {
     { label: "saw fall", recipe: { osc: [{ type: "sawtooth", f: 1760, to: 110 }], glide: 0.3, atk: 0.002, hold: 0.05, rel: 0.3, gain: 0.25 } },
   ],
   death: [
-    { label: "saw pair dive", recipe: { osc: [{ type: "sawtooth", f: 440, to: 40 }, { type: "sawtooth", f: 443, to: 41 }], glide: 1.1, atk: 0.002, hold: 0.05, rel: 1.1, gain: 0.25 } },
+    { label: "noise collapse", recipe: { noise: true, filter: { type: "lowpass", f: 4000, to: 120 }, sweep: 1, atk: 0.002, hold: 0.1, rel: 1, gain: 0.45 } },
     { label: "square fall", recipe: { osc: [{ type: "square", f: 880, to: 55 }], glide: 0.9, filter: { type: "lowpass", f: 3000, to: 200 }, sweep: 0.9, atk: 0.002, hold: 0.05, rel: 0.9, gain: 0.25 } },
   ],
   gameOver: [
     { label: "sine long fall", recipe: { osc: [{ type: "sine", f: 220, to: 55 }], glide: 2, atk: 0.02, hold: 0.5, rel: 1.5, gain: 0.35 } },
   ],
   respawn: [
-    { label: "sine fifth rise", recipe: { osc: [{ type: "sine", f: 330, to: 990 }, { type: "sine", f: 495, to: 1485 }], glide: 0.25, atk: 0.01, hold: 0.1, rel: 0.2, gain: 0.14 } },
+    { label: "triangle rise", recipe: { osc: [{ type: "triangle", f: 220, to: 880 }], glide: 0.3, atk: 0.01, hold: 0.1, rel: 0.2, gain: 0.18 } },
   ],
   purge: [
-    { label: "saw pair surge", recipe: { osc: [{ type: "sawtooth", f: 110, to: 1760 }, { type: "sawtooth", f: 55, to: 880 }], glide: 0.4, filter: { type: "lowpass", f: 800, to: 6000 }, sweep: 0.4, atk: 0.01, hold: 0.2, rel: 0.4, gain: 0.3 } },
+    { label: "noise bloom", recipe: { noise: true, filter: { type: "lowpass", f: 400, to: 8000 }, sweep: 0.35, atk: 0.01, hold: 0.15, rel: 0.5, gain: 0.45 } },
   ],
   purgeWeak: [
-    { label: "square phut", recipe: { osc: [{ type: "square", f: 330, to: 220 }], glide: 0.12, atk: 0.005, hold: 0.02, rel: 0.1, gain: 0.08 } },
+    { label: "noise puff", recipe: { noise: true, filter: { type: "lowpass", f: 400, to: 1200 }, sweep: 0.15, atk: 0.01, hold: 0.03, rel: 0.15, gain: 0.12 } },
   ],
   extraLife: [
     { label: "sine octave lift", recipe: { osc: [{ type: "sine", f: 1047, to: 2093 }], glide: 0.15, atk: 0.005, hold: 0.15, rel: 0.5, gain: 0.22 } },
   ],
   lifeLost: [
-    { label: "triangle sag", recipe: { osc: [{ type: "triangle", f: 523, to: 262 }], glide: 0.3, atk: 0.005, hold: 0.1, rel: 0.3, gain: 0.18 } },
+    { label: "square fifth sag", recipe: { osc: [{ type: "square", f: 784, to: 392 }, { type: "square", f: 1175, to: 587 }], glide: 0.25, filter: { type: "lowpass", f: 2500 }, atk: 0.005, hold: 0.1, rel: 0.3, gain: 0.12 } },
   ],
   wellClear: [
-    { label: "sine + square lift", recipe: { osc: [{ type: "sine", f: 392, to: 784 }, { type: "square", f: 588, to: 1176 }], glide: 0.2, filter: { type: "lowpass", f: 3000 }, atk: 0.01, hold: 0.15, rel: 0.4, gain: 0.14 } },
+    { label: "triangle third lift", recipe: { osc: [{ type: "triangle", f: 523, to: 1047 }, { type: "triangle", f: 659, to: 1319 }], glide: 0.2, atk: 0.01, hold: 0.15, rel: 0.45, gain: 0.2 } },
   ],
   dive: [
-    { label: "sine pair doppler", recipe: { osc: [{ type: "sine", f: 110, to: 880 }, { type: "sine", f: 111, to: 888 }], glide: 2.4, atk: 0.4, hold: 1.8, rel: 0.4, gain: 0.22 } },
+    { label: "saw doppler", recipe: { osc: [{ type: "sawtooth", f: 80, to: 1600 }], glide: 2.25, filter: { type: "lowpass", f: 600, to: 5000 }, sweep: 2.25, atk: 0.3, hold: 1.9, rel: 0.4, gain: 0.18 } },
   ],
   diveStrike: [
-    { label: "noise crack", recipe: { noise: true, filter: { type: "highpass", f: 2000 }, atk: 0.002, hold: 0.02, rel: 0.15, gain: 0.3 } },
+    { label: "square clang", recipe: { osc: [{ type: "square", f: 1200, to: 300 }, { type: "square", f: 1650, to: 410 }], glide: 0.15, atk: 0.002, hold: 0.02, rel: 0.2, gain: 0.16 } },
   ],
   menuMove: [
     { label: "triangle blip", recipe: { osc: [{ type: "triangle", f: 1320 }], atk: 0.001, hold: 0.01, rel: 0.04, gain: 0.1 } },
   ],
   menuConfirm: [
-    { label: "triangle fifth", recipe: { osc: [{ type: "triangle", f: 660 }, { type: "triangle", f: 990 }], atk: 0.002, hold: 0.05, rel: 0.12, gain: 0.1 } },
+    { label: "square up", recipe: { osc: [{ type: "square", f: 880, to: 1760 }], glide: 0.05, atk: 0.002, hold: 0.03, rel: 0.08, gain: 0.08 } },
   ],
   menuBack: [
-    { label: "triangle down", recipe: { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 } },
+    { label: "square down", recipe: { osc: [{ type: "square", f: 880, to: 440 }], glide: 0.06, atk: 0.002, hold: 0.02, rel: 0.07, gain: 0.08 } },
   ],
 };
 // ===== CANDIDATES END =====
@@ -1084,7 +1084,7 @@ function candidates(name) {
 }
 
 // ---- picks -----------------------------------------------------------------
-const PICK_KEY = "vv_sfx_lab_picks_v1";
+const PICK_KEY = "vv_sfx_lab_picks_v2";   // v2: Paul's 2026-09-16 picks became candidate A
 const picks = {};
 for (const name of EVENTS) picks[name] = 0;
 try {
