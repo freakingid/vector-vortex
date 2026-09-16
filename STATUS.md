@@ -1,26 +1,18 @@
 # Vector Vortex — STATUS
-Version: 0.0.6 · Changeset: CS010 (P4 done 2026-09-16 — P5 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.7 · Changeset: CS011 (not yet planned) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
-## Phase ledger — CS010
+## Phase ledger — CS011
 
-**Planned at `d40f222`** (`PLANNED-FEATURES-CS010.md`,
-`IMPLEMENTATION-PHASES-CS010.md`): five phases, every call answered by Paul in
-the planning session (D1–D16). One line per phase here; ⛔ **reasoning goes to
-`log/CS010.md` as the phase goes**, not to this file (`CLAUDE.md`, Session
-rules, 2026-08-31).
-
-| Phase | Commit | One line |
-|---|---|---|
-| P1 | `8bf9110` | kit-audio 0.3.0: optional `gating` (bar-latched `setIntensity`), `sweep`, `limiter`, `duck` (`setDuck`, `dip`), `onBeat`; the fake's compressor; the headroom gate is D16's model (0.3350 / 0.3359). Nothing drives them yet. 7 of 7 red |
-| P2 | `2e89263`, `d1501ef` | The director: kit-audio `createDirector` (asymmetric, audio clock), top-level `dangerInputs(state, out)`, `audioFrame()` driving `setIntensity`/`setSweep` in play (a Dive reads 0; run entry resets; pause side holds; title opens the sweep), `duckFor()` on the pause side, `sfx()` dips on D9's four. `INT_HEAT_MAX` deleted. 10 of 10 red. Follow-up: `Director.hold()` on the pause side, so a resume skips the pause (Paul); 11 of 11 |
-| P3 | `5baef99` | The earned layers: `cycle` tier 2, `tick` tier 3, `bar` on both tables; `pulse` at Paul's lab gains and `title`'s ground 0.45, behind the limiter (render 0.454 / −24.30 dB, 0.413 / −25.37 dB, plan §1.6 exactly; model 0.3512 / 0.3408). music-lab's INTENSITY and TIER, COPY TABLE writes `tier`; sfx-lab passes `gating`. p2's tier assertion and p5's Surger-voice fixture repaired in place. `test-cs010-p3.js`: the articulation gate, COPY TABLE's tempo and tier rewrites. 14 of 14 red |
-| P4 | this commit | The rim pulse: `heart` `beat: true` (three files), `19-sfx.js`'s onset ring and `beatGlow()`, `audioFrame()`'s `rimGlow` (play only, after the scheduler), `drawWell`'s optional sixth argument (rim width and alpha, capped). `C.RIM_PULSE_*` (⚠ provisional, plus `RIM_PULSE_RING`). `test-cs010-p4.js`; 6 of 6 red. No closed file edited |
+Not planned. ⛔ **The next session is CS011's planning session**
+(`CLAUDE.md`, Session rules: it writes `PLANNED-FEATURES-CS011.md` and
+`IMPLEMENTATION-PHASES-CS011.md`, and no code). CS010's ledger is in
+`log/CS010.md`.
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules, 490.2 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **53 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **54 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -59,6 +51,13 @@ rules, 2026-08-31).
   contract field, the held Surger tone and the over-cap life sound. Phase ledger,
   mutation records, baseline ledger and the §10 verdicts are in `log/CS009.md`;
   GDD §19's Audio verdict is in GDD §19.
+- **CS010 closed 2026-09-16 — the intensity director.** kit-audio **0.3.0**
+  (bar-latched tier gates, the sweep, the limiter, the pause-side duck and the
+  event dips, `onBeat`), `createDirector` fed by `dangerInputs()`, `pulse`'s
+  `cycle` (tier 2) and `tick` (tier 3) at Paul's lab gains behind the limiter,
+  music-lab's INTENSITY and TIER, the rim pulse, and the eighth soak. Phase
+  ledger, mutation records, baseline ledger, review notes and the §9 verdicts
+  are in `log/CS010.md`; GDD §19's Audio verdict is in GDD §19.
 - ⛔ **`AudioSys.ctx` is null until a key, click or lifted touch**, and every
   audio entry point returns early on it. `buildGame({ audio: true })` installs
   the recording fake (`X._audio`); the default is still no audio API.
@@ -89,7 +88,7 @@ rules, 2026-08-31).
   `points()`, CS008 P2), the wiring points, the one array / one spawn entry /
   one well entry / one collision pass rule, and the Dive: an entity that is
   `blocksClear: false` and not `anchored` must decide whether it survives a dive.
-- ⛔ **SEVEN SOAKS, AND THEY PROVE DIFFERENT THINGS ON DIFFERENT BOARDS.**
+- ⛔ **EIGHT SOAKS, AND THEY PROVE DIFFERENT THINGS ON DIFFERENT BOARDS.**
   `test-cs003-p5.js` is the Vaulter soak (level 2, the per-tick lane SPEED
   bound). `test-cs004-p5.js` runs the three-kind band (level 7, the exact-lane
   form). `test-cs005-p5.js` and `test-cs006-p5.js` run the full board (level 23);
@@ -103,9 +102,14 @@ rules, 2026-08-31).
   off, and compares a whole-board hash on every frame** (104,107). It also holds
   the node ceiling, the stall bound after a 60 s hidden gap, held voices ≤
   telegraphing Surgers, and every §7 event sounded. It stages the Start Depth
-  record (23) and one run's lives at the cap, in both sessions. ⛔ A future
-  changeset extends the pattern with an eighth file rather than widening a
-  closed one.
+  record (23) and one run's lives at the cap, in both sessions. ⛔
+  **`test-cs010-p5.js` plays that session twice, audio on both times**, with a
+  pause excursion and title-side OPTIONS added: once hashing `state` around
+  every `dangerInputs` call, once with a constant reading, one hash on every
+  frame (106,769). It also holds intensity in [0, 1], gate automation on bar
+  lines, no bare `.value`, the duck on D9's frames, the four dips, `rimGlow` off
+  play and the node ceiling. ⛔ A future changeset adds a ninth file rather
+  than widening a closed one.
 - ⛔ **`test-cs006-p5.js` carries the count-based form of the no-draw rule**, a
   function of the LEVEL: `spawnEnemy`'s 1 plus `pickSpawnLane`'s bounded
   `[1, C.SPAWN_LANE_TRIES]`, plus +0 at levels 1–2 and +1 from level 3. It needs
@@ -159,47 +163,40 @@ rules, 2026-08-31).
 - ⚠ **Every seat call is `sfx(`, and `test-cs009-p5.js` scans the built file for
   them.** Each call must name its `C.SFX` event as a string literal, and its
   arguments must hold no assignment.
-- ⛔ **KIT-AUDIO 0.3.0 (CS010 P1).** The path is track gain → sweep → limiter →
-  duck → dip → `music`. Every group is OPTIONAL and nothing drives one yet:
-  gates open (no tier), sweep open, duck and dip at unity. Without its group a
-  setter schedules nothing; the duck node itself is always built (CS009's). ⚠
-  **`scheduleStep` gained ONE line, the `onBeat` report** (it reads `beat`, never
-  intensity; `log/CS010.md` reading 1). ⛔ A tier needs `gating` AND the track's
-  `bar` (dividing `steps`), so P3's `bar: 16` goes in with the tiers. A gate flip
-  back before its bar line withdraws the waiting change. ⛔ The duck and dip pin
-  from their own breakpoints, never `.value`.
-- ⛔ **CS010 PLANNING FOUND THESE (MEASURED at `d40f222`, plan §1.4–1.6). Each
-  phase that meets one acts on it.**
-  - **A director that WRITES `state` passes every closed test.** It happens in
-    both of `test-cs009-p6.js`'s sessions and outside `audioFrame()`'s body, so
-    no hash sees it. The eighth soak spies `dangerInputs` (P5).
-  - **Any new `heat(` call turns `test-cs007-p2.js` red.** Read heat through
-    `heatT()`.
-  - **`19-sfx.js`'s code may not name `state`** (`test-cs009-p1.js:489`).
-  - **A new REQUIRED `createMusic` option makes `test-cs009-p1.js` throw**, so
-    new engine options are optional groups.
-  - **A duck in front of a limiter is swallowed**: 6 dB in, 1.9 dB out.
-  - ⚠ **The Surger tone alone renders at sample peak 1.106** at unity, which
-    clips at the destination. No changeset owns it.
-  - `IIRFilterNode` cannot be swept (no automatable parameter), so the sweep is
-    a biquad.
-- ⛔ **THE DIRECTOR IS LIVE (CS010 P2).** `audioFrame()` runs it, then
-  `setIntensity`, `setSweep` and `setDuck`, all ⛔ BEFORE `setState()`, so a track
-  starting on a frame builds its gates at that frame's level (P3's tiers). ⛔ Its
-  one board reader is top-level `dangerInputs(state, out)`; `test-cs010-p2.js`
-  hashes `state` around every call. `INT_W_COMBO` is wired and fed 0;
-  `INT_COMBO_MAX` is CS012's and unread. `INT_HEAT_MAX` is gone.
-  - ⛔ **A run resets the director only when play is entered from a non-run
-    screen** (not play, not the pause side), tracked by `Game`'s `audioRunLive`,
-    which `Game.reset()` clears. ⚠ A `startGame()` called while already on play
-    (the pinned soaks' restarts) does NOT reset. P5's soak should know.
-  - ✅ **A resume SKIPS the pause** (Paul, 2026-09-16). Pause-side frames call
-    `Director.hold()` (keep the level, forget the clock), so the first play
-    frame after a pause only takes the clock. Without it, R1's audio-clock dt
-    integrated the whole pause on resume. `DECISIONS.md`.
-  - ⚠ **R4 observed on the fake:** title → play closes the sweep toward 600 Hz
-    with τ 0.05 s while `title`'s 0.6 s crossfade plays, so its tail darkens in
-    ~0.15 s.
+- ⛔ **KIT-AUDIO 0.3.0 (CS010).** The path is track gain → sweep → limiter →
+  duck → dip → `music`. Every group is OPTIONAL (a new REQUIRED `createMusic`
+  option makes `test-cs009-p1.js` throw); the duck node itself is always built.
+  ⛔ A tier needs `gating` AND the track's `bar` (dividing `steps`). ⛔
+  `scheduleStep` has ONE line reading data, the `onBeat` report; it never reads
+  intensity. A gate flip back before its bar line withdraws the waiting change.
+  ⛔ The duck and dip pin from their own breakpoints, never `.value`. ⛔ The
+  headroom gate is the limiter's curve model and holds only at the rendered
+  settings, so `test-cs010-p1.js` pins `C.MUSIC_LIMIT` to D2's literals.
+- ⛔ **THE DIRECTOR (CS010).** `audioFrame()` runs it, then `setIntensity`,
+  `setSweep` and `setDuck`, ⛔ BEFORE `setState()`, so a starting track builds its
+  gates at that frame's level. ⛔ Its one board reader is top-level
+  `dangerInputs(state, out)`, which writes only `out`; **any new `heat(` call
+  turns `test-cs007-p2.js` red** (use `heatT()`), and **`19-sfx.js`'s code may not
+  name `state`** (`test-cs009-p1.js`). `INT_W_COMBO` is wired and fed 0;
+  `INT_COMBO_MAX` is CS012's. A Dive reads 0. The pause side calls
+  `Director.hold()`, so a resume skips the pause (Paul). ⚠ **A run resets the
+  director only when play is entered from a non-run screen** (`audioRunLive`,
+  cleared by `Game.reset()`): a `startGame()` called while already on play (the
+  pinned soaks' restarts) does NOT reset.
+- ⛔ **THE RIM PULSE is `Game`'s closure variable `rimGlow`**, set in
+  `audioFrame()` AFTER `MusicSys.update()` and 0 off play. ⛔ `audioFrame()`'s
+  body may not contain the text "draw" (`test-cs009-p3.js`), comments included.
+  ⚠ Outside the dim band it moves the rim's width only (the alpha caps at 1).
+- ⚠ **`Game.reset()` leaves the screen on play**, so a fixture's `frame(0)`
+  before `quitToTitle()` schedules real `pulse` notes on the fake at t = 0.
+- ⛔ **`test-cs010-p3.js` pins both labs' `LAB` copies to `C`**: a change to
+  `C.MUSIC_LIMIT`, `C.LAYER_THRESHOLD`, `C.LAYER_CROSSFADE` or `C.FILTER_*` is a
+  three-file edit.
+- ⚠ **Classic's intensity peaks at 0.668** (weights 0.85 without combo), so the
+  sweep never fully opens in Classic: GDD §19's "audible end to end" is not met
+  there. CS012 re-measures with the combo.
+- ⚠ **The Surger tone alone renders at sample peak 1.106** at unity, which clips
+  at the destination. No changeset owns it.
 - ⛔ **`MusicSys.setState()` BEFORE THE FIRST GESTURE IS DROPPED** (ported
   as-is: it returns on a null `ctx` without recording the name). That is why
   `audioFrame()` calls it every frame. ⛔ Never move it onto a screen change.
@@ -333,12 +330,13 @@ rules, 2026-08-31).
 - ⚠ **`CLAUDE.md` carries no telemetry rule**; whether it earns one is Paul's
   call.
 - ⚠ **Paul replaces `C.CREDITS_LINES` before ship.**
-- ✅ **Paul's music-lab note is in and ported** (2026-09-16): struck, never
-  swelled (above). Paul hears the struck tracks as better, and likely all PASS.
 - ⚠ **`test-cs009-p5.js`'s headroom sort compares exact floats.** At a tempo
   whose `stepDur` is not a binary fraction (e.g. 138 BPM), a back-to-back note
   pair reads as an overlap (0.5377 against 0.4201 with a 1e-9 tolerance). 120
   BPM is exact (0.125). A future tempo port repairs that fixture in place.
+- ⛔ **CS012 — the director's combo input and the Overdrive intensity
+  re-measure** (Paul's D6): `INT_W_COMBO` is fed 0 in Classic and nothing was
+  rescaled.
 - ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
   2 → 3.
@@ -350,49 +348,8 @@ rules, 2026-08-31).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS010 P5
+## Next up — ⛔ CS011 planning
 
-⛔ **Paste P5's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: the eighth soak,
-the docs, the close. What P3 and P4 left for it:
-
-- ⛔ **The rim pulse is a `Game` closure variable, `rimGlow`**, set in
-  `audioFrame()` AFTER `MusicSys.update()` and read by `draw()`. Nothing reaches
-  it from outside; `test-cs010-p4.js` reads it off the rim's drawn width.
-  ⛔ `audioFrame()`'s body may not contain the text "draw" (`test-cs009-p3.js`),
-  comments included.
-- ⚠ **`Game.reset()` leaves the screen on play**, so a fixture's `frame(0)`
-  before `quitToTitle()` schedules real `pulse` notes on the fake at t = 0.
-- ⚠ **Outside the dim band the rim pulse moves the width only** (the alpha
-  product caps at 1). D10's cap as written.
-- ⛔ **`test-cs010-p3.js` pins both labs' `LAB` copies to `C`**: music-lab's
-  `limit`, `gating`, `sweep` and sfx-lab's `gating`. A change to
-  `C.MUSIC_LIMIT`, `C.LAYER_THRESHOLD`, `C.LAYER_CROSSFADE` or `C.FILTER_*` is a
-  three-file edit.
-- ⚠ **`CLAUDE.md`'s music-lab bullet** ("Design instruments") predates
-  INTENSITY and TIER. P5's close should add them.
-
-⛔ **What every CS010 phase must not lose** (plan §0, answered by Paul
-2026-09-16):
-
-1. ✅ **Two earned layers on `pulse`: `cycle` tier 2 (0.25) and `tick` tier 3
-   (0.40).** The foundation is `melody`, `swell`, `bassline` and `heart`.
-   `title` is untiered. There is no danger layer.
-2. ✅ **The limiter: −24 dB, knee 0, ratio 20, 1 ms, 100 ms**, on the path
-   gate → track gain → sweep → limiter → duck → dip → `music`. `pulse` is at
-   Paul's lab gains and `title`'s ground at 0.45 (P3), and music-lab plays
-   limited.
-3. ⚠ **SETTLED — the Surger tone is audible over music at every tier.** After
-   the limiter, the gate is the curve model with the settings pinned (D16):
-   `pulse` 0.3512 and `title` 0.3408 against 0.45. The render peaks at 0.454 and
-   0.413.
-4. ⛔ **`scheduleStep` never reads intensity.** Tier changes latch to the bar
-   line in the SETTER. `LAYER_CROSSFADE` is 0.03 s, on the gate, never on a note.
-5. ⛔ **The director reads `state` through one top-level `dangerInputs`, writes
-   none of it, and draws nothing.** Counts are live and non-anchored; heat comes
-   through `heatT()`; combo is 0 in Classic. Intensity acts in play only, a Dive
-   reads 0, and a run starts from 0.
-6. ⚠ **SETTLED — struck, never swelled.** ✅ The articulation gate and COPY
-   TABLE's tempo and tier tests are in `test-cs010-p3.js` (P3).
-7. ✅ **`pulse`'s length target is ≥ 36 bars** (Paul, D13).
-8. ✅ **The rim pulses on `heart`'s onsets by the audio clock, in play only,**
-   with no fill and no `state` (D10, P4).
+⛔ **CS011 is planned in its own session** (`ROADMAP.md`: meta — kit profiles,
+local top-10 per mode, leaderboard wiring, achievements; GDD §15.1–15.5). It
+also owns the persistence carried above. Nothing from CS010 blocks it.

@@ -22,9 +22,9 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS007** | The run escalates: the heat clock and every value derived from it, GDD §8.1's introduction schedule, the spawner-stall call, telemetry as the tuning instrument | §8, §8.1, §15.6 |
 | **CS008** | ✅ **Shipped 2026-09-13.** The rim fix (P1: every arrival killable) and the rim sweep (P1b: a fire-holding crossing kills), then front of house: scoring and extra lives, mode and Start Depth, one text path, the HUD and death fragmentation, title → mode → Start Depth → play → game over → restart, pause from five sources, Options, Credits, a Controls page with rebinding, and the sixth soak through the front door. ⚠ Nine phases — Paul's scope call, 2026-09-13, plus P1b | §4.2, §4.4, §4.6, §6.1, §7, §9, §10.4–10.5, §13, §17 items 8, 13, 14 |
 | **CS009** | ✅ **Shipped 2026-09-16.** The audio engine: kit-audio (`AudioSys`, `MusicSys` with a stall-resyncing per-frame lookahead scheduler, the SFX player), the gesture unlock, `tools/music-lab.html` with SOLO, MUTE and PASS / FAIL per layer, the untiered `title` and `pulse` tracks, music by screen, OPTIONS' four volumes and MUSIC TRACK, `tools/sfx-lab.html`, the Classic SFX at their seats with the held Surger tone and the over-cap life sound, and the seventh soak (audio on and off, one hash). ⚠ Six phases plus a port commit; `drive` moved to CS012 | §4.4, §6.5, §10.5, §11.1–11.3, §11.7–11.8, §17 item 9 |
-| **CS010** | The intensity director: live-danger signal, filter sweep, two or three earned layers, the solo audition | §11.4–11.6 |
+| **CS010** | ✅ **Shipped 2026-09-16.** The intensity director: kit-audio 0.3.0 (bar-latched tier gates, the filter sweep, a limiter on the music, the menu duck and the event dips), a live-danger signal read through one `dangerInputs()` that writes no state, two earned layers on `pulse` (`cycle` tier 2, `tick` tier 3, both PASS), Paul's lab gains behind the limiter, music-lab's INTENSITY and TIER, the rim pulse on `heart`'s onsets, and the eighth soak. Five phases, as planned | §5, §11.1, §11.3–11.8, §17 item 9, §19 |
 | **CS011** | Meta: kit profiles, local top-10 per mode, leaderboard wiring, achievements | §15.1–15.5 |
-| **CS012** | Overdrive core: mode flags, Jump, combo multiplier, the Reaver, and the `drive` track (Overdrive's AUTO default, from CS009) | §11.7, §13, §14.2, §14.4, §14.6 |
+| **CS012** | Overdrive core: mode flags, Jump, combo multiplier, the Reaver, and the `drive` track (Overdrive's AUTO default, from CS009); the combo input to the intensity director and the Overdrive intensity re-measure (from CS010) | §11.4, §11.7, §13, §14.2, §14.4, §14.6 |
 | **CS013** | Overdrive tokens and the remaining enemies: five powerups, the Warden, the Mimic on probation | §14.1, §14.6 |
 | **CS014** | The ring-flight Dive, hard-capped at 4 s / 6 rings | §14.5 |
 | **CS015** | Onboarding: first-run prompts, attract mode, the teach-in-four-seconds pass on level 1 | §12 |
@@ -198,6 +198,39 @@ both tracks were re-articulated. Then he picked **120 BPM** for both and marked
 under the level he set, to hold the Surger tone's headroom gate. Paul's call:
 a limiter on the music, in CS010, buys it back. The VOICE bus is live and nothing feeds it (A3). A pad-only
 player is silent until a key, click or tap, and no changeset owns that.
+
+**CS010 held as ONE changeset of five phases and shipped its row.** kit-audio
+0.3.0 (P1), the director (P2, plus Paul's resume follow-up), the earned layers
+and Paul's gains (P3), the rim pulse (P4), and the eighth soak plus the close
+(P5). Paul answered all sixteen calls in the planning session.
+
+**What CS010 shipped against the row.** ⛔ **Music reacts to the board, not the
+level.** One top-level `dangerInputs(state, out)` reads live non-anchored
+enemies, the deepest of them, the last life and `heatT(level)`. kit-audio's
+`createDirector` smooths the mix asymmetrically on the audio clock (0.4 s up,
+2.5 s down). Play drives it, a Dive reads zero, pause holds it, and a run starts
+from 0. ⛔ **Tier changes latch to the bar line** in the setter; the scheduler
+still reads no intensity. `pulse`'s `cycle` enters at 0.25 and `tick` at 0.40.
+The foundation (melody included) is never gated, and there is no danger layer.
+A Butterworth sweep follows the level, 600 Hz → 18 kHz. ⛔ **A limiter on the
+music** (−24 dB, ratio 20) lets `pulse` play at exactly Paul's lab gains, and
+the Surger tone's headroom gate became the limiter's curve model. The menu duck
+is on the pause side only. The dips fire on `purge`, `purgeWeak`, `death` and
+`extraLife`. The rim pulses on `heart`'s onsets by the audio clock. music-lab
+gained INTENSITY and TIER, and plays limited. ⛔ **The eighth soak** hashes
+`state` around every `dangerInputs` call, and shows that a constant danger
+reading leaves the run's hash unchanged on every frame. No baseline moved.
+
+⚠ **What CS010 deliberately left.** **The combo input is CS012's**: Classic
+has no combo, so `INT_W_COMBO` is fed 0 and nothing was rescaled (Paul's D6).
+Classic's played intensity peaks at 0.668, so **the sweep never fully opens in
+Classic**, and GDD §19's "audible end to end" is not met by Classic play. CS012
+re-measures intensity on Overdrive boards once the combo exists. **`title` stays
+untiered** and nothing is tier 4. No ATK / REL / GATE controls in music-lab.
+**No persistence** (CS011). Every ear check is a skipped playtest: the tiers in
+play, the limiter in three browsers, the duck and dips, the rim pulse, and the
+Surger tone at every tier. Still unowned: the Surger tone's own 1.106 sample
+peak, the pad-only silence, the VOICE bus and the Dive's visual.
 
 ---
 

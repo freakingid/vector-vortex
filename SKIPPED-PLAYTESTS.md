@@ -253,6 +253,18 @@ for.
   speakers.
 - **Knobs:** `title`'s `ground` gain (music-lab, COPY TABLE).
 
+### CS010 P5 — the Surger tone at every tier, by ear on hardware
+- **Would have done:** played Start Depth 13 and 23 with `pulse` until `tick`
+  (tier 3) was in, then waited for a Surger to telegraph over the C section, on
+  laptop speakers, headphones and a phone; once more with a board thin enough
+  that only the foundation played.
+- **Trying to learn:** GDD §19's "Surger charge audible over music at every
+  tier, verified by ear on hardware". The suite holds it by the limiter-curve
+  model and unity gates (`test-cs009-p5.js`), which measures peaks, not what a
+  person hears; the render runs up to 2.2 dB over the model.
+- **Knobs:** `C.SFX.surgeCharge` `gain` (sfx-lab), `C.MUSIC_LIMIT` threshold,
+  `C.LAYER_THRESHOLD`, the tier gains in music-lab.
+
 ### CS010 P4 — the rim pulse over a busy rim
 - **Would have done:** played `pulse` from Start Depth 1 and 23 with a full
   rim (Vaulters hunting, Surgers telegraphing, shots out), and once in the dim

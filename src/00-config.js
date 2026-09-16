@@ -747,7 +747,7 @@ const C = {
   TELEMETRY_PLACEHOLDER: { maxCombo: 0 },
 
   // ---- Build / debug ------------------------------------------------------
-  GAME_VERSION:         "0.0.6",   // ⚠ 0.0.2 was never written here — see log/CS006.md
+  GAME_VERSION:         "0.0.7",   // ⚠ 0.0.2 was never written here — see log/CS006.md
   GAME_ID:              "vector-vortex",   // must match the Worker registry
 };
 

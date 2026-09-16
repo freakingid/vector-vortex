@@ -588,8 +588,11 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     16-audio-engine.js kit-audio: the context and four buses, the lookahead
                        scheduler, the SFX player. Reads no game global
     17-audio-tracks.js track tables (DATA, ported from music-lab)
-    18-audio-director.js kit-audio's createDirector: weighted, asymmetric
-                       smoothing. Its one board reader is dangerInputs() (23)
+    18-audio-director.js kit-audio's createDirector: five weighted inputs,
+                       one-pole ASYMMETRIC smoothing on the audio clock,
+                       reset() per run, hold() on the pause side. Reads no
+                       game global; its one board reader is dangerInputs()
+                       (23), which writes no state (test-cs010-p5.js)
     19-sfx.js          AudioSys / MusicSys / Sfx built from C; sfx(), the ONE
                        seat call; the Surger tone; musicStateFor()
     20-achievements.js
@@ -613,8 +616,11 @@ game logic it needs; drift here can only produce a bad *preview*, never a bad
 
 - **`tools/music-lab.html`** — ⛔ the porting source for every track table, and
   the home of the **per-layer solo button** that enforces the audition gate:
-  SOLO, MUTE, the PASS/FAIL mark, the TEMPO ladder and COPY TABLE. Its BLOCK A and BLOCK B are
-  `16-audio-engine.js` and `17-audio-tracks.js` verbatim (`test-cs009-p2.js`).
+  SOLO, MUTE, the PASS/FAIL mark, the TEMPO ladder, INTENSITY (the real
+  bar-latched setter and the sweep), TIER per PASS layer, and COPY TABLE, which
+  writes `tier`. It plays through the game's limiter. Its BLOCK A and BLOCK B are
+  `16-audio-engine.js` and `17-audio-tracks.js` verbatim (`test-cs009-p2.js`);
+  its `LAB` copies of `C` are pinned by `test-cs010-p3.js`.
 - **`tools/sfx-lab.html`** — ⛔ the porting source for every `C.SFX` recipe:
   2–3 candidates per event, ▶ alone, ▶ in context, a picked mark and COPY OUT.
   ⛔ **The build ships the picked candidate; port verbatim** (candidate A until
