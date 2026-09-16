@@ -2,7 +2,7 @@
 
 **Module:** `src/16-audio-engine.js`
 **Vendored from:** *originated here (Vector Vortex), destined for coinless-kit as `kit-audio`*
-**Current version:** `0.2.0`
+**Current version:** `0.3.0`
 **Depends on:** nothing. The host supplies a noise generator and calls `unlock()` from a user gesture.
 
 ---
@@ -54,26 +54,40 @@ can fail, and that is the normal silent path: `unlock()` returns `false`.
 | `fadeOut` | yes | Seconds. The fade when `setState()` names a silence. |
 | `noise` | yes | `() => number in [0, 1)`. Fills the 2 s noise buffer once. Pass a **seeded** generator, and the host keeps its determinism. |
 | `layerSink` | no | `({ ctx, track, index, layer, out }) => node \| null`, called per layer on each `setState()`. Return a node the layer's gate should feed (the host connects it onward to `out`), or `null` for the plain path. This is where a lab hangs SOLO and MUTE. |
+| `gating` | no (0.3.0) | `{ thresholds: { 2, 3, 4 }, ramp }`. Tier gates and `setIntensity()`. Required by any track with a `tier`. |
+| `sweep` | no (0.3.0) | `{ minHz, maxHz, q, tc }`. A low-pass after the track gain, built fully open, and `setSweep()`. `q` is in dB for a low-pass: −3.0103 puts no peak at the cutoff. |
+| `limiter` | no (0.3.0) | `{ threshold, knee, ratio, attack, release }`. A compressor node after the sweep. ⚠ The platform adds automatic makeup gain. |
+| `duck` | no (0.3.0) | `{ gain, ramp, dipGain, dipHold }`. `setDuck()` and `dip()`; builds the dip node after the duck. |
+| `onBeat` | no (0.3.0) | `(t) => void`, called once for each note of a `beat: true` layer as it is scheduled, with its start time on the context clock. |
+
+⛔ **A present group requires every number in it; an absent group builds no node,
+and its setters change nothing.** A host that passes none gets 0.2.0's music.
 
 | Surface | Meaning |
 |---|---|
 | `setState(name)` | Crossfade to `tracks[name]`, or fade to silence if there is none. Idempotent for the current name. |
 | `update()` | Call **once per frame**. Schedules the lookahead window, and resyncs after a stall (below). |
+| `setIntensity(f)` | Clamps `f` to 0..1 (non-finite reads 0) and holds it. For each tiered gate whose target flips (tier 1 and untiered are always 1; tier N is 1 when `f >= thresholds[N]`), ⛔ **schedules the change at the next bar line on the scheduler's grid**: a pin at the bar line and a linear ramp over `gating.ramp`. A flip back before that bar line withdraws the waiting change. Idempotent. A new track's gates are built straight at the held intensity's targets. |
+| `setSweep(f)` | Clamps and holds `f`; moves the low-pass to `minHz · (maxHz / minHz)^f` with `setTargetAtTime(…, now, tc)`. Idempotent. Held before the graph exists, it is the level the filter is built at. |
+| `setDuck(on)` | Idempotent. Ramps the duck to `duck.gain` or 1 over `duck.ramp`, from the level it has reached. Held before a context exists, it is the level the duck is built at. |
+| `dip()` | The dip node: down to `dipGain` over `ramp`, held `dipHold`, back to 1 over `ramp`. A dip during a dip starts from the level reached. |
 | `scheduleStep(step, t)` / `playNote(layer, cell, t, i)` / `ensureGraph()` / `ensureNoiseBuf()` | Internal, exposed for tests and labs. Each is ctx-guarded. |
-| `state`, `track`, `step`, `nextStepTime`, `duck`, `trackGain`, `layerGates`, `noiseBuf` | Read-only for a host. |
+| `state`, `track`, `step`, `nextStepTime`, `duck`, `dipNode`, `limiter`, `sweep`, `inlet`, `trackGain`, `layerGates`, `noiseBuf`, `intensity`, `sweepLevel`, `ducked` | Read-only for a host. |
 
 **Track contract (DATA):**
 
 ```js
-{ stepDur, steps, layers: [ { name, type, cutoff, cutoffTo, cutoffTime, q, hp,
-    detune, drop, dropTime, noise, gain, atk, rel, audition,
+{ stepDur, steps, bar, layers: [ { name, tier, type, cutoff, cutoffTo, cutoffTime,
+    q, hp, detune, drop, dropTime, noise, gain, atk, rel, audition, beat,
     steps: [ { f, dur, g } | null ] } ] }
 ```
 
 - `audition` is `"pass"`, `"fail"` or absent. It is a mark for whoever tiers the track later. ⛔ The scheduler never reads it.
-- ⛔ **`tier` is refused in 0.1.0.** A tier outside `1..4` is always an error. Any tier at all is an error until an intensity setter exists; without one, a tier is a gate nobody moves.
+- ⛔ **A `tier` outside `1..4` is always an error.** A tier in `1..4` (0.3.0) needs the `gating` option and the track's `bar`; without either it throws.
+- `bar` (0.3.0) is steps per bar, a positive integer dividing `steps`. It is where a gate change latches.
+- `beat` (0.3.0) is `true` or absent. Each note of a marked layer is reported to `onBeat`.
 
-**Signal path:** note envelope → layer gate (open) → track gain (crossfaded) → duck (unity) → `music` bus → `master` → destination.
+**Signal path:** note envelope → layer gate → track gain (crossfaded) → [sweep] → [limiter] → duck → [dip] → `music` bus → `master` → destination. Bracketed nodes exist only with their group. ⛔ **The duck and dip sit after the limiter**: in front of it, a 6 dB duck comes out as about 2 dB.
 
 ```js
 const engine = createAudioEngine({ volRamp: 0.03, vol: { master: 1, music: 1, sfx: 1, voice: 1 } });
@@ -118,8 +132,9 @@ gain → `sfx` bus.
 **Three behaviours worth knowing before wiring it**
 
 1. ⛔ **`scheduleStep` never consults intensity.** Every layer is always
-   scheduled; gating is a downstream gain node. Note timing is therefore fixed
-   whatever a director does.
+   scheduled; gating is a downstream gain node, and the bar-line latch lives in
+   `setIntensity()`. Note timing is therefore fixed whatever a director does.
+   Delete every `tier` and every gate builds open: the retreat is data-only.
 2. ⛔ **Stall resync.** When `nextStepTime` is more than one lookahead behind
    the clock (a hidden tab runs no frames), `update()` advances the cursor and
    the clock by the whole number of missed steps and schedules none of them.
@@ -186,3 +201,34 @@ suite checks this slice for `C.`, its game globals and a platform random call.
 
 **Backport status.** `not yet`.
 
+### 2026-09-16 — the gates, the sweep, the limiter, the duck (`VERSION` 0.2.0 → 0.3.0)
+
+**What changed.** Additive: four optional option groups and one callback.
+`gating` ports Orbital Overhaul's `setIntensity` gate loop and `setDuck`
+(`5abd37a` 2425–2460), and the loader now accepts a `tier` in
+`1..4` given `gating` and the track's `bar`. Three new departures:
+
+5. **The bar-line latch.** The source ramped each gate at `currentTime` and was
+   called once per wave. Here a flipped gate's change waits for the next bar
+   line on the scheduler's own grid (`nextStepTime`, `step`, `bar`), and a flip
+   back before it withdraws the change.
+6. **The sweep and the limiter**, built once in `ensureGraph()`, between the
+   track gain and the duck.
+7. **The dip node** after the duck, and **`onBeat(t)`**, reported from
+   `scheduleStep` for each note of a `beat: true` layer. That is the one line
+   `scheduleStep` gained; it reads a data mark, never intensity.
+
+The duck and the dip ramp from the level this module last scheduled, never from
+a param's `.value`. Without a group nothing is built and its setters change
+nothing, so a 0.2.0 host is unchanged.
+
+**Why.** Vector Vortex CS010 P1 (GDD §11.4–11.6, `PLANNED-FEATURES-CS010.md`
+§3). The game's intensity director drives the gates and the sweep; the menu
+duck and event dips follow its screens; the limiter lets a track run at the
+composer's balance with its peaks held under a gameplay cue.
+
+**Game-agnostic?** Yes. It names no game concept: thresholds, bar length, the
+filter range, the limiter's settings, the duck levels and what `onBeat` does
+belong to the host. The host's suite scans this slice for `C.` and `state`.
+
+**Backport status.** `not yet`.

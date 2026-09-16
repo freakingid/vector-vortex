@@ -538,7 +538,13 @@ SY.enemies.push(u1, u2);
 
 // ---------------------------------------------------------------------------
 // ⛔ THE HEADROOM GATE (GDD 11.8, SETTLED). At the default volumes: the tone's
-// peak at master ≥ HEADROOM_RATIO × the loudest overlap of note peaks at master.
+// peak at master ≥ HEADROOM_RATIO × the loudest music moment at master.
+// ⛔ CS010 P1 rewrote the two headroom assertions in place to Paul's D16: the
+// music passes a limiter, so the loudest overlap of note peaks is the limiter's
+// INPUT. It goes through the Web Audio spec's hard-knee static curve and its
+// makeup gain, then the duck, the dip and the buses. The model is exact only at
+// knee 0, which is asserted first. It is not a bound on the rendered transient
+// (plan §1.7); the settings are pinned to the rendered ones instead.
 // ---------------------------------------------------------------------------
 {
   const vols = ["master", "music", "sfx"].map(b => A.vol[b]);
@@ -566,10 +572,16 @@ SY.enemies.push(u1, u2);
     let sum = 0, loudest = 0;
     for (const e of ev) { sum += e[1]; loudest = Math.max(loudest, sum); }
     const trackPeak = Math.max(...rec.automation.filter(x => x.node === M.trackGain && x.param === "gain").map(x => x.v));
-    const musicPeak = loudest * trackPeak * M.duck.gain.value * A.vol.music;
+    const L = M.limiter;
+    H.assert(L && L.kind === "compressor", `fixture: ${name} plays through the limiter`);
+    H.eq(L.knee.value, 0, `⛔ ${name}: the limiter's knee is 0, so the curve model is exact (D16)`);
+    const T = L.threshold.value, Rt = L.ratio.value;
+    const xdB = 20 * Math.log10(loudest * trackPeak);
+    const ydB = (xdB > T ? T + (xdB - T) / Rt : xdB) - 0.6 * (T - T / Rt);   // curve, then makeup
+    const musicPeak = Math.pow(10, ydB / 20) * M.duck.gain.value * M.dipNode.gain.value * A.vol.music * A.vol.master;
     H.assert(notes.length > 50, `fixture: ${name}'s loop scheduled its notes (${notes.length})`);
-    H.assert(tonePeak >= HEADROOM_RATIO * musicPeak,
-             `⛔ headroom on ${name}: surgeCharge ${tonePeak.toFixed(3)} ≥ ${HEADROOM_RATIO} × the loudest moment ${musicPeak.toFixed(4)}`);
+    H.assert(tonePeak * A.vol.master >= HEADROOM_RATIO * musicPeak,
+             `⛔ headroom on ${name}: surgeCharge ${(tonePeak * A.vol.master).toFixed(3)} ≥ ${HEADROOM_RATIO} × the limited loudest moment ${musicPeak.toFixed(4)} (in ${(loudest * trackPeak).toFixed(4)})`);
     M.setState(Y.MUSIC_SILENCE);
   }
 }

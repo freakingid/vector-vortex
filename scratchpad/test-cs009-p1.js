@@ -97,7 +97,7 @@ function inputOpts(C, extra) {
   const X = H.buildGame();
   const { C, AudioSys, MusicSys } = X;
   H.assert(X._audio === null, "the default build installs no fake");
-  H.eq(X.AUDIO_VERSION, "0.2.0", "kit-audio is 0.2.0");   // CS009 P4: the SFX player, MINOR
+  H.eq(X.AUDIO_VERSION, "0.3.0", "kit-audio is 0.3.0");   // CS010 P1: the gates, sweep, limiter and duck, MINOR
   H.assert(AudioSys && MusicSys, "AudioSys and MusicSys exist");
   for (const k of ["AUDIO_NOISE_SEED", "AUDIO_VOL_RAMP"]) hasKnob(X, k, null, H);
   hasKnob(X, "AUDIO_VOL_STEPS", { def: 10 }, H);
@@ -262,9 +262,14 @@ function throwsWith(f, re) {
     H.assert(throwsWith(make(oneLayer({ tier })), /tier must be an integer in 1\.\.4/),
       `⛔ the loader refuses tier ${JSON.stringify(tier)} as outside 1..4`);
   }
+  // CS010 P1 rewrote these in place: the setter is ported, so a tier in 1..4 is
+  // accepted, given the gating group and the track's bar.
+  const gating = { thresholds: C.LAYER_THRESHOLD, ramp: C.LAYER_CROSSFADE };
   for (const tier of [1, 2, 3, 4]) {
-    H.assert(throwsWith(make(oneLayer({ tier })), /tier is not supported/),
-      `⛔ the loader refuses tier ${tier} in CS009 (A6)`);
+    const t = oneLayer({ tier });
+    t.t.bar = 4;
+    H.assert(!throwsWith(() => XA.createMusic(A, musicOpts(t, { gating })), /./),
+      `⛔ the loader accepts tier ${tier} (with gating and bar)`);
   }
   H.assert(throwsWith(make(oneLayer({ audition: "maybe" })), /audition must be/), "the loader refuses a bad audition mark");
   for (const audition of ["pass", "fail", undefined]) {
@@ -321,14 +326,22 @@ function distinctStarts(from) {
   const M = XA.createMusic(A, musicOpts({ syn: SYN, quiet: null }, {
     layerSink: arg => { sinks.push(arg); if (arg.index !== 1) return null; const n = arg.ctx.createGain(); n.connect(arg.out); return n; },
   }));
-  H.assert(!("intensity" in M) && !("setIntensity" in M) && !("setDuck" in M),
-    "⛔ the intensity setter and menu ducking are not ported (CS010)");
+  H.assert("intensity" in M && typeof M.setIntensity === "function" && typeof M.setDuck === "function",
+    "⛔ the intensity setter and menu ducking are ported (CS010)");
+  // The game's instance, for the route below (CS010 P1): read before the clear.
+  const GM = XA.MusicSys;
+  GM.setState("title");
+  const feeds = (from, to) => !!from && !!to && rec.connections.some(c => c.from === from && c.to === to);
+  const gameRoute = feeds(GM.trackGain, GM.sweep) && feeds(GM.sweep, GM.limiter) && feeds(GM.limiter, GM.duck) &&
+    feeds(GM.duck, GM.dipNode) && feeds(GM.dipNode, A.music) && GM.limiter.kind === "compressor";
+  GM.setState(XA.MUSIC_SILENCE);
   A.ctx.currentTime = 1.0;
   rec.clear();
   M.setState("syn");
   H.assert(M.duck && M.duck.gain.value === 1, "the duck node is built at unity");
   H.assert(rec.connections.some(c => c.from === M.duck && c.to === A.music), "the duck feeds the music bus");
-  H.assert(M.trackGain && rec.connections.some(c => c.from === M.trackGain && c.to === M.duck), "the track gain feeds the duck");
+  H.assert(M.trackGain && rec.connections.some(c => c.from === M.trackGain && c.to === M.duck) && gameRoute,
+    "the track gain feeds the duck with no groups, and the game's goes track gain → sweep → limiter → duck → dip → music");
   H.eq(M.layerGates.length, SYN_LAYERS.length, "one gate per layer");
   H.assert(M.layerGates.every(g => g.node.gain.value === 1), "every gate is open");
 

@@ -151,6 +151,12 @@ function fakeAudio() {
     createGain() { return node(this, "gain", { gain: 1 }); }
     createBiquadFilter() { const n = node(this, "biquad", { frequency: 350, Q: 1, gain: 0 }); n.type = "lowpass"; return n; }
     createOscillator() { const n = node(this, "oscillator", { frequency: 440, detune: 0 }, true); n.type = "sine"; return n; }
+    // CS010 P1: the music limiter. Chromium's defaults; `reduction` stays 0 (no sound).
+    createDynamicsCompressor() {
+      const n = node(this, "compressor", { threshold: -24, knee: 30, ratio: 12, attack: 0.003, release: 0.25 });
+      n.reduction = 0;
+      return n;
+    }
     createBufferSource() { const n = node(this, "bufferSource", { playbackRate: 1 }, true); n.buffer = null; return n; }
     createBuffer(channels, length, sampleRate) {
       rec.buffers++;

@@ -132,21 +132,27 @@
 // a director does later.
 //
 // createMusic() is Orbital Overhaul's music system (commit 5abd37a), ported.
-// It departs from that source in exactly four places, each marked DEPARTURE
-// below and each asserted by test-cs009-p1.js:
+// It departs from that source in seven places, each marked DEPARTURE below.
+// 1-4 are asserted by test-cs009-p1.js, 5-7 by test-cs010-p1.js:
 //   1. the noise buffer is filled from the injected generator;
 //   2. update() RESYNCS after a stall instead of bursting every missed note;
 //   3. no comment names the browser audio API by the word the host's
 //      vocabulary scan bans;
 //   4. opts.layerSink, so a lab's per-layer SOLO/MUTE nodes live outside this
-//      code.
-// Not ported (0.1.0): the intensity setter and menu ducking. Every layer gate
-// and the duck node are built at unity.
+//      code;
+//   5. (0.3.0) setIntensity() LATCHES each gate change to the next bar line
+//      on the scheduler's own grid; the source ramped at currentTime;
+//   6. (0.3.0) the sweep and the limiter, built once, between the track gain
+//      and the duck;
+//   7. (0.3.0) the dip node after the duck, and the onBeat report.
+// Ported in 0.3.0: the intensity setter's gate loop and setDuck(). Each new
+// group (gating, sweep, limiter, duck) is OPTIONAL: an absent group builds no
+// node, and the music behaves as 0.2.0 did.
 //
 // createSfxPlayer() (0.2.0) is new here, not a port: one-shot and held voices
 // built from recipe DATA, into the sfx bus. Its noise is injected too.
 
-const AUDIO_VERSION = "0.2.0";
+const AUDIO_VERSION = "0.3.0";
 
 // The four buses, in build order. master goes to the output; the other three
 // go to master. A bus nothing feeds yet is still built, so its volume row works.
@@ -247,18 +253,29 @@ function createAudioEngine(options) {
   return engine;
 }
 
+// An optional group of numbers: null when absent, and every named field
+// required when present (a present group is the host saying it tunes them).
+function audioGroup(opts, name, fields) {
+  const g = opts[name];
+  if (g === undefined) return null;
+  if (!g || typeof g !== "object") throw new Error("createMusic: options." + name + " must be an object");
+  for (let i = 0; i < fields.length; i++) audioRequireNum(g, "createMusic: options." + name, fields[i]);
+  return g;
+}
+
 // The track loader. A track is DATA (GDD 11.3):
-//   { stepDur, steps, layers: [ { name, type, cutoff, cutoffTo, cutoffTime, q,
-//     hp, detune, drop, dropTime, noise, gain, atk, rel, audition,
-//     steps: [cell | null] } ] }      cell = { f, dur, g }
+//   { stepDur, steps, bar, layers: [ { name, tier, type, cutoff, cutoffTo,
+//     cutoffTime, q, hp, detune, drop, dropTime, noise, gain, atk, rel,
+//     audition, beat, steps: [cell | null] } ] }      cell = { f, dur, g }
 // A track may be null: a named silence.
-// ⛔ `tier` IS REFUSED IN 0.1.0. A tier outside 1..4 is always an error (a
-// threshold table has no key for it, so the layer would be silent forever).
-// Any tier at all is an error until the intensity setter is ported: without
-// it, a tier would be a gate nobody opens or closes.
+// ⛔ A `tier` outside 1..4 is always an error (a threshold table has no key for
+// it, so the layer would be silent forever). A tier in 1..4 needs the gating
+// group, or it is a gate nobody opens or closes, and the track's `bar` (steps
+// per bar, dividing `steps`), or there is no bar line to latch it to.
 // `audition` is "pass", "fail" or absent. It is a mark for whoever tiers the
 // track later, and the scheduler never reads it.
-function audioCheckTracks(tracks) {
+// `beat` is true or absent: each note of a marked layer is reported to onBeat.
+function audioCheckTracks(tracks, gating) {
   if (!tracks || typeof tracks !== "object") throw new Error("createMusic: options.tracks must be an object");
   const names = Object.keys(tracks);
   for (let n = 0; n < names.length; n++) {
@@ -269,6 +286,9 @@ function audioCheckTracks(tracks) {
     if (typeof track.stepDur !== "number" || !(track.stepDur > 0)) throw new Error(at + ": stepDur must be > 0");
     if (!Number.isInteger(track.steps) || track.steps < 1) throw new Error(at + ": steps must be a positive integer");
     if (!Array.isArray(track.layers)) throw new Error(at + ": layers must be an array");
+    if (track.bar !== undefined && (!Number.isInteger(track.bar) || track.bar < 1 || track.steps % track.bar !== 0)) {
+      throw new Error(at + ": bar must be a positive integer that divides steps");
+    }
     for (let i = 0; i < track.layers.length; i++) {
       const layer = track.layers[i];
       const la = at + " layer " + i;
@@ -277,24 +297,52 @@ function audioCheckTracks(tracks) {
         if (!Number.isInteger(layer.tier) || layer.tier < 1 || layer.tier > 4) {
           throw new Error(la + ": tier must be an integer in 1..4");
         }
-        throw new Error(la + ": tier is not supported in kit-audio " + AUDIO_VERSION + " (no intensity gating)");
+        if (!gating) throw new Error(la + ": a tier needs options.gating");
+        if (track.bar === undefined) throw new Error(la + ": a tier needs the track's bar");
       }
       if (layer.audition !== undefined && layer.audition !== "pass" && layer.audition !== "fail") {
         throw new Error(la + ": audition must be \"pass\", \"fail\" or absent");
       }
+      if (layer.beat !== undefined && layer.beat !== true) throw new Error(la + ": beat must be true or absent");
     }
   }
 }
 
-// createMusic(engine, { tracks, lookahead, crossfade, fadeOut, noise, layerSink })
+// A gain's level at time t, off the breakpoints this module scheduled on it
+// ([[t, v], ...], linear between them, flat outside). ⛔ Never a param's
+// `.value`: during a ramp, and on a recording fake, that is not the level now.
+function audioLevelAt(points, t) {
+  if (!points.length || t <= points[0][0]) return points.length ? points[0][1] : 1;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1], b = points[i];
+    if (t < b[0]) return b[0] === a[0] ? b[1] : a[1] + (b[1] - a[1]) * (t - a[0]) / (b[0] - a[0]);
+  }
+  return points[points.length - 1][1];
+}
+
+function audioClamp01(f) {
+  return typeof f === "number" && isFinite(f) ? Math.max(0, Math.min(1, f)) : 0;
+}
+
+// createMusic(engine, { tracks, lookahead, crossfade, fadeOut, noise, layerSink,
+//                       gating, sweep, limiter, duck, onBeat })
 //   tracks     { name: track | null }, checked by audioCheckTracks
 //   lookahead  s — each update(), schedule every step starting inside this window
 //   crossfade  s — track-to-track fade on setState()
 //   fadeOut    s — the fade when setState() names a silence
 //   noise      () => number in [0, 1) — fills the noise buffer
 //   layerSink  optional ({ ctx, track, index, layer, out }) => node | null
+// The optional groups (0.3.0). Absent, a group builds no node and changes nothing:
+//   gating     { thresholds: { 2, 3, 4 }, ramp } — tier gates and setIntensity(f)
+//   sweep      { minHz, maxHz, q, tc } — a low-pass and setSweep(f)
+//   limiter    { threshold, knee, ratio, attack, release } — a compressor node
+//   duck       { gain, ramp, dipGain, dipHold } — setDuck(on) and dip()
+//   onBeat     optional (t) => void — each note of a `beat: true` layer, at its start
 //
-// Signal path: note envelopes -> layer gate -> [track gain, crossfaded] -> duck -> engine.music
+// Signal path: note envelopes -> layer gate -> [track gain, crossfaded]
+//   -> [sweep] -> [limiter] -> duck -> [dip] -> engine.music
+// ⛔ The duck and the dip sit AFTER the limiter: in front of it, a 6 dB duck
+// comes out as about 2 dB.
 function createMusic(engine, options) {
   if (!engine || typeof engine.unlock !== "function") {
     throw new Error("createMusic: engine must come from createAudioEngine()");
@@ -311,25 +359,179 @@ function createMusic(engine, options) {
   // should feed (which the host has connected onward to `out`), or null for
   // the plain path. A lab hangs SOLO and MUTE here; a game passes none.
   const layerSink = typeof opts.layerSink === "function" ? opts.layerSink : null;
+  const gating   = audioGroup(opts, "gating", ["ramp"]);
+  if (gating) {
+    if (!gating.thresholds || typeof gating.thresholds !== "object") {
+      throw new Error("createMusic: options.gating.thresholds must be an object");
+    }
+    for (const tier of [2, 3, 4]) audioRequireNum(gating.thresholds, "createMusic: options.gating.thresholds", tier);
+  }
+  const sweepOpts = audioGroup(opts, "sweep", ["minHz", "maxHz", "q", "tc"]);
+  const limitOpts = audioGroup(opts, "limiter", ["threshold", "knee", "ratio", "attack", "release"]);
+  const duckOpts  = audioGroup(opts, "duck", ["gain", "ramp", "dipGain", "dipHold"]);
+  if (opts.onBeat !== undefined && typeof opts.onBeat !== "function") {
+    throw new Error("createMusic: options.onBeat must be a function");
+  }
+  const onBeat = opts.onBeat || null;
   const tracks = opts.tracks === undefined ? {} : opts.tracks;
-  audioCheckTracks(tracks);
+  audioCheckTracks(tracks, gating);
+  const sweepHz = f => sweepOpts.minHz * Math.pow(sweepOpts.maxHz / sweepOpts.minHz, f);
 
   return {
-    duck: null,          // GainNode: track graph -> engine.music. ⛔ unity in 0.1.0
+    duck: null,          // GainNode: the menu duck, after the limiter. Unity without the duck group
+    dipNode: null,       // GainNode after the duck (duck group only): the event dips
+    limiter: null,       // compressor node (limiter group only)
+    sweep: null,         // low-pass BiquadFilterNode (sweep group only)
+    inlet: null,         // the node a track gain feeds: the first of sweep, limiter, duck
     trackGain: null,     // GainNode for the currently-scheduled track; replaced (crossfaded) on setState
     state: "off",        // current track name, or a name with no track (silence)
     track: null,         // the active step table, or null for a silence
     step: 0,             // scheduler cursor into track.steps
     nextStepTime: 0,     // absolute ctx time of the next step to schedule
-    layerGates: null,    // [{ node }] parallel to this.track.layers, or null
+    layerGates: null,    // [{ node, tier, target, from, at }] parallel to this.track.layers, or null
     noiseBuf: null,      // lazily-built 2 s mono white-noise buffer, for `noise: true` layers
+    intensity: 0,        // 0..1, held by setIntensity(); read only by the gates
+    sweepLevel: 1,       // 0..1, held by setSweep(); 1 is fully open
+    sweepTarget: null,   // Hz last targeted, so a per-frame setSweep() is idempotent
+    ducked: false,       // last duck target, so a per-frame setDuck() is idempotent
+    duckLevels: [],      // breakpoints scheduled on the duck (audioLevelAt)
+    dipLevels: [],       // breakpoints scheduled on the dip
 
-    // Lazily build the duck node once the bus graph exists (first user gesture).
+    // Lazily build the post-track chain once the bus graph exists (first user
+    // gesture), downstream first. Each node is built ONCE per graph, at the
+    // level held so far: a level, not a change.
     ensureGraph() {
       if (this.duck || !engine.ctx || !engine.music) return;
-      this.duck = engine.ctx.createGain();
-      this.duck.gain.value = 1.0;
-      this.duck.connect(engine.music);
+      const ctx = engine.ctx;
+      let out = engine.music;
+      if (duckOpts) {
+        this.dipNode = ctx.createGain();
+        this.dipNode.gain.value = 1.0;
+        this.dipNode.connect(out);
+        out = this.dipNode;
+      }
+      this.duck = ctx.createGain();
+      this.duck.gain.value = this.ducked ? duckOpts.gain : 1.0;   // honour a duck asked for before the graph
+      this.duck.connect(out);
+      out = this.duck;
+      if (limitOpts) {
+        const l = ctx.createDynamicsCompressor();
+        l.threshold.value = limitOpts.threshold;
+        l.knee.value = limitOpts.knee;
+        l.ratio.value = limitOpts.ratio;
+        l.attack.value = limitOpts.attack;
+        l.release.value = limitOpts.release;
+        l.connect(out);
+        this.limiter = l;
+        out = l;
+      }
+      if (sweepOpts) {
+        const s = ctx.createBiquadFilter();
+        s.type = "lowpass";
+        s.Q.value = sweepOpts.q;
+        this.sweepTarget = sweepHz(this.sweepLevel);
+        s.frequency.value = this.sweepTarget;
+        s.connect(out);
+        this.sweep = s;
+        out = s;
+      }
+      this.inlet = out;
+    },
+
+    // A layer's gate level at the held intensity: 1 or 0, never between.
+    gateTarget(tier) {
+      if (!gating || !tier || tier === 1) return 1;
+      return this.intensity >= gating.thresholds[tier] ? 1 : 0;
+    },
+
+    // The first bar line at or after `now`, on the scheduler's own grid: the
+    // step under the cursor starts at nextStepTime, and a bar starts on every
+    // step index divisible by the track's `bar`.
+    nextBar(now) {
+      const stepDur = this.track.stepDur, bar = this.track.bar;
+      let k = Math.ceil((now - this.nextStepTime) / stepDur - 1e-9);
+      const idx = (((this.step + k) % bar) + bar) % bar;
+      if (idx) k += bar - idx;
+      return this.nextStepTime + k * stepDur;
+    },
+
+    // The intensity setter, 0..1, clamped. OO's gate loop, idempotent: a gate
+    // moves only when its target flips. DEPARTURE 5: ⛔ THE CHANGE LATCHES TO
+    // THE NEXT BAR LINE, where the gate ramps over gating.ramp; the source
+    // ramped at currentTime, and a layer entering mid-phrase sounds like a bug.
+    // A flip back before that bar line withdraws the waiting change.
+    setIntensity(f) {
+      this.intensity = audioClamp01(f);
+      if (!engine.ctx || !gating || !this.track || !this.layerGates) return;
+      const now = engine.ctx.currentTime;
+      let tBar = null;
+      for (const lg of this.layerGates) {
+        const target = this.gateTarget(lg.tier);
+        if (target === lg.target) continue;
+        const prev = lg.target, p = lg.node.gain;
+        lg.target = target;
+        if (lg.at >= now) {                      // still waiting for its bar line
+          p.cancelScheduledValues(lg.at);
+          const back = target === lg.from;
+          lg.at = -Infinity;
+          if (back) continue;
+        }
+        if (tBar === null) tBar = this.nextBar(now);
+        lg.from = prev;
+        lg.at = tBar;
+        p.cancelScheduledValues(tBar);
+        p.setValueAtTime(prev, tBar);
+        p.linearRampToValueAtTime(target, tBar + gating.ramp);
+      }
+    },
+
+    // The sweep, 0..1 (1 fully open): minHz * (maxHz / minHz)^f, moved with a
+    // time constant so it never steps. It adds no notes, so it does not latch.
+    setSweep(f) {
+      this.sweepLevel = audioClamp01(f);
+      if (!engine.ctx || !sweepOpts) return;
+      this.ensureGraph();
+      if (!this.sweep) return;
+      const hz = sweepHz(this.sweepLevel);
+      if (hz === this.sweepTarget) return;
+      this.sweepTarget = hz;
+      this.sweep.frequency.setTargetAtTime(hz, engine.ctx.currentTime, sweepOpts.tc);
+    },
+
+    // The menu duck, OO's setDuck: idempotent under per-frame calls, and ⛔ a
+    // RAMP over duck.ramp, never a bare .value set.
+    setDuck(on) {
+      if (!duckOpts) return;
+      on = !!on;
+      if (on === this.ducked) return;
+      if (!engine.ctx) { this.ducked = on; return; }   // no graph yet: ensureGraph honours it
+      this.ensureGraph();                              // build at the CURRENT level first
+      this.ducked = on;
+      if (!this.duck) return;
+      const t = engine.ctx.currentTime, p = this.duck.gain;
+      const from = audioLevelAt(this.duckLevels, t), to = on ? duckOpts.gain : 1.0;
+      p.cancelScheduledValues(t);
+      p.setValueAtTime(from, t);
+      p.linearRampToValueAtTime(to, t + duckOpts.ramp);
+      this.duckLevels = [[t, from], [t + duckOpts.ramp, to]];
+    },
+
+    // An event dip (DEPARTURE 7): down to duck.dipGain over duck.ramp, held
+    // duck.dipHold, back to unity over duck.ramp. Its own node, so a dip inside
+    // a duck multiplies and neither cancels the other. A dip during a dip
+    // starts again from the level it has reached.
+    dip() {
+      if (!duckOpts || !engine.ctx) return;
+      this.ensureGraph();
+      if (!this.dipNode) return;
+      const t = engine.ctx.currentTime, p = this.dipNode.gain, r = duckOpts.ramp;
+      const from = audioLevelAt(this.dipLevels, t), low = duckOpts.dipGain;
+      p.cancelScheduledValues(t);
+      p.setValueAtTime(from, t);
+      p.linearRampToValueAtTime(low, t + r);
+      p.setValueAtTime(low, t + r + duckOpts.dipHold);
+      p.linearRampToValueAtTime(1.0, t + r + duckOpts.dipHold + r);
+      this.dipLevels = [[t, from], [t + r, low], [t + r + duckOpts.dipHold, low], [t + r + duckOpts.dipHold + r, 1.0]];
     },
 
     // Crossfade to a named track. Fades out and retires the previous track's
@@ -359,16 +561,19 @@ function createMusic(engine, options) {
         const g = ctx.createGain();
         g.gain.setValueAtTime(0.0001, t);
         g.gain.linearRampToValueAtTime(1, t + crossfade);
-        g.connect(this.duck);
+        g.connect(this.inlet);
         this.trackGain = g;
-        // One persistent gate per layer, open. The track-level crossfade above
-        // fades the whole track in, so a gate needs no ramp of its own.
+        // One persistent gate per layer, built straight at its target for the
+        // CURRENT intensity (OO's idiom): the track-level crossfade above fades
+        // the whole track in, so a gate needs no ramp of its own. Later changes
+        // latch to a bar line in setIntensity(). Without a tier a gate is open.
         this.layerGates = this.track.layers.map((layer, index) => {
           const node = ctx.createGain();
-          node.gain.value = 1;
+          const target = this.gateTarget(layer.tier);
+          node.gain.value = target;
           const sink = layerSink ? layerSink({ ctx, track: s, index, layer, out: g }) : null;
           node.connect(sink || g);
-          return { node };
+          return { node, tier: layer.tier || 1, target, from: target, at: -Infinity };
         });
       }
     },
@@ -409,7 +614,9 @@ function createMusic(engine, options) {
       // (this.layerGates), never a scheduling omission.
       for (let i = 0; i < layers.length; i++) {
         const cell = layers[i].steps[step];
-        if (cell) this.playNote(layers[i], cell, t, i);
+        if (!cell) continue;
+        this.playNote(layers[i], cell, t, i);
+        if (onBeat && layers[i].beat) onBeat(t);     // DEPARTURE 7: the onset, on the context clock
       }
     },
 
@@ -1037,7 +1244,8 @@ const SFX_ALTS = {
 // what the lab previews, never the build. test-cs009-p4.js holds telegraph to
 // C.SURGE_TELEGRAPH.
 const LAB = { lookahead: 0.20, crossfade: 0.60, fadeOut: 1.00, volRamp: 0.03, noiseSeed: 0x5EED0A0D,
-              telegraph: 0.45, hitStop: 1.20 };
+              telegraph: 0.45, hitStop: 1.20,
+              limit: { threshold: -24, knee: 0, ratio: 20, attack: 0.001, release: 0.10 } };
 function labRng(seed) {
   let a = seed >>> 0;
   return function () {
@@ -1125,6 +1333,7 @@ const music = createMusic(engine, {
   tracks: { pulse: MUSIC_TRACKS.pulse },
   lookahead: LAB.lookahead, crossfade: LAB.crossfade, fadeOut: LAB.fadeOut,
   noise: labRng(LAB.noiseSeed),
+  limiter: LAB.limit,   // ⛔ the game's limiter (Paul's D3)
 });
 const player = createSfxPlayer(engine, { noise: labRng(LAB.noiseSeed) });
 

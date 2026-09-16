@@ -717,3 +717,7 @@ louder while its peaks stay under the tone.
 
 **What would change it.** Paul asking for a 90 s `pulse`, which means nine
 more bars of music at 120 BPM, or deciding the mix call in CS010.
+
+---
+
+- CS010's audio calls (D1–D16) and readings (R1–R11), Paul, 2026-09-16: `PLANNED-FEATURES-CS010.md` §0, answered in the planning session.

@@ -1,19 +1,23 @@
 # Vector Vortex — STATUS
-Version: 0.0.6 · Changeset: CS010 (planned 2026-09-16 — P1 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.6 · Changeset: CS010 (P1 done 2026-09-16 — P2 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS010
 
 **Planned at `d40f222`** (`PLANNED-FEATURES-CS010.md`,
 `IMPLEMENTATION-PHASES-CS010.md`): five phases, every call answered by Paul in
-the planning session (D1–D16). Nothing built yet. One line per phase here; ⛔
-**reasoning goes to `log/CS010.md` as the phase goes**, not to this file
-(`CLAUDE.md`, Session rules, 2026-08-31).
+the planning session (D1–D16). One line per phase here; ⛔ **reasoning goes to
+`log/CS010.md` as the phase goes**, not to this file (`CLAUDE.md`, Session
+rules, 2026-08-31).
+
+| Phase | Commit | One line |
+|---|---|---|
+| P1 | this commit | kit-audio 0.3.0: optional `gating` (bar-latched `setIntensity`), `sweep`, `limiter`, `duck` (`setDuck`, `dip`), `onBeat`; the fake's compressor; the headroom gate is D16's model (0.3350 / 0.3359). Nothing drives them yet. 7 of 7 red |
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 467.1 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 480.0 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **49 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **50 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -58,9 +62,11 @@ the planning session (D1–D16). Nothing built yet. One line per phase here; ⛔
 - ⛔ **A seat writes no `state` and draws nothing.** The Surger tone is one held
   voice per telegraphing Surger, keyed in a `Map` in `19-sfx.js` (never a field
   on the entity), and `set(chargeTip())` each frame. ⛔ The headroom gate
-  (`test-cs009-p5.js`, `HEADROOM_RATIO` 1.0, ⚠ provisional) measures the
-  UNTIERED tracks: 0.450 against 0.4201 `pulse` and 0.3424 `title` (since the
-  articulation pass).
+  (`test-cs009-p5.js`, `HEADROOM_RATIO` 1.0, ⚠ provisional) is **D16's limiter
+  curve model since CS010 P1**: 0.450 against 0.3350 `pulse` (0.4184 in) and
+  0.3359 `title` (0.4404 in). ⛔ It holds only at the rendered settings, so
+  `test-cs010-p1.js` pins `C.MUSIC_LIMIT` to D2's literals (threshold −18 left
+  the model green, `log/CS010.md`).
 - ⚠ **SETTLED — MUSIC IS STRUCK, NEVER SWELLED** (Paul, 2026-09-16; `CLAUDE.md`
   Audio, GDD §11.3). Both tracks were re-articulated after the close: attack
   ≤ 0.005 s, decay from the onset, a per-layer `GATE` in steps, and closing filter
@@ -150,6 +156,15 @@ the planning session (D1–D16). Nothing built yet. One line per phase here; ⛔
 - ⚠ **Every seat call is `sfx(`, and `test-cs009-p5.js` scans the built file for
   them.** Each call must name its `C.SFX` event as a string literal, and its
   arguments must hold no assignment.
+- ⛔ **KIT-AUDIO 0.3.0 (CS010 P1).** The path is track gain → sweep → limiter →
+  duck → dip → `music`. Every group is OPTIONAL and nothing drives one yet:
+  gates open (no tier), sweep open, duck and dip at unity. Without its group a
+  setter schedules nothing; the duck node itself is always built (CS009's). ⚠
+  **`scheduleStep` gained ONE line, the `onBeat` report** (it reads `beat`, never
+  intensity; `log/CS010.md` reading 1). ⛔ A tier needs `gating` AND the track's
+  `bar` (dividing `steps`), so P3's `bar: 16` goes in with the tiers. A gate flip
+  back before its bar line withdraws the waiting change. ⛔ The duck and dip pin
+  from their own breakpoints, never `.value`.
 - ⛔ **CS010 PLANNING FOUND THESE (MEASURED at `d40f222`, plan §1.4–1.6). Each
   phase that meets one acts on it.**
   - **A director that WRITES `state` passes every closed test.** It happens in
@@ -160,10 +175,6 @@ the planning session (D1–D16). Nothing built yet. One line per phase here; ⛔
   - **`19-sfx.js`'s code may not name `state`** (`test-cs009-p1.js:489`).
   - **A new REQUIRED `createMusic` option makes `test-cs009-p1.js` throw**, so
     new engine options are optional groups.
-  - **The fake has no `createDynamicsCompressor`.** A limiter without it turns
-    five files red.
-  - **A limiter on the path leaves `test-cs009-p5.js`'s headroom gate GREEN while
-    it measures the wrong thing.** P1 rewrites the gate.
   - **`test-cs009-p5.js` finds a Surger voice by a gain equal to 0.45.** Music
     notes at 0.450 collide (nine assertions red). P3 repairs the fixture.
   - **A duck in front of a limiter is swallowed**: 6 dB in, 1.9 dB out.
@@ -171,14 +182,11 @@ the planning session (D1–D16). Nothing built yet. One line per phase here; ⛔
     clips at the destination. No changeset owns it.
   - `IIRFilterNode` cannot be swept (no automatable parameter), so the sweep is
     a biquad.
-- ⚠ **GDD §11.5 names `MUSIC_LAYER_CROSSFADE`; `C` has `LAYER_CROSSFADE`.**
-  ✅ Paul (D11): `C.LAYER_CROSSFADE` survives at 0.03 s; CS010 P1 edits the GDD.
-  Neither is read. CS010 reconciles the name when it reads one.
-- ⛔ **EVERY CS010 CONSTANT IS ALREADY IN `C` AND UNREAD** (MEASURED at the
-  CS009 close, a grep of `src/` for `C.<key>`): the ten `INT_*` keys,
-  `LAYER_THRESHOLD`, `LAYER_CROSSFADE`, `FILTER_MIN_HZ`, `FILTER_MAX_HZ`,
-  `MUSIC_DUCK_GAIN`, `MUSIC_DUCK_RAMP`. `INT_W_COMBO` has no source before
-  CS012's combo.
+- ⛔ **THE TEN `INT_*` KEYS ARE STILL UNREAD** (P2's). Since CS010 P1,
+  `19-sfx.js` reads `LAYER_THRESHOLD`, `LAYER_CROSSFADE`, `FILTER_*`,
+  `MUSIC_LIMIT`, `MUSIC_DUCK_*` and `MUSIC_DIP_*` into `createMusic`.
+  `INT_W_COMBO` has no source before CS012's combo; `INT_HEAT_MAX` is P2's to
+  delete (D7).
 - ⛔ **`MusicSys.setState()` BEFORE THE FIRST GESTURE IS DROPPED** (ported
   as-is: it returns on a null `ctx` without recording the name). That is why
   `audioFrame()` calls it every frame. ⛔ Never move it onto a screen change.
@@ -327,19 +335,18 @@ the planning session (D1–D16). Nothing built yet. One line per phase here; ⛔
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
   2 → 3.
 - Backport kit-input (**0.7.0**), kit-menu (0.1.0), kit-fx and kit-audio
-  (**0.2.0**) to coinless-kit — each a separate manual step, verified against
+  (**0.3.0**) to coinless-kit — each a separate manual step, verified against
   that repo's own suite.
 - The Overdrive `PTS_REAVER`, `PTS_MIMIC`, `PTS_WARDEN` are unread — CS012's.
 - ⛔ **The seven debug spawn actions ship until CS016** (Paul's H5 call).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS010 P1
+## Next up — ⛔ CS010 P2
 
-⛔ **Paste P1's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: kit-audio
-0.3.0. It adds the tier gates with the bar-line latch, the sweep, the limiter,
-the duck and dip, `onBeat`, and the fake's compressor, and it rewrites the headroom gate
-to D16's curve model. P1 writes the `DECISIONS.md` pointer to plan §0.
+⛔ **Paste P2's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: the director.
+kit-audio 0.3.0's setters exist and nothing calls them; P2 drives
+`setIntensity`, `setSweep`, `setDuck` and `dip` from play.
 
 ⛔ **What every CS010 phase must not lose** (plan §0, answered by Paul
 2026-09-16):

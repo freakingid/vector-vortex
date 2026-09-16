@@ -513,10 +513,17 @@ const C = {
   MUSIC_FADE_OUT:       1.00,   // s to silence at game over
   MUSIC_DUCK_GAIN:      0.50,   // menu-open level
   MUSIC_DUCK_RAMP:      0.15,   // s. ⛔ ramp, never a bare .value set.
-  LAYER_THRESHOLD:      { 2: 0.30, 3: 0.55, 4: 0.80 }, // ⛔ tier must be 1..4
-  LAYER_CROSSFADE:      1.20,   // s thicken/thin ramp
+  MUSIC_DIP_GAIN:       0.50,   // -6 dB event dip (Paul's D9); ramps over MUSIC_DUCK_RAMP
+  MUSIC_DIP_HOLD:       0.50,   // s held at the dip before it ramps back
+  // ⛔ The music limiter (Paul's D2), after the sweep and before the duck. The
+  // headroom gate models its static curve, exact only at knee 0 (D16).
+  MUSIC_LIMIT:          { threshold: -24, knee: 0, ratio: 20, attack: 0.001, release: 0.10 },
+  LAYER_THRESHOLD:      { 2: 0.25, 3: 0.40, 4: 0.80 }, // ⛔ tier must be 1..4. Key 4 unread (no tier-4 layer)
+  LAYER_CROSSFADE:      0.03,   // s gate ramp FROM THE BAR LINE: a de-click, not a fade (D11)
   FILTER_MIN_HZ:        600,    // music bus low-pass at intensity 0
-  FILTER_MAX_HZ:        18000,  // ... and at intensity 1
+  FILTER_MAX_HZ:        18000,  // ... and at intensity 1; exponential between (D14)
+  FILTER_Q:             -3.0103, // dB: a Butterworth low-pass, no peak at the cutoff
+  FILTER_TC:            0.05,   // s sweep time constant. ⚠ provisional
   INT_ATTACK:           0.40,   // s — danger registers fast
   INT_RELEASE:          2.50,   // s — relief is earned. ⛔ asymmetric.
   INT_W_COUNT:          0.30,

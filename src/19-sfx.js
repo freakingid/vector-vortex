@@ -31,6 +31,12 @@ const MusicSys = createMusic(AudioSys, {
   crossfade: C.MUSIC_CROSSFADE,
   fadeOut:   C.MUSIC_FADE_OUT,
   noise:     mulberry32(C.AUDIO_NOISE_SEED),
+  // kit-audio 0.3.0's groups (CS010 P1). No director drives them yet: every
+  // gate is open, the sweep is fully open, and the duck and dip sit at unity.
+  gating:    { thresholds: C.LAYER_THRESHOLD, ramp: C.LAYER_CROSSFADE },
+  sweep:     { minHz: C.FILTER_MIN_HZ, maxHz: C.FILTER_MAX_HZ, q: C.FILTER_Q, tc: C.FILTER_TC },
+  limiter:   C.MUSIC_LIMIT,
+  duck:      { gain: C.MUSIC_DUCK_GAIN, ramp: C.MUSIC_DUCK_RAMP, dipGain: C.MUSIC_DIP_GAIN, dipHold: C.MUSIC_DIP_HOLD },
 });
 
 // The SFX player (CS009 P4). Its noise is a SECOND instance of the audio seed's
