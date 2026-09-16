@@ -447,7 +447,6 @@ layers (P3). A director spy needs the director (P2).
 > `VECTOR-VORTEX-GDD.md` §0, §1, §11, §17, §19. Then
 > `scratchpad/test-cs009-p6.js` (the driver and the hasher), `log/CS010.md` in
 > full, and `ROADMAP.md`'s sequence and "What CS009 deliberately left".
-> ultrathink.
 >
 > **1. `scratchpad/test-cs010-p5.js` — the eighth soak.** ⛔ Do not widen
 > `test-cs009-p6.js`. Use its front-door driver shape (Start Depths 1 / 13 / 23,
