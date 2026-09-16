@@ -117,6 +117,7 @@ asymmetrically on a clock the host hands it. It names no game term.
 |---|---|
 | `frame(inputs, now)` | Sums `w · clamp01(inputs[name])` (non-finite reads 0), clamps the sum to 0..1, and moves the level `(1 − e^(−dt/τ))` of the way to it, `dt` being `now` minus the previous frame's `now`. The first frame after `reset()` only takes the clock; a clock that did not move forward, or is not finite, moves nothing. Returns the level. No allocation. |
 | `reset()` | Level 0, clock forgotten. |
+| `hold()` | Level kept, clock forgotten: the next `frame()` only takes the clock. Call it while the host is paused, so the pause is skipped rather than integrated. |
 | `level` | The smoothed value, 0..1. |
 
 ```js
@@ -127,8 +128,9 @@ music.setIntensity(f);
 music.setSweep(f);
 ```
 
-⚠ **The host decides when it runs.** A host that stops calling `frame()` (a
-pause) holds the level, and the next call integrates the whole gap.
+⚠ **The host decides when it runs.** A host that stops calling `frame()` holds
+the level, and the next call integrates the whole gap, unless the host calls
+`hold()` during it.
 
 ### `createSfxPlayer(engine, opts)` (0.2.0)
 
@@ -263,7 +265,7 @@ belong to the host. The host's suite scans this slice for `C.` and `state`.
 
 ### 2026-09-16 — the director (`18-audio-director.js`; `VERSION` stays 0.3.0)
 
-**What changed.** Additive: `createDirector({ attack, release, weights })`. New,
+**What changed.** Additive: `createDirector({ attack, release, weights })` with `frame`, `reset`, `hold` and `level`. New,
 not a port: Orbital Overhaul gated on a wave curve (`1 − e^(−(w−1)/8)`), with no
 smoothing and no live input. Nothing in `16-audio-engine.js` changed. The
 version was not bumped: 0.3.0 is unreleased and still in the changeset that

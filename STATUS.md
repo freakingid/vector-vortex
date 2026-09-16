@@ -12,11 +12,11 @@ rules, 2026-08-31).
 | Phase | Commit | One line |
 |---|---|---|
 | P1 | `8bf9110` | kit-audio 0.3.0: optional `gating` (bar-latched `setIntensity`), `sweep`, `limiter`, `duck` (`setDuck`, `dip`), `onBeat`; the fake's compressor; the headroom gate is D16's model (0.3350 / 0.3359). Nothing drives them yet. 7 of 7 red |
-| P2 | this commit | The director: kit-audio `createDirector` (asymmetric, audio clock), top-level `dangerInputs(state, out)`, `audioFrame()` driving `setIntensity`/`setSweep` in play (a Dive reads 0; run entry resets; pause side holds; title opens the sweep), `duckFor()` on the pause side, `sfx()` dips on D9's four. `INT_HEAT_MAX` deleted. 10 of 10 red |
+| P2 | `2e89263`, `d1501ef` | The director: kit-audio `createDirector` (asymmetric, audio clock), top-level `dangerInputs(state, out)`, `audioFrame()` driving `setIntensity`/`setSweep` in play (a Dive reads 0; run entry resets; pause side holds; title opens the sweep), `duckFor()` on the pause side, `sfx()` dips on D9's four. `INT_HEAT_MAX` deleted. 10 of 10 red. Follow-up: `Director.hold()` on the pause side, so a resume skips the pause (Paul); 11 of 11 |
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 486.9 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 487.3 KB); the
   manifest is checked both directions against `src/`.
 - `node scratchpad/run-all.js`: **51 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
@@ -193,10 +193,10 @@ rules, 2026-08-31).
     screen** (not play, not the pause side), tracked by `Game`'s `audioRunLive`,
     which `Game.reset()` clears. ⚠ A `startGame()` called while already on play
     (the pinned soaks' restarts) does NOT reset. P5's soak should know.
-  - ⚠ **A resume integrates the pause** (R1's audio-clock dt): the first play
-    frame after a g-second pause moves the level 1 − e^(−g/τ) toward the
-    reading (PREDICTED: 86 % of a release after 5 s). The hold while paused is
-    exact. Whether to skip the gap is a call for Paul; unowned.
+  - ✅ **A resume SKIPS the pause** (Paul, 2026-09-16). Pause-side frames call
+    `Director.hold()` (keep the level, forget the clock), so the first play
+    frame after a pause only takes the clock. Without it, R1's audio-clock dt
+    integrated the whole pause on resume. `DECISIONS.md`.
   - ⚠ **R4 observed on the fake:** title → play closes the sweep toward 600 Hz
     with τ 0.05 s while `title`'s 0.6 s crossfade plays, so its tail darkens in
     ~0.15 s.

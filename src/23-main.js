@@ -1306,7 +1306,9 @@ const Game = (function () {
   //                 (R11). The first play frame of a run, entered from a screen
   //                 with no live run behind it (title side, game over), resets
   //                 it, so a run and a RESTART both start from 0.
-  //   pause side    duckFor(): nothing set, so intensity and the sweep HOLD.
+  //   pause side    duckFor(): nothing set, so intensity and the sweep HOLD, and
+  //                 the director holds too, so a resume skips the paused time
+  //                 rather than catching up on it (Paul, 2026-09-16).
   //   title side    the sweep fully open; intensity untouched (title is untiered).
   //   game over     nothing: the music is fading to silence.
   // The duck follows duckFor() on every frame. ⛔ Reads state, writes none.
@@ -1319,7 +1321,9 @@ const Game = (function () {
                                    AudioSys.now());
       MusicSys.setIntensity(level);
       MusicSys.setSweep(level);
-    } else if (!pauseSide && screen !== "gameover") {
+    } else if (pauseSide) {
+      Director.hold();
+    } else if (screen !== "gameover") {
       MusicSys.setSweep(1);
     }
     audioRunLive = screen === "play" || pauseSide;

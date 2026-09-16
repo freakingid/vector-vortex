@@ -721,3 +721,4 @@ more bars of music at 120 BPM, or deciding the mix call in CS010.
 ---
 
 - CS010's audio calls (D1–D16) and readings (R1–R11), Paul, 2026-09-16: `PLANNED-FEATURES-CS010.md` §0, answered in the planning session.
+- A resume skips the paused time in the intensity director (`Director.hold()` on pause-side frames), Paul, 2026-09-16: `log/CS010.md`, P2.

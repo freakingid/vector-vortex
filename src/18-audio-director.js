@@ -4,7 +4,7 @@
 // object, no game object, no game global. The host names its inputs, weights
 // them, and hands over a reading and a clock each frame. It names no game term.
 //
-// createDirector({ attack, release, weights }) -> { frame(inputs, now), reset(), level }
+// createDirector({ attack, release, weights }) -> { frame(inputs, now), reset(), hold(), level }
 //   weights  { name: w >= 0 }. frame() reads inputs[name] for each, clamps
 //            it to 0..1, and sums w * input; the sum is clamped to 0..1.
 //   frame    smooths that sum on the clock it is handed (seconds), one pole:
@@ -14,6 +14,9 @@
 //            The first frame after reset() only takes the clock (dt 0). A clock
 //            that did not move forward moves nothing.
 //   reset    level 0, and forget the clock.
+//   hold     keep the level, forget the clock: call it while the host is paused,
+//            so the next frame only takes the clock and the pause is SKIPPED,
+//            never integrated as if it were play (Paul, 2026-09-16).
 //   level    the smoothed value, 0..1.
 // ⛔ No allocation per frame.
 
@@ -51,6 +54,7 @@ function createDirector(opts) {
       return level;
     },
     reset() { level = 0; last = null; },
+    hold() { last = null; },
     get level() { return level; },
   };
 }
