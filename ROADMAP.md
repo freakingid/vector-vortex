@@ -120,8 +120,8 @@ that moves between bands rather than one pinned to a level.
 
 ⚠ **What CS007 deliberately left.** ⛔ **Nothing was tuned.** The instrument was
 built and the curve was chosen from measured option tables, but no playtest
-evidence has been collected and GDD §8.2's targets are still targets — the ask is
-in `PLAYTEST.md`, and it is the one thing the suite cannot check. ⛔ **No
+evidence has been collected and GDD §8.2's targets are still targets — it is logged
+in `SKIPPED-PLAYTESTS.md`, and it is the one thing the suite cannot check. ⛔ **No
 persistence** for the telemetry buffer: `kit-storage` owns the keyspace and
 `22-meta.js` is still a placeholder, so CS011 owns it. **No scoring, no HUD, no
 Start Depth** (CS008's), **no Dive visual**, **no spawn-lane weighting toward the
@@ -159,7 +159,7 @@ OPTIONS' Sound/Music row are CS009's. **No persistence**: the Start Depth
 record, the settings and the bindings are session-only, and the `'quit'` and
 `'died'` submits have a seat in `quitToTitle()` but no call. All of that is
 CS011's. **No tuning**: a fire-holder has no death path on levels 1–4, and
-whether those wells still feel tense is a `PLAYTEST.md` ask that feeds GDD §8.2.
+whether those wells still feel tense is logged in `SKIPPED-PLAYTESTS.md`.
 The touch buttons are live but undrawn, and the Dive still has no visual.
 Neither has an owner.
 
@@ -303,8 +303,8 @@ module seam, named against CS012 for the same reason.
 - ✅ **CLOSED by CS006 P2 — the Flat (11) and the Stair (9) are offset.** The
   Flat's shortest lane-centre spoke went 23.6 → 151.8 px, the Stair's 30.4 →
   79.6 px, both past `C.MIN_LANE_SPOKE_PX` 60. ⚠ **The numbers are settled and
-  the picture is not** — nobody has looked at either shape, and the ask is in
-  `PLAYTEST.md`.
+  the picture is not** — nobody has looked at either shape, and the skipped ask is in
+  `SKIPPED-PLAYTESTS.md`.
 - ⛔ **`src/07-enemies.js` wants splitting, and the moment is CS012.** Measured
   at the CS005 close, not felt: it went from **39.1 KB / 782 lines** at CS004
   close (`74fb50c`) to **65.2 KB / 1,277 lines** — **+67% by size for two

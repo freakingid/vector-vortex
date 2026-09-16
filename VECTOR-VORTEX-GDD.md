@@ -1345,7 +1345,7 @@ vector-vortex/
 ├── ROADMAP.md                   # changeset sequence to ship; on demand only
 ├── VECTOR-VORTEX-GDD.md         # this document, with its §0 read contract
 ├── NEXT-STEPS.md                # specified but unscheduled; ⛔ read only when named
-├── PLAYTEST.md                  # open questions only the eye can answer; ⛔ never by default
+├── SKIPPED-PLAYTESTS.md         # playtests skipped by policy, and what each was for; ⛔ never by default
 ├── DIFFICULTY-NOTES.md          # the heat curve, documented
 ├── EXTERNAL-FILES.md            # runtime files the build loads
 ├── PLANNED-FEATURES-CS0##.md    # spec for what's being built now

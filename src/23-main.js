@@ -419,8 +419,8 @@ const Game = (function () {
   //     can. Reaching level 23 to see a Surger Carrier is not a way to judge a
   //     silhouette.
   //
-  // ⛔ The six enemy colours are still ⚠ provisional (GDD 6.1), PLAYTEST.md is
-  // written around these keys, and `0` is the only way to see the palette
+  // ⛔ The six enemy colours are still ⚠ provisional (GDD 6.1), SKIPPED-PLAYTESTS.md
+  // names these keys, and `0` is the only way to see the palette
   // together. They ship until CS016 decides whether debug keys ship at all.
   //
   // ⛔ A kind that is not in ENEMY_KINDS yet is a NO-OP, not a throw:

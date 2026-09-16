@@ -641,3 +641,23 @@ Detail is in `log/CS008.md`, P7, and GDD §10.5.
 **What would change it.** A hardware pass where ×2.0 still feels slow on a
 high-DPI mouse, or where players expect Purge on a slider to revert.
 
+
+---
+
+## 2026-09-16 — no more playtests
+
+**The question.** `PLAYTEST.md` had grown to about 400 lines of asks for Paul,
+and nearly every phase added more.
+
+**The call — Paul.** No more playtests. Orbital Overhaul reached a finished
+game quickly with almost none. `PLAYTEST.md` is renamed `SKIPPED-PLAYTESTS.md`
+and rewritten as a record: each entry names the changeset and phase, what Paul
+would have done, what we were trying to learn, and the knobs. Nothing waits on
+it, and the shipped values stand. Older entries in this file that say "a
+playtest would change it" now mean that nothing will, unless Paul raises it
+himself.
+
+**Open, for CS009 planning to raise.** `CLAUDE.md`'s music solo-audition gate
+is a listening test. CS009's plan asks Paul how it is judged.
+
+**What would change it.** Paul choosing to play something.

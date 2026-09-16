@@ -155,8 +155,8 @@ rules, 2026-08-31).
 - **A rim Vaulter hunts the Skimmer's continuous lane**, so a player parked
   between two centres has it hopping back and forth. Unowned.
 - ⛔ **A chosen level is reached from START DEPTH**, never `w`; a sitting runs
-  `levelRecord().noteCleared(81)` in the console first. ⛔ **Playtest asks live
-  in `PLAYTEST.md`**, never session context.
+  `levelRecord().noteCleared(81)` in the console first. ⛔ **There are no
+  playtests** (Paul, 2026-09-16); a would-be ask goes in `SKIPPED-PLAYTESTS.md`.
 
 ## Open questions (blocking)
 
@@ -211,5 +211,8 @@ every claim MEASURED or PREDICTED, and writes no code.
    headless suite has no `AudioContext`, and nothing may start before a gesture.
 4. ⛔ **Nothing audio-side may spend `state.rng()` or read the frame clock into
    the simulation**, or the hash moves.
-5. ⚠ Nothing has been tuned against GDD §8.2, and `PLAYTEST.md` now carries the
-   K2 levels-1–4 ask, the device flow and the Controls page on hardware.
+5. ⚠ Nothing has been tuned against GDD §8.2, and there will be no playtest to
+   tune against (`SKIPPED-PLAYTESTS.md` records what was skipped).
+6. ⛔ **The music solo-audition gate (`CLAUDE.md`, Audio) is a listening test, and
+   Paul does no playtests.** CS009 builds the solo button; the plan must raise
+   with Paul who, if anyone, judges "recognizable played alone" before CS010.

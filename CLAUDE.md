@@ -65,7 +65,7 @@ happen here, in Claude Code, including planning — `DECISIONS.md`, 2026-08-31.
 |---|---|---|
 | **Planning** | `PLANNED-FEATURES-CS0##.md`, `IMPLEMENTATION-PHASES-CS0##.md` | those two docs, committed |
 | **Build phase** | `src/`, `scratchpad/`, `log/CS0##.md`, the docs its phase names | one phase, committed |
-| **Close** | `log/CS0##.md`, `STATUS.md`, `ROADMAP.md`, `PLAYTEST.md` | the changeset closed |
+| **Close** | `log/CS0##.md`, `STATUS.md`, `ROADMAP.md`, `SKIPPED-PLAYTESTS.md` | the changeset closed |
 
 1. **Read `STATUS.md` first.** Update it at the end of the session.
 2. **One phase per session.** Build only what the phase prompt scopes. Do not
@@ -115,7 +115,7 @@ happen here, in Claude Code, including planning — `DECISIONS.md`, 2026-08-31.
 | `DECISIONS.md` | Judgment calls made outside the phase flow. | On demand only |
 | `ROADMAP.md` | Changeset sequence to ship. | On demand only |
 | `NEXT-STEPS.md` | Specified but unscheduled work — a defect or a call written up for a future session. | ⛔ **Only when a prompt names it** |
-| `PLAYTEST.md` | Open questions only the eye can answer. | **Never by default** |
+| `SKIPPED-PLAYTESTS.md` | Playtests we would have asked for, and what each was for. Paul does none. | **Never by default** |
 | `log/CS0##.md` | Per-changeset narrative log + version history. | **Never by default** |
 | `archive/` | Spent planning docs. | **Never by default** |
 
@@ -156,8 +156,11 @@ Reasoning goes in `log/CS0##.md`.
 shell redirect, verify the entry actually begins a new paragraph — a missing
 trailing newline fuses entries into one unreadable line.
 
-⛔ **Playtest asks live in `PLAYTEST.md`, not here.** A question only a player
-at a screen can answer is a tax on every build session that loads it.
+⛔ **Paul does NO playtests (2026-09-16).** No plan, phase or close asks him
+to play, listen or look, and no work waits on it. A phase that ships something
+only a person could judge appends one entry to `SKIPPED-PLAYTESTS.md`
+(changeset, phase, what he would have done, what it was trying to learn, knobs)
+and moves on. The shipped values stand. Never put these entries in this file.
 
 ---
 
