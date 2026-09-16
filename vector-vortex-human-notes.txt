@@ -1,0 +1,115 @@
+20260830
+About to start Changeset 001 after getting everything (hopefully) setup.
+
+=====
+Changeset 001
+Phase 1
+Phase 2
+Phase 3
+
+=====
+Changeset 002
+Phase 1
+Phase 2
+Phase 3
+Phase 4
+
+=====
+Changeset 003
+Phase 1
+Phase 2
+Phase 3
+Phase 4
+Phase 5
+
+=====
+Changeset 004
+Phase 1
+Phase 2
+Phase 3
+Phase 4
+Phase 5 (oops left in same session I think?) Not sure.
+
+=====
+Changeset 005
+Phase 1
+Phase 2
+Phase 3
+Phase 4
+Phase 5 (updated)
+
+=====
+Changeset 006
+Phase 0
+Phase 1
+Phase 2
+Phase 3
+Phase 4
+Phase 5 (corrected)
+
+=====
+Changeset 007
+* This is the first one where we are moving spec and implementation planning into Claude Code.
+Phase 1
+Phase 2 after some finagling.
+Phase 3
+Phase 4
+Phase 5
+
+=====
+Changeset 008
+Phase 1
+Phase 1b
+Phase 2
+Phase 3
+Phase 4
+Phase 5
+Phase 6
+Phase 7
+Phase 8
+
+=====
+9/16/2026 630a
+* Building Changeset 009, mostly about music?
+Phase 1
+Phase 2
+Phase 3
+Phase 4 (sfx and music labs)
+Phase 5 (wiring up sounds)
+
+=====
+Now starting changeset 010 planning.
+1155a (After some wrangling over the music tracks)
+
+=====
+Changeset 010
+Phase 1
+Phase 2
+Phase 3
+Phase 4
+Phase 5
+
+=====
+Changeset 011 planning is happening
+341p
+Need to restart, disconnected from WSL
+
+
+
+
+
+=====
+We stopped and made notes of where we were at. Here is a snippet Claude Code gave me:
+
+Done. NEXT-STEPS.md is in the repo with the full write-up, and four pointers now lead to it:
+
+CLAUDE.md document map — read contract: only when a prompt names it, never by default. (29.8 KB, well under the 50 KB ceiling.)
+VECTOR-VORTEX-GDD.md §16.4 repo layout — which was also missing PLAYTEST.md, so I added both rows.
+STATUS.md — a condensed Known-issues entry with the mechanism and the numbers, plus a line under what CS008 inherits. 279 lines, against the ~400 invariant.
+ROADMAP.md "Still open" — flagged as the one item there that is a bug rather than a design call.
+The file is a queue, not a record: its own contract says an entry is deleted by the session that acts on it, in the same commit that lands the plan. That keeps it from silently becoming a second changelog.
+
+Three calls are stated and left open for you — which fix, whether 100 % killable at the rim is what you want, and where it lands. Docs only, no code, 34 test files green.
+
+To pick it up later, in a fresh session: "Read NEXT-STEPS.md and plan the rim hit-window fix." That's enough — the entry names everything else it needs.
+
