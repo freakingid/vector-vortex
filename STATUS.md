@@ -66,9 +66,10 @@ rules, 2026-08-31).
   "After the close").
 - ✅ **PAUL'S LAB PICKS ARE PORTED (2026-09-16): 120 BPM on both tracks, every
   layer PASS**, and his balance, with `title`'s ground and `pulse`'s bassline,
-  heart and tick at the slider's 0.300 top. ⚠ **`pulse` is trimmed 5.3 dB as a
-  whole** to hold the SETTLED headroom gate (0.7771 → 0.4196). The game's
-  `pulse` is quieter than he heard it (gated −33.6 dB, peak 0.347); `title`
+  heart and tick then raised to 0.450 at his ask (the lab slider now reaches
+  0.6). ⚠ **`pulse` is trimmed 8.2 dB as a whole** to hold the SETTLED headroom
+  gate (1.0771 → 0.4184). The game's `pulse` is under his lab levels (gated
+  −33.5 dB, peak 0.346); `title`
   ports as he set it (−29.6 dB, 0.446, headroom 0.4404). ⚠ **`pulse` loops at
   72 s**: Paul chose the tempo over the 90 s target, which is now read as ≥ 36
   bars (Claude's reading, `DECISIONS.md`; `test-cs009-p2.js` rewritten in
@@ -295,9 +296,8 @@ rules, 2026-08-31).
   BPM is exact (0.125). A future tempo port repairs that fixture in place.
 - ⚠ **COPY TABLE's tempo rewrite has no suite test.** A throwaway check and a
   headless click-through covered it (`log/CS009.md`).
-- ⚠ **Four gains sit at music-lab's 0.300 slider top** in Paul's lab picks
-  (`pulse`'s now read 0.162 after the trim). Whether he wanted them higher
-  still is unknown.
+- ⚠ **`title`'s ground sits at 0.300**, the old slider top, and Paul has not
+  said whether he wants it at 0.45 like `pulse`'s three.
 - ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
   2 → 3.
@@ -336,10 +336,11 @@ writes no code.
    pinned `function audioFrame()` text, and the banned substrings.
 7. ⚠ **SETTLED — struck, never swelled.** Every earned layer obeys the rule, and
    the rule has no test yet. CS010 adds that gate in its own file.
-8. ⚠ **`pulse` is 5.3 dB quieter in the game than Paul set it**, because the
-   SETTLED headroom gate trimmed his balance as a whole; with the struck pass,
-   it sits about 9 dB under CS009's P2 level. Whether to buy level back (a
-   master limiter, a lower SFX bus, a different gate ratio) is a mix call for
-   Paul, and his rhythm gains at the slider's top say he wanted punch.
+8. ✅ **Paul's call (2026-09-16): a LIMITER on the music, in CS010.** `pulse` is
+   8.2 dB under his lab levels, because the SETTLED headroom gate trims his
+   balance (rhythm at 0.450) as a whole; it sits about 9 dB under CS009's P2
+   level. The limiter lets the track get louder while its peaks stay under the
+   Surger tone. Where it sits, its settings, and how the gate measures after it
+   are the plan's to measure and put to Paul.
 9. ⚠ **`pulse` loops at 72 s (36 bars at 120 BPM).** The length target is now
    read in bars (Claude's reading). Paul confirms it, or asks for more bars.

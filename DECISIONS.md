@@ -707,10 +707,13 @@ and chose the tempo anyway.
 bars in A→B→C sections. That is independent of tempo, and it is the form the
 seconds figure stood for. The p2 assertion was rewritten in place to it.
 Paul may prefer more bars instead; that is composition, and a later changeset's.
-(2) `pulse`'s six gains are trimmed together by 5.3 dB so the SETTLED gate
-holds. His balance holds and the level drops. `title` ports exactly as he set it
-(0.4404). Buying the level back (a limiter, the SFX bus, the gate ratio) is
-CS010's mix call.
+(2) `pulse`'s six gains are trimmed together so the SETTLED gate holds. The
+trim is 8.2 dB since Paul then asked for bassline, heart and tick at 0.45. His
+balance holds, and the level drops. `title` ports exactly as he set it (0.4404).
+
+**Then Paul's call on the level.** Asked whether to loosen the Surger gate, he
+chose his balance now and a limiter on the music in CS010, so the track can get
+louder while its peaks stay under the tone.
 
 **What would change it.** Paul asking for a 90 s `pulse`, which means nine
 more bars of music at 120 BPM, or deciding the mix call in CS010.

@@ -194,9 +194,9 @@ of the Surger tone guarantee cannot be tested before CS010. **No persistence**:
 the volumes and the track setting are session-only, and that is CS011's.
 After the close, Paul's music-lab work came in. "Struck, never swelled" meant
 both tracks were re-articulated. Then he picked **120 BPM** for both and marked
-**every layer PASS**. `pulse` now loops at 72 s (36 bars), and it is 5.3 dB
-under the level he set, to hold the Surger tone's headroom gate. Buying that
-level back is CS010's mix call. The VOICE bus is live and nothing feeds it (A3). A pad-only
+**every layer PASS**. `pulse` now loops at 72 s (36 bars), and it is 8.2 dB
+under the level he set, to hold the Surger tone's headroom gate. Paul's call:
+a limiter on the music, in CS010, buys it back. The VOICE bus is live and nothing feeds it (A3). A pad-only
 player is silent until a key, click or tap, and no changeset owns that.
 
 ---

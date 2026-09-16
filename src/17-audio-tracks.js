@@ -194,15 +194,16 @@ function buildPulseTrack() {
     for (const n of sec.beat) trackNote(heart, s0 + n[0], 45, GATE.heart, n[1]);
     if (b >= 4) for (const n of sec.ticks) trackNote(tick, s0 + n[0], 69, GATE.tick, n[1]);
   }
-  // Gains: Paul's balance from the lab (2026-09-16), all trimmed together by
-  // 5.3 dB so the Surger charge tone stays above the loudest moment (GDD 11.8).
+  // Gains: Paul's balance from the lab (2026-09-16), with bassline, heart and
+  // tick at 0.450, all trimmed together by 8.2 dB so the Surger charge tone
+  // stays above the loudest moment (GDD 11.8). A limiter is CS010's (Paul).
   return { stepDur: 60 / 120 / 4, steps: STEPS, layers: [
-    { name: "melody", type: "triangle", detune: 4, gain: 0.038, atk: 0.004, rel: 0.5625, audition: "pass", steps: melody },
-    { name: "swell", type: "sawtooth", cutoff: 1400, cutoffTo: 700, detune: 9, gain: 0.026, atk: 0.004, rel: 0.375, audition: "pass", steps: swell },
-    { name: "bassline", type: "triangle", gain: 0.162, atk: 0.004, rel: 0.375, audition: "pass", steps: bassline },
-    { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.038, atk: 0.005, rel: 0.1875, audition: "pass", steps: cycle },
-    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.162, atk: 0.003, rel: 0.14, audition: "pass", steps: heart },
-    { name: "tick", noise: true, hp: 7000, gain: 0.162, atk: 0.001, rel: 0.1875, audition: "pass", steps: tick },
+    { name: "melody", type: "triangle", detune: 4, gain: 0.027, atk: 0.004, rel: 0.5625, audition: "pass", steps: melody },
+    { name: "swell", type: "sawtooth", cutoff: 1400, cutoffTo: 700, detune: 9, gain: 0.019, atk: 0.004, rel: 0.375, audition: "pass", steps: swell },
+    { name: "bassline", type: "triangle", gain: 0.175, atk: 0.004, rel: 0.375, audition: "pass", steps: bassline },
+    { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.027, atk: 0.005, rel: 0.1875, audition: "pass", steps: cycle },
+    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.175, atk: 0.003, rel: 0.14, audition: "pass", steps: heart },
+    { name: "tick", noise: true, hp: 7000, gain: 0.175, atk: 0.001, rel: 0.1875, audition: "pass", steps: tick },
   ]};
 }
 
