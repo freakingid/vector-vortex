@@ -984,6 +984,17 @@ Generic step-sequencer table, consumed unmodified by the scheduler:
 
 **Shipped, CS009 P2 — the lab and the first two tables.** `tools/music-lab.html` opens from `file://`. ⛔ **Its BLOCK A is `src/16-audio-engine.js` whole and its BLOCK B is `src/17-audio-tracks.js` whole, character for character** (`scratchpad/test-cs009-p2.js`, against the built file), so what the lab plays is what the game plays. Per layer it has **SOLO** (exclusive-additive: while any layer is soloed, every unsoloed layer is silent), **MUTE**, a gain slider, a cutoff slider when the layer has a `cutoff`, and a **PASS / FAIL / —** mark. SOLO and MUTE are two gain nodes hung on `createMusic`'s `layerSink`, never inside BLOCK A. A loop ribbon draws every note with its A / B / C section marks and seeks on click; the readout gives bar, step, section and seconds. ⛔ **COPY TABLE is the one route back**: it prints BLOCK B with every changed `gain` and `cutoff` rewritten and each marked layer's `audition` written (`"pass"`, `"fail"`, or removed for —), to paste over `17-audio-tracks.js`. ⛔ **No layer carries `tier`** (Paul's A6), so the table shape above ships without it, plus `audition`, `q`, `cutoffTime`, `hp`, `drop`, `dropTime` and `noise` (kit-audio 0.1.0's track contract). `audition` is a mark for whoever tiers a track later (CS010 may tier only a PASS layer); the scheduler never reads it. ⚠ **Both tracks are unauditioned**: no layer is marked, and the lab is where Paul judges them. Nothing waits on that. Since CS009 P4, `tools/sfx-lab.html` carries the same two files as its own BLOCK A and BLOCK B (`test-cs009-p4.js`), so an edit to either is a three-file edit.
 
+⚠ **SETTLED — every note is struck, never swelled (Paul, 2026-09-16).** Paul's note on the CS009 tracks: the "lilting" attack and decay was wrong for this game. The game is punch and staccato, "right on the money", and a soft onset or a long ring reads as imprecise. ⛔ **On every layer of every track**, `drive` and CS010's earned layers included:
+
+| | Rule | In the data |
+|---|---|---|
+| Attack | ≤ 0.005 s | `atk` |
+| Decay | starts within 0.05 s of the onset: nothing holds at its peak, and nothing fades in | `rel` ≥ the note's sounding length |
+| Length | a note sounds for at most its layer's gate, whatever its written length; the onsets carry the rhythm | the builder's `GATE`, in steps |
+| Filter | a sweep closes over the note, bright to dark, and never opens | `cutoffTo` < `cutoff` |
+
+✅ **Ported the same day, after the CS009 close**, into `17-audio-tracks.js` and both labs' BLOCK B. MEASURED from the data before the change: `title`'s theme held a note at its peak for up to 3 s, its `glow` faded in over 1.0 s, `pulse`'s `swell` over 0.6 s, and its melody held for up to 2.3 s, while both pads' filters opened. No note, onset or pitch moved. The balance between layers was restored (§11.7).
+
 ### 11.4 The intensity director — the new work
 
 **What failed in Orbital Overhaul, recorded so we do not repeat it.** Layers were gated on `musicIntensity(wave) = 1 − e^-(w-1)/8`, a smooth curve over wave number. Two findings: the tier-4 threshold at 0.70 first crossed at **wave 11**, so no track had an audible melody for most of a typical run; and re-tiering was then tried and rejected on audition, because on every track the preferred mix was the foundation alone — the thickening read as clutter.
@@ -1036,7 +1047,7 @@ The scheduler emits kick and snare events to the render layer; the rim pulses on
 | Track | Mode | Character |
 |---|---|---|
 | `title` | — | Title screen |
-| `pulse` | Classic default | Sparse, tonal, near-ambient at foundation |
+| `pulse` | Classic default | Sparse, tonal, struck (§11.3's articulation rule; it was "near-ambient" until Paul's 2026-09-16 note) |
 | `drive` | Overdrive default | ~138 BPM. The flagship. |
 | `rush` | Overdrive alt | ~150 BPM, aggressive |
 | `deep` | Both | ~124 BPM, dubby, wide |
@@ -1050,7 +1061,18 @@ Selectable in Options, persisted per profile, cycled exactly like Orbital Overha
 | `title` | G major, 60 BPM, 16 steps a bar | 8 bars, **32 s** | A bars 0–3 (the theme), B 4–7 (the answer, falling home) | `theme`, `bells`, `glow`, `ground` | 9 |
 | `pulse` | E minor, 80 BPM, 16 steps a bar | 36 bars, **108 s** | A bars 0–11 (the tune low and plain), B 12–23 (an octave up, heart doubles), C 24–35 (the peak; the opening motif returns at bar 32, and a B major bar pulls back to the top) | `melody`, `swell`, `bassline`, `cycle`, `heart`, `tick` | 14 |
 
-Node counts are MEASURED on the harness's recording fake against `C.MUSIC_STEP_NODE_MAX` 16. MEASURED in headless Chromium by rendering each table offline through BLOCK A: the full mix peaks at 0.32 (`title`) and 0.30 (`pulse`) of full scale, which leaves headroom for the SFX bus. ⚠ **That is a rendered sample peak, and it is not §11.8's headroom figure.** The gate there sums the envelope peaks of every note sounding at once (0.434 `pulse`, 0.3005 `title`). That sum is an upper bound, because waveforms sounding together do not all crest at the same sample.
+Node counts are MEASURED on the harness's recording fake against `C.MUSIC_STEP_NODE_MAX` 16. MEASURED in headless Chromium by rendering each table offline through BLOCK A. At P2, the full mix peaked at 0.32 (`title`) and 0.30 (`pulse`) of full scale.
+
+**Re-measured after the articulation pass (§11.3), the same day.** Levels are gated: 400 ms blocks, with blocks more than 10 dB under the mean dropped, so the silence between struck notes does not count as quiet.
+
+| | P2 (swelled) | Struck, shipped |
+|---|---|---|
+| `title` mix, gated / sample peak | −24.3 dB / 0.319 | −29.0 dB / 0.420 |
+| `pulse` mix, gated / sample peak | −24.4 dB / 0.303 | −32.0 dB / 0.421 |
+| `pulse` under its melody: bassline, heart, swell, cycle, tick | −0.2, −5.3, −6.1, −8.4, −17.8 dB | −0.6, −5.2, −5.7, −8.5, −18.0 dB |
+| `title` under its theme: ground, glow, bells | −0.2, −6.6, −11.3 dB | −0.7, −6.4, −11.4 dB |
+
+The balance between layers holds within 0.5 dB. ⚠ **The mix is 5–8 dB quieter at unity and peaks higher**, because struck notes crest together on the beat. Two limits set the gains: §11.8's headroom gate, and a sample peak of 0.42 for both mixes. ⚠ **A rendered sample peak and §11.8's envelope sum measure different things, and neither bounds the other.** A detuned layer is two oscillators, so it can crest at twice its envelope. The P2 `title` mix already peaked at 0.319 over its 0.3005 sum.
 
 **Shipped, CS009 P3 — which track plays where.** `musicStateFor(screen, optionsFrom, mode, trackSetting)` in `src/19-sfx.js` is pure. `Game.frame()` calls `audioFrame()` once per frame, after the steps and before `draw()`. It passes the result to `MusicSys.setState()` (idempotent) and then calls `MusicSys.update()`. ⛔ **It runs every frame**, because a `setState()` before the first gesture is dropped. It writes no `state` and draws nothing.
 
@@ -1088,7 +1110,7 @@ Every entry point is `if (!AudioSys.ctx) return;`-guarded, headless-safe.
 
 ⛔ **The charge tone is held, not played.** `audioFrame()` calls `reconcileSurgeTones(state.enemies, live)` once per frame. Each entity in `telegraph` that has a `chargeTip()` gets one voice, keyed in a `Map` in `19-sfx.js`, never a field on the entity, and `set(chargeTip())`. A voice stops when its Surger leaves `telegraph`, dies or is filtered. `live` comes from `Game.frame()`, which counts its play steps. If the frame ends frozen or off play (pause, any menu, game over, the death freeze), every voice stops. If the run is live but no step ran (a display faster than 60 Hz), the voices hold. Otherwise they follow the fuse.
 
-⛔ **The headroom gate (`scratchpad/test-cs009-p5.js`)** runs at the default volumes. The tone's peak at `master` (recipe gain × SFX bus) must be at least the loudest overlap of note peaks at `master` over a whole loop. It must hold for `pulse` and for `title`. MEASURED: 0.450 against 0.434 on `pulse` and 0.3005 on `title`. ⚠ The 0 dB ratio is provisional. The hardware check is a skipped playtest (`SKIPPED-PLAYTESTS.md`). ⚠ **"At every intensity tier" is untested until tiers exist.** CS009's tracks are untiered, which is the loudest a track can be, and CS010's sweep and layers re-run the gate.
+⛔ **The headroom gate (`scratchpad/test-cs009-p5.js`)** runs at the default volumes. The tone's peak at `master` (recipe gain × SFX bus) must be at least the loudest overlap of note peaks at `master` over a whole loop. It must hold for `pulse` and for `title`. MEASURED at P5: 0.450 against 0.434 on `pulse` and 0.3005 on `title`. Re-measured after the articulation pass (§11.3): 0.4201 on `pulse` and 0.3424 on `title`. ⚠ The 0 dB ratio is provisional. The hardware check is a skipped playtest (`SKIPPED-PLAYTESTS.md`). ⚠ **"At every intensity tier" is untested until tiers exist.** CS009's tracks are untiered, which is the loudest a track can be, and CS010's sweep and layers re-run the gate.
 
 ⛔ **Played, CS009 P6 — the seventh soak (`scratchpad/test-cs009-p6.js`).** One front-door session is played twice: once on the recording fake, unlocked by the first key press through the input's DOM handler, and once with no audio API. The session starts at the title and runs to game over and RESTART at Start Depths 1, 13 and 23. ⛔ **The state hash is identical on all 104,107 frames**, and every seat fires the same number of times in both. In the audio session, all 20 one-shot events sounded, every `sfx()` call reached the player, and the Surger tone was held 27 times. Held voices never exceeded telegraphing Surgers on any frame, and no voice sounded on a frame that ended frozen or off play. Across 4,600 played steps, the worst was 14 nodes against 16. `lifeLost` is staged in both sessions, because no played board reaches the cap: one run starts with `C.LIVES_MAX` lives and its score one point short of a milestone.
 

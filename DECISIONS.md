@@ -671,3 +671,21 @@ Pointer only: Paul's nine answers (OPTIONS rows, default volumes, the voice bus,
 MUSIC TRACK, which tracks, no `tier` in CS009, `sfx-lab` candidate A, the core
 SFX set, `sfxVoice`) and the eleven readings are in `PLANNED-FEATURES-CS009.md`
 §0, answered in the planning session.
+
+---
+
+## 2026-09-16 — music is struck, never swelled
+
+**The question.** After CS009 closed, Paul gave his music-lab note on `title` and
+`pulse`: he dislikes the "lilting" attack and decay of the notes.
+
+**The call — Paul.** This game is about punch and staccato, "right on the
+money". Soft onsets and long rings read as soft and imprecise. It is a rule for
+every track, not a fix for two: attacks ≤ 0.005 s, decay from the onset, a
+per-layer gate on how long a note sounds, and filter sweeps that close. The rule
+is in `CLAUDE.md` (Audio) and GDD §11.3. The port and its measurements are in
+`log/CS009.md`, "After the close".
+
+**What would change it.** Paul hearing the struck version in `tools/music-lab.html`
+and wanting some ring back on a specific layer. That is a data change through
+the lab, and the rule's numbers move with it.

@@ -57,7 +57,14 @@ rules, 2026-08-31).
   voice per telegraphing Surger, keyed in a `Map` in `19-sfx.js` (never a field
   on the entity), and `set(chargeTip())` each frame. ⛔ The headroom gate
   (`test-cs009-p5.js`, `HEADROOM_RATIO` 1.0, ⚠ provisional) measures the
-  UNTIERED tracks: 0.450 against 0.434 `pulse`, 0.3005 `title`.
+  UNTIERED tracks: 0.450 against 0.4201 `pulse` and 0.3424 `title` (since the
+  articulation pass).
+- ⚠ **SETTLED — MUSIC IS STRUCK, NEVER SWELLED** (Paul, 2026-09-16; `CLAUDE.md`
+  Audio, GDD §11.3). Both tracks were re-articulated after the close: attack
+  ≤ 0.005 s, decay from the onset, a per-layer `GATE` in steps, and closing filter
+  sweeps. The balance was restored by a gated offline render (`log/CS009.md`,
+  "After the close"). ⚠ **Both mixes are 5–8 dB quieter at unity**, and each
+  peaks at 0.42.
 - ⚠ **Both tracks are unauditioned**: no layer carries an `audition` mark.
 - ⛔ **Read GDD §6.5 before adding an enemy.** Eight contract fields (plus
   `points()`, CS008 P2), the wiring points, the one array / one spawn entry /
@@ -273,9 +280,9 @@ rules, 2026-08-31).
 - ⚠ **`CLAUDE.md` carries no telemetry rule**; whether it earns one is Paul's
   call.
 - ⚠ **Paul replaces `C.CREDITS_LINES` before ship.**
-- ⚠ **Paul has music-lab feedback he has not yet put into words** (2026-09-16):
-  he dislikes some things in the tracks. Asked at CS009's close; the answer is
-  pending. Nothing waits on it, but CS010's plan tiers layers of those tracks.
+- ✅ **Paul's music-lab note is in and ported** (2026-09-16): struck, never
+  swelled (above). ⚠ Whether the struck tracks sound as he means is his call in
+  the lab. No layer is marked PASS.
 - ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
   2 → 3.
@@ -299,8 +306,8 @@ writes no code.
 
 1. ⛔ **CS010 may tier only a layer marked PASS (Paul's A6), and no layer is
    marked.** A PASS is Paul's mark in `tools/music-lab.html`; a lab is not a
-   playtest. What CS010 does with no marks is a call for Paul, and so is his
-   unworded track feedback (Carried tasks). The plan names both and stops.
+   playtest. What CS010 does with no marks is a call for Paul. The plan names
+   it and stops.
 2. ⚠ **SETTLED — the Surger charge tone is audible over music at every tier.**
    `test-cs009-p5.js`'s gate measures untiered tracks. A sweep or a tier
    re-runs it.
@@ -314,3 +321,8 @@ writes no code.
    unity. GDD §17 item 9's two remaining clauses become testable here.
 6. ⛔ Every audio edit obeys the known issues above: the three-file rule, the
    pinned `function audioFrame()` text, and the banned substrings.
+7. ⚠ **SETTLED — struck, never swelled.** Every earned layer obeys the rule, and
+   the rule has no test yet. CS010 adds that gate in its own file.
+8. ⚠ **The struck mixes are 5–8 dB quieter at unity**, limited by the headroom
+   gate and a 0.42 sample peak. Whether to buy level back (a master limiter, a
+   lower SFX bus, a different gate) is a mix call for Paul.

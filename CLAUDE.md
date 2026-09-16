@@ -386,6 +386,13 @@ nothing starts before the first user gesture and the headless suite is safe.
 must stay audible over music at every intensity tier. It is the one sound whose
 absence costs a life.
 
+⚠ **SETTLED — music is struck, never swelled: punch and staccato, right on the
+beat** (Paul, 2026-09-16). On every layer of every track, `drive` and CS010's
+layers included: `atk` ≤ 0.005 s; decay starts within 0.05 s of the onset (`rel`
+≥ the note's sounding length); a note sounds for at most its layer's `GATE` in
+steps; a filter sweep closes, never opens. A pad that fades in is the sound Paul
+rejected. GDD §11.3.
+
 ### Save data
 
 ⛔ **`kit-storage` owns the keyspace.** The game never chooses a raw

@@ -12,6 +12,16 @@
 // ⛔ EVERY LAYER IS WRITTEN AS A PART, to be recognisable played solo (GDD
 // 11.4(c)): a tune, a line, a figure or a groove. Never texture.
 //
+// ⚠ SETTLED — EVERY NOTE IS STRUCK, NEVER SWELLED (Paul, 2026-09-16; GDD 11.3).
+// The game is punch and staccato, right on the beat; a soft attack or a long
+// ring reads as imprecise. So, on every layer:
+//   attack   atk <= 0.005 s
+//   decay    it starts within 0.05 s of the onset: `rel` is at least the note's
+//            sounding length, so nothing holds and nothing fades in
+//   length   a note SOUNDS for at most its layer's GATE, in steps, whatever its
+//            written length: the rhythm is carried by the onsets
+//   filter   a sweep closes over the note (bright to dark), never opens
+//
 // ⛔ THIS FILE READS NO GAME GLOBAL. The lab runs it with no config object.
 
 // MIDI note number to Hz. 69 is A4.
@@ -28,11 +38,11 @@ function trackNote(row, step, m, dur, g) { row[step] = { f: midiHz(m), dur: dur,
 // TITLE. G major, 60 BPM, 16 steps to a bar, 8 bars: 32 s to the loop point.
 // A (bars 0-3) states a four-bar theme that settles on A over D. B (bars 4-7)
 // answers it, climbing to G5 and falling home to F#4, which leans back into
-// bar 0's G. Four layers:
+// bar 0's G. Four layers, each struck and short (the header's rule):
 //   theme   the tune, and nothing else carries it
 //   bells   a four-note falling figure on each bar's second half, high
-//   glow    a two-note-a-bar chorale line under the tune
-//   ground  root for three beats, fifth on the fourth
+//   glow    two chord tones a bar under the tune, stabbed
+//   ground  the root on beat one, the fifth on beat four
 // ---------------------------------------------------------------------------
 function buildTitleTrack() {
   const BAR = 16, BARS = 8, STEPS = BAR * BARS;
@@ -46,6 +56,8 @@ function buildTitleTrack() {
     Bm: [47, [90, 86, 83, 78], [62, 59]],
   };
   const PROG = ["G", "Em", "C", "D", "G", "Bm", "C", "D"];
+  // The most steps a note SOUNDS for, per layer (the header's rule).
+  const GATE = { theme: 3, bells: 1, glow: 2, ground: 2 };
   // The tune: one row per bar, each note [step, midi, dur].
   const TUNE = [
     [[0, 71, 8], [8, 74, 4], [12, 71, 4]],
@@ -59,24 +71,24 @@ function buildTitleTrack() {
   ];
   for (let b = 0; b < BARS; b++) {
     const s0 = b * BAR, ch = CHORD[PROG[b]];
-    for (const n of TUNE[b]) trackNote(theme, s0 + n[0], n[1], n[2], n[0] === 0 ? 1 : 0.85);
-    for (let i = 0; i < 4; i++) trackNote(bells, s0 + 8 + i * 2, ch[1][i], 2, i === 0 ? 0.9 : 0.65);
-    trackNote(glow, s0, ch[2][0], 8, 0.9);
-    trackNote(glow, s0 + 8, ch[2][1], 8, 0.8);
-    trackNote(ground, s0, ch[0], 12, 1);
-    trackNote(ground, s0 + 12, ch[0] + 7, 4, 0.7);
+    for (const n of TUNE[b]) trackNote(theme, s0 + n[0], n[1], Math.min(n[2], GATE.theme), n[0] === 0 ? 1 : 0.85);
+    for (let i = 0; i < 4; i++) trackNote(bells, s0 + 8 + i * 2, ch[1][i], GATE.bells, i === 0 ? 0.9 : 0.65);
+    trackNote(glow, s0, ch[2][0], GATE.glow, 0.9);
+    trackNote(glow, s0 + 8, ch[2][1], GATE.glow, 0.8);
+    trackNote(ground, s0, ch[0], GATE.ground, 1);
+    trackNote(ground, s0 + 12, ch[0] + 7, GATE.ground, 0.7);
   }
   return { stepDur: 0.25, steps: STEPS, layers: [
-    { name: "theme", type: "triangle", detune: 5, gain: 0.075, atk: 0.10, rel: 0.9, steps: theme },
-    { name: "bells", type: "triangle", gain: 0.075, atk: 0.004, rel: 0.45, steps: bells },
-    { name: "glow", type: "sawtooth", cutoff: 900, cutoffTo: 1600, detune: 8, gain: 0.085, atk: 1.0, rel: 1.2, steps: glow },
-    { name: "ground", type: "triangle", gain: 0.090, atk: 0.20, rel: 0.8, steps: ground },
+    { name: "theme", type: "triangle", detune: 5, gain: 0.090, atk: 0.004, rel: 0.75, steps: theme },
+    { name: "bells", type: "triangle", gain: 0.086, atk: 0.004, rel: 0.25, steps: bells },
+    { name: "glow", type: "sawtooth", cutoff: 1600, cutoffTo: 900, detune: 8, gain: 0.056, atk: 0.004, rel: 0.5, steps: glow },
+    { name: "ground", type: "triangle", gain: 0.202, atk: 0.004, rel: 0.5, steps: ground },
   ]};
 }
 
 // ---------------------------------------------------------------------------
 // PULSE. Classic's gameplay track (GDD 13). E minor, 80 BPM, 16 steps to a
-// bar, 36 bars: 108 s to the loop point. Sparse, tonal, near-ambient.
+// bar, 36 bars: 108 s to the loop point. Sparse, tonal, and struck.
 //   A (bars 0-11)   the tune stated low and plain over Em Cmaj7 G D, twice,
 //                   then a four-bar answer. Heart once a bar; ticks from bar 4.
 //   B (bars 12-23)  the tune lifts an octave into the relative major's colours
@@ -84,9 +96,9 @@ function buildTitleTrack() {
 //   C (bars 24-35)  the peak: the busiest bassline and ticks, the tune at its
 //                   highest, then the opening motif returns (bar 32) and a B
 //                   major bar pulls back to bar 0's Em.
-// Six layers:
+// Six layers, each struck and short (the header's rule):
 //   melody    the tune, and nothing else carries it
-//   swell     a two-note-a-bar chorale line
+//   swell     two chord tones a bar, stabbed
 //   bassline  the root's rhythm, a different figure per section
 //   cycle     three chord tones against eight eighths, so the figure shifts
 //   heart     lub-dub
@@ -111,6 +123,8 @@ function buildPulseTrack() {
     "Cmaj7", "D", "Bm7", "Em", "Cmaj7", "D", "G", "G", "Am7", "Bm7", "Cmaj7", "D",     // B
     "Em", "D", "Cmaj7", "G", "Am7", "Em", "Cmaj7", "D", "Em", "Cmaj7", "Am7", "B",     // C
   ];
+  // The most steps a note SOUNDS for, per layer (the header's rule).
+  const GATE = { melody: 3, swell: 2, bassline: 2, cycle: 1, heart: 1, tick: 1 };
   // The tune: one row per bar, each note [step, midi, dur].
   const TUNE = [
     [[0, 76, 6], [6, 74, 2], [8, 71, 8]],                   // A
@@ -169,22 +183,22 @@ function buildPulseTrack() {
   ];
   for (let b = 0; b < BARS; b++) {
     const s0 = b * BAR, ch = CHORD[PROG[b]], sec = SECTION[Math.floor(b / 12)];
-    for (const n of TUNE[b]) trackNote(melody, s0 + n[0], n[1], n[2], n[0] === 0 ? 1 : 0.85);
+    for (const n of TUNE[b]) trackNote(melody, s0 + n[0], n[1], Math.min(n[2], GATE.melody), n[0] === 0 ? 1 : 0.85);
     const two = sec === SECTION[1] ? [ch[2][1], ch[2][0]] : ch[2];
-    trackNote(swell, s0, two[0], 8, 0.9);
-    trackNote(swell, s0 + 8, two[1], 8, 0.8);
-    for (const n of sec.bass) trackNote(bassline, s0 + n[0], ch[0] + n[1], n[2], n[3]);
-    for (let i = 0; i < 8; i++) trackNote(cycle, s0 + i * 2, ch[1][sec.order[i]], 2, i === 0 ? 0.9 : 0.6);
-    for (const n of sec.beat) trackNote(heart, s0 + n[0], 45, 1, n[1]);
-    if (b >= 4) for (const n of sec.ticks) trackNote(tick, s0 + n[0], 69, 1, n[1]);
+    trackNote(swell, s0, two[0], GATE.swell, 0.9);
+    trackNote(swell, s0 + 8, two[1], GATE.swell, 0.8);
+    for (const n of sec.bass) trackNote(bassline, s0 + n[0], ch[0] + n[1], Math.min(n[2], GATE.bassline), n[3]);
+    for (let i = 0; i < 8; i++) trackNote(cycle, s0 + i * 2, ch[1][sec.order[i]], GATE.cycle, i === 0 ? 0.9 : 0.6);
+    for (const n of sec.beat) trackNote(heart, s0 + n[0], 45, GATE.heart, n[1]);
+    if (b >= 4) for (const n of sec.ticks) trackNote(tick, s0 + n[0], 69, GATE.tick, n[1]);
   }
   return { stepDur: 0.1875, steps: STEPS, layers: [
-    { name: "melody", type: "triangle", detune: 4, gain: 0.070, atk: 0.08, rel: 0.6, steps: melody },
-    { name: "swell", type: "sawtooth", cutoff: 700, cutoffTo: 1400, detune: 9, gain: 0.085, atk: 0.6, rel: 0.9, steps: swell },
-    { name: "bassline", type: "triangle", gain: 0.098, atk: 0.01, rel: 0.25, steps: bassline },
-    { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.055, atk: 0.005, rel: 0.3, steps: cycle },
-    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.140, atk: 0.003, rel: 0.14, steps: heart },
-    { name: "tick", noise: true, hp: 7000, gain: 0.050, atk: 0.001, rel: 0.04, steps: tick },
+    { name: "melody", type: "triangle", detune: 4, gain: 0.070, atk: 0.004, rel: 0.5625, steps: melody },
+    { name: "swell", type: "sawtooth", cutoff: 1400, cutoffTo: 700, detune: 9, gain: 0.049, atk: 0.004, rel: 0.375, steps: swell },
+    { name: "bassline", type: "triangle", gain: 0.171, atk: 0.004, rel: 0.375, steps: bassline },
+    { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.070, atk: 0.005, rel: 0.1875, steps: cycle },
+    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.072, atk: 0.003, rel: 0.14, steps: heart },
+    { name: "tick", noise: true, hp: 7000, gain: 0.074, atk: 0.001, rel: 0.1875, steps: tick },
   ]};
 }
 
