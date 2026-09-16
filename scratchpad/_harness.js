@@ -265,6 +265,8 @@ function buildGame(opts = {}) {
     "musicStateFor", "MUSIC_SILENCE",
     // the seats' one call and the Surger tone (19-sfx.js, CS009 P5)
     "sfx", "reconcileSurgeTones",
+    // the intensity director, the danger read and the duck (18/19/23, CS010 P2)
+    "createDirector", "Director", "dangerInputs", "duckFor",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of

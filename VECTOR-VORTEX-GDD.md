@@ -1014,7 +1014,7 @@ raw = W_COUNT     * clamp01(enemiesAlive / EXPECTED_ENEMIES)
     + W_PROXIMITY * clamp01(nearestEnemyDepth)
     + W_COMBO     * clamp01(combo / COMBO_MAX)      // Overdrive
     + W_PERIL     * (lives <= 1 ? 1 : 0)
-    + W_HEAT      * clamp01(heat / HEAT_MAX);
+    + W_HEAT      * heatT(level);             // normalised at level 99 (D7)
 ```
 
 Smoothed **asymmetrically** — attack ~0.4 s so danger registers immediately, release ~2.5 s so relief is earned. Symmetric smoothing makes layers flutter, which sounds broken.
@@ -1024,6 +1024,8 @@ Smoothed **asymmetrically** — attack ~0.4 s so danger registers immediately, r
 **(c) ⛔ P5 — the standalone test.** *Every layer above the foundation must be recognizable played solo, with the rest of the track muted.* A layer that only makes sense inside the stack is texture, and texture is what produced the mud. `music-lab` gains a **solo button per layer**, and a layer that fails the solo audition does not ship. This is an audition gate, not a code rule, and it is the thing that was missing last time.
 
 **CS009 — not built; CS010's.** No director exists: `src/18-audio-director.js` is a one-line placeholder, and kit-audio has no intensity setter. What CS009 did ship for (c) is the solo button itself, with MUTE and a PASS / FAIL mark per layer (§11.3). ⚠ No layer is marked yet.
+
+**Shipped, CS010 P2 — the director, with no layer tiered yet.** `createDirector` (`src/18-audio-director.js`, kit-audio: no `C`, no `state`) mixes the five readings with `C.INT_W_*`, clamps the sum to 0..1, and smooths it one-pole on the **audio clock**: τ = `C.INT_ATTACK` (0.4 s) while the mix is above the level, `C.INT_RELEASE` (2.5 s) otherwise. ⛔ The readings come from ONE top-level function, `dangerInputs(state, out)` (`23-main.js`), which writes only `out`: live, non-`anchored` entities over `C.INT_EXPECTED_ENEMIES` (a Weaver bolt counts, a Thorn does not), the deepest of them (0 with none), the last life, `heatT(level)`, and a combo of 0. ⛔ **Classic's ceiling is 0.85, and nothing is rescaled for the missing combo** (D6). `audioFrame()` runs it on every play frame, frozen or not, and hands the level to `setIntensity` and `setSweep`. ⛔ **A Dive reads zero**, so the level falls by the release (§5). The first play frame of a run entered from the title side or game over resets it to 0, so RESTART starts from 0. Pause and OPTIONS from pause call nothing and hold both; the title side opens the sweep fully. ⚠ A resume's first frame integrates the paused time (`STATUS.md`). `test-cs010-p2.js`.
 
 ### 11.5 ⛔ Scope: sweep plus two or three earned layers
 
@@ -1049,6 +1051,8 @@ Deliberately narrower than the five-tier design that failed.
 The scheduler emits kick and snare events to the render layer; the rim pulses on the kick. ⛔ **Driven by the scheduler, not an `AnalyserNode`** — an analyser adds latency, and tightness is the point.
 
 **CS009 — the node only; the rest is CS010's.** `createMusic` builds `duck` between the track gain and the music bus, at unity, because §11.1's signal path contains it. Nothing ramps it: no menu duck (`C.MUSIC_DUCK_GAIN` and `C.MUSIC_DUCK_RAMP` are unread), no 6 dB dips, and no kick or snare events.
+
+**Shipped, CS010 P2 — the duck and the dips.** ⛔ **"A menu is open" means the pause side** (Paul's D9): `duckFor(screen, optionsFrom)` (`19-sfx.js`, pure) is true on pause and on OPTIONS and its pages opened from pause, and on no other screen — not the title, MODE, START DEPTH, the title's OPTIONS or game over. `audioFrame()` calls `MusicSys.setDuck(duckFor(…))` every frame; the duck ramps to `C.MUSIC_DUCK_GAIN` (0.5) over `C.MUSIC_DUCK_RAMP`. ⛔ **The dips ride on the seat call**: `sfx(name)` calls `MusicSys.dip()` when `name` is in `C.MUSIC_DIP_EVENTS` — `purge`, `purgeWeak`, `death`, `extraLife`, and ⛔ never `lifeLost` (the over-cap sound). No new seat. The dip is its own node after the duck, so a dip under a duck multiplies. The rim pulse is P4's.
 
 ### 11.7 Tracks
 

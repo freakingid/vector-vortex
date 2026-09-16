@@ -209,3 +209,14 @@ for.
   whether menu ticks are too loud next to `title`.
 - **Knobs:** each `C.SFX` recipe's `gain` (re-pick in the lab), `C.SFX_KILL_PITCH`,
   and `C.AUDIO_VOL_DEFAULT`.
+
+### CS010 P2 — the menu duck and the event dips on hardware
+- **Would have done:** paused and opened OPTIONS mid-run with `pulse` playing,
+  then spent a Purge, a weak Purge, lost a life, and crossed an extra-life
+  milestone, on speakers and on headphones.
+- **Trying to learn:** whether −6 dB under a menu reads as "the game is waiting"
+  without sounding broken, whether 0.15 s ramps click or drag, and whether a
+  0.5 s dip is heard as a punctuation of the event or as a dropout (a death dips
+  inside its own 1.1 s sound).
+- **Knobs:** `C.MUSIC_DUCK_GAIN`, `C.MUSIC_DUCK_RAMP`, `C.MUSIC_DIP_GAIN`,
+  `C.MUSIC_DIP_HOLD`.

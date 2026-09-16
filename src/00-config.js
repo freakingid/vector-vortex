@@ -515,6 +515,7 @@ const C = {
   MUSIC_DUCK_RAMP:      0.15,   // s. ⛔ ramp, never a bare .value set.
   MUSIC_DIP_GAIN:       0.50,   // -6 dB event dip (Paul's D9); ramps over MUSIC_DUCK_RAMP
   MUSIC_DIP_HOLD:       0.50,   // s held at the dip before it ramps back
+  MUSIC_DIP_EVENTS:     ["purge", "purgeWeak", "death", "extraLife"], // the seat call dips the music on these (D9); never lifeLost
   // ⛔ The music limiter (Paul's D2), after the sweep and before the duck. The
   // headroom gate models its static curve, exact only at knee 0 (D16).
   MUSIC_LIMIT:          { threshold: -24, knee: 0, ratio: 20, attack: 0.001, release: 0.10 },
@@ -533,7 +534,6 @@ const C = {
   INT_W_HEAT:           0.10,
   INT_EXPECTED_ENEMIES: 10,
   INT_COMBO_MAX:        8,
-  INT_HEAT_MAX:         2.0,
   // The engine (CS009 P1). ⛔ The noise buffer is its OWN stream from its own
   // seed (01-rng.js's header), never the run's: an audio draw must not move a
   // spawn lane, and the platform generator is banned from the build.

@@ -39,6 +39,21 @@ const MusicSys = createMusic(AudioSys, {
   duck:      { gain: C.MUSIC_DUCK_GAIN, ramp: C.MUSIC_DUCK_RAMP, dipGain: C.MUSIC_DIP_GAIN, dipHold: C.MUSIC_DIP_HOLD },
 });
 
+// ⛔ THE INTENSITY DIRECTOR (CS010 P2; GDD 11.4), built from C. The input names
+// are 23-main.js's dangerInputs() fields, which is the one reader of the board.
+// `combo` is always 0 in Classic (D6), and nothing is rescaled for it.
+const Director = createDirector({
+  attack:  C.INT_ATTACK,
+  release: C.INT_RELEASE,
+  weights: {
+    count:     C.INT_W_COUNT,
+    proximity: C.INT_W_PROXIMITY,
+    combo:     C.INT_W_COMBO,
+    peril:     C.INT_W_PERIL,
+    heat:      C.INT_W_HEAT,
+  },
+});
+
 // The SFX player (CS009 P4). Its noise is a SECOND instance of the audio seed's
 // stream, so it shares no draws with MusicSys's buffer or with the run. The
 // recipes are C.SFX; the seats call sfx() below.
@@ -56,6 +71,9 @@ function sfx(name, voice) {
   if (!AudioSys.ctx) return;
   const pitch = voice == null ? undefined : C.SFX_KILL_PITCH[voice];
   Sfx.play(C.SFX[name], { pitch });
+  // ⛔ THE MUSIC DIPS RIDE ON THE SEAT (CS010 P2, R8; GDD 11.6): no seat of
+  // their own, so the seat lines are unchanged.
+  if (C.MUSIC_DIP_EVENTS.indexOf(name) >= 0) MusicSys.dip();
 }
 
 // ⛔ THE SURGER CHARGE TONE (GDD 6.3, 11.8; plan §7). A HELD voice per Surger
@@ -116,4 +134,13 @@ function musicStateFor(screen, optionsFrom, mode, trackSetting) {
                 (optionsFrom === "pause" && MUSIC_OPTIONS_PAGES.indexOf(screen) >= 0);
   if (!inRun) return "title";
   return trackSetting === "auto" ? C.MODE_TRACK[mode] : trackSetting;
+}
+
+// ⛔ THE MENU DUCK BY SCREEN (CS010 P2; Paul's D9). PURE, beside musicStateFor:
+// true on pause, and on OPTIONS and its pages opened from pause. Not on title,
+// mode, START DEPTH, the title's OPTIONS, play or game over. These are also the
+// screens where audioFrame() holds intensity and the sweep.
+function duckFor(screen, optionsFrom) {
+  return screen === "pause" ||
+         (optionsFrom === "pause" && MUSIC_OPTIONS_PAGES.indexOf(screen) >= 0);
 }

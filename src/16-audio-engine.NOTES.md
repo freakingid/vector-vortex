@@ -102,6 +102,34 @@ music.setState(screen === "title" ? "title" : "off");
 music.update();
 ```
 
+### `createDirector(opts)` (0.3.0, `18-audio-director.js`)
+
+An intensity director: a weighted mix of the host's 0..1 readings, smoothed
+asymmetrically on a clock the host hands it. It names no game term.
+
+| Option | Required | Meaning |
+|---|---|---|
+| `attack` | yes | Seconds > 0. The time constant while the mix is above the level. |
+| `release` | yes | Seconds > 0. The time constant otherwise. ⛔ Keep it longer than `attack`: symmetric smoothing makes layers flutter. |
+| `weights` | yes | `{ name: w >= 0 }`. The input names `frame()` reads. |
+
+| Surface | Meaning |
+|---|---|
+| `frame(inputs, now)` | Sums `w · clamp01(inputs[name])` (non-finite reads 0), clamps the sum to 0..1, and moves the level `(1 − e^(−dt/τ))` of the way to it, `dt` being `now` minus the previous frame's `now`. The first frame after `reset()` only takes the clock; a clock that did not move forward, or is not finite, moves nothing. Returns the level. No allocation. |
+| `reset()` | Level 0, clock forgotten. |
+| `level` | The smoothed value, 0..1. |
+
+```js
+const director = createDirector({ attack: 0.4, release: 2.5, weights: { danger: 0.7, heat: 0.3 } });
+// each gameplay frame; the host fills `reading` in place:
+const f = director.frame(reading, engine.now());
+music.setIntensity(f);
+music.setSweep(f);
+```
+
+⚠ **The host decides when it runs.** A host that stops calling `frame()` (a
+pause) holds the level, and the next call integrates the whole gap.
+
 ### `createSfxPlayer(engine, opts)` (0.2.0)
 
 | Option | Required | Meaning |
@@ -230,5 +258,22 @@ composer's balance with its peaks held under a gameplay cue.
 **Game-agnostic?** Yes. It names no game concept: thresholds, bar length, the
 filter range, the limiter's settings, the duck levels and what `onBeat` does
 belong to the host. The host's suite scans this slice for `C.` and `state`.
+
+**Backport status.** `not yet`.
+
+### 2026-09-16 — the director (`18-audio-director.js`; `VERSION` stays 0.3.0)
+
+**What changed.** Additive: `createDirector({ attack, release, weights })`. New,
+not a port: Orbital Overhaul gated on a wave curve (`1 − e^(−(w−1)/8)`), with no
+smoothing and no live input. Nothing in `16-audio-engine.js` changed. The
+version was not bumped: 0.3.0 is unreleased and still in the changeset that
+bumped it (Vector Vortex's plan §8 allows one bump for CS010).
+
+**Why.** Vector Vortex CS010 P2 (GDD §11.4). Layers and the sweep follow live
+danger, rising fast and falling slowly.
+
+**Game-agnostic?** Yes. The input names, weights and time constants are the
+host's, and so is what counts as danger. The host's suite scans the slice for
+`C.`, the word `state`, and its game globals.
 
 **Backport status.** `not yet`.

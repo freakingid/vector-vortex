@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.6 · Changeset: CS010 (P1 done 2026-09-16 — P2 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.6 · Changeset: CS010 (P2 done 2026-09-16 — P3 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS010
 
@@ -11,13 +11,14 @@ rules, 2026-08-31).
 
 | Phase | Commit | One line |
 |---|---|---|
-| P1 | this commit | kit-audio 0.3.0: optional `gating` (bar-latched `setIntensity`), `sweep`, `limiter`, `duck` (`setDuck`, `dip`), `onBeat`; the fake's compressor; the headroom gate is D16's model (0.3350 / 0.3359). Nothing drives them yet. 7 of 7 red |
+| P1 | `8bf9110` | kit-audio 0.3.0: optional `gating` (bar-latched `setIntensity`), `sweep`, `limiter`, `duck` (`setDuck`, `dip`), `onBeat`; the fake's compressor; the headroom gate is D16's model (0.3350 / 0.3359). Nothing drives them yet. 7 of 7 red |
+| P2 | this commit | The director: kit-audio `createDirector` (asymmetric, audio clock), top-level `dangerInputs(state, out)`, `audioFrame()` driving `setIntensity`/`setSweep` in play (a Dive reads 0; run entry resets; pause side holds; title opens the sweep), `duckFor()` on the pause side, `sfx()` dips on D9's four. `INT_HEAT_MAX` deleted. 10 of 10 red |
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 480.0 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 486.9 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **50 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **51 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -182,11 +183,23 @@ rules, 2026-08-31).
     clips at the destination. No changeset owns it.
   - `IIRFilterNode` cannot be swept (no automatable parameter), so the sweep is
     a biquad.
-- ⛔ **THE TEN `INT_*` KEYS ARE STILL UNREAD** (P2's). Since CS010 P1,
-  `19-sfx.js` reads `LAYER_THRESHOLD`, `LAYER_CROSSFADE`, `FILTER_*`,
-  `MUSIC_LIMIT`, `MUSIC_DUCK_*` and `MUSIC_DIP_*` into `createMusic`.
-  `INT_W_COMBO` has no source before CS012's combo; `INT_HEAT_MAX` is P2's to
-  delete (D7).
+- ⛔ **THE DIRECTOR IS LIVE (CS010 P2).** `audioFrame()` runs it, then
+  `setIntensity`, `setSweep` and `setDuck`, all ⛔ BEFORE `setState()`, so a track
+  starting on a frame builds its gates at that frame's level (P3's tiers). ⛔ Its
+  one board reader is top-level `dangerInputs(state, out)`; `test-cs010-p2.js`
+  hashes `state` around every call. `INT_W_COMBO` is wired and fed 0;
+  `INT_COMBO_MAX` is CS012's and unread. `INT_HEAT_MAX` is gone.
+  - ⛔ **A run resets the director only when play is entered from a non-run
+    screen** (not play, not the pause side), tracked by `Game`'s `audioRunLive`,
+    which `Game.reset()` clears. ⚠ A `startGame()` called while already on play
+    (the pinned soaks' restarts) does NOT reset. P5's soak should know.
+  - ⚠ **A resume integrates the pause** (R1's audio-clock dt): the first play
+    frame after a g-second pause moves the level 1 − e^(−g/τ) toward the
+    reading (PREDICTED: 86 % of a release after 5 s). The hold while paused is
+    exact. Whether to skip the gap is a call for Paul; unowned.
+  - ⚠ **R4 observed on the fake:** title → play closes the sweep toward 600 Hz
+    with τ 0.05 s while `title`'s 0.6 s crossfade plays, so its tail darkens in
+    ~0.15 s.
 - ⛔ **`MusicSys.setState()` BEFORE THE FIRST GESTURE IS DROPPED** (ported
   as-is: it returns on a null `ctx` without recording the name). That is why
   `audioFrame()` calls it every frame. ⛔ Never move it onto a screen change.
@@ -342,11 +355,12 @@ rules, 2026-08-31).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS010 P2
+## Next up — ⛔ CS010 P3
 
-⛔ **Paste P2's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: the director.
-kit-audio 0.3.0's setters exist and nothing calls them; P2 drives
-`setIntensity`, `setSweep`, `setDuck` and `dip` from play.
+⛔ **Paste P3's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: the earned
+layers (`cycle` tier 2, `tick` tier 3, `bar: 16`), Paul's `pulse` gains and
+`title`'s ground at 0.45, and music-lab's INTENSITY and TIER. The director
+already drives `setIntensity` from play, so a tier added in P3 is heard at once.
 
 ⛔ **What every CS010 phase must not lose** (plan §0, answered by Paul
 2026-09-16):

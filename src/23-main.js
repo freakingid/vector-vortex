@@ -303,6 +303,39 @@ function buildLaneState(state, well) {
   return _laneState;
 }
 
+// ---------------------------------------------------------------------------
+// THE DANGER READ (GDD 11.4; CS010 P2, R7). The intensity director's ONE reader
+// of the board. Top-level so a harness spy reaches it (a function inside Game's
+// closure cannot be spied).
+// ---------------------------------------------------------------------------
+//
+// ⛔ IT WRITES `out` AND NOTHING ELSE, and allocates nothing: the caller owns
+// `out` and it is refilled in place every frame.
+//   count      live non-anchored entities / C.INT_EXPECTED_ENEMIES, capped at 1
+//   proximity  the deepest of them, 0 with none (D15)
+//   peril      1 on the last life
+//   heat       heatT(level), normalised at C.HEAT_FULL_LEVEL (D7). ⛔ Never the
+//              curve itself: test-cs007-p2.js holds its call sites exact.
+//   combo      0. Classic has no combo, ever (GDD 13; D6); CS012 supplies one.
+// ⛔ A THORN IS NOT COUNTED: `anchored` means its depth is a LENGTH, not a
+// position (CLAUDE.md). A Weaver bolt is a position, and counts.
+function dangerInputs(state, out) {
+  const list = state.enemies;
+  let n = 0, near = 0;
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    if (e.dead || e.anchored) continue;
+    n++;
+    if (e.depth > near) near = e.depth;
+  }
+  out.count = Math.min(n / C.INT_EXPECTED_ENEMIES, 1);
+  out.proximity = Math.min(near, 1);
+  out.peril = state.lives <= 1 ? 1 : 0;
+  out.heat = heatT(state.level);
+  out.combo = 0;
+  return out;
+}
+
 const Game = (function () {
 
   let canvas = null;
@@ -1264,13 +1297,46 @@ const Game = (function () {
   // voice stops (false); no play step ran but the run is live, and the voices
   // hold (null); otherwise they follow the fuse (true). ⛔ Not `hitStopLeft > 0`
   // alone: a pause holds no freeze, and it stops the fuse all the same.
+  //
+  // ⛔ AND THE INTENSITY DIRECTOR (CS010 P2; Paul's D8, D9). BEFORE setState(),
+  // so a track that starts on this frame builds its gates at this frame's level.
+  //   play          the director reads dangerInputs(), or ZERO during a Dive
+  //                 (GDD 5: the music drops to its foundation), and its level
+  //                 drives setIntensity() and setSweep(). ⛔ It runs frozen or not
+  //                 (R11). The first play frame of a run, entered from a screen
+  //                 with no live run behind it (title side, game over), resets
+  //                 it, so a run and a RESTART both start from 0.
+  //   pause side    duckFor(): nothing set, so intensity and the sweep HOLD.
+  //   title side    the sweep fully open; intensity untouched (title is untiered).
+  //   game over     nothing: the music is fading to silence.
+  // The duck follows duckFor() on every frame. ⛔ Reads state, writes none.
   function audioFrame() {
+    const screen = state.screen;
+    const pauseSide = duckFor(screen, optionsFrom);
+    if (screen === "play") {
+      if (!audioRunLive) Director.reset();
+      const level = Director.frame(state.dive.active ? DANGER_NONE : dangerInputs(state, dangerRead),
+                                   AudioSys.now());
+      MusicSys.setIntensity(level);
+      MusicSys.setSweep(level);
+    } else if (!pauseSide && screen !== "gameover") {
+      MusicSys.setSweep(1);
+    }
+    audioRunLive = screen === "play" || pauseSide;
+    MusicSys.setDuck(pauseSide);
     MusicSys.setState(musicStateFor(state.screen, optionsFrom, state.mode,
                                     C.MUSIC_TRACK_CHOICES[sound.track]));
     MusicSys.update();
     const stopped = hitStopLeft > 0 || state.screen !== "play";
     reconcileSurgeTones(state.enemies, stopped ? false : playSteps > 0 ? true : null);
   }
+
+  // audioFrame()'s own memory, never `state`: the director's reading is
+  // refilled in place, a Dive reads the zero board, and whether the last frame
+  // had a live run behind it (play or pause side) decides a reset.
+  const dangerRead = { count: 0, proximity: 0, peril: 0, heat: 0, combo: 0 };
+  const DANGER_NONE = Object.freeze({ count: 0, proximity: 0, peril: 0, heat: 0, combo: 0 });
+  let audioRunLive = false;
 
   function rafFrame(tMs) {
     if (!running) return;
@@ -1320,6 +1386,7 @@ const Game = (function () {
     lastMs = 0;
     hitStopLeft = 0;
     syncedScreen = null;
+    audioRunLive = false;
     resetControls();
     resetSound();
     stats.frames = 0; stats.ticks = 0; stats.lastSteps = 0; stats.accumulator = 0;

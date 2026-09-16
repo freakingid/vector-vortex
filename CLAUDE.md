@@ -588,7 +588,8 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     16-audio-engine.js kit-audio: the context and four buses, the lookahead
                        scheduler, the SFX player. Reads no game global
     17-audio-tracks.js track tables (DATA, ported from music-lab)
-    18-audio-director.js intensity -> tier + filter sweep (CS010; empty)
+    18-audio-director.js kit-audio's createDirector: weighted, asymmetric
+                       smoothing. Its one board reader is dangerInputs() (23)
     19-sfx.js          AudioSys / MusicSys / Sfx built from C; sfx(), the ONE
                        seat call; the Surger tone; musicStateFor()
     20-achievements.js

@@ -564,6 +564,7 @@ const C = {
   MUSIC_DUCK_RAMP:      0.15,   // s. ⛔ ramp, never a bare .value set.
   MUSIC_DIP_GAIN:       0.50,   // -6 dB event dip (Paul's D9); ramps over MUSIC_DUCK_RAMP
   MUSIC_DIP_HOLD:       0.50,   // s held at the dip before it ramps back
+  MUSIC_DIP_EVENTS:     ["purge", "purgeWeak", "death", "extraLife"], // the seat call dips the music on these (D9); never lifeLost
   // ⛔ The music limiter (Paul's D2), after the sweep and before the duck. The
   // headroom gate models its static curve, exact only at knee 0 (D16).
   MUSIC_LIMIT:          { threshold: -24, knee: 0, ratio: 20, attack: 0.001, release: 0.10 },
@@ -582,7 +583,6 @@ const C = {
   INT_W_HEAT:           0.10,
   INT_EXPECTED_ENEMIES: 10,
   INT_COMBO_MAX:        8,
-  INT_HEAT_MAX:         2.0,
   // The engine (CS009 P1). ⛔ The noise buffer is its OWN stream from its own
   // seed (01-rng.js's header), never the run's: an audio draw must not move a
   // spawn lane, and the platform generator is banned from the build.
@@ -7540,7 +7540,62 @@ const MUSIC_TRACKS = {
 // ==========================================================================
 // 18-audio-director.js
 // ==========================================================================
-// 18-audio-director.js — placeholder. See VECTOR-VORTEX-GDD.md for the section that owns this.
+// 18-audio-director.js — kit-audio's intensity director (GDD 11.4; CS010 P2).
+//
+// ⛔ KIT-SHAPED, and part of kit-audio (16-audio-engine.NOTES.md): no config
+// object, no game object, no game global. The host names its inputs, weights
+// them, and hands over a reading and a clock each frame. It names no game term.
+//
+// createDirector({ attack, release, weights }) -> { frame(inputs, now), reset(), level }
+//   weights  { name: w >= 0 }. frame() reads inputs[name] for each, clamps
+//            it to 0..1, and sums w * input; the sum is clamped to 0..1.
+//   frame    smooths that sum on the clock it is handed (seconds), one pole:
+//            level += (raw - level) * (1 - e^(-dt / tau)), tau = attack while
+//            the sum is above the level, release otherwise. Returns the level.
+//            ⛔ ASYMMETRIC ON PURPOSE: symmetric smoothing makes layers flutter.
+//            The first frame after reset() only takes the clock (dt 0). A clock
+//            that did not move forward moves nothing.
+//   reset    level 0, and forget the clock.
+//   level    the smoothed value, 0..1.
+// ⛔ No allocation per frame.
+
+function createDirector(opts) {
+  const o = opts || {};
+  function seconds(v, name) {
+    if (typeof v !== "number" || !isFinite(v) || v <= 0) throw new Error("createDirector: " + name + " must be seconds > 0");
+    return v;
+  }
+  const attack = seconds(o.attack, "attack");
+  const release = seconds(o.release, "release");
+  if (!o.weights || typeof o.weights !== "object") throw new Error("createDirector: weights is required");
+  const names = Object.keys(o.weights);
+  const weights = names.map(n => {
+    const w = o.weights[n];
+    if (typeof w !== "number" || !isFinite(w) || w < 0) throw new Error("createDirector: weight " + n + " must be a number >= 0");
+    return w;
+  });
+
+  let level = 0;
+  let last = null;   // the clock at the previous frame, or null after reset()
+
+  return {
+    frame(inputs, now) {
+      let raw = 0;
+      for (let i = 0; i < names.length; i++) raw += weights[i] * audioClamp01(inputs[names[i]]);
+      raw = audioClamp01(raw);
+      if (typeof now !== "number" || !isFinite(now)) return level;
+      const dt = last === null ? 0 : now - last;
+      last = now;
+      if (dt > 0) {
+        const tau = raw > level ? attack : release;
+        level = audioClamp01(level + (raw - level) * (1 - Math.exp(-dt / tau)));
+      }
+      return level;
+    },
+    reset() { level = 0; last = null; },
+    get level() { return level; },
+  };
+}
 
 // ==========================================================================
 // 19-sfx.js
@@ -7586,6 +7641,21 @@ const MusicSys = createMusic(AudioSys, {
   duck:      { gain: C.MUSIC_DUCK_GAIN, ramp: C.MUSIC_DUCK_RAMP, dipGain: C.MUSIC_DIP_GAIN, dipHold: C.MUSIC_DIP_HOLD },
 });
 
+// ⛔ THE INTENSITY DIRECTOR (CS010 P2; GDD 11.4), built from C. The input names
+// are 23-main.js's dangerInputs() fields, which is the one reader of the board.
+// `combo` is always 0 in Classic (D6), and nothing is rescaled for it.
+const Director = createDirector({
+  attack:  C.INT_ATTACK,
+  release: C.INT_RELEASE,
+  weights: {
+    count:     C.INT_W_COUNT,
+    proximity: C.INT_W_PROXIMITY,
+    combo:     C.INT_W_COMBO,
+    peril:     C.INT_W_PERIL,
+    heat:      C.INT_W_HEAT,
+  },
+});
+
 // The SFX player (CS009 P4). Its noise is a SECOND instance of the audio seed's
 // stream, so it shares no draws with MusicSys's buffer or with the run. The
 // recipes are C.SFX; the seats call sfx() below.
@@ -7603,6 +7673,9 @@ function sfx(name, voice) {
   if (!AudioSys.ctx) return;
   const pitch = voice == null ? undefined : C.SFX_KILL_PITCH[voice];
   Sfx.play(C.SFX[name], { pitch });
+  // ⛔ THE MUSIC DIPS RIDE ON THE SEAT (CS010 P2, R8; GDD 11.6): no seat of
+  // their own, so the seat lines are unchanged.
+  if (C.MUSIC_DIP_EVENTS.indexOf(name) >= 0) MusicSys.dip();
 }
 
 // ⛔ THE SURGER CHARGE TONE (GDD 6.3, 11.8; plan §7). A HELD voice per Surger
@@ -7663,6 +7736,15 @@ function musicStateFor(screen, optionsFrom, mode, trackSetting) {
                 (optionsFrom === "pause" && MUSIC_OPTIONS_PAGES.indexOf(screen) >= 0);
   if (!inRun) return "title";
   return trackSetting === "auto" ? C.MODE_TRACK[mode] : trackSetting;
+}
+
+// ⛔ THE MENU DUCK BY SCREEN (CS010 P2; Paul's D9). PURE, beside musicStateFor:
+// true on pause, and on OPTIONS and its pages opened from pause. Not on title,
+// mode, START DEPTH, the title's OPTIONS, play or game over. These are also the
+// screens where audioFrame() holds intensity and the sweep.
+function duckFor(screen, optionsFrom) {
+  return screen === "pause" ||
+         (optionsFrom === "pause" && MUSIC_OPTIONS_PAGES.indexOf(screen) >= 0);
 }
 
 // ==========================================================================
@@ -8426,6 +8508,39 @@ function buildLaneState(state, well) {
   }
 
   return _laneState;
+}
+
+// ---------------------------------------------------------------------------
+// THE DANGER READ (GDD 11.4; CS010 P2, R7). The intensity director's ONE reader
+// of the board. Top-level so a harness spy reaches it (a function inside Game's
+// closure cannot be spied).
+// ---------------------------------------------------------------------------
+//
+// ⛔ IT WRITES `out` AND NOTHING ELSE, and allocates nothing: the caller owns
+// `out` and it is refilled in place every frame.
+//   count      live non-anchored entities / C.INT_EXPECTED_ENEMIES, capped at 1
+//   proximity  the deepest of them, 0 with none (D15)
+//   peril      1 on the last life
+//   heat       heatT(level), normalised at C.HEAT_FULL_LEVEL (D7). ⛔ Never the
+//              curve itself: test-cs007-p2.js holds its call sites exact.
+//   combo      0. Classic has no combo, ever (GDD 13; D6); CS012 supplies one.
+// ⛔ A THORN IS NOT COUNTED: `anchored` means its depth is a LENGTH, not a
+// position (CLAUDE.md). A Weaver bolt is a position, and counts.
+function dangerInputs(state, out) {
+  const list = state.enemies;
+  let n = 0, near = 0;
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    if (e.dead || e.anchored) continue;
+    n++;
+    if (e.depth > near) near = e.depth;
+  }
+  out.count = Math.min(n / C.INT_EXPECTED_ENEMIES, 1);
+  out.proximity = Math.min(near, 1);
+  out.peril = state.lives <= 1 ? 1 : 0;
+  out.heat = heatT(state.level);
+  out.combo = 0;
+  return out;
 }
 
 const Game = (function () {
@@ -9389,13 +9504,46 @@ const Game = (function () {
   // voice stops (false); no play step ran but the run is live, and the voices
   // hold (null); otherwise they follow the fuse (true). ⛔ Not `hitStopLeft > 0`
   // alone: a pause holds no freeze, and it stops the fuse all the same.
+  //
+  // ⛔ AND THE INTENSITY DIRECTOR (CS010 P2; Paul's D8, D9). BEFORE setState(),
+  // so a track that starts on this frame builds its gates at this frame's level.
+  //   play          the director reads dangerInputs(), or ZERO during a Dive
+  //                 (GDD 5: the music drops to its foundation), and its level
+  //                 drives setIntensity() and setSweep(). ⛔ It runs frozen or not
+  //                 (R11). The first play frame of a run, entered from a screen
+  //                 with no live run behind it (title side, game over), resets
+  //                 it, so a run and a RESTART both start from 0.
+  //   pause side    duckFor(): nothing set, so intensity and the sweep HOLD.
+  //   title side    the sweep fully open; intensity untouched (title is untiered).
+  //   game over     nothing: the music is fading to silence.
+  // The duck follows duckFor() on every frame. ⛔ Reads state, writes none.
   function audioFrame() {
+    const screen = state.screen;
+    const pauseSide = duckFor(screen, optionsFrom);
+    if (screen === "play") {
+      if (!audioRunLive) Director.reset();
+      const level = Director.frame(state.dive.active ? DANGER_NONE : dangerInputs(state, dangerRead),
+                                   AudioSys.now());
+      MusicSys.setIntensity(level);
+      MusicSys.setSweep(level);
+    } else if (!pauseSide && screen !== "gameover") {
+      MusicSys.setSweep(1);
+    }
+    audioRunLive = screen === "play" || pauseSide;
+    MusicSys.setDuck(pauseSide);
     MusicSys.setState(musicStateFor(state.screen, optionsFrom, state.mode,
                                     C.MUSIC_TRACK_CHOICES[sound.track]));
     MusicSys.update();
     const stopped = hitStopLeft > 0 || state.screen !== "play";
     reconcileSurgeTones(state.enemies, stopped ? false : playSteps > 0 ? true : null);
   }
+
+  // audioFrame()'s own memory, never `state`: the director's reading is
+  // refilled in place, a Dive reads the zero board, and whether the last frame
+  // had a live run behind it (play or pause side) decides a reset.
+  const dangerRead = { count: 0, proximity: 0, peril: 0, heat: 0, combo: 0 };
+  const DANGER_NONE = Object.freeze({ count: 0, proximity: 0, peril: 0, heat: 0, combo: 0 });
+  let audioRunLive = false;
 
   function rafFrame(tMs) {
     if (!running) return;
@@ -9445,6 +9593,7 @@ const Game = (function () {
     lastMs = 0;
     hitStopLeft = 0;
     syncedScreen = null;
+    audioRunLive = false;
     resetControls();
     resetSound();
     stats.frames = 0; stats.ticks = 0; stats.lastSteps = 0; stats.accumulator = 0;
