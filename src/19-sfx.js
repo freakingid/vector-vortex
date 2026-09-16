@@ -25,6 +25,33 @@ const AudioSys = createAudioEngine({
   },
 });
 
+// ⛔ THE RIM PULSE'S ONSETS (CS010 P4; Paul's D10). createMusic reports each
+// note of a `beat: true` layer (`heart`) through onBeat, at its START TIME on the
+// context clock, which the lookahead reaches up to C.MUSIC_LOOKAHEAD EARLY. So
+// the time is only written down here, into a fixed ring (no allocation), and
+// beatGlow() lights nothing until the clock reaches it. Never an AnalyserNode.
+const BEAT_ONSETS = new Float64Array(C.RIM_PULSE_RING).fill(-Infinity);
+let beatOnsetNext = 0;
+
+function noteBeat(t) {
+  if (!AudioSys.ctx) return;
+  BEAT_ONSETS[beatOnsetNext] = t;
+  beatOnsetNext = (beatOnsetNext + 1) % BEAT_ONSETS.length;
+}
+
+// 0..1 at context time `now`: 1 on the latest onset the clock has REACHED,
+// falling linearly to 0 over C.RIM_PULSE_TIME. An onset still ahead reads nothing.
+function beatGlow(now) {
+  if (!AudioSys.ctx) return 0;
+  let last = -Infinity;
+  for (let i = 0; i < BEAT_ONSETS.length; i++) {
+    const t = BEAT_ONSETS[i];
+    if (t <= now && t > last) last = t;
+  }
+  const g = 1 - (now - last) / C.RIM_PULSE_TIME;
+  return g > 0 ? g : 0;
+}
+
 const MusicSys = createMusic(AudioSys, {
   tracks:    MUSIC_TRACKS,
   lookahead: C.MUSIC_LOOKAHEAD,
@@ -37,6 +64,7 @@ const MusicSys = createMusic(AudioSys, {
   sweep:     { minHz: C.FILTER_MIN_HZ, maxHz: C.FILTER_MAX_HZ, q: C.FILTER_Q, tc: C.FILTER_TC },
   limiter:   C.MUSIC_LIMIT,
   duck:      { gain: C.MUSIC_DUCK_GAIN, ramp: C.MUSIC_DUCK_RAMP, dipGain: C.MUSIC_DIP_GAIN, dipHold: C.MUSIC_DIP_HOLD },
+  onBeat:    noteBeat,
 });
 
 // ⛔ THE INTENSITY DIRECTOR (CS010 P2; GDD 11.4), built from C. The input names

@@ -715,6 +715,14 @@ const C = {
   GLOW_WIDE_W:          6.0,    // px, outer glow pass width multiplier base
   GLOW_WIDE_ALPHA:      0.20,
   GLOW_THIN_ALPHA:      0.95,
+  // ⛔ THE RIM PULSE (CS010 P4; Paul's D10, GDD 11.6). `heart`'s onsets, by the
+  // audio clock, raise the rim stroke's width and alpha and nothing else. ⚠
+  // provisional. The alpha is capped at 1, so outside the dim band only the
+  // width moves.
+  RIM_PULSE_TIME:       0.10,   // s from an onset back to rest, linear
+  RIM_PULSE_W:          0.5,    // width x (1 + W x glow)
+  RIM_PULSE_ALPHA:      0.5,    // alpha x (1 + ALPHA x glow), capped at 1
+  RIM_PULSE_RING:       8,      // onset times held; the lookahead holds at most two
 
   // ---- Telemetry (GDD 15.6) -----------------------------------------------
   // ⛔ THE RING IS IN MEMORY AND NOTHING IS PERSISTED THIS CHANGESET.

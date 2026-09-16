@@ -1170,7 +1170,9 @@ const Game = (function () {
     // an unlit one draw at the same alpha — see buildLaneState() above — so the
     // producer would be a per-frame no-op. drawWell() already handles null.
     const lit = wellBaseAlpha(state.level) < 1 ? buildLaneState(state, well) : null;
-    drawWell(ctx, well, state.level, lit, state.bandRoll);
+    // The rim pulse is audioFrame()'s reading of this frame (CS010 P4), 0 off
+    // play and with no audio. A value, never a clock or a draw of its own.
+    drawWell(ctx, well, state.level, lit, state.bandRoll, rimGlow);
     // Z-order: the well is the backdrop, enemies climb over it, shots travel
     // over them, and the Skimmer — always at depth 1, the rim — rides on top
     // of everything. Shots above enemies so a shot is never lost behind the
@@ -1312,6 +1314,10 @@ const Game = (function () {
   //   title side    the sweep fully open; intensity untouched (title is untiered).
   //   game over     nothing: the music is fading to silence.
   // The duck follows duckFor() on every frame. ⛔ Reads state, writes none.
+  //
+  // ⛔ AND THE RIM PULSE (CS010 P4; Paul's D10): `rimGlow` off `heart`'s onsets
+  // once the audio clock has REACHED one (beatGlow(), 19-sfx.js), in play only;
+  // 0 on every other screen and with no context. A closure variable, never state.
   function audioFrame() {
     const screen = state.screen;
     const pauseSide = duckFor(screen, optionsFrom);
@@ -1331,6 +1337,7 @@ const Game = (function () {
     MusicSys.setState(musicStateFor(state.screen, optionsFrom, state.mode,
                                     C.MUSIC_TRACK_CHOICES[sound.track]));
     MusicSys.update();
+    rimGlow = screen === "play" ? beatGlow(AudioSys.now()) : 0;   // after the scheduler: a late onset clamps to now
     const stopped = hitStopLeft > 0 || state.screen !== "play";
     reconcileSurgeTones(state.enemies, stopped ? false : playSteps > 0 ? true : null);
   }
@@ -1341,6 +1348,7 @@ const Game = (function () {
   const dangerRead = { count: 0, proximity: 0, peril: 0, heat: 0, combo: 0 };
   const DANGER_NONE = Object.freeze({ count: 0, proximity: 0, peril: 0, heat: 0, combo: 0 });
   let audioRunLive = false;
+  let rimGlow = 0;
 
   function rafFrame(tMs) {
     if (!running) return;
@@ -1391,6 +1399,7 @@ const Game = (function () {
     hitStopLeft = 0;
     syncedScreen = null;
     audioRunLive = false;
+    rimGlow = 0;
     resetControls();
     resetSound();
     stats.frames = 0; stats.ticks = 0; stats.lastSteps = 0; stats.accumulator = 0;

@@ -910,6 +910,8 @@ function createSfxPlayer(engine, options) {
 // every layer PASS in the lab (2026-09-16), after the articulation pass below.
 // The music plays through a limiter (CS010), so these gains are Paul's lab
 // balance as he set it.
+// `heart` is marked `beat: true` (CS010 P4): the engine reports each of its
+// onsets through `onBeat`, on the context clock. A hand edit; COPY TABLE keeps it.
 //
 // ⛔ EVERY LAYER IS WRITTEN AS A PART, to be recognisable played solo (GDD
 // 11.4(c)): a tune, a line, a figure or a groove. Never texture.
@@ -1100,7 +1102,7 @@ function buildPulseTrack() {
     { name: "swell", type: "sawtooth", cutoff: 1400, cutoffTo: 700, detune: 9, gain: 0.049, atk: 0.004, rel: 0.375, audition: "pass", steps: swell },
     { name: "bassline", type: "triangle", gain: 0.450, atk: 0.004, rel: 0.375, audition: "pass", steps: bassline },
     { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.070, atk: 0.005, rel: 0.1875, tier: 2, audition: "pass", steps: cycle },
-    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.450, atk: 0.003, rel: 0.14, audition: "pass", steps: heart },
+    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.450, atk: 0.003, rel: 0.14, beat: true, audition: "pass", steps: heart },
     { name: "tick", noise: true, hp: 7000, gain: 0.450, atk: 0.001, rel: 0.1875, tier: 3, audition: "pass", steps: tick },
   ]};
 }

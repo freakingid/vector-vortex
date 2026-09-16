@@ -764,6 +764,14 @@ const C = {
   GLOW_WIDE_W:          6.0,    // px, outer glow pass width multiplier base
   GLOW_WIDE_ALPHA:      0.20,
   GLOW_THIN_ALPHA:      0.95,
+  // ⛔ THE RIM PULSE (CS010 P4; Paul's D10, GDD 11.6). `heart`'s onsets, by the
+  // audio clock, raise the rim stroke's width and alpha and nothing else. ⚠
+  // provisional. The alpha is capped at 1, so outside the dim band only the
+  // width moves.
+  RIM_PULSE_TIME:       0.10,   // s from an onset back to rest, linear
+  RIM_PULSE_W:          0.5,    // width x (1 + W x glow)
+  RIM_PULSE_ALPHA:      0.5,    // alpha x (1 + ALPHA x glow), capped at 1
+  RIM_PULSE_RING:       8,      // onset times held; the lookahead holds at most two
 
   // ---- Telemetry (GDD 15.6) -----------------------------------------------
   // ⛔ THE RING IS IN MEMORY AND NOTHING IS PERSISTED THIS CHANGESET.
@@ -5537,17 +5545,22 @@ function projectPoly(points) {
 //              below C.BAND_RNG_LEVEL. ⛔ A NUMBER, NOT A STREAM — the caller
 //              passes state.bandRoll, which nextWell() drew during a simulation
 //              step (CLAUDE.md, Math and lifecycle).
-function drawWell(ctx, well, level, laneState, rng) {
+//   rimGlow    optional 0..1, the rim pulse (CS010 P4): 23-main.js's audioFrame()
+//              reads it off `heart`'s onsets. Absent or 0 draws the rim as
+//              before. It moves the RIM stroke's width and alpha and nothing else.
+function drawWell(ctx, well, level, laneState, rng, rimGlow) {
   const color = wellBandColor(level, rng);
   const baseAlpha = wellBaseAlpha(level);
   const rim = projectPoly(well.rim);
   const throat = projectPoly(wellThroat(well));
   const vcount = wellVertCount(well);
+  const pulse = rimGlow > 0 ? Math.min(rimGlow, 1) : 0;
 
   // Rim and throat rings, each a single flat-weight stroke (they sit at one
   // depth apiece, so there is no line-weight gradient to apply within them).
   drawPoly(ctx, rim, well.closed);
-  glowStroke(ctx, color, C.LINE_W_RIM, baseAlpha);
+  glowStroke(ctx, color, C.LINE_W_RIM * (1 + C.RIM_PULSE_W * pulse),
+             Math.min(1, baseAlpha * (1 + C.RIM_PULSE_ALPHA * pulse)));
 
   drawPoly(ctx, throat, well.closed);
   glowStroke(ctx, color, C.LINE_W_THROAT, baseAlpha);
@@ -7338,6 +7351,8 @@ function createSfxPlayer(engine, options) {
 // every layer PASS in the lab (2026-09-16), after the articulation pass below.
 // The music plays through a limiter (CS010), so these gains are Paul's lab
 // balance as he set it.
+// `heart` is marked `beat: true` (CS010 P4): the engine reports each of its
+// onsets through `onBeat`, on the context clock. A hand edit; COPY TABLE keeps it.
 //
 // ⛔ EVERY LAYER IS WRITTEN AS A PART, to be recognisable played solo (GDD
 // 11.4(c)): a tune, a line, a figure or a groove. Never texture.
@@ -7528,7 +7543,7 @@ function buildPulseTrack() {
     { name: "swell", type: "sawtooth", cutoff: 1400, cutoffTo: 700, detune: 9, gain: 0.049, atk: 0.004, rel: 0.375, audition: "pass", steps: swell },
     { name: "bassline", type: "triangle", gain: 0.450, atk: 0.004, rel: 0.375, audition: "pass", steps: bassline },
     { name: "cycle", type: "square", cutoff: 1800, cutoffTo: 500, cutoffTime: 0.18, q: 2, gain: 0.070, atk: 0.005, rel: 0.1875, tier: 2, audition: "pass", steps: cycle },
-    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.450, atk: 0.003, rel: 0.14, audition: "pass", steps: heart },
+    { name: "heart", type: "triangle", drop: 12, dropTime: 0.08, gain: 0.450, atk: 0.003, rel: 0.14, beat: true, audition: "pass", steps: heart },
     { name: "tick", noise: true, hp: 7000, gain: 0.450, atk: 0.001, rel: 0.1875, tier: 3, audition: "pass", steps: tick },
   ]};
 }
@@ -7633,6 +7648,33 @@ const AudioSys = createAudioEngine({
   },
 });
 
+// ⛔ THE RIM PULSE'S ONSETS (CS010 P4; Paul's D10). createMusic reports each
+// note of a `beat: true` layer (`heart`) through onBeat, at its START TIME on the
+// context clock, which the lookahead reaches up to C.MUSIC_LOOKAHEAD EARLY. So
+// the time is only written down here, into a fixed ring (no allocation), and
+// beatGlow() lights nothing until the clock reaches it. Never an AnalyserNode.
+const BEAT_ONSETS = new Float64Array(C.RIM_PULSE_RING).fill(-Infinity);
+let beatOnsetNext = 0;
+
+function noteBeat(t) {
+  if (!AudioSys.ctx) return;
+  BEAT_ONSETS[beatOnsetNext] = t;
+  beatOnsetNext = (beatOnsetNext + 1) % BEAT_ONSETS.length;
+}
+
+// 0..1 at context time `now`: 1 on the latest onset the clock has REACHED,
+// falling linearly to 0 over C.RIM_PULSE_TIME. An onset still ahead reads nothing.
+function beatGlow(now) {
+  if (!AudioSys.ctx) return 0;
+  let last = -Infinity;
+  for (let i = 0; i < BEAT_ONSETS.length; i++) {
+    const t = BEAT_ONSETS[i];
+    if (t <= now && t > last) last = t;
+  }
+  const g = 1 - (now - last) / C.RIM_PULSE_TIME;
+  return g > 0 ? g : 0;
+}
+
 const MusicSys = createMusic(AudioSys, {
   tracks:    MUSIC_TRACKS,
   lookahead: C.MUSIC_LOOKAHEAD,
@@ -7645,6 +7687,7 @@ const MusicSys = createMusic(AudioSys, {
   sweep:     { minHz: C.FILTER_MIN_HZ, maxHz: C.FILTER_MAX_HZ, q: C.FILTER_Q, tc: C.FILTER_TC },
   limiter:   C.MUSIC_LIMIT,
   duck:      { gain: C.MUSIC_DUCK_GAIN, ramp: C.MUSIC_DUCK_RAMP, dipGain: C.MUSIC_DIP_GAIN, dipHold: C.MUSIC_DIP_HOLD },
+  onBeat:    noteBeat,
 });
 
 // ⛔ THE INTENSITY DIRECTOR (CS010 P2; GDD 11.4), built from C. The input names
@@ -9383,7 +9426,9 @@ const Game = (function () {
     // an unlit one draw at the same alpha — see buildLaneState() above — so the
     // producer would be a per-frame no-op. drawWell() already handles null.
     const lit = wellBaseAlpha(state.level) < 1 ? buildLaneState(state, well) : null;
-    drawWell(ctx, well, state.level, lit, state.bandRoll);
+    // The rim pulse is audioFrame()'s reading of this frame (CS010 P4), 0 off
+    // play and with no audio. A value, never a clock or a draw of its own.
+    drawWell(ctx, well, state.level, lit, state.bandRoll, rimGlow);
     // Z-order: the well is the backdrop, enemies climb over it, shots travel
     // over them, and the Skimmer — always at depth 1, the rim — rides on top
     // of everything. Shots above enemies so a shot is never lost behind the
@@ -9525,6 +9570,10 @@ const Game = (function () {
   //   title side    the sweep fully open; intensity untouched (title is untiered).
   //   game over     nothing: the music is fading to silence.
   // The duck follows duckFor() on every frame. ⛔ Reads state, writes none.
+  //
+  // ⛔ AND THE RIM PULSE (CS010 P4; Paul's D10): `rimGlow` off `heart`'s onsets
+  // once the audio clock has REACHED one (beatGlow(), 19-sfx.js), in play only;
+  // 0 on every other screen and with no context. A closure variable, never state.
   function audioFrame() {
     const screen = state.screen;
     const pauseSide = duckFor(screen, optionsFrom);
@@ -9544,6 +9593,7 @@ const Game = (function () {
     MusicSys.setState(musicStateFor(state.screen, optionsFrom, state.mode,
                                     C.MUSIC_TRACK_CHOICES[sound.track]));
     MusicSys.update();
+    rimGlow = screen === "play" ? beatGlow(AudioSys.now()) : 0;   // after the scheduler: a late onset clamps to now
     const stopped = hitStopLeft > 0 || state.screen !== "play";
     reconcileSurgeTones(state.enemies, stopped ? false : playSteps > 0 ? true : null);
   }
@@ -9554,6 +9604,7 @@ const Game = (function () {
   const dangerRead = { count: 0, proximity: 0, peril: 0, heat: 0, combo: 0 };
   const DANGER_NONE = Object.freeze({ count: 0, proximity: 0, peril: 0, heat: 0, combo: 0 });
   let audioRunLive = false;
+  let rimGlow = 0;
 
   function rafFrame(tMs) {
     if (!running) return;
@@ -9604,6 +9655,7 @@ const Game = (function () {
     hitStopLeft = 0;
     syncedScreen = null;
     audioRunLive = false;
+    rimGlow = 0;
     resetControls();
     resetSound();
     stats.frames = 0; stats.ticks = 0; stats.lastSteps = 0; stats.accumulator = 0;

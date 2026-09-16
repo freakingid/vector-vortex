@@ -146,17 +146,22 @@ function projectPoly(points) {
 //              below C.BAND_RNG_LEVEL. ⛔ A NUMBER, NOT A STREAM — the caller
 //              passes state.bandRoll, which nextWell() drew during a simulation
 //              step (CLAUDE.md, Math and lifecycle).
-function drawWell(ctx, well, level, laneState, rng) {
+//   rimGlow    optional 0..1, the rim pulse (CS010 P4): 23-main.js's audioFrame()
+//              reads it off `heart`'s onsets. Absent or 0 draws the rim as
+//              before. It moves the RIM stroke's width and alpha and nothing else.
+function drawWell(ctx, well, level, laneState, rng, rimGlow) {
   const color = wellBandColor(level, rng);
   const baseAlpha = wellBaseAlpha(level);
   const rim = projectPoly(well.rim);
   const throat = projectPoly(wellThroat(well));
   const vcount = wellVertCount(well);
+  const pulse = rimGlow > 0 ? Math.min(rimGlow, 1) : 0;
 
   // Rim and throat rings, each a single flat-weight stroke (they sit at one
   // depth apiece, so there is no line-weight gradient to apply within them).
   drawPoly(ctx, rim, well.closed);
-  glowStroke(ctx, color, C.LINE_W_RIM, baseAlpha);
+  glowStroke(ctx, color, C.LINE_W_RIM * (1 + C.RIM_PULSE_W * pulse),
+             Math.min(1, baseAlpha * (1 + C.RIM_PULSE_ALPHA * pulse)));
 
   drawPoly(ctx, throat, well.closed);
   glowStroke(ctx, color, C.LINE_W_THROAT, baseAlpha);

@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.6 · Changeset: CS010 (P3 done 2026-09-16 — P4 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.6 · Changeset: CS010 (P4 done 2026-09-16 — P5 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS010
 
@@ -13,13 +13,14 @@ rules, 2026-08-31).
 |---|---|---|
 | P1 | `8bf9110` | kit-audio 0.3.0: optional `gating` (bar-latched `setIntensity`), `sweep`, `limiter`, `duck` (`setDuck`, `dip`), `onBeat`; the fake's compressor; the headroom gate is D16's model (0.3350 / 0.3359). Nothing drives them yet. 7 of 7 red |
 | P2 | `2e89263`, `d1501ef` | The director: kit-audio `createDirector` (asymmetric, audio clock), top-level `dangerInputs(state, out)`, `audioFrame()` driving `setIntensity`/`setSweep` in play (a Dive reads 0; run entry resets; pause side holds; title opens the sweep), `duckFor()` on the pause side, `sfx()` dips on D9's four. `INT_HEAT_MAX` deleted. 10 of 10 red. Follow-up: `Director.hold()` on the pause side, so a resume skips the pause (Paul); 11 of 11 |
-| P3 | this commit | The earned layers: `cycle` tier 2, `tick` tier 3, `bar` on both tables; `pulse` at Paul's lab gains and `title`'s ground 0.45, behind the limiter (render 0.454 / −24.30 dB, 0.413 / −25.37 dB, plan §1.6 exactly; model 0.3512 / 0.3408). music-lab's INTENSITY and TIER, COPY TABLE writes `tier`; sfx-lab passes `gating`. p2's tier assertion and p5's Surger-voice fixture repaired in place. `test-cs010-p3.js`: the articulation gate, COPY TABLE's tempo and tier rewrites. 14 of 14 red |
+| P3 | `5baef99` | The earned layers: `cycle` tier 2, `tick` tier 3, `bar` on both tables; `pulse` at Paul's lab gains and `title`'s ground 0.45, behind the limiter (render 0.454 / −24.30 dB, 0.413 / −25.37 dB, plan §1.6 exactly; model 0.3512 / 0.3408). music-lab's INTENSITY and TIER, COPY TABLE writes `tier`; sfx-lab passes `gating`. p2's tier assertion and p5's Surger-voice fixture repaired in place. `test-cs010-p3.js`: the articulation gate, COPY TABLE's tempo and tier rewrites. 14 of 14 red |
+| P4 | this commit | The rim pulse: `heart` `beat: true` (three files), `19-sfx.js`'s onset ring and `beatGlow()`, `audioFrame()`'s `rimGlow` (play only, after the scheduler), `drawWell`'s optional sixth argument (rim width and alpha, capped). `C.RIM_PULSE_*` (⚠ provisional, plus `RIM_PULSE_RING`). `test-cs010-p4.js`; 6 of 6 red. No closed file edited |
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 487.5 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 490.2 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **52 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **53 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -349,16 +350,20 @@ rules, 2026-08-31).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS010 P4
+## Next up — ⛔ CS010 P5
 
-⛔ **Paste P4's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: the rim pulse on
-`heart`'s onsets. P3 left three things P4 meets:
+⛔ **Paste P5's prompt from `IMPLEMENTATION-PHASES-CS010.md`**: the eighth soak,
+the docs, the close. What P3 and P4 left for it:
 
-- ⛔ **`heart`'s `beat: true` is a hand edit in three files** (COPY TABLE does
-  not write it). Put it BEFORE `tier` and `audition` on the layer's one line
-  (after `rel`): COPY TABLE inserts `tier` just before `audition`, and a later
-  audition edit re-inserts the mark before `steps`, so a field after the mark
-  would be reordered past it.
+- ⛔ **The rim pulse is a `Game` closure variable, `rimGlow`**, set in
+  `audioFrame()` AFTER `MusicSys.update()` and read by `draw()`. Nothing reaches
+  it from outside; `test-cs010-p4.js` reads it off the rim's drawn width.
+  ⛔ `audioFrame()`'s body may not contain the text "draw" (`test-cs009-p3.js`),
+  comments included.
+- ⚠ **`Game.reset()` leaves the screen on play**, so a fixture's `frame(0)`
+  before `quitToTitle()` schedules real `pulse` notes on the fake at t = 0.
+- ⚠ **Outside the dim band the rim pulse moves the width only** (the alpha
+  product caps at 1). D10's cap as written.
 - ⛔ **`test-cs010-p3.js` pins both labs' `LAB` copies to `C`**: music-lab's
   `limit`, `gating`, `sweep` and sfx-lab's `gating`. A change to
   `C.MUSIC_LIMIT`, `C.LAYER_THRESHOLD`, `C.LAYER_CROSSFADE` or `C.FILTER_*` is a
@@ -389,3 +394,5 @@ rules, 2026-08-31).
 6. ⚠ **SETTLED — struck, never swelled.** ✅ The articulation gate and COPY
    TABLE's tempo and tier tests are in `test-cs010-p3.js` (P3).
 7. ✅ **`pulse`'s length target is ≥ 36 bars** (Paul, D13).
+8. ✅ **The rim pulses on `heart`'s onsets by the audio clock, in play only,**
+   with no fill and no `state` (D10, P4).

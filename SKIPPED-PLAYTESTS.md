@@ -252,3 +252,15 @@ for.
   under the theme rather than swallowing it, and whether it booms on small
   speakers.
 - **Knobs:** `title`'s `ground` gain (music-lab, COPY TABLE).
+
+### CS010 P4 — the rim pulse over a busy rim
+- **Would have done:** played `pulse` from Start Depth 1 and 23 with a full
+  rim (Vaulters hunting, Surgers telegraphing, shots out), and once in the dim
+  band (Start Depth 65), watching the rim through a well clear and a Dive.
+- **Trying to learn:** whether the pulse reads as the music's heartbeat or as
+  flicker; whether a 1.5× rim stroke on every `heart` onset hides a rim-level
+  enemy or the Skimmer's own outline; whether it feels on the beat (the audio
+  clock against the display's latency); whether in the dim band the alpha
+  lift reads as lanes lighting.
+- **Knobs:** `C.RIM_PULSE_TIME`, `C.RIM_PULSE_W`, `C.RIM_PULSE_ALPHA`; which
+  layer carries `beat: true` (a three-file data edit).

@@ -267,6 +267,8 @@ function buildGame(opts = {}) {
     "sfx", "reconcileSurgeTones",
     // the intensity director, the danger read and the duck (18/19/23, CS010 P2)
     "createDirector", "Director", "dangerInputs", "duckFor",
+    // the rim pulse's onset ring and its reading (19-sfx.js, CS010 P4)
+    "noteBeat", "beatGlow",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of
