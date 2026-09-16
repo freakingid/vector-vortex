@@ -2,7 +2,7 @@
 
 **Module:** `src/04-input.js`
 **Vendored from:** *originated here (Vector Vortex), destined for coinless-kit as `kit-input`*
-**Current version:** `0.6.0`
+**Current version:** `0.7.0`
 **Depends on:** nothing
 
 ---
@@ -53,6 +53,7 @@ read it as "one unit of its discrete axis".
 | `keys` | no | Binding override, shape of `INPUT_KEYS_DEFAULT`. Matched case-insensitively. |
 | `actionKeys` | no | `{ actionName: ["key", …] }` — host-named actions (debug keys, screen toggles). |
 | `onAction` | no | `(name) => void`, called during `sample()`, in simulation order. |
+| `onGesture` | no | `() => void`, called **synchronously inside** `attach()`'s `keydown`, `mousedown` and `touchend` handlers, after the event reaches the sink. ⛔ The one callback that runs at event time: it exists for host work a browser allows only inside a user gesture. Never called by the sink entries, `sample()`, a gamepad poll, `keyup`, `mousemove`, `touchstart` or `touchcancel`. |
 
 **Surface**
 
@@ -303,5 +304,31 @@ or a reserved key is. It refuses only its own double-binding, and it hands a
 captured key or button to whatever `cb` the host gives. Swapping, the reserved
 list and the "an action keeps one binding" rule live in the host. Nothing
 references a config object, game object or game function.
+
+**Backport status.** `not yet`.
+
+### 2026-09-16 — a user-gesture callback (`VERSION` 0.6.0 → 0.7.0)
+
+**What changed.** One optional option, `onGesture: () => void`. `attach()`'s
+`keydown`, `mousedown` and `touchend` handlers call it synchronously, after the
+event has reached the sink. Nothing else calls it: not the sink entries
+(`keyDown()` and the rest), so a D-pad press synthesised by `pollGamepads()` is
+not a gesture; not `sample()`; and not `keyup`, `mousemove`, `touchstart` or
+`touchcancel`. `touchcancel` used to share `touchend`'s handler function and
+still runs the same release code, but it no longer shares the listener. Absent,
+the module is 0.6.0 exactly.
+
+**Why.** Vector Vortex CS009 P1, the audio engine. A browser creates or resumes
+an audio context only inside a user gesture, and this module is the only place
+in the host allowed to listen to a DOM event. Before 0.7.0 the host had no way
+to run code inside one. Which events count as activation is PREDICTED, not
+measured (no browser in that session): key press, click and lifted touch do;
+`touchstart` and a gamepad button do not. A pad-only player is therefore silent
+until a key, click or tap.
+
+**Game-agnostic?** Yes. The module does not know what the callback does. It
+says only "a user gesture happened, inside its handler". Nothing references a
+config object, game object or game function, and the host's suite still scans
+this module's slice for both.
 
 **Backport status.** `not yet`.

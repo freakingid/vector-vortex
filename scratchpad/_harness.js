@@ -90,12 +90,87 @@ function stubEnv() {
   return { win, doc, canvas, store };
 }
 
+// A RECORDING FAKE AUDIO CONTEXT (CS009 P1), installed only by
+// buildGame({ audio: true }); the default stays `undefined`, so every closed
+// test keeps running the guarded no-op path. It makes no sound. It counts every
+// created node by kind in `created` (buffers are not nodes: `buffers`), and
+// records connect() in `connections`, every param automation call in
+// `automation`, every bare `.value` write in `valueSets`, and start()/stop()
+// times. ⛔ THE TEST OWNS THE CLOCK: write `rec.ctx.currentTime`.
+// ⚠ A param's `.value` is the LAST value written or targeted, not the value a
+// ramp would have reached at currentTime.
+function fakeAudio() {
+  const rec = {
+    contexts: [], created: {}, nodes: [], buffers: 0, connections: [], automation: [],
+    valueSets: [], starts: [], stops: [], resumes: 0,
+    get ctx() { return this.contexts.length ? this.contexts[this.contexts.length - 1] : null; },
+    // Clears the logs, never the contexts or the node ids.
+    clear() {
+      this.created = {}; this.buffers = 0; this.connections.length = 0; this.automation.length = 0;
+      this.valueSets.length = 0; this.starts.length = 0; this.stops.length = 0; this.resumes = 0;
+    },
+  };
+  let nextId = 0;
+  function param(node, name, init) {
+    let value = init;
+    const log = (fn, v, t) => rec.automation.push({ node, param: name, fn, v, t });
+    return {
+      get value() { return value; },
+      set value(v) { rec.valueSets.push({ node, param: name, v }); value = v; },
+      setValueAtTime(v, t) { log("setValueAtTime", v, t); value = v; return this; },
+      linearRampToValueAtTime(v, t) { log("linearRampToValueAtTime", v, t); value = v; return this; },
+      exponentialRampToValueAtTime(v, t) { log("exponentialRampToValueAtTime", v, t); value = v; return this; },
+      setTargetAtTime(v, t) { log("setTargetAtTime", v, t); value = v; return this; },
+      cancelScheduledValues(t) { log("cancelScheduledValues", undefined, t); return this; },
+    };
+  }
+  function node(ctx, kind, params, source) {
+    const n = {
+      kind, id: nextId++, context: ctx,
+      connect(to) { rec.connections.push({ from: n, to }); return to; },
+      disconnect() {},
+    };
+    for (const k of Object.keys(params)) n[k] = param(n, k, params[k]);
+    if (source) {
+      n.start = t => rec.starts.push({ node: n, t });
+      n.stop = t => rec.stops.push({ node: n, t });
+    }
+    rec.nodes.push(n);
+    rec.created[kind] = (rec.created[kind] || 0) + 1;
+    return n;
+  }
+  class FakeAudioContext {
+    constructor() {
+      this.currentTime = 0;
+      this.sampleRate = 48000;
+      this.state = "running";
+      this.destination = { kind: "destination", id: nextId++, connect() {} };
+      rec.contexts.push(this);
+    }
+    resume() { rec.resumes++; this.state = "running"; return Promise.resolve(); }
+    createGain() { return node(this, "gain", { gain: 1 }); }
+    createBiquadFilter() { const n = node(this, "biquad", { frequency: 350, Q: 1, gain: 0 }); n.type = "lowpass"; return n; }
+    createOscillator() { const n = node(this, "oscillator", { frequency: 440, detune: 0 }, true); n.type = "sine"; return n; }
+    createBufferSource() { const n = node(this, "bufferSource", { playbackRate: 1 }, true); n.buffer = null; return n; }
+    createBuffer(channels, length, sampleRate) {
+      rec.buffers++;
+      const data = [];
+      for (let i = 0; i < channels; i++) data.push(new Float32Array(length));
+      return { numberOfChannels: channels, length, sampleRate, getChannelData: i => data[i] };
+    }
+  }
+  rec.AudioContext = FakeAudioContext;
+  return rec;
+}
+
 function buildGame(opts = {}) {
   if (opts.rebuild !== false && distIsStale()) {
     execFileSync(process.execPath, [path.join(ROOT, "build.js")], { stdio: "pipe" });
   }
   const script = extractScript(fs.readFileSync(DIST, "utf8"));
   const env = stubEnv();
+  const audio = opts.audio ? fakeAudio() : null;
+  if (audio) env.win.AudioContext = audio.AudioContext;
 
   // Trailing expression returns the globals a test wants to poke. Extend the
   // list as systems land. ⛔ Named explicitly, never harvested from the scope:
@@ -175,6 +250,9 @@ function buildGame(opts = {}) {
     "drawText", "drawHud", "hudLayout", "PURGE_GLYPH_POLY", "drawFragments", "fragmentT",
     // the menu model and the screens (15/23, CS008 P5)
     "createMenu", "drawMenu", "menuWindowStart",
+    // kit-audio and the game's instances (16/19, CS009 P1)
+    "AUDIO_VERSION", "AUDIO_BUSES", "createAudioEngine", "createMusic",
+    "AudioSys", "MusicSys", "MUSIC_TRACKS",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of
@@ -204,8 +282,9 @@ function buildGame(opts = {}) {
                           script + tail);
 
   const g = fn(env.win, env.doc, env.win.navigator, env.win.performance,
-               env.win.localStorage, env.win.requestAnimationFrame, undefined);
-  return Object.assign({}, g, { _env: env });
+               env.win.localStorage, env.win.requestAnimationFrame,
+               audio ? audio.AudioContext : undefined);
+  return Object.assign({}, g, { _env: env, _audio: audio });
 }
 
 function syntaxCheck() {

@@ -662,3 +662,12 @@ listen and adjust values, `music-lab` included, is allowed. The music
 solo-audition gate stands, and he judges it in the lab.
 
 **What would change it.** Paul choosing to play something.
+
+---
+
+## 2026-09-16 — CS009's audio calls (A1–A9)
+
+Pointer only: Paul's nine answers (OPTIONS rows, default volumes, the voice bus,
+MUSIC TRACK, which tracks, no `tier` in CS009, `sfx-lab` candidate A, the core
+SFX set, `sfxVoice`) and the eleven readings are in `PLANNED-FEATURES-CS009.md`
+§0, answered in the planning session.

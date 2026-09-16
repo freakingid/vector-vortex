@@ -527,6 +527,14 @@ const C = {
   INT_EXPECTED_ENEMIES: 10,
   INT_COMBO_MAX:        8,
   INT_HEAT_MAX:         2.0,
+  // The engine (CS009 P1). ⛔ The noise buffer is its OWN stream from its own
+  // seed (01-rng.js's header), never the run's: an audio draw must not move a
+  // spawn lane, and the platform generator is banned from the build.
+  AUDIO_NOISE_SEED:     0x5EED0A0D,
+  AUDIO_VOL_STEPS:      10,     // a volume row is 0..STEPS; gain is linear, steps / STEPS
+  AUDIO_VOL_DEFAULT:    10,     // every bus at unity (Paul's A2)
+  AUDIO_VOL_RAMP:       0.03,   // s. ⛔ a volume change ramps, never a bare .value set.
+  MUSIC_STEP_NODE_MAX:  16,     // ⚠ provisional ceiling on nodes one scheduled step creates
 
   // ---- Overdrive (GDD 14) -------------------------------------------------
   MAX_TOKENS:           2,      // ⛔ readability cap on powerups on screen

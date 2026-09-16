@@ -39,7 +39,7 @@
 // lets a headless test replay a recorded event list with no DOM at all, which
 // is what makes the determinism guarantee (GDD 17.1) testable.
 
-const INPUT_VERSION = "0.6.0";
+const INPUT_VERSION = "0.7.0";
 
 // Default bindings, matched case-insensitively. These are NOT tunables — a
 // keymap is this module's own default and a host replaces it wholesale through
@@ -131,6 +131,7 @@ function inputBuildBindings(src) {
 //     keys,        // optional binding override, shape of INPUT_KEYS_DEFAULT
 //     actionKeys,  // optional { actionName: ["key", ...] } for named actions
 //     onAction,    // optional (name) => void, called during sample()
+//     onGesture,   // optional () => void, called INSIDE keydown / mousedown / touchend (0.7.0)
 //   })
 function createInput(options) {
   const opts = options || {};
@@ -143,6 +144,13 @@ function createInput(options) {
   const keyRamp     = inputRequireNum(opts, "keyRamp");
   const pointerLockOffer = opts.pointerLockOffer !== false;
   const onAction = typeof opts.onAction === "function" ? opts.onAction : null;
+  // ⛔ THE ONE CALLBACK THAT RUNS AT EVENT TIME, NOT IN sample() (0.7.0). A
+  // browser grants user activation only inside the handler of a key press, a
+  // click or a lifted touch, and some host work (unlocking audio output) is
+  // refused anywhere else. It carries no input and touches no struct, so it
+  // cannot move a replay. The DOM adapter calls it; the sink never does, so a
+  // D-pad press fed through keyDown() is not a gesture.
+  const onGesture = typeof opts.onGesture === "function" ? opts.onGesture : null;
 
   let touchSens        = inputRequireNum(opts, "touchSens");
   const touchZoneFrac  = inputRequireNum(opts, "touchZoneFrac");
@@ -758,6 +766,7 @@ function createInput(options) {
 
     on(doc, "keydown", function (ev) {
       if (keyDown(ev.key) && typeof ev.preventDefault === "function") ev.preventDefault();
+      if (onGesture) onGesture();
     });
     on(doc, "keyup", function (ev) {
       if (keyUp(ev.key) && typeof ev.preventDefault === "function") ev.preventDefault();
@@ -767,6 +776,7 @@ function createInput(options) {
     on(el, "mousedown", function (ev) {
       if (ev.button === 2) setButton("purge", true);
       else { setButton("fire", true); offerLock(el, doc); }
+      if (onGesture) onGesture();
     });
     on(el, "contextmenu", function (ev) {
       if (typeof ev.preventDefault === "function") ev.preventDefault();
@@ -812,7 +822,12 @@ function createInput(options) {
       const list = ev.changedTouches || [];
       for (let i = 0; i < list.length; i++) touchEnd(list[i].identifier);
     }
-    on(el, "touchend", touchEndHandler);
+    // ⛔ touchend is a gesture and touchcancel is not: a cancelled touch was
+    // taken by the browser, not lifted by the player.
+    on(el, "touchend", function (ev) {
+      touchEndHandler(ev);
+      if (onGesture) onGesture();
+    });
     on(el, "touchcancel", touchEndHandler);
 
     return detachers.length > 0;

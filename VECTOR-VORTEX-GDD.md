@@ -950,11 +950,15 @@ note envelopes → layerGate → trackGain (crossfaded) → duck → AudioSys.mu
 SFX ───────────────────────────────────────────────────────→ AudioSys.sfx → master
 ```
 
+**Shipped, CS009 P1 — the engine, with no track and no sound.** `src/16-audio-engine.js` is kit-audio 0.1.0 (`src/16-audio-engine.NOTES.md`): `createAudioEngine(opts)` and `createMusic(engine, opts)`. It reads no `C` and no `state`, and it is ported from Orbital Overhaul `5abd37a`. `src/19-sfx.js` builds the two instances from `C`. ⛔ **Four buses**: `master` → destination, and `music`, `sfx` and `voice` → `master` (`voice` is fed by nothing, Paul's A3). Each is built at `C.AUDIO_VOL_DEFAULT / C.AUDIO_VOL_STEPS` (unity), and `setVol` ramps over `C.AUDIO_VOL_RAMP`, never a bare `.value` set. ⛔ **`AudioSys.ctx` is null until a user gesture.** kit-input 0.7.0's `onGesture` calls `AudioSys.unlock()` inside `keydown`, `mousedown` and `touchend`. Every entry point returns early while `ctx` is null, which is the whole headless suite's path. ⚠ PREDICTED, not measured: a gamepad button is not a browser gesture, so a pad-only player is silent until a key, click or tap. The duck node and every layer gate are built at unity, and §11.6's ducking and §11.4's setter are CS010's. ⛔ **The track loader refuses any `tier` in CS009** (Paul's A6), and a `tier` outside `1..4` always. The noise buffer is `mulberry32(C.AUDIO_NOISE_SEED)`, its own stream, never the run's.
+
 ### 11.2 ⛔ Scheduler
 
 **Per-frame lookahead, called once per frame from the main loop. Never `setTimeout`, never `setInterval` for notes.** Each frame, schedule any note starting within `MUSIC_LOOKAHEAD` (0.2 s) using absolute `AudioContext.currentTime`. Timing is sample-accurate and immune to frame-rate jitter.
 
 ⛔ **`scheduleStep` never consults intensity.** Every layer is always scheduled; gating is entirely a downstream gain node. That is what makes a track's note timing provably fixed regardless of what the director is doing.
+
+**Shipped, CS009 P1 — and ⛔ the scheduler RESYNCS after a stall.** Orbital Overhaul clamps a late step to `currentTime`, and after a 60 s gap one update fired 931 notes at the same instant (measured, plan §1.3). Here a hidden tab is a shipped pause source (§10.5), so the gap is routine. When `nextStepTime` is more than one lookahead behind the clock, `update()` advances the cursor and the clock together by the whole number of missed steps. Bar phase holds, and nothing that should already have sounded is played. `scratchpad/test-cs009-p1.js` asserts the following on a synthetic table. Each `update()` schedules exactly the steps inside the window. Every step starts within 1e-6 s of `t0 + k × stepDur` over 10 simulated minutes. One post-gap `update()` schedules at most `ceil(lookahead / stepDur) + 1` steps (353 with the resync deleted). Every layer is scheduled whatever its `audition` mark, and no layer's `audition`, `tier` or intensity is read. The worst step's node count is under `C.MUSIC_STEP_NODE_MAX` (16, ⚠ provisional). The built file's code, comments stripped, has no timer call.
 
 ### 11.3 ⛔ Tracks are DATA
 

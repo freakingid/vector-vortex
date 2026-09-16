@@ -1,1 +1,35 @@
-// 19-sfx.js — placeholder. See VECTOR-VORTEX-GDD.md for the section that owns this.
+// 19-sfx.js — the game's side of the audio engine: the instances, built from C.
+//
+// ⛔ 16-audio-engine.js is kit-shaped and reads no game global. THIS file is
+// where C crosses into it, exactly as 23-main.js hands createInput() its
+// tunables. Verbose on purpose.
+//
+// ⛔ THE NOISE SOURCE IS ITS OWN STREAM, from its own seed (01-rng.js's header),
+// and never the run's: an audio draw must not move a spawn lane.
+//
+// ⛔ EVERY FUNCTION IN THIS FILE RETURNS EARLY WHILE AudioSys.ctx IS NULL, so
+// nothing sounds before the first user gesture and the headless suite, which
+// has no audio API, runs every call as a no-op. The context is created by
+// AudioSys.unlock(), which 23-main.js passes to createInput() as onGesture.
+
+// ⚠ EMPTY IN CS009 P1: the engine is tested on a synthetic table, and no track
+// exists yet. P2 composes `title` and `pulse`.
+const MUSIC_TRACKS = {};
+
+const AudioSys = createAudioEngine({
+  volRamp: C.AUDIO_VOL_RAMP,
+  vol: {
+    master: C.AUDIO_VOL_DEFAULT / C.AUDIO_VOL_STEPS,
+    music:  C.AUDIO_VOL_DEFAULT / C.AUDIO_VOL_STEPS,
+    sfx:    C.AUDIO_VOL_DEFAULT / C.AUDIO_VOL_STEPS,
+    voice:  C.AUDIO_VOL_DEFAULT / C.AUDIO_VOL_STEPS,
+  },
+});
+
+const MusicSys = createMusic(AudioSys, {
+  tracks:    MUSIC_TRACKS,
+  lookahead: C.MUSIC_LOOKAHEAD,
+  crossfade: C.MUSIC_CROSSFADE,
+  fadeOut:   C.MUSIC_FADE_OUT,
+  noise:     mulberry32(C.AUDIO_NOISE_SEED),
+});

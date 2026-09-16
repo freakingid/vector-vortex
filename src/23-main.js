@@ -398,6 +398,10 @@ const Game = (function () {
     hiddenAction:     "autoPause",
     actionKeys:       ACTION_KEYS,
     onAction:         runAction,
+    // ⛔ THE AUDIO UNLOCK (CS009 P1). A browser opens audio output only inside
+    // a key press, click or lifted touch, and kit-input is the one module that
+    // may listen for those. ⚠ A pad-only player is silent until one of them.
+    onGesture:        () => AudioSys.unlock(),
   });
 
   // ⛔ THE MENU MODEL (15-render-hud.js), handed its one tunable here, from C,

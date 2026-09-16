@@ -1,17 +1,26 @@
 # Vector Vortex — STATUS
-Version: 0.0.5 · Changeset: CS009 (planned 2026-09-16 — P1 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
+Version: 0.0.5 · Changeset: CS009 (P1 done 2026-09-16 — P2 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 0/5
 
 ## Phase ledger — CS009
 
-Nothing built yet. One line per phase here; ⛔ **reasoning goes to
-`log/CS009.md` as the phase goes**, not to this file (`CLAUDE.md`, Session
-rules, 2026-08-31).
+One line per phase here; ⛔ **reasoning goes to `log/CS009.md` as the phase
+goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
+
+| Phase | Commit | One line |
+|---|---|---|
+| P1 | this commit | The engine: kit-input 0.7.0 `onGesture`, kit-audio 0.1.0 (four buses, the scheduler with the stall resync), the harness fake. No sound yet. 6 of 6 mutations red |
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 414.0 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 433.5 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **43 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **44 test files, all green, zero skips.**
+- **CS009 P1 — the engine.** `16-audio-engine.js` is kit-audio **0.1.0**
+  (`.NOTES.md`). `19-sfx.js` builds `AudioSys` / `MusicSys` from `C`, and
+  `AudioSys.unlock()` is kit-input **0.7.0**'s `onGesture`. ⛔ `ctx` is null
+  until a key, click or lifted touch, and every entry point returns early on it.
+  ⛔ `buildGame({ audio: true })` installs the recording fake (`X._audio`). The
+  default is still no audio API.
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -77,6 +86,29 @@ rules, 2026-08-31).
   serve`).
 
 ## Known issues
+
+- ⚠ **R2 — A PAD-ONLY PLAYER IS SILENT UNTIL A KEY, CLICK OR TAP** (PREDICTED:
+  a gamepad button is not browser user activation). kit-input's `onGesture`
+  fires on `keydown`, `mousedown` and `touchend` only. No changeset owns a fix.
+- ⛔ **CS009 TRAPS IN AUDIO CODE** (plan §1.4, §1.5, §1.13). (1) Never write the
+  vocabulary scan's banned word, even as "… Audio" in a comment:
+  `test-cs008-p6.js` scans the whole built file. (2) Never write `.key` after
+  an identifier ending in `e` (`tone.key`): `test-cs002-p1.js` bans the
+  substring `e.key` outside `04-input.js`. (3) Never start a comment line with
+  `// 21-telemetry.js` or `// 22-meta.js`. (4) No platform RNG: the noise is
+  `mulberry32(C.AUDIO_NOISE_SEED)`.
+- ⛔ **`MUSIC_TRACKS` IS DECLARED IN `19-sfx.js`** (P1 prompt). P2 puts the
+  tracks in `17-audio-tracks.js` and must **move** the `const` there. A second
+  declaration is a SyntaxError in the built file.
+- ⛔ **`MusicSys.setState()` BEFORE THE FIRST GESTURE IS DROPPED** (ported
+  as-is: it returns on a null `ctx` without recording the name). P3's frame
+  hook must call it every frame, not once on a screen change.
+- ⛔ **A test that counts scheduled steps counts NOTES, never distinct start
+  times.** A late step clamps to `currentTime`, so a burst collapses to one
+  instant. That reading hid a deleted resync (`log/CS009.md`, P1).
+- ⚠ **P2's BLOCK A must be identical text to `16-audio-engine.js`.** The engine
+  is self-contained for that reason: no `C`, and the noise and `layerSink`
+  are injected.
 
 - ⛔ **A REPLAY THAT OUTLIVES ITS GAME OVER MEETS A LIVE MENU** (CS008 P5). A
   scripted Fire there RESTARTS on a time seed and a Purge quits. ⛔ Any new
@@ -187,18 +219,18 @@ rules, 2026-08-31).
 - ⚠ **`CLAUDE.md` carries no telemetry rule**; whether it earns one is Paul's
   call.
 - ⚠ **Paul replaces `C.CREDITS_LINES` before ship.**
-- Backport kit-input (**0.6.0**), kit-menu (0.1.0) and kit-fx to coinless-kit —
+- Backport kit-input (**0.7.0**), kit-menu (0.1.0), kit-fx and kit-audio (0.1.0) to coinless-kit —
   each a separate manual step, verified against that repo's own suite.
 - The Overdrive `PTS_REAVER`, `PTS_MIMIC`, `PTS_WARDEN` are unread — CS012's.
 - ⛔ **The seven debug spawn actions ship until CS016** (Paul's H5 call).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS009 P1, the engine
+## Next up — ⛔ CS009 P2, music-lab and the two tracks
 
 ⛔ **CS009 is planned** (2026-09-16, at `d1847e2`): `PLANNED-FEATURES-CS009.md`
 and `IMPLEMENTATION-PHASES-CS009.md`, six phases. Every design call is
-answered (plan §0, A1–A9); P1 writes the `DECISIONS.md` pointer. Paste P1's
+answered (plan §0, A1–A9; `DECISIONS.md` pointer written in P1). Paste P2's
 prompt from `IMPLEMENTATION-PHASES-CS009.md`.
 
 ⛔ **What the plan measured that every CS009 phase must respect:**
@@ -209,7 +241,7 @@ prompt from `IMPLEMENTATION-PHASES-CS009.md`.
    `04-input.js`. `C` already holds a comment naming the timers, so a
    `setTimeout` scan must strip comments.
 2. ⛔ **Orbital Overhaul's scheduler bursts 931 notes after a 60 s stall**
-   (plan §1.3); a hidden tab is a shipped pause source here. P1 resyncs.
+   (plan §1.3); a hidden tab is a shipped pause source here. ✅ P1 resyncs.
 3. ⛔ **The OPTIONS rows go after CREDITS** — above TELEMETRY they turn 99 closed
    assertions red (plan §1.8).
 4. ⚠ SETTLED — the Surger charge tone stays audible over music at every tier;
