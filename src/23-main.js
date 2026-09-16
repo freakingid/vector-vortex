@@ -146,6 +146,7 @@ function respawnSkimmer(state, well, lane) {
   // cleared — killSkimmer() set it so a button held across the freeze needs a
   // real release before it spends another charge (09-collision.js).
   state.invulnTime = 0;
+  sfx("respawn");
 }
 
 // The next level. ⛔ GDD 3.4's shapeIndex — the well is derived from the level
@@ -830,7 +831,7 @@ const Game = (function () {
         adjustAcc -= whole * C.MENU_ROTATE_STEP;
         const a = ADJUST[adjusting];
         const n = Math.min(a.hi, Math.max(a.lo, a.get() + whole));
-        if (n !== a.get()) a.set(n);
+        if (n !== a.get()) { a.set(n); sfx("menuMove"); }
       }
       if (fireEdge || purgeEdge) adjusting = null;           // ⛔ any exit keeps the value
     } else if (fireEdge || purgeEdge) {
@@ -956,9 +957,11 @@ const Game = (function () {
   // else, a drag must only move the cursor, so auto-fire is off and a tap above
   // the rotation zone is the confirm (Paul, 2026-09-13).
   let syncedScreen = null;
+  let menuEntering = false;   // the next menu step is an entry step: no sound (CS009 P5)
   function syncScreen() {
     if (state.screen === syncedScreen) return;
     syncedScreen = state.screen;
+    menuEntering = true;
     const inPlay = state.screen === "play";
     // ⛔ The top-edge pause target is live in play only; on a menu the upper
     // screen is all confirm taps and a dead spot there would fail silently.
@@ -998,7 +1001,15 @@ const Game = (function () {
       if (screen) {
         if (adjusting !== null || capturing !== null) stepControlMode(screen);
         else {
+          // ⛔ THE MENU SOUNDS (CS009 P5; plan §7), read off the step's answer:
+          // the screen's back action is `menuBack`, any other action
+          // `menuConfirm`, and a cursor that moved with no action `menuMove`.
+          // An entry step moves the cursor to the first row and is silent.
+          const cursor = menu.cursor, entering = menuEntering;
+          menuEntering = false;
           const action = menu.step(screen, state.input);
+          if (action) sfx(action === screen.back ? "menuBack" : "menuConfirm");
+          else if (!entering && menu.cursor !== cursor) sfx("menuMove");
           if (action) menuAction(action, screen);
         }
       }
@@ -1013,6 +1024,7 @@ const Game = (function () {
       return;
     }
 
+    playSteps++;
     state.time += dt;
 
     // reset() writes 02-state.js's shipped defaults, which put `skimmer` back
@@ -1103,6 +1115,7 @@ const Game = (function () {
     // (GDD 4.6; 22-meta.js). Not in state: it has to outlive startGame().
     if (wellCleared(state)) {
       state.tally.wellsCleared++;
+      sfx("wellClear");
       clearBonuses(state);
       levelRecord().noteCleared(state.level);
       startDive(state);
@@ -1189,7 +1202,12 @@ const Game = (function () {
 
   // ---- the frame -----------------------------------------------------------
 
+  // This frame's play steps, for audioFrame(): an update() that got past the
+  // stop, so the simulation ran (CS009 P5).
+  let playSteps = 0;
+
   function frame(tMs) {
+    playSteps = 0;
     let dt = (tMs - lastMs) / 1000;
     lastMs = tMs;
     if (!(dt > 0)) dt = 0;                       // first frame, or a clock that went back
@@ -1239,10 +1257,19 @@ const Game = (function () {
   // so headless and before the first gesture this is two no-ops. ⛔ It runs on
   // EVERY frame, not on a screen change: a setState() before the gesture is
   // dropped, and the next frame's call is what starts the music.
+  //
+  // ⛔ AND THE SURGER CHARGE TONE (CS009 P5), which needs to know whether the
+  // fuse is RUNNING: frame() counts its play steps above. The frame ends frozen
+  // or off play — a pause, any menu, game over, the death freeze — and every
+  // voice stops (false); no play step ran but the run is live, and the voices
+  // hold (null); otherwise they follow the fuse (true). ⛔ Not `hitStopLeft > 0`
+  // alone: a pause holds no freeze, and it stops the fuse all the same.
   function audioFrame() {
     MusicSys.setState(musicStateFor(state.screen, optionsFrom, state.mode,
                                     C.MUSIC_TRACK_CHOICES[sound.track]));
     MusicSys.update();
+    const stopped = hitStopLeft > 0 || state.screen !== "play";
+    reconcileSurgeTones(state.enemies, stopped ? false : playSteps > 0 ? true : null);
   }
 
   function rafFrame(tMs) {

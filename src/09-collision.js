@@ -30,6 +30,10 @@
 // awards `e.points()` through addScore() (12-scoring.js) on the false -> true
 // `dead` transition, beside the `tally.kills` it already counted, and nowhere
 // else. The Thorn's per-chip 5 is paid inside its own onShot(), not here.
+//
+// ⛔ AND THE KILL SOUND, CS009 P5, beside the points at the same three edges:
+// `sfx("kill", e.sfxVoice)`, the pitch read off the entity's eighth contract
+// field (07-enemies.js). No sound call here writes `state` or draws.
 
 // Are two lanes the same lane, to within the contact tolerance? ⛔ laneDelta,
 // never (a - b): on a 16-lane Ring the distance from lane 15.9 to lane 0 is
@@ -106,7 +110,7 @@ function collideShots(state, well) {
       // splits dies. `e.dead` was false above, so this IS the false -> true
       // transition: the telemetry count (02-state.js's `tally`) and the points
       // (12-scoring.js), and nothing here branches on either.
-      if (e.dead) { state.tally.kills++; addScore(e.points()); }
+      if (e.dead) { state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); }
       break;
     }
   }
@@ -212,7 +216,7 @@ function collideSkimmer(state, well) {
     // ⛔ The rim sweep — the header above, and the four decisions in it.
     if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
       e.onShot(null);
-      if (e.dead) { state.tally.kills++; addScore(e.points()); continue; }
+      if (e.dead) { state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); continue; }
     }
     killSkimmer(state);
     return;   // one death per step, whatever else is touching
@@ -259,6 +263,7 @@ function killSkimmer(state) {
   // and the derived form would start quietly under-reporting the moment they
   // land. Below the invulnerability guard, so a declined kill is not a death.
   state.tally.deaths++;
+  sfx("death");
 
   // ⛔ THE BUTTON IS RE-LATCHED BY DEATH. Devices are still drained during
   // hit-stop (23-main.js — a freeze must not dump a second of banked mouse
@@ -277,6 +282,7 @@ function killSkimmer(state) {
   if (state.lives <= 0) {
     state.lives = 0;
     state.screen = "gameover";
+    sfx("gameOver");
   }
 
   // ⛔ Simulation time freezes; rendering does not. Game.hitStop() is the one
@@ -300,6 +306,11 @@ function killSkimmer(state) {
 //             bonus. The weak second use is what converts the Purge from a spam
 //             button into a decision.
 //   3rd+      nothing.
+//
+// ⛔ THE SOUNDS FOLLOW THE SAME COUNT (CS009 P5): `purge` on use 1, `purgeWeak`
+// on use 2 — GDD 4.3's "distinctly feeble", so the downgrade is felt — played
+// on the press whether or not a victim remains, and nothing on use 3+. Every
+// victim of either use also makes its kill sound, like any kill site.
 //
 // ⛔ BOTH USES SCORE NORMAL POINTS (GDD 7; Paul, P2s) — each victim's
 // `points()`, through addScore(). C.PURGE_SAVED_BONUS reads state.purgeUses ===
@@ -368,21 +379,23 @@ function updatePurge(state) {
   // button. This works by OMISSION, which is exactly the kind of thing that
   // gets "unified" by a later session, so it is written down here.
   if (state.purgeUses === 1) {
+    sfx("purge");
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); }
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); }
     }
     return;
   }
 
   if (state.purgeUses === 2) {
+    sfx("purgeWeak");
     const victim = purgeTarget(state);
     // A second use with nothing left to kill is still SPENT. The charge is
     // consumed by the press, not by the result — otherwise a player could bank
     // the weak use by firing it into an empty well.
     // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
     // branches of the panic button count here (02-state.js's `tally`).
-    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points()); }
+    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points()); sfx("kill", victim.sfxVoice); }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.

@@ -90,6 +90,18 @@ for.
 
 ---
 
+### CS009 P5 — the Surger tone over `pulse`, on real hardware
+- **Would have done:** played from START DEPTH 23 with `pulse` at default volumes,
+  on laptop speakers, headphones and a phone. Pressed `6` in a busy moment and
+  listened for the rising charge tone.
+- **Trying to learn:** whether the tone is heard over the music and the other SFX
+  in time to leave the lane. It is the one sound whose absence costs a life. The
+  headless gate (`test-cs009-p5.js`) compares peak gains only, not loudness as a
+  person hears it: small speakers lose the low start of the sweep (110 Hz).
+- **Knobs:** `C.SFX.surgeCharge` `gain` (0.45; re-pick in `tools/sfx-lab.html`),
+  then the gate's `HEADROOM_RATIO` (1.0, ⚠ provisional 0 dB), then
+  `C.AUDIO_VOL_DEFAULT`.
+
 ## Pacing skips
 
 ### CS007 P3 (+P4 telemetry) — each new kind is noticeable
@@ -187,3 +199,13 @@ for.
   range on a real mouse and phone (`C.SENS_MIN_MULT`, `C.SENS_MAX_MULT`,
   `C.SENS_STEP`), whether rebinding works on a real pad, and whether a refused
   swap explains itself.
+
+### CS009 P5 — the SFX mix and clutter at high spawn rates
+- **Would have done:** played levels 17–30 holding fire, and spent a first Purge
+  on a full board.
+- **Trying to learn:** whether `fire` at the full cadence tires the ear, whether
+  stacked `kill`s blur together (a first Purge plays one per victim, all at once),
+  whether the Drifter's birth `cross` reads as a spawn cue (A8 says none), and
+  whether menu ticks are too loud next to `title`.
+- **Knobs:** each `C.SFX` recipe's `gain` (re-pick in the lab), `C.SFX_KILL_PITCH`,
+  and `C.AUDIO_VOL_DEFAULT`.

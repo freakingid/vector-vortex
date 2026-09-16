@@ -34,11 +34,63 @@ const MusicSys = createMusic(AudioSys, {
 });
 
 // The SFX player (CS009 P4). Its noise is a SECOND instance of the audio seed's
-// stream, so it shares no draws with MusicSys's buffer or with the run. ⛔ No
-// seat plays it yet: the recipes are C.SFX, and the seats are CS009 P5's.
+// stream, so it shares no draws with MusicSys's buffer or with the run. The
+// recipes are C.SFX; the seats call sfx() below.
 const Sfx = createSfxPlayer(AudioSys, {
   noise: mulberry32(C.AUDIO_NOISE_SEED),
 });
+
+// ⛔ THE ONE CALL EVERY SEAT MAKES (CS009 P5; plan §7): sfx(name, voice). `name`
+// is a C.SFX event; `voice` is an entity's sfxVoice, and only the kill passes
+// one — it picks the pitch from C.SFX_KILL_PITCH, and anything unknown plays
+// the recipe at its own pitch. ⛔ A SEAT WRITES NO `state` AND DRAWS NOTHING:
+// this reads C and plays, so an audio-on run spends exactly the draws of an
+// audio-off one. Headless and before the first gesture it returns at once.
+function sfx(name, voice) {
+  if (!AudioSys.ctx) return;
+  const pitch = voice == null ? undefined : C.SFX_KILL_PITCH[voice];
+  Sfx.play(C.SFX[name], { pitch });
+}
+
+// ⛔ THE SURGER CHARGE TONE (GDD 6.3, 11.8; plan §7). A HELD voice per Surger
+// in its telegraph, reconciled against the board once per frame by
+// 23-main.js's audioFrame(), and ⛔ keyed by the entity in this Map — no field on
+// the entity. Each frame the voice's pitch is set from chargeTip(), so the tone
+// follows the fuse and never a clock of its own.
+//
+// `live` is what Game's audioFrame() reports about the frame:
+//   true   play steps ran and the run is live: set() each telegraphing Surger's
+//          voice, start the missing ones, stop the rest
+//   false  the frame ends frozen or off play — pause, any menu, game over, the
+//          death freeze: ⛔ STOP EVERY VOICE, so the tone cannot run ahead of a
+//          frozen fuse or play out after one
+//   null   the run is live but no step ran (a display faster than the step
+//          rate): leave every voice as it is. The fuse did not move and is not
+//          frozen, and a stop here would chop the tone every other frame at 120 Hz.
+// A Surger is found by what it reads, not its class: a `chargeTip()` and the
+// phase "telegraph". One that died or was filtered is simply not seen.
+const SURGE_TONES = new Map();   // entity -> { voice, frame }
+let surgeToneFrame = 0;
+
+function reconcileSurgeTones(enemies, live) {
+  if (!AudioSys.ctx || live === null) return;
+  surgeToneFrame++;
+  if (live) {
+    for (let i = 0; i < enemies.length; i++) {
+      const e = enemies[i];
+      if (e.dead || e.phase !== "telegraph" || typeof e.chargeTip !== "function") continue;
+      let tone = SURGE_TONES.get(e);
+      if (!tone) { tone = { voice: Sfx.hold(C.SFX.surgeCharge), frame: 0 }; SURGE_TONES.set(e, tone); }
+      tone.frame = surgeToneFrame;
+      tone.voice.set(e.chargeTip());
+    }
+  }
+  for (const [e, tone] of SURGE_TONES) {
+    if (tone.frame === surgeToneFrame) continue;
+    tone.voice.stop();
+    SURGE_TONES.delete(e);
+  }
+}
 
 // ⛔ MUSIC BY SCREEN (CS009 P3; plan §0's reading). PURE: four arguments in, a
 // MusicSys state name out, and nothing read but C. 23-main.js's audioFrame()

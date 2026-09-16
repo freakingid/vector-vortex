@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.5 · Changeset: CS009 (P4 done 2026-09-16 — P5 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.5 · Changeset: CS009 (P5 done 2026-09-16 — P6 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS009
 
@@ -12,13 +12,14 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 | P2 | `3809eba` | `tools/music-lab.html` (SOLO, MUTE, gain/cutoff, PASS/FAIL, COPY TABLE) and the `title` (32 s) and `pulse` (108 s, A→B→C) tables. Lab BLOCK A/B identical to `16`/`17`. 8 of 8 mutations red |
 | P3 | `88befdb` | Music by screen (`musicStateFor()`, `audioFrame()` once per frame) and OPTIONS' MASTER / MUSIC / SFX / VOICE VOLUME and MUSIC TRACK rows, one generalised row mode. `test-cs008-p6.js`'s three assertions rewritten in place. 9 of 9 mutations red |
 | P4 | `0458601` | kit-audio 0.2.0 `createSfxPlayer` (`play` / `hold`), `C.SFX` (21 recipes, candidate A) and `C.SFX_KILL_PITCH`, `tools/sfx-lab.html` (2–3 candidates, ▶ in context, picked, COPY OUT). No seat plays yet. 10 of 10 mutations red |
-| P4 port | this commit | ✅ Paul's sfx-lab picks, ported verbatim: 13 of 21 events changed. In the lab each pick is now candidate A, and the picks key is v2 |
+| P4 port | `310d716` | ✅ Paul's sfx-lab picks, ported verbatim: 13 of 21 events changed. In the lab each pick is now candidate A, and the picks key is v2 |
+| P5 | this commit | The Classic SFX at their seats: `sfx(name, voice)`, `sfxVoice` (the eighth contract field), the held Surger tone, and the headroom gate (0.450 vs 0.434 `pulse`, 0.3005 `title`). `test-cs004-p1.js`'s field list rewritten in place. No baseline moved. 12 of 12 mutations red |
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 460.8 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 467.1 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **47 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **48 test files, all green, zero skips.**
 - **CS009 P1 — the engine.** `16-audio-engine.js` is kit-audio **0.1.0**
   (`.NOTES.md`). `19-sfx.js` builds `AudioSys` / `MusicSys` from `C`, and
   `AudioSys.unlock()` is kit-input **0.7.0**'s `onGesture`. ⛔ `ctx` is null
@@ -41,8 +42,14 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `hold(recipe)` → `{ set(t01), stop() }`. Recipes are `C.SFX`, one per plan §7
   event; the kill's pitch is `C.SFX_KILL_PITCH[sfxVoice]`. ⛔ **Every recipe is
   Paul's pick (2026-09-16), ported verbatim**, and each is now the lab's candidate A.
-  ⚠ `surgeCharge` A peaks at 0.45 against `pulse`'s loudest step, 0.434
-  (MEASURED). The gate itself is P5's.
+- **CS009 P5 — the seats.** Every seat is one `sfx(name, voice)` call (`19-sfx.js`;
+  GDD §11.8's table). ⛔ It writes no `state` and draws nothing. The kill's pitch
+  is `C.SFX_KILL_PITCH[e.sfxVoice]`. `lifeLost` plays only at the cap on a live
+  run. `purgeWeak` is use 2, and use 3+ is silent. The Dive's termination kill is
+  silent. ⛔ **The Surger tone is `reconcileSurgeTones()`**, run from `audioFrame()`:
+  one held voice per telegraphing Surger, in a `Map`, `set(chargeTip())`. Every
+  voice stops when the frame ends frozen or off play. ⛔ The headroom gate is in
+  `test-cs009-p5.js` (`HEADROOM_RATIO` 1.0, ⚠ provisional).
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -71,7 +78,7 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   **0.6.0**, kit-menu **0.1.0** (`src/15-render-hud.js`), kit-fx's first draft
   (`src/14-render-entities.NOTES.md`). Phase ledger, mutation records, baseline
   ledger, closed-file edits and the §10 and §19 verdicts are in `log/CS008.md`.
-- ⛔ **Read GDD §6.5 before adding an enemy.** Seven contract fields (plus
+- ⛔ **Read GDD §6.5 before adding an enemy.** Eight contract fields (plus
   `points()`, CS008 P2), the wiring points, the one array / one spawn entry /
   one well entry / one collision pass rule, and the Dive: an entity that is
   `blocksClear: false` and not `anchored` must decide whether it survives a dive.
@@ -119,6 +126,22 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   substring `e.key` outside `04-input.js`. (3) Never start a comment line with
   `// 21-telemetry.js` or `// 22-meta.js`. (4) No platform RNG: the noise is
   `mulberry32(C.AUDIO_NOISE_SEED)`.
+- ⛔ **`test-cs009-p3.js` PINS THE TEXT `function audioFrame()` AND ITS CALL
+  `audioFrame()`.** So P5 passes the frame's play-step count through a closure
+  variable (`playSteps`), not a parameter. A signature change turns P3's seat
+  assertions red.
+- ⛔ **THE SURGER TONE IS DECIDED AT FRAME END** (`audioFrame()`). If the frame ends
+  frozen (`hitStopLeft > 0`) or off play, every voice stops. If the run is live and
+  no step ran, the voices hold, so a 120 Hz display does not chop the tone. ⛔ Do not
+  stop the tone on a frame with no step: that chops it at every other frame.
+- ⛔ **A MENU STEP'S SOUND IS READ OFF ITS ANSWER**, and `syncScreen()` sets
+  `menuEntering` so that an entry step's cursor reset is silent. A new screen
+  change that skips `syncScreen()` would make its first step play a
+  `menuMove`. Unspecified and silent: leaving an adjusting row, a capture,
+  entering pause.
+- ⚠ **Every seat call is `sfx(`, and `test-cs009-p5.js` scans the built file for
+  them.** Each call must name its `C.SFX` event as a string literal, and its
+  arguments must hold no assignment.
 - ⛔ **`MusicSys.setState()` BEFORE THE FIRST GESTURE IS DROPPED** (ported
   as-is: it returns on a null `ctx` without recording the name). That is why
   `audioFrame()` calls it every frame. ⛔ Never move it onto a screen change.
@@ -232,8 +255,6 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 
 ## Carried tasks
 
-- ⛔ **CS009 — the over-cap life sound.** `addScore()`'s `else` branch names the
-  seat (GDD 4.4, "never silently swallowed").
 - ⛔ **CS011 — persistence of the Start Depth record, the Controls settings, the
   bindings, the four volumes and the MUSIC TRACK setting.** All are
   session-only. `levelRecord()` is the one
@@ -264,13 +285,14 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS009 P5, the Classic SFX at their seats
+## Next up — ⛔ CS009 P6, the seventh soak, the docs, the close
 
 ⛔ **CS009 is planned** (2026-09-16, at `d1847e2`): `PLANNED-FEATURES-CS009.md`
 and `IMPLEMENTATION-PHASES-CS009.md`, six phases. Every design call is
-answered (plan §0, A1–A9; `DECISIONS.md` pointer written in P1). Paste P5's
-prompt from `IMPLEMENTATION-PHASES-CS009.md`. ⛔ `Sfx` exists and nothing calls it;
-P5 writes `sfx(name, arg)` over it and reads `Sfx.hold()` for the Surger.
+answered (plan §0, A1–A9; `DECISIONS.md` pointer written in P1). Paste P6's
+prompt from `IMPLEMENTATION-PHASES-CS009.md`. ⛔ Every seat is live, so P6's
+audio-on and audio-off sessions are the proof that a seat spends no draw
+(acceptance 12).
 
 ⛔ **What the plan measured that every CS009 phase must respect:**
 
@@ -284,5 +306,5 @@ P5 writes `sfx(name, arg)` over it and reads `Sfx.hold()` for the Surger.
 3. ✅ **The OPTIONS rows went after CREDITS** (P3). Above TELEMETRY they turn 99
    closed assertions red (plan §1.8).
 4. ⚠ SETTLED — the Surger charge tone stays audible over music at every tier;
-   P5's headless headroom gate stands in for the hardware check.
+   ✅ P5's headless headroom gate (`test-cs009-p5.js`) stands in for the hardware check.
 5. ⛔ No baseline moves in CS009 (plan §9).

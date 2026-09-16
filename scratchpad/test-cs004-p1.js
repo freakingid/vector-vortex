@@ -63,16 +63,19 @@ const base = new X.Enemy(3, 0.4);
 H.assert("anchored" in base, "⛔ the Enemy base carries `anchored`");
 H.eq(base.anchored, false, "⛔ and it defaults to false — `depth` is a position");
 
-// ⛔ SEVEN FIELDS, FOUR SIGNATURES, AND NO BEHAVIOUR (GDD 6.5). The base
-// exists so the ninth enemy cannot forget a field; the moment it grows an
-// eighth that is a climb rate, the instruction is to flatten it back to
+// ⛔ EIGHT FIELDS, FOUR SIGNATURES, AND NO BEHAVIOUR (GDD 6.5). The base
+// exists so the ninth enemy cannot forget a field; the moment it grows one
+// that is a climb rate, the instruction is to flatten it back to
 // independent classes, not to add a switch. This list is the tripwire.
 // CS008 P2 added the fourth signature, points() (GDD 6.5, 7), rewritten here
 // in place: a default-safe 0, the same shape as onShot's false.
+// CS009 P5 added the eighth field, sfxVoice (Paul's A9), rewritten here in
+// place: DATA the kill site reads for its pitch, not behaviour — a null
+// default the seven roster classes each override.
 H.assert(
   JSON.stringify(Object.keys(base)) ===
-  JSON.stringify(["lane", "depth", "dead", "purgeable", "blocksClear", "killDepth", "anchored"]),
-  "⛔ the base holds exactly the seven contract fields, in contract order");
+  JSON.stringify(["lane", "depth", "dead", "purgeable", "blocksClear", "killDepth", "anchored", "sfxVoice"]),
+  "⛔ the base holds exactly the eight contract fields, in contract order");
 H.assert(
   JSON.stringify(Object.getOwnPropertyNames(X.Enemy.prototype)) ===
   JSON.stringify(["constructor", "update", "draw", "onShot", "points"]),

@@ -2833,6 +2833,7 @@ function updateShots(state, well, dt) {
     const lane = laneNormalize(well, Math.round(state.skimmer.lane));
     state.shots.push(new Shot(well, lane));
     state.shotCooldown = 0;
+    sfx("fire");
     // ⛔ TELEMETRY ONLY, AND WRITE-ONLY (02-state.js's `tally`). Inside the
     // branch, so it counts shots that actually left the rim rather than trigger
     // presses the cooldown or C.SHOT_MAX refused. Nothing in the simulation
@@ -2919,7 +2920,7 @@ class Enemy {
     // CS005 P3's Surger holds the rim band while it climbs and through its whole
     // telegraph, drops to 0 for C.SURGE_DISCHARGE, and restores the band on the
     // way out — which is how GDD 4.5 item 3 ("being in a Surger's lane when it
-    // discharges") is expressed with NO EIGHTH FIELD and no branch in the
+    // discharges") is expressed with NO EXTRA FIELD and no branch in the
     // collision pass. A transient zero the player was given C.SURGE_TELEGRAPH of
     // visible fuse to walk out of is a discharge; a permanent one is an
     // unaccountable death. ⛔ The RESTORE is as load-bearing as the mutation:
@@ -2946,6 +2947,13 @@ class Enemy {
     // nobody would look. ⚠ This does NOT narrow that clamp's band (SETTLED,
     // GDD 4.4); it says which entities the clamp is meaningful for.
     this.anchored = false;
+
+    // ⛔ THE EIGHTH FIELD (CS009 P5, Paul's A9): which kill sound this entity
+    // makes, as a key into C.SFX_KILL_PITCH. The kill site reads it off the
+    // entity and never a class name, exactly as the Purge reads `purgeable`.
+    // The base is null, and every roster class sets its own; a null voice
+    // plays the kill at the recipe's own pitch rather than no sound.
+    this.sfxVoice = null;
   }
 
   // Movement and AI. dt is C.FIXED_DT; `well` is the current well (topology
@@ -2999,6 +3007,7 @@ class Vaulter extends Enemy {
   // undefined included, means +1.
   constructor(lane, depth, dir) {
     super(lane, depth);
+    this.sfxVoice = "vaulter";   // the kill sound's pitch key (A9)
 
     // GDD 4.5 item 1: an enemy reaching the rim in your lane kills on contact.
     // ⛔ Expressed as `1 - C.RIM_CONTACT_DEPTH`, not a second constant — the
@@ -3221,6 +3230,7 @@ class Carrier extends Enemy {
   // string carries the variant, so the class does not need a branch.
   constructor(lane, depth, cargo) {
     super(lane, depth);
+    this.sfxVoice = "carrier";   // the kill sound's pitch key (A9)
 
     // GDD 4.5 item 1, the same expression the Vaulter uses. ⛔ Not a second
     // constant: the band is measured DOWN from the rim, so retuning
@@ -3299,6 +3309,7 @@ class Carrier extends Enemy {
     const lanes = splitLanes(well, this.lane);
     spawnEnemy(row.kind, lanes[0], this.depth);
     spawnEnemy(row.kind, lanes[1], this.depth);
+    sfx("split");
     return true;
   }
 
@@ -3347,6 +3358,7 @@ class Weaver extends Enemy {
   // regardless of which kind came out of the throat.
   constructor(lane, depth) {
     super(lane, depth);
+    this.sfxVoice = "weaver";   // the kill sound's pitch key (A9)
 
     // ⛔ Explicit, not inherited-and-forgotten. The base already defaults to
     // null, and writing it here is what makes the ONE enemy that means it
@@ -3489,7 +3501,9 @@ class Weaver extends Enemy {
   // The current well is read the way spawnEnemy() itself reads it; `well` is
   // handed to update() and this is called from inside it.
   fire() {
-    spawnEnemy("weaverBolt", this.lane, this.depth);
+    // The launch sound only for a bolt that exists: spawnEnemy() refuses one at
+    // C.ENEMY_CAP, and a sound for nothing is a lie about the lane.
+    if (spawnEnemy("weaverBolt", this.lane, this.depth)) sfx("bolt");
   }
 
   draw(ctx, well) {
@@ -3543,6 +3557,7 @@ class Weaver extends Enemy {
 class WeaverBolt extends Enemy {
   constructor(lane, depth) {
     super(lane, depth);
+    this.sfxVoice = "weaverBolt";   // the kill sound's pitch key (A9)
     this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
     this.blocksClear = false;
   }
@@ -3646,6 +3661,7 @@ class Thorn extends Enemy {
   // run's ONE stream aligned regardless of which kind came out of the throat.
   constructor(lane, depth) {
     super(lane, depth);
+    this.sfxVoice = "thorn";   // the kill sound's pitch key (A9)
 
     // ⛔ GDD 4.3's "does not remove Thorns", as the flag the Purge already
     // reads. The roster's first false — and the reason the Purge needs no
@@ -3690,6 +3706,7 @@ class Thorn extends Enemy {
   // below is 0 so the kill site pays nothing on top.
   onShot(shot) {
     addScore(C.PTS_THORN);
+    sfx("chip");
     this.depth -= C.THORN_CHIP;
     if (this.depth <= 0) {
       this.depth = 0;
@@ -3769,6 +3786,7 @@ class Drifter extends Enemy {
   // undefined included, means +1.
   constructor(lane, depth, dir) {
     super(lane, depth);
+    this.sfxVoice = "drifter";   // the kill sound's pitch key (A9)
 
     // ⛔ THE RIM BAND, NOT ZERO — the same expression the Vaulter, the Carrier
     // and the Weaver's bolt use, so retuning C.RIM_CONTACT_DEPTH moves every
@@ -3940,6 +3958,9 @@ class Drifter extends Enemy {
     this.crossDelta = laneDelta(well, this.lane, lane);
     this.crossTime = 0;
     this.phase = "cross";
+    // ⛔ THE ONE WRITER OF "cross", so the sound is the moment it opens — the
+    // birth cross from the throat included (plan §7, GDD 6.3's vulnerable read).
+    sfx("cross");
   }
 
   // Which way the next cross goes. ⛔ GDD 6.1's "homes near rim", as a
@@ -4040,7 +4061,7 @@ class Drifter extends Enemy {
 //
 // ⛔ THE ROSTER'S FIRST ENTITY WHOSE LETHALITY IS A PHASE OF ITS OWN CYCLE
 // RATHER THAN A DEPTH — and it is expressed in the SEVEN CONTRACT FIELDS THAT
-// ALREADY EXIST (GDD 6.5). There is no eighth field, and there is no branch for
+// ALREADY EXIST (GDD 6.5). There is no extra field, and there is no branch for
 // it in the collision pass. That is the return the contract was designed to pay.
 //
 // ⛔ THE DISCHARGE IS killDepth MUTATED TO 0, AND RESTORED ON THE WAY OUT.
@@ -4094,6 +4115,7 @@ class Surger extends Enemy {
   // regardless of which kind came out of the throat.
   constructor(lane, depth) {
     super(lane, depth);
+    this.sfxVoice = "surger";   // the kill sound's pitch key (A9)
 
     // ⛔ THE RIM BAND, and it is the value this field spends most of its life
     // holding — the same expression the Vaulter, the Carrier, the bolt and the
@@ -4128,6 +4150,7 @@ class Surger extends Enemy {
     this.phase = phase;
     this.surgeTimer = 0;
     this.killDepth = phase === "discharge" ? 0 : 1 - C.RIM_CONTACT_DEPTH;
+    if (phase === "discharge") sfx("surgeDischarge");
   }
 
   // How far the fuse has grown, as 0..1 of the lane, or 0 when the lane is not
@@ -4575,6 +4598,10 @@ function wellCleared(state) {
 // awards `e.points()` through addScore() (12-scoring.js) on the false -> true
 // `dead` transition, beside the `tally.kills` it already counted, and nowhere
 // else. The Thorn's per-chip 5 is paid inside its own onShot(), not here.
+//
+// ⛔ AND THE KILL SOUND, CS009 P5, beside the points at the same three edges:
+// `sfx("kill", e.sfxVoice)`, the pitch read off the entity's eighth contract
+// field (07-enemies.js). No sound call here writes `state` or draws.
 
 // Are two lanes the same lane, to within the contact tolerance? ⛔ laneDelta,
 // never (a - b): on a 16-lane Ring the distance from lane 15.9 to lane 0 is
@@ -4651,7 +4678,7 @@ function collideShots(state, well) {
       // splits dies. `e.dead` was false above, so this IS the false -> true
       // transition: the telemetry count (02-state.js's `tally`) and the points
       // (12-scoring.js), and nothing here branches on either.
-      if (e.dead) { state.tally.kills++; addScore(e.points()); }
+      if (e.dead) { state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); }
       break;
     }
   }
@@ -4757,7 +4784,7 @@ function collideSkimmer(state, well) {
     // ⛔ The rim sweep — the header above, and the four decisions in it.
     if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
       e.onShot(null);
-      if (e.dead) { state.tally.kills++; addScore(e.points()); continue; }
+      if (e.dead) { state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); continue; }
     }
     killSkimmer(state);
     return;   // one death per step, whatever else is touching
@@ -4804,6 +4831,7 @@ function killSkimmer(state) {
   // and the derived form would start quietly under-reporting the moment they
   // land. Below the invulnerability guard, so a declined kill is not a death.
   state.tally.deaths++;
+  sfx("death");
 
   // ⛔ THE BUTTON IS RE-LATCHED BY DEATH. Devices are still drained during
   // hit-stop (23-main.js — a freeze must not dump a second of banked mouse
@@ -4822,6 +4850,7 @@ function killSkimmer(state) {
   if (state.lives <= 0) {
     state.lives = 0;
     state.screen = "gameover";
+    sfx("gameOver");
   }
 
   // ⛔ Simulation time freezes; rendering does not. Game.hitStop() is the one
@@ -4845,6 +4874,11 @@ function killSkimmer(state) {
 //             bonus. The weak second use is what converts the Purge from a spam
 //             button into a decision.
 //   3rd+      nothing.
+//
+// ⛔ THE SOUNDS FOLLOW THE SAME COUNT (CS009 P5): `purge` on use 1, `purgeWeak`
+// on use 2 — GDD 4.3's "distinctly feeble", so the downgrade is felt — played
+// on the press whether or not a victim remains, and nothing on use 3+. Every
+// victim of either use also makes its kill sound, like any kill site.
 //
 // ⛔ BOTH USES SCORE NORMAL POINTS (GDD 7; Paul, P2s) — each victim's
 // `points()`, through addScore(). C.PURGE_SAVED_BONUS reads state.purgeUses ===
@@ -4913,21 +4947,23 @@ function updatePurge(state) {
   // button. This works by OMISSION, which is exactly the kind of thing that
   // gets "unified" by a later session, so it is written down here.
   if (state.purgeUses === 1) {
+    sfx("purge");
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); }
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); }
     }
     return;
   }
 
   if (state.purgeUses === 2) {
+    sfx("purgeWeak");
     const victim = purgeTarget(state);
     // A second use with nothing left to kill is still SPENT. The charge is
     // consumed by the press, not by the result — otherwise a player could bank
     // the weak use by firing it into an empty well.
     // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
     // branches of the panic button count here (02-state.js's `tally`).
-    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points()); }
+    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points()); sfx("kill", victim.sfxVoice); }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.
@@ -5032,6 +5068,8 @@ function startDive(state) {
   state.dive.active = true;
   state.shots = [];
   state.enemies = state.enemies.filter(e => e.anchored && !e.dead);
+  // GDD 5's rising sweep. HERE, so a repeated dive plays it again (plan §7).
+  sfx("dive");
 }
 
 // ---------------------------------------------------------------------------
@@ -5096,7 +5134,7 @@ function diveStrike(state, well) {
   // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and behind the same `sk.dead`
   // the return value is read off: an invulnerable diver passes through the
   // Thorn, and a strike that killed nobody is not a death. GDD 4.5 item 5.
-  if (sk.dead) state.tally.thornDeaths++;
+  if (sk.dead) { state.tally.thornDeaths++; sfx("diveStrike"); }
   return sk.dead;
 }
 
@@ -5175,6 +5213,8 @@ function diveRespawn(state, well) {
     // ⛔ NO addScore() AND NO `tally.kills`, and that is a decision (plan §0,
     // CS008 P2): the termination guarantee destroying a Thorn is not the player
     // destroying it. The build's three kill sites are all in 09-collision.js.
+    // ⛔ AND NO KILL SOUND (CS009 P5), for the same reason: diveStrike's sound
+    // already covers the moment.
     if (struck) struck.dead = true;
   }
 
@@ -5281,9 +5321,11 @@ function updateDive(state, well, dt) {
 // SCORE. C.EXTRA_LIFE_FIRST, then every C.EXTRA_LIFE_EVERY (Paul, P3s). The
 // `while` is what makes one award that crosses two milestones pay both.
 //
-// ⚠ AN AWARD PAST C.LIVES_MAX IS LOST, AND IN CS008 THAT IS SILENT. The milestone
-// still advances — a life refused at the cap is not banked for later. GDD 4.4
-// wants a distinct sound for it, and audio is CS009's.
+// ⚠ AN AWARD PAST C.LIVES_MAX IS LOST. The milestone still advances — a life
+// refused at the cap is not banked for later — and since CS009 P5 it is voiced
+// with `lifeLost`, GDD 4.4's "never silently swallowed". ⛔ Only on a LIVE run:
+// a milestone crossed on the game-over step is not an award refused at the cap
+// (the rule below), so it is silent (plan §0).
 //
 // ⛔ A STOPPED RUN SCORES BUT GAINS NO LIFE (Paul, 2026-09-13). A clear edge on
 // the step that spent the last life (a Weaver bolt kills as a shot takes the
@@ -5295,8 +5337,10 @@ function updateDive(state, well, dt) {
 function addScore(n) {
   state.score += n;
   while (state.score >= state.nextLife) {
-    if (state.lives < C.LIVES_MAX && state.screen !== "gameover") state.lives += 1;
-    // else: CS009 voices the lost life here (GDD 4.4, "never silently swallowed").
+    if (state.screen !== "gameover") {
+      if (state.lives < C.LIVES_MAX) { state.lives += 1; sfx("extraLife"); }
+      else sfx("lifeLost");
+    }
     state.nextLife += C.EXTRA_LIFE_EVERY;
   }
 }
@@ -7304,11 +7348,63 @@ const MusicSys = createMusic(AudioSys, {
 });
 
 // The SFX player (CS009 P4). Its noise is a SECOND instance of the audio seed's
-// stream, so it shares no draws with MusicSys's buffer or with the run. ⛔ No
-// seat plays it yet: the recipes are C.SFX, and the seats are CS009 P5's.
+// stream, so it shares no draws with MusicSys's buffer or with the run. The
+// recipes are C.SFX; the seats call sfx() below.
 const Sfx = createSfxPlayer(AudioSys, {
   noise: mulberry32(C.AUDIO_NOISE_SEED),
 });
+
+// ⛔ THE ONE CALL EVERY SEAT MAKES (CS009 P5; plan §7): sfx(name, voice). `name`
+// is a C.SFX event; `voice` is an entity's sfxVoice, and only the kill passes
+// one — it picks the pitch from C.SFX_KILL_PITCH, and anything unknown plays
+// the recipe at its own pitch. ⛔ A SEAT WRITES NO `state` AND DRAWS NOTHING:
+// this reads C and plays, so an audio-on run spends exactly the draws of an
+// audio-off one. Headless and before the first gesture it returns at once.
+function sfx(name, voice) {
+  if (!AudioSys.ctx) return;
+  const pitch = voice == null ? undefined : C.SFX_KILL_PITCH[voice];
+  Sfx.play(C.SFX[name], { pitch });
+}
+
+// ⛔ THE SURGER CHARGE TONE (GDD 6.3, 11.8; plan §7). A HELD voice per Surger
+// in its telegraph, reconciled against the board once per frame by
+// 23-main.js's audioFrame(), and ⛔ keyed by the entity in this Map — no field on
+// the entity. Each frame the voice's pitch is set from chargeTip(), so the tone
+// follows the fuse and never a clock of its own.
+//
+// `live` is what Game's audioFrame() reports about the frame:
+//   true   play steps ran and the run is live: set() each telegraphing Surger's
+//          voice, start the missing ones, stop the rest
+//   false  the frame ends frozen or off play — pause, any menu, game over, the
+//          death freeze: ⛔ STOP EVERY VOICE, so the tone cannot run ahead of a
+//          frozen fuse or play out after one
+//   null   the run is live but no step ran (a display faster than the step
+//          rate): leave every voice as it is. The fuse did not move and is not
+//          frozen, and a stop here would chop the tone every other frame at 120 Hz.
+// A Surger is found by what it reads, not its class: a `chargeTip()` and the
+// phase "telegraph". One that died or was filtered is simply not seen.
+const SURGE_TONES = new Map();   // entity -> { voice, frame }
+let surgeToneFrame = 0;
+
+function reconcileSurgeTones(enemies, live) {
+  if (!AudioSys.ctx || live === null) return;
+  surgeToneFrame++;
+  if (live) {
+    for (let i = 0; i < enemies.length; i++) {
+      const e = enemies[i];
+      if (e.dead || e.phase !== "telegraph" || typeof e.chargeTip !== "function") continue;
+      let tone = SURGE_TONES.get(e);
+      if (!tone) { tone = { voice: Sfx.hold(C.SFX.surgeCharge), frame: 0 }; SURGE_TONES.set(e, tone); }
+      tone.frame = surgeToneFrame;
+      tone.voice.set(e.chargeTip());
+    }
+  }
+  for (const [e, tone] of SURGE_TONES) {
+    if (tone.frame === surgeToneFrame) continue;
+    tone.voice.stop();
+    SURGE_TONES.delete(e);
+  }
+}
 
 // ⛔ MUSIC BY SCREEN (CS009 P3; plan §0's reading). PURE: four arguments in, a
 // MusicSys state name out, and nothing read but C. 23-main.js's audioFrame()
@@ -7936,6 +8032,7 @@ function respawnSkimmer(state, well, lane) {
   // cleared — killSkimmer() set it so a button held across the freeze needs a
   // real release before it spends another charge (09-collision.js).
   state.invulnTime = 0;
+  sfx("respawn");
 }
 
 // The next level. ⛔ GDD 3.4's shapeIndex — the well is derived from the level
@@ -8620,7 +8717,7 @@ const Game = (function () {
         adjustAcc -= whole * C.MENU_ROTATE_STEP;
         const a = ADJUST[adjusting];
         const n = Math.min(a.hi, Math.max(a.lo, a.get() + whole));
-        if (n !== a.get()) a.set(n);
+        if (n !== a.get()) { a.set(n); sfx("menuMove"); }
       }
       if (fireEdge || purgeEdge) adjusting = null;           // ⛔ any exit keeps the value
     } else if (fireEdge || purgeEdge) {
@@ -8746,9 +8843,11 @@ const Game = (function () {
   // else, a drag must only move the cursor, so auto-fire is off and a tap above
   // the rotation zone is the confirm (Paul, 2026-09-13).
   let syncedScreen = null;
+  let menuEntering = false;   // the next menu step is an entry step: no sound (CS009 P5)
   function syncScreen() {
     if (state.screen === syncedScreen) return;
     syncedScreen = state.screen;
+    menuEntering = true;
     const inPlay = state.screen === "play";
     // ⛔ The top-edge pause target is live in play only; on a menu the upper
     // screen is all confirm taps and a dead spot there would fail silently.
@@ -8788,7 +8887,15 @@ const Game = (function () {
       if (screen) {
         if (adjusting !== null || capturing !== null) stepControlMode(screen);
         else {
+          // ⛔ THE MENU SOUNDS (CS009 P5; plan §7), read off the step's answer:
+          // the screen's back action is `menuBack`, any other action
+          // `menuConfirm`, and a cursor that moved with no action `menuMove`.
+          // An entry step moves the cursor to the first row and is silent.
+          const cursor = menu.cursor, entering = menuEntering;
+          menuEntering = false;
           const action = menu.step(screen, state.input);
+          if (action) sfx(action === screen.back ? "menuBack" : "menuConfirm");
+          else if (!entering && menu.cursor !== cursor) sfx("menuMove");
           if (action) menuAction(action, screen);
         }
       }
@@ -8803,6 +8910,7 @@ const Game = (function () {
       return;
     }
 
+    playSteps++;
     state.time += dt;
 
     // reset() writes 02-state.js's shipped defaults, which put `skimmer` back
@@ -8893,6 +9001,7 @@ const Game = (function () {
     // (GDD 4.6; 22-meta.js). Not in state: it has to outlive startGame().
     if (wellCleared(state)) {
       state.tally.wellsCleared++;
+      sfx("wellClear");
       clearBonuses(state);
       levelRecord().noteCleared(state.level);
       startDive(state);
@@ -8979,7 +9088,12 @@ const Game = (function () {
 
   // ---- the frame -----------------------------------------------------------
 
+  // This frame's play steps, for audioFrame(): an update() that got past the
+  // stop, so the simulation ran (CS009 P5).
+  let playSteps = 0;
+
   function frame(tMs) {
+    playSteps = 0;
     let dt = (tMs - lastMs) / 1000;
     lastMs = tMs;
     if (!(dt > 0)) dt = 0;                       // first frame, or a clock that went back
@@ -9029,10 +9143,19 @@ const Game = (function () {
   // so headless and before the first gesture this is two no-ops. ⛔ It runs on
   // EVERY frame, not on a screen change: a setState() before the gesture is
   // dropped, and the next frame's call is what starts the music.
+  //
+  // ⛔ AND THE SURGER CHARGE TONE (CS009 P5), which needs to know whether the
+  // fuse is RUNNING: frame() counts its play steps above. The frame ends frozen
+  // or off play — a pause, any menu, game over, the death freeze — and every
+  // voice stops (false); no play step ran but the run is live, and the voices
+  // hold (null); otherwise they follow the fuse (true). ⛔ Not `hitStopLeft > 0`
+  // alone: a pause holds no freeze, and it stops the fuse all the same.
   function audioFrame() {
     MusicSys.setState(musicStateFor(state.screen, optionsFrom, state.mode,
                                     C.MUSIC_TRACK_CHOICES[sound.track]));
     MusicSys.update();
+    const stopped = hitStopLeft > 0 || state.screen !== "play";
+    reconcileSurgeTones(state.enemies, stopped ? false : playSteps > 0 ? true : null);
   }
 
   function rafFrame(tMs) {

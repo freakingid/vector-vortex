@@ -30,9 +30,11 @@
 // SCORE. C.EXTRA_LIFE_FIRST, then every C.EXTRA_LIFE_EVERY (Paul, P3s). The
 // `while` is what makes one award that crosses two milestones pay both.
 //
-// ⚠ AN AWARD PAST C.LIVES_MAX IS LOST, AND IN CS008 THAT IS SILENT. The milestone
-// still advances — a life refused at the cap is not banked for later. GDD 4.4
-// wants a distinct sound for it, and audio is CS009's.
+// ⚠ AN AWARD PAST C.LIVES_MAX IS LOST. The milestone still advances — a life
+// refused at the cap is not banked for later — and since CS009 P5 it is voiced
+// with `lifeLost`, GDD 4.4's "never silently swallowed". ⛔ Only on a LIVE run:
+// a milestone crossed on the game-over step is not an award refused at the cap
+// (the rule below), so it is silent (plan §0).
 //
 // ⛔ A STOPPED RUN SCORES BUT GAINS NO LIFE (Paul, 2026-09-13). A clear edge on
 // the step that spent the last life (a Weaver bolt kills as a shot takes the
@@ -44,8 +46,10 @@
 function addScore(n) {
   state.score += n;
   while (state.score >= state.nextLife) {
-    if (state.lives < C.LIVES_MAX && state.screen !== "gameover") state.lives += 1;
-    // else: CS009 voices the lost life here (GDD 4.4, "never silently swallowed").
+    if (state.screen !== "gameover") {
+      if (state.lives < C.LIVES_MAX) { state.lives += 1; sfx("extraLife"); }
+      else sfx("lifeLost");
+    }
     state.nextLife += C.EXTRA_LIFE_EVERY;
   }
 }

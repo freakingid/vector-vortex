@@ -73,7 +73,7 @@ class Enemy {
     // CS005 P3's Surger holds the rim band while it climbs and through its whole
     // telegraph, drops to 0 for C.SURGE_DISCHARGE, and restores the band on the
     // way out — which is how GDD 4.5 item 3 ("being in a Surger's lane when it
-    // discharges") is expressed with NO EIGHTH FIELD and no branch in the
+    // discharges") is expressed with NO EXTRA FIELD and no branch in the
     // collision pass. A transient zero the player was given C.SURGE_TELEGRAPH of
     // visible fuse to walk out of is a discharge; a permanent one is an
     // unaccountable death. ⛔ The RESTORE is as load-bearing as the mutation:
@@ -100,6 +100,13 @@ class Enemy {
     // nobody would look. ⚠ This does NOT narrow that clamp's band (SETTLED,
     // GDD 4.4); it says which entities the clamp is meaningful for.
     this.anchored = false;
+
+    // ⛔ THE EIGHTH FIELD (CS009 P5, Paul's A9): which kill sound this entity
+    // makes, as a key into C.SFX_KILL_PITCH. The kill site reads it off the
+    // entity and never a class name, exactly as the Purge reads `purgeable`.
+    // The base is null, and every roster class sets its own; a null voice
+    // plays the kill at the recipe's own pitch rather than no sound.
+    this.sfxVoice = null;
   }
 
   // Movement and AI. dt is C.FIXED_DT; `well` is the current well (topology
@@ -153,6 +160,7 @@ class Vaulter extends Enemy {
   // undefined included, means +1.
   constructor(lane, depth, dir) {
     super(lane, depth);
+    this.sfxVoice = "vaulter";   // the kill sound's pitch key (A9)
 
     // GDD 4.5 item 1: an enemy reaching the rim in your lane kills on contact.
     // ⛔ Expressed as `1 - C.RIM_CONTACT_DEPTH`, not a second constant — the
@@ -375,6 +383,7 @@ class Carrier extends Enemy {
   // string carries the variant, so the class does not need a branch.
   constructor(lane, depth, cargo) {
     super(lane, depth);
+    this.sfxVoice = "carrier";   // the kill sound's pitch key (A9)
 
     // GDD 4.5 item 1, the same expression the Vaulter uses. ⛔ Not a second
     // constant: the band is measured DOWN from the rim, so retuning
@@ -453,6 +462,7 @@ class Carrier extends Enemy {
     const lanes = splitLanes(well, this.lane);
     spawnEnemy(row.kind, lanes[0], this.depth);
     spawnEnemy(row.kind, lanes[1], this.depth);
+    sfx("split");
     return true;
   }
 
@@ -501,6 +511,7 @@ class Weaver extends Enemy {
   // regardless of which kind came out of the throat.
   constructor(lane, depth) {
     super(lane, depth);
+    this.sfxVoice = "weaver";   // the kill sound's pitch key (A9)
 
     // ⛔ Explicit, not inherited-and-forgotten. The base already defaults to
     // null, and writing it here is what makes the ONE enemy that means it
@@ -643,7 +654,9 @@ class Weaver extends Enemy {
   // The current well is read the way spawnEnemy() itself reads it; `well` is
   // handed to update() and this is called from inside it.
   fire() {
-    spawnEnemy("weaverBolt", this.lane, this.depth);
+    // The launch sound only for a bolt that exists: spawnEnemy() refuses one at
+    // C.ENEMY_CAP, and a sound for nothing is a lie about the lane.
+    if (spawnEnemy("weaverBolt", this.lane, this.depth)) sfx("bolt");
   }
 
   draw(ctx, well) {
@@ -697,6 +710,7 @@ class Weaver extends Enemy {
 class WeaverBolt extends Enemy {
   constructor(lane, depth) {
     super(lane, depth);
+    this.sfxVoice = "weaverBolt";   // the kill sound's pitch key (A9)
     this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
     this.blocksClear = false;
   }
@@ -800,6 +814,7 @@ class Thorn extends Enemy {
   // run's ONE stream aligned regardless of which kind came out of the throat.
   constructor(lane, depth) {
     super(lane, depth);
+    this.sfxVoice = "thorn";   // the kill sound's pitch key (A9)
 
     // ⛔ GDD 4.3's "does not remove Thorns", as the flag the Purge already
     // reads. The roster's first false — and the reason the Purge needs no
@@ -844,6 +859,7 @@ class Thorn extends Enemy {
   // below is 0 so the kill site pays nothing on top.
   onShot(shot) {
     addScore(C.PTS_THORN);
+    sfx("chip");
     this.depth -= C.THORN_CHIP;
     if (this.depth <= 0) {
       this.depth = 0;
@@ -923,6 +939,7 @@ class Drifter extends Enemy {
   // undefined included, means +1.
   constructor(lane, depth, dir) {
     super(lane, depth);
+    this.sfxVoice = "drifter";   // the kill sound's pitch key (A9)
 
     // ⛔ THE RIM BAND, NOT ZERO — the same expression the Vaulter, the Carrier
     // and the Weaver's bolt use, so retuning C.RIM_CONTACT_DEPTH moves every
@@ -1094,6 +1111,9 @@ class Drifter extends Enemy {
     this.crossDelta = laneDelta(well, this.lane, lane);
     this.crossTime = 0;
     this.phase = "cross";
+    // ⛔ THE ONE WRITER OF "cross", so the sound is the moment it opens — the
+    // birth cross from the throat included (plan §7, GDD 6.3's vulnerable read).
+    sfx("cross");
   }
 
   // Which way the next cross goes. ⛔ GDD 6.1's "homes near rim", as a
@@ -1194,7 +1214,7 @@ class Drifter extends Enemy {
 //
 // ⛔ THE ROSTER'S FIRST ENTITY WHOSE LETHALITY IS A PHASE OF ITS OWN CYCLE
 // RATHER THAN A DEPTH — and it is expressed in the SEVEN CONTRACT FIELDS THAT
-// ALREADY EXIST (GDD 6.5). There is no eighth field, and there is no branch for
+// ALREADY EXIST (GDD 6.5). There is no extra field, and there is no branch for
 // it in the collision pass. That is the return the contract was designed to pay.
 //
 // ⛔ THE DISCHARGE IS killDepth MUTATED TO 0, AND RESTORED ON THE WAY OUT.
@@ -1248,6 +1268,7 @@ class Surger extends Enemy {
   // regardless of which kind came out of the throat.
   constructor(lane, depth) {
     super(lane, depth);
+    this.sfxVoice = "surger";   // the kill sound's pitch key (A9)
 
     // ⛔ THE RIM BAND, and it is the value this field spends most of its life
     // holding — the same expression the Vaulter, the Carrier, the bolt and the
@@ -1282,6 +1303,7 @@ class Surger extends Enemy {
     this.phase = phase;
     this.surgeTimer = 0;
     this.killDepth = phase === "discharge" ? 0 : 1 - C.RIM_CONTACT_DEPTH;
+    if (phase === "discharge") sfx("surgeDischarge");
   }
 
   // How far the fuse has grown, as 0..1 of the lane, or 0 when the lane is not

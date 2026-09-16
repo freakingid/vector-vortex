@@ -305,7 +305,8 @@ the well-clear condition, and **the Dive**. **Decide explicitly whether the
 Purge destroys it**, and — seventh point, GDD §6.5 — an entity that is
 `blocksClear: false` and **not** `anchored` must decide explicitly whether it
 survives a dive. `startDive()` filters the board down to `anchored` survivors,
-so today the answer for the one entity in that position is *no*.
+so today the answer for the one entity in that position is *no*. And — CS009
+P5, GDD §6.5 — **decide explicitly its `sfxVoice`**, the eighth contract field.
 
 ⛔ **`anchored` says what `depth` MEANS on an entity, not whether it moves.**
 `false` is a position; `true` is a length — the tip of an extent rooted at the

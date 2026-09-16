@@ -82,6 +82,8 @@ function startDive(state) {
   state.dive.active = true;
   state.shots = [];
   state.enemies = state.enemies.filter(e => e.anchored && !e.dead);
+  // GDD 5's rising sweep. HERE, so a repeated dive plays it again (plan §7).
+  sfx("dive");
 }
 
 // ---------------------------------------------------------------------------
@@ -146,7 +148,7 @@ function diveStrike(state, well) {
   // ⛔ TELEMETRY ONLY (02-state.js's `tally`), and behind the same `sk.dead`
   // the return value is read off: an invulnerable diver passes through the
   // Thorn, and a strike that killed nobody is not a death. GDD 4.5 item 5.
-  if (sk.dead) state.tally.thornDeaths++;
+  if (sk.dead) { state.tally.thornDeaths++; sfx("diveStrike"); }
   return sk.dead;
 }
 
@@ -225,6 +227,8 @@ function diveRespawn(state, well) {
     // ⛔ NO addScore() AND NO `tally.kills`, and that is a decision (plan §0,
     // CS008 P2): the termination guarantee destroying a Thorn is not the player
     // destroying it. The build's three kill sites are all in 09-collision.js.
+    // ⛔ AND NO KILL SOUND (CS009 P5), for the same reason: diveStrike's sound
+    // already covers the moment.
     if (struck) struck.dead = true;
   }
 
