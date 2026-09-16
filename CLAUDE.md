@@ -612,7 +612,7 @@ game logic it needs; drift here can only produce a bad *preview*, never a bad
 
 - **`tools/music-lab.html`** — ⛔ the porting source for every track table, and
   the home of the **per-layer solo button** that enforces the audition gate:
-  SOLO, MUTE, the PASS/FAIL mark and COPY TABLE. Its BLOCK A and BLOCK B are
+  SOLO, MUTE, the PASS/FAIL mark, the TEMPO ladder and COPY TABLE. Its BLOCK A and BLOCK B are
   `16-audio-engine.js` and `17-audio-tracks.js` verbatim (`test-cs009-p2.js`).
 - **`tools/sfx-lab.html`** — ⛔ the porting source for every `C.SFX` recipe:
   2–3 candidates per event, ▶ alone, ▶ in context, a picked mark and COPY OUT.

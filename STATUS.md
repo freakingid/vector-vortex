@@ -281,8 +281,18 @@ rules, 2026-08-31).
   call.
 - ⚠ **Paul replaces `C.CREDITS_LINES` before ship.**
 - ✅ **Paul's music-lab note is in and ported** (2026-09-16): struck, never
-  swelled (above). ⚠ Whether the struck tracks sound as he means is his call in
-  the lab. No layer is marked PASS.
+  swelled (above). Paul hears the struck tracks as better, and likely all PASS.
+- ⛔ **PAUL IS PICKING TEMPOS in music-lab's new TEMPO ladder** (2026-09-16: both
+  tracks too slow). His COPY TABLE comes back as `stepDur: 60 / BPM / 4` lines,
+  and possibly PASS marks. The port is a three-file edit, as always. ⚠ **At the
+  port:** (1) `pulse` above 96 BPM is under the 90 s target that
+  `test-cs009-p2.js` asserts, so ask Paul: more bars, or a new target. (2)
+  `test-cs009-p5.js`'s headroom sort compares exact floats, and at a
+  non-binary `stepDur` (e.g. 138) a back-to-back note pair reads as an overlap
+  (0.5377 against 0.4201 with a 1e-9 tolerance). Repair that fixture in place.
+  (3) GDD §11.7's tempo column and the builders' header comments name 60 and
+  80 BPM. ⚠ COPY TABLE's tempo rewrite has no suite test: a throwaway check and a
+  headless click-through covered it (`log/CS009.md`).
 - ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
   2 → 3.

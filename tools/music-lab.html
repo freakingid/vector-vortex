@@ -17,9 +17,10 @@
   GDD 11.4(c)'s audition: a layer that is not recognisable played alone fails.
 
   THE ROUTE BACK INTO THE REPO. Move a gain or cutoff slider, mark a layer PASS
-  or FAIL, press COPY TABLE, and paste the text over src/17-audio-tracks.js.
-  COPY TABLE rewrites only what changed: an edited `gain` or `cutoff`, and each
-  layer's `audition` mark. Then rebuild (`node build.js`) and run the suite.
+  or FAIL, step the TEMPO, press COPY TABLE, and paste the text over
+  src/17-audio-tracks.js. COPY TABLE rewrites only what changed: an edited
+  `gain` or `cutoff`, each layer's `audition` mark, and a track's `stepDur`
+  when its tempo moved. Then rebuild (`node build.js`) and run the suite.
   ⛔ Never re-tune a value in src/ by hand (CLAUDE.md, Audio).
 
   To change BLOCK A, change src/16-audio-engine.js and copy it here whole.
@@ -62,6 +63,8 @@
   input[type=range] { width: 120px; accent-color: var(--cyan); vertical-align: middle; }
   .val { display: inline-block; min-width: 48px; text-align: right; color: var(--dim); }
   .edited { color: var(--gold); }
+  .warn { color: var(--fail); }
+  button:disabled { opacity: .35; cursor: default; border-color: var(--line); }
   textarea { width: 100%; height: 220px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
              font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; margin-top: 8px; }
   .foot { margin-top: 16px; color: var(--dim); font-size: 11px; border-left: 2px solid var(--line); padding: 6px 12px; }
@@ -82,6 +85,15 @@
     <span class="readout" id="pos">—</span>
   </div>
 
+  <div class="row">
+    <span class="readout">tempo</span>
+    <button id="slower" title="one metronome step slower">−</button>
+    <span class="readout" id="bpmOut">—</span>
+    <button id="faster" title="one metronome step faster">+</button>
+    <span class="readout" id="loopOut"></span>
+    <span class="readout" id="floorOut"></span>
+  </div>
+
   <div id="blurb"></div>
   <p class="readout">Loop ribbon — click to jump to that bar. Section marks A / B / C.</p>
   <svg id="ribbon" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true"></svg>
@@ -100,7 +112,10 @@
   <div class="foot">
     <b>The solo test (GDD 11.4(c)).</b> SOLO one layer. If it is not recognisable played alone — a tune, a line,
     a figure, a groove — mark it FAIL. A layer marked FAIL may never be tiered (Paul's A6). SOLO is additive:
-    solo two layers to hear them as a pair. Marks, gains and cutoffs travel back only through COPY TABLE.
+    solo two layers to hear them as a pair. Marks, gains, cutoffs and tempo travel back only through COPY TABLE.<br>
+    <b>Tempo.</b> − and + step along the metronome's ladder, live. The slowest step offered is the slowest at which every
+    note still decays from its onset (GDD 11.3). A red loop length is under <code>pulse</code>'s 90 s target: a faster
+    tempo shortens the loop unless bars are added.
   </div>
 </div>
 
@@ -877,18 +892,50 @@ function labRng(seed) {
 }
 
 // The picker. `sections` are [mark, first bar]; `builder` is the function in
-// BLOCK B that COPY TABLE rewrites for this track.
+// BLOCK B that COPY TABLE rewrites for this track; `minLoop` is GDD 11.3's
+// flagship length target, in seconds.
 const LAB_TRACKS = {
   title: { label: "Title", builder: "buildTitleTrack", bar: 16, sections: [["A", 0], ["B", 4]],
-    blurb: "The title screens. G major, 60 BPM, 8 bars. A states the theme; B answers it higher and falls home." },
+    blurb: "The title screens. G major, 8 bars. A states the theme; B answers it higher and falls home." },
   pulse: { label: "Pulse", builder: "buildPulseTrack", bar: 16, sections: [["A", 0], ["B", 12], ["C", 24]],
-    blurb: "Classic's gameplay track. E minor, 80 BPM, 36 bars. A: the tune low and plain. B: an octave up, heart doubles. C: the peak, then the opening motif returns and a B major bar pulls back to the top." },
+    minLoop: 90,
+    blurb: "Classic's gameplay track. E minor, 36 bars. A: the tune low and plain. B: an octave up, heart doubles. C: the peak, then the opening motif returns and a B major bar pulls back to the top." },
 };
 
 // What each layer held at load, so COPY TABLE rewrites only what changed.
-const ORIGINAL = {};
+const ORIGINAL = {}, ORIGINAL_STEP = {};
 for (const key of Object.keys(LAB_TRACKS)) {
   ORIGINAL[key] = MUSIC_TRACKS[key].layers.map(L => ({ gain: L.gain, cutoff: L.cutoff, audition: L.audition }));
+  ORIGINAL_STEP[key] = MUSIC_TRACKS[key].stepDur;
+}
+
+// ⛔ TEMPO, IN METRONOME STEPS (Paul, 2026-09-16). A track's tempo is its
+// `stepDur`: four steps to a beat, so stepDur = 60 / BPM / 4. The choices are
+// the metronome's own ladder, where each step is a similar-sized change to the
+// ear, not a fine control. ⚠ A track's ladder starts at the slowest tempo at
+// which every note still decays within 0.05 s of its onset (GDD 11.3, struck
+// never swelled). Below it, a note's `rel` no longer covers its sounding
+// length, and the note would hold.
+const TEMPO_LADDER = [60, 63, 66, 69, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120,
+                      126, 132, 138, 144, 152, 160, 168, 176];
+const STEPS_PER_BEAT = 4;
+const HOLD_MAX = 0.05;   // s: GDD 11.3's "decay starts within 0.05 s of the onset"
+
+function bpmOf(stepDur) { return Math.round(60 / stepDur / STEPS_PER_BEAT * 100) / 100; }
+
+// The slowest BPM at which no note holds: dur * 60 / BPM / 4 - rel <= HOLD_MAX.
+function tempoFloor(track) {
+  let floor = 0;
+  for (const L of track.layers) {
+    const rel = L.rel == null ? 0.5 : L.rel;
+    for (const c of L.steps) if (c) floor = Math.max(floor, 60 * c.dur / STEPS_PER_BEAT / (rel + HOLD_MAX));
+  }
+  return floor;
+}
+
+function tempoChoices(track) {
+  const floor = tempoFloor(track);
+  return TEMPO_LADDER.filter(b => b >= floor - 1e-9);
 }
 
 let current = "pulse";
@@ -959,6 +1006,7 @@ function select(key) {
   if (playing) start();
   renderPicker();
   $("blurb").textContent = LAB_TRACKS[key].blurb;
+  renderTempo();
   drawRibbon();
   renderLayers();
 }
@@ -974,6 +1022,32 @@ function start() {
   playing = true;
 }
 
+function renderTempo() {
+  const t = MUSIC_TRACKS[current], info = LAB_TRACKS[current];
+  const bpm = bpmOf(t.stepDur), choices = tempoChoices(t), loop = t.steps * t.stepDur;
+  const moved = t.stepDur !== ORIGINAL_STEP[current];
+  $("bpmOut").innerHTML = `<b class="${moved ? "edited" : ""}">${bpm}</b> BPM`;
+  $("slower").disabled = !choices.some(b => b < bpm - 1e-9);
+  $("faster").disabled = !choices.some(b => b > bpm + 1e-9);
+  const short = info.minLoop && loop < info.minLoop - 1e-9;
+  $("loopOut").innerHTML = `· loop <span class="${short ? "warn" : ""}">${loop.toFixed(1)} s` +
+    (short ? ` — under the ${info.minLoop} s target` : "") + "</span>";
+  $("floorOut").textContent = `· slowest ${choices[0]} · shipped ${bpmOf(ORIGINAL_STEP[current])}`;
+}
+
+// One ladder step. The scheduler reads stepDur at every step, so a playing
+// track changes tempo from its next step.
+function stepTempo(dir) {
+  const t = MUSIC_TRACKS[current], bpm = bpmOf(t.stepDur), choices = tempoChoices(t);
+  const next = dir > 0 ? choices.find(b => b > bpm + 1e-9) : choices.slice().reverse().find(b => b < bpm - 1e-9);
+  if (next === undefined) return;
+  t.stepDur = 60 / next / STEPS_PER_BEAT;
+  renderTempo();
+  renderPicker();
+}
+
+$("slower").onclick = () => stepTempo(-1);
+$("faster").onclick = () => stepTempo(+1);
 $("play").onclick = () => start();
 $("stop").onclick = () => { music.setState("lab-silence"); playing = false; };
 $("vol").oninput = e => {
@@ -1108,16 +1182,26 @@ function tick() {
 }
 
 // ⛔ COPY TABLE's rewrite. Pure: BLOCK B's text and a list of edits in, the new
-// text out. An edit is { builder, name, gain?, cutoff?, audition? }: `gain` and
-// `cutoff` are the text to write, and `audition` is "pass", "fail", or null to
-// remove the mark. A field left undefined is not touched. Each layer is one
-// line in its builder, found by `{ name: "<name>",`. test-cs009-p2.js runs this.
+// text out. A layer edit is { builder, name, gain?, cutoff?, audition? }: `gain`
+// and `cutoff` are the text to write, and `audition` is "pass", "fail", or null
+// to remove the mark. A field left undefined is not touched. Each layer is one
+// line in its builder, found by `{ name: "<name>",`. A tempo edit is
+// { builder, stepDur } with no name: the text after the builder's `stepDur: `,
+// up to its comma, becomes `stepDur`. test-cs009-p2.js runs this.
 function rewriteBlockB(src, edits) {
   let out = src;
   for (const e of edits) {
     const at = out.indexOf("function " + e.builder + "(");
     if (at < 0) throw new Error("COPY TABLE: no function " + e.builder + " in BLOCK B");
     const end = out.indexOf("\n}\n", at);
+    if (e.name === undefined) {
+      if (e.stepDur === undefined) throw new Error("COPY TABLE: an edit names no layer and no tempo");
+      const ts = out.indexOf("stepDur: ", at);
+      if (ts < 0 || ts > end) throw new Error("COPY TABLE: no stepDur in " + e.builder);
+      const te = out.indexOf(",", ts);
+      out = out.slice(0, ts) + "stepDur: " + e.stepDur + out.slice(te);
+      continue;
+    }
     const ls = out.indexOf("{ name: \"" + e.name + "\",", at);
     if (ls < 0 || ls > end) throw new Error("COPY TABLE: no layer " + e.name + " in " + e.builder);
     const le = out.indexOf("\n", ls);
@@ -1133,10 +1217,15 @@ function rewriteBlockB(src, edits) {
   return out;
 }
 
-// Every change since load, across both tracks.
+// Every change since load, across both tracks. A tempo is written as the
+// arithmetic that makes it, so the file reads as a BPM.
 function labEdits() {
   const edits = [];
   for (const key of Object.keys(LAB_TRACKS)) {
+    const t = MUSIC_TRACKS[key];
+    if (t.stepDur !== ORIGINAL_STEP[key]) {
+      edits.push({ builder: LAB_TRACKS[key].builder, stepDur: "60 / " + bpmOf(t.stepDur) + " / " + STEPS_PER_BEAT });
+    }
     MUSIC_TRACKS[key].layers.forEach((L, i) => {
       const o = ORIGINAL[key][i], e = { builder: LAB_TRACKS[key].builder, name: L.name };
       let changed = false;
@@ -1163,7 +1252,7 @@ $("copy").onclick = () => {
   $("table").value = text;
   $("table").select();
   const say = copied => {
-    $("copyOut").textContent = edits.length + " layer edit(s) · " +
+    $("copyOut").textContent = edits.length + " edit(s) · " +
       (copied ? "copied — paste over src/17-audio-tracks.js" : "select the text below and copy it");
   };
   const fallback = () => {
