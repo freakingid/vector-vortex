@@ -888,7 +888,7 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 | Mode | CLASSIC; OVERDRIVE shown locked (M1) | Title |
 | Start Depth | `startDepthOptions()` (§4.6), each row with its `startBonus()`. ⛔ No countdown | Mode |
 | Pause | RESUME, OPTIONS, QUIT TO TITLE (U4), over the frozen board | RESUME |
-| Options | TELEMETRY (ON/OFF), EXPORT (TO CONSOLE), CONTROLS ›, CREDITS ›, BACK (U5). Sound and music are CS009's rows | Title or pause — wherever it was opened from |
+| Options | TELEMETRY (ON/OFF), EXPORT (TO CONSOLE), CONTROLS ›, CREDITS ›, MASTER VOLUME, MUSIC VOLUME, SFX VOLUME, VOICE VOLUME, MUSIC TRACK, BACK (U5; CS009's A1) | Title or pause — wherever it was opened from |
 | Controls | MOUSE SENSITIVITY, TOUCH SENSITIVITY, LEFT-HANDED TOUCH, TOUCH AUTO-FIRE, KEYBOARD ›, GAMEPAD ›, RESET TO DEFAULTS, BACK (U7) | Options |
 | Keyboard, Gamepad | LEFT, RIGHT, FIRE, PURGE and JUMP, two slots each, then BACK. One line above the rows shows a refusal's reason | Controls |
 | Credits | `C.CREDITS_LINES`, then `VERSION` + `C.GAME_VERSION` (U6). ⚠ Placeholder copy; Paul replaces it before ship. ⛔ §18: no mention of the original game or its publisher | Options |
@@ -914,6 +914,12 @@ Pause rules:
 
 **Options (Paul, U5; shipped CS008 P6).** TELEMETRY and EXPORT call the same two functions as the `t` and `e` bench keys (`toggleTelemetry()`, `exportTelemetry()` in `23-main.js`). The row's ON/OFF detail is written from the switch on every Options step, never in `draw()`. ⛔ Capture is still off at every launch and never persisted (§15.6). Options is reachable from the title and from pause, and its BACK returns there.
 
+**Sound and music (Paul, A1–A4; shipped CS009 P3).** ⛔ **Session-only until CS011**, like the Controls page: the settings live outside `state`, a quit to the title keeps them, and `Game.reset()` restores the defaults.
+- ⛔ **The five rows go after CREDITS and before BACK.** Above TELEMETRY they move the row indices the closed tests navigate by (plan §1.8). Ten rows outgrow `MENU_VISIBLE_ROWS`, so the window scrolls.
+- **MASTER / MUSIC / SFX / VOICE VOLUME are 0–100 % in 10 % steps, default 100 %** (`C.AUDIO_VOL_STEPS`, `C.AUDIO_VOL_DEFAULT`). The gain is linear, steps / 10, and every change goes through `AudioSys.setVol`, which ramps over `C.AUDIO_VOL_RAMP`. ⛔ **VOICE controls a bus nothing feeds** (A3).
+- **MUSIC TRACK is AUTO / PULSE** (`C.MUSIC_TRACK_CHOICES`, A4). AUTO plays the mode's track (`C.MODE_TRACK`), and PULSE forces `pulse`. `drive` joins at CS012. A change is heard at once (§11.7).
+- **Every row works like a sensitivity row.** Fire arms it and the detail shows `‹100%›`. Rotate changes the value live, one step per whole `MENU_ROTATE_STEP`, clamped at both ends. ⛔ Fire, Purge or Escape leaves the row **and keeps the value**, and never leaves OPTIONS. It is the same row mode as the Controls page (`adjusting` is the row's key), so the menu still steps under it and a held Purge does not back out. The details are written in `update()`, never in `draw()`.
+
 **Controls (Paul, U7 and U8; shipped CS008 P7).** ⛔ **Session-only until CS011**: nothing is stored, and a quit to the title keeps every setting.
 - **Sensitivity rows are ×`C.SENS_MIN_MULT` 0.5 to ×`C.SENS_MAX_MULT` 2.0 of `MOUSE_SENS` / `TOUCH_SENS`, in `C.SENS_STEP` 0.1 steps.** Paul confirmed the range (2026-09-13). ×1.0 is the shipped constant exactly.
 - **Fire on a sensitivity row arms it** (Paul, 2026-09-13), and the detail shows `‹×1.2›`. Rotate then changes the value live, one step per whole `MENU_ROTATE_STEP`, clamped at both ends. ⛔ Fire, Purge or Escape leaves the row **and keeps the value**, and never leaves the page.
@@ -922,7 +928,7 @@ Pause rules:
 - ⛔ **Refused, with the reason on the page, and the refusal ENDS the capture** (Paul, 2026-09-13), so Escape and Start double as cancel. Refused keys are every named-action key (Escape, `p`, `w`, the bench digits, `t`, `e`) and every digit. On a pad, Start is refused. A pad button on KEYBOARD, or a key on GAMEPAD, is refused too. A mouse click or a touch cancels a capture without a reason.
 - ⛔ **A swap that would leave an action with no binding is refused** ("FIRE NEEDS A BUTTON"; Paul, 2026-09-13). Gamepad fire, left and right ship with one button each, so a pad-only player cannot lock themselves out of the menus.
 - **RESET TO DEFAULTS** restores `INPUT_KEYS_DEFAULT`, the gamepad defaults and the `C` values of both sensitivities, the mirror and auto-fire.
-- ⛔ **While a row owns the input, the menu model still steps**, on a snapshot with no rotate and the real Fire and Purge levels, and its answer is ignored. That keeps its edges current, so a Purge held past a row's exit does not back out of the page.
+- ⛔ **While a row owns the input, the menu model still steps**, on a snapshot with no rotate and the real Fire and Purge levels, and its answer is ignored. That keeps its edges current, so a Purge held past a row's exit does not back out of the page. OPTIONS' sound rows use the same mode (CS009 P3).
 
 **Navigation (Paul, U1).** Rotate moves the cursor, Fire confirms, Purge backs out, and Escape also backs out (a named action, `back`). The menu model is `createMenu()` in `15-render-hud.js`, kit-menu's draft (`src/15-render-hud.NOTES.md`). ⛔ It reads no game state: a screen is data (rows with a label, a detail, an enabled flag and an action name, plus a back action), a step takes the input struct and returns an action name, and `23-main.js` decides what each name does.
 - ⛔ **Fire and Purge are rising edges** against the previous step. The struct stays four levels (§9.5).
@@ -1026,9 +1032,9 @@ The scheduler emits kick and snare events to the render layer; the rim pulses on
 | `rush` | Overdrive alt | ~150 BPM, aggressive |
 | `deep` | Both | ~124 BPM, dubby, wide |
 
-Selectable in Options, persisted per profile, cycled exactly like Orbital Overhaul's `settings.musicTrack`.
+Selectable in Options, persisted per profile, cycled exactly like Orbital Overhaul's `settings.musicTrack`. ⚠ Session-only until CS011 persists it (§10.5).
 
-**Shipped, CS009 P2 — `title` and `pulse`**, in `src/17-audio-tracks.js` (`buildTitleTrack`, `buildPulseTrack`, `MUSIC_TRACKS`). `drive` is CS012's (Paul's A5); `rush` and `deep` are post-ship. ⛔ Every layer is written as a part, to pass §11.4(c) played solo, and the tune is in the foundation because every layer is. The music plays nowhere in the game until CS009 P3.
+**Shipped, CS009 P2 — `title` and `pulse`**, in `src/17-audio-tracks.js` (`buildTitleTrack`, `buildPulseTrack`, `MUSIC_TRACKS`). `drive` is CS012's (Paul's A5); `rush` and `deep` are post-ship. ⛔ Every layer is written as a part, to pass §11.4(c) played solo, and the tune is in the foundation because every layer is.
 
 | Track | Key, tempo | Length | Sections | Layers | Worst nodes / step |
 |---|---|---|---|---|---|
@@ -1036,6 +1042,17 @@ Selectable in Options, persisted per profile, cycled exactly like Orbital Overha
 | `pulse` | E minor, 80 BPM, 16 steps a bar | 36 bars, **108 s** | A bars 0–11 (the tune low and plain), B 12–23 (an octave up, heart doubles), C 24–35 (the peak; the opening motif returns at bar 32, and a B major bar pulls back to the top) | `melody`, `swell`, `bassline`, `cycle`, `heart`, `tick` | 14 |
 
 Node counts are MEASURED on the harness's recording fake against `C.MUSIC_STEP_NODE_MAX` 16. MEASURED in headless Chromium by rendering each table offline through BLOCK A: the full mix peaks at 0.32 (`title`) and 0.30 (`pulse`) of full scale, which leaves headroom for the SFX bus.
+
+**Shipped, CS009 P3 — which track plays where.** `musicStateFor(screen, optionsFrom, mode, trackSetting)` in `src/19-sfx.js` is pure. `Game.frame()` calls `audioFrame()` once per frame, after the steps and before `draw()`. It passes the result to `MusicSys.setState()` (idempotent) and then calls `MusicSys.update()`. ⛔ **It runs every frame**, because a `setState()` before the first gesture is dropped. It writes no `state` and draws nothing.
+
+| Screen | Plays |
+|---|---|
+| Title, mode, START DEPTH; OPTIONS and its pages opened from the title | `title` |
+| Play (the Dive included), pause; OPTIONS and its pages opened from pause | the gameplay track |
+| Game over | silence, faded over `C.MUSIC_FADE_OUT` |
+
+- **The gameplay track is the MUSIC TRACK setting (§10.5).** AUTO resolves through `C.MODE_TRACK` (`{ classic: "pulse" }`; CS012 adds `overdrive: "drive"`), and PULSE forces `pulse`. A change crossfades over `C.MUSIC_CROSSFADE` on the next frame. In Classic, AUTO and PULSE are the same track.
+- **RESTART and entering play start the gameplay track again** from silence or from `title`. Pause does not crossfade.
 
 ### 11.8 SFX
 

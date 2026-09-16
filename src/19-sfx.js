@@ -32,3 +32,23 @@ const MusicSys = createMusic(AudioSys, {
   fadeOut:   C.MUSIC_FADE_OUT,
   noise:     mulberry32(C.AUDIO_NOISE_SEED),
 });
+
+// ⛔ MUSIC BY SCREEN (CS009 P3; plan §0's reading). PURE: four arguments in, a
+// MusicSys state name out, and nothing read but C. 23-main.js's audioFrame()
+// calls it every frame with the screen, where OPTIONS was opened from, the run's
+// mode and the MUSIC TRACK setting.
+//   title, mode, depth, and OPTIONS and its pages opened from the title: "title"
+//   play (the dive is play), pause, and OPTIONS and its pages opened from pause:
+//     the gameplay track, C.MODE_TRACK[mode] on "auto", else the setting itself
+//   gameover: MUSIC_SILENCE, which createMusic fades out over C.MUSIC_FADE_OUT
+// RESTART is a screen change to play, so it starts the gameplay track again.
+const MUSIC_SILENCE = "off";   // a name with no track, and createMusic's starting state
+const MUSIC_OPTIONS_PAGES = ["options", "controls", "keyboard", "gamepad", "credits"];
+
+function musicStateFor(screen, optionsFrom, mode, trackSetting) {
+  if (screen === "gameover") return MUSIC_SILENCE;
+  const inRun = screen === "play" || screen === "pause" ||
+                (optionsFrom === "pause" && MUSIC_OPTIONS_PAGES.indexOf(screen) >= 0);
+  if (!inRun) return "title";
+  return trackSetting === "auto" ? C.MODE_TRACK[mode] : trackSetting;
+}

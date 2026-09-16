@@ -332,10 +332,16 @@ toTitle();
 tapRight(1); press(FIRE);
 H.eq(state.screen, "options", "OPTIONS opens from the title");
 H.eq(drawDeltas().hud, 0, "⛔ H4: the title's OPTIONS draws no HUD");
-const labels = drawnTexts().map(t => t.str);
 const ROWS = ["TELEMETRY", "EXPORT", "CONTROLS", "CREDITS", "BACK"];
+const SOUND_ROWS = ["MASTER VOLUME", "MUSIC VOLUME", "SFX VOLUME", "VOICE VOLUME", "MUSIC TRACK"];
+// CS009 P3: ten rows outgrow the C.MENU_VISIBLE_ROWS window, so the list is read
+// through a scroll of it, and the cursor comes back to TELEMETRY.
+const labels = [];
+const rowCount = ROWS.length + SOUND_ROWS.length;
+for (let i = 0; i < rowCount; i++) { for (const t of drawnTexts()) if (!labels.includes(t.str)) labels.push(t.str); tapRight(1); }
+for (let i = 0; i < rowCount; i++) { G.input.keyDown("ArrowLeft"); steps(2); G.input.keyUp("ArrowLeft"); liveStep(); }
 H.assert(ROWS.every(r => labels.includes(r)), `OPTIONS rows are ${ROWS.join(" / ")} (got ${labels.join(" / ")})`);
-H.assert(!labels.some(s => /SOUND|MUSIC/.test(s)), "no Sound or Music row (CS009's)");
+H.assert(SOUND_ROWS.every(r => labels.includes(r)), `CS009's Sound and Music rows are present: ${SOUND_ROWS.join(" / ")}`);
 
 // ⛔ A label and its detail never overlap (TEXT_CHAR_W is the layout advance).
 {
@@ -345,7 +351,7 @@ H.assert(!labels.some(s => /SOUND|MUSIC/.test(s)), "no Sound or Music row (CS009
   for (const l of lefts) for (const r of rights) {
     H.assert(l.x + w(l) < r.x - w(r), `"${l.str}" clears "${r.str}"`);
   }
-  H.eq(rights.length, 4, "four rows carry a detail");
+  H.eq(rights.length, lefts.filter(l => l.str !== "BACK").length, "every drawn row but BACK carries a detail");
 }
 
 const logs = [];

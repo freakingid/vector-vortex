@@ -535,6 +535,13 @@ const C = {
   AUDIO_VOL_DEFAULT:    10,     // every bus at unity (Paul's A2)
   AUDIO_VOL_RAMP:       0.03,   // s. ⛔ a volume change ramps, never a bare .value set.
   MUSIC_STEP_NODE_MAX:  16,     // ⚠ provisional ceiling on nodes one scheduled step creates
+  // Music by screen (CS009 P3; GDD 11.7, 13). A mode's own gameplay track, which
+  // the MUSIC TRACK row's AUTO resolves through. CS012 adds overdrive: "drive".
+  MODE_TRACK:           { classic: "pulse" },
+  // The MUSIC TRACK row's choices in rotate order (Paul's A4). The first is the
+  // default. "auto" is the mode's track; any other entry names a track, and
+  // CS012 appends "drive".
+  MUSIC_TRACK_CHOICES:  ["auto", "pulse"],
 
   // ---- Overdrive (GDD 14) -------------------------------------------------
   MAX_TOKENS:           2,      // ⛔ readability cap on powerups on screen

@@ -571,10 +571,19 @@ const Game = (function () {
   const CONTROL_ACTIONS = ["left", "right", "fire", "purge", "jump"];
   const OPTIONS_TELEMETRY = { label: "TELEMETRY", detail: "OFF", enabled: true, action: "toggleTelemetry" };
   const CTL_ROWS = {
-    mouse:    { label: "MOUSE SENSITIVITY", detail: "", enabled: true, action: "adjustMouse" },
-    touch:    { label: "TOUCH SENSITIVITY", detail: "", enabled: true, action: "adjustTouch" },
+    mouse:    { label: "MOUSE SENSITIVITY", detail: "", enabled: true, action: "adjust", adjust: "mouse" },
+    touch:    { label: "TOUCH SENSITIVITY", detail: "", enabled: true, action: "adjust", adjust: "touch" },
     mirror:   { label: "LEFT-HANDED TOUCH", detail: "", enabled: true, action: "toggleMirror" },
     autofire: { label: "TOUCH AUTO-FIRE",   detail: "", enabled: true, action: "toggleAutofire" },
+  };
+  // CS009 P3 (Paul's A1). Row modes like the sensitivity rows; every detail is
+  // written by refreshSoundRows(), in update().
+  const SOUND_ROWS = {
+    master: { label: "MASTER VOLUME", detail: "", enabled: true, action: "adjust", adjust: "master" },
+    music:  { label: "MUSIC VOLUME",  detail: "", enabled: true, action: "adjust", adjust: "music" },
+    sfx:    { label: "SFX VOLUME",    detail: "", enabled: true, action: "adjust", adjust: "sfx" },
+    voice:  { label: "VOICE VOLUME",  detail: "", enabled: true, action: "adjust", adjust: "voice" },
+    track:  { label: "MUSIC TRACK",   detail: "", enabled: true, action: "adjust", adjust: "track" },
   };
   const SCREENS = {
     title: { title: "VECTOR VORTEX", lines: [], back: null, items: [
@@ -599,12 +608,14 @@ const Game = (function () {
     // U5. Opened from the title or from pause, and BACK returns to whichever.
     // TELEMETRY's detail is written from the switch itself on every OPTIONS step
     // (update()), so `t` pressed here shows too — ⛔ never in draw(), which must
-    // not name Telemetry (test-cs007-p4.js). Sound and music are CS009's rows.
+    // not name Telemetry (test-cs007-p4.js). \u26D4 The sound rows go AFTER CREDITS
+    // (CS009 P3): above TELEMETRY they move the closed tests' row indices.
     options: { title: "OPTIONS", lines: [], back: "optionsBack", items: [
       OPTIONS_TELEMETRY,
       { label: "EXPORT",   detail: "TO CONSOLE", enabled: true, action: "exportTelemetry" },
       { label: "CONTROLS", detail: "\u203A",     enabled: true, action: "toControls" },
       { label: "CREDITS",  detail: "\u203A",     enabled: true, action: "toCredits" },
+      SOUND_ROWS.master, SOUND_ROWS.music, SOUND_ROWS.sfx, SOUND_ROWS.voice, SOUND_ROWS.track,
       { label: "BACK",     detail: "",           enabled: true, action: "optionsBack" },
     ] },
     // U7 (CS008 P7). Every detail is written by refreshControlRows(), in update().
@@ -661,7 +672,7 @@ const Game = (function () {
                             "LS", "RS", "D-UP", "D-DOWN", "D-LEFT", "D-RIGHT", "HOME"];
   const controls = { mouse: SENS_UNIT, touch: SENS_UNIT, autofire: C.TOUCH_AUTOFIRE,
                      keys: toSlots(INPUT_KEYS_DEFAULT), pad: toSlots(GAMEPAD_BUTTONS_DEFAULT) };
-  let adjusting = null;       // "mouse" | "touch" while a sensitivity row takes rotate
+  let adjusting = null;       // an ADJUST key while its row takes rotate (CS009 P3 generalised it)
   let adjustAcc = 0;
   let capturing = null;       // { page, bind, slot } while a slot waits for a press
   let pageNote = "";          // a refusal's reason, shown until the next capture
@@ -693,6 +704,46 @@ const Game = (function () {
     return out;
   }
   function sensFor(base, steps) { return base * (steps / SENS_UNIT); }   // ⛔ ×1.0 is `base` exactly
+
+  // ---- the sound rows on OPTIONS (GDD 10.5, 11.1; CS009 P3) -----------------
+  //
+  // ⛔ SESSION-ONLY until CS011, exactly as `controls` is: outside `state`, so
+  // quitToTitle() keeps them, and Game.reset() restores them (resetSound()).
+  // A volume is whole steps, 0..C.AUDIO_VOL_STEPS, and its gain is linear,
+  // steps / STEPS (plan §0). `track` indexes C.MUSIC_TRACK_CHOICES.
+  // ⛔ The VOICE row moves a bus nothing feeds (Paul's A3).
+  const VOL_BUSES = ["master", "music", "sfx", "voice"];
+  const sound = { master: C.AUDIO_VOL_DEFAULT, music: C.AUDIO_VOL_DEFAULT, sfx: C.AUDIO_VOL_DEFAULT,
+                  voice: C.AUDIO_VOL_DEFAULT, track: 0 };
+  function resetSound() {
+    for (const bus of VOL_BUSES) {
+      sound[bus] = C.AUDIO_VOL_DEFAULT;
+      AudioSys.setVol(bus, sound[bus] / C.AUDIO_VOL_STEPS);   // held headless; a ramp with a context
+    }
+    sound.track = 0;
+  }
+
+  // ⛔ ONE ROW MODE, WHATEVER THE ROW (CS008 P7's, generalised by CS009 P3). A
+  // row's `adjust` names its entry: the clamp range in whole steps, the value,
+  // and what a new value does. `set` runs only when the clamped value moved.
+  function volAdjust(bus) {
+    return { lo: 0, hi: C.AUDIO_VOL_STEPS, get: () => sound[bus],
+             set: n => { sound[bus] = n; AudioSys.setVol(bus, n / C.AUDIO_VOL_STEPS); } };
+  }
+  const ADJUST = {
+    mouse:  { lo: SENS_LO, hi: SENS_HI, get: () => controls.mouse,
+              set: n => { controls.mouse = n; input.configure({ mouseSens: sensFor(C.MOUSE_SENS, n) }); } },
+    touch:  { lo: SENS_LO, hi: SENS_HI, get: () => controls.touch,
+              set: n => { controls.touch = n; input.configure({ touchSens: sensFor(C.TOUCH_SENS, n) }); } },
+    master: volAdjust("master"),
+    music:  volAdjust("music"),
+    sfx:    volAdjust("sfx"),
+    voice:  volAdjust("voice"),
+    // A change in play is heard at once: audioFrame() resolves the setting
+    // every frame, and setState() crossfades on a new name.
+    track:  { lo: 0, hi: C.MUSIC_TRACK_CHOICES.length - 1, get: () => sound.track,
+              set: n => { sound.track = n; } },
+  };
 
   // ⛔ THE ONE RESET: the RESET TO DEFAULTS row, and Game.reset() for the suite.
   function resetControls() {
@@ -764,7 +815,8 @@ const Game = (function () {
     pageNote = "";
   }
 
-  // A step on a CONTROLS page while a row owns the input. ⛔ The menu still
+  // A step on a menu page while a row owns the input — CONTROLS' and its pages'
+  // since CS008 P7, OPTIONS' sound rows since CS009 P3. ⛔ The menu still
   // steps, on a snapshot with no rotate and the real Fire and Purge levels,
   // and its answer is ignored: that keeps its edges current, so the press that
   // ends a mode is not a second press on the row once the menu has it back.
@@ -776,10 +828,9 @@ const Game = (function () {
       const whole = Math.trunc(adjustAcc / C.MENU_ROTATE_STEP);
       if (whole !== 0) {
         adjustAcc -= whole * C.MENU_ROTATE_STEP;
-        const n = Math.min(SENS_HI, Math.max(SENS_LO, controls[adjusting] + whole));
-        controls[adjusting] = n;
-        if (adjusting === "mouse") input.configure({ mouseSens: sensFor(C.MOUSE_SENS, n) });
-        else input.configure({ touchSens: sensFor(C.TOUCH_SENS, n) });
+        const a = ADJUST[adjusting];
+        const n = Math.min(a.hi, Math.max(a.lo, a.get() + whole));
+        if (n !== a.get()) a.set(n);
       }
       if (fireEdge || purgeEdge) adjusting = null;           // ⛔ any exit keeps the value
     } else if (fireEdge || purgeEdge) {
@@ -815,6 +866,14 @@ const Game = (function () {
         }
       }
     }
+  }
+
+  function refreshSoundRows() {
+    const shown = (k, s) => adjusting === k ? "‹" + s + "›" : s;
+    for (const bus of VOL_BUSES) {
+      SOUND_ROWS[bus].detail = shown(bus, Math.round(sound[bus] * 100 / C.AUDIO_VOL_STEPS) + "%");
+    }
+    SOUND_ROWS.track.detail = shown("track", C.MUSIC_TRACK_CHOICES[sound.track].toUpperCase());
   }
 
   function buildDepthRows() {
@@ -856,8 +915,7 @@ const Game = (function () {
     if (name === "toKeyboard") state.screen = "keyboard";
     if (name === "toGamepad") state.screen = "gamepad";
     if (name === "backToControls") state.screen = "controls";
-    if (name === "adjustMouse") { adjusting = "mouse"; adjustAcc = 0; }
-    if (name === "adjustTouch") { adjusting = "touch"; adjustAcc = 0; }
+    if (name === "adjust") { adjusting = screen.items[menu.cursor].adjust; adjustAcc = 0; }
     if (name === "toggleMirror") input.configure({ inputMirror: !input.setting("inputMirror") });
     if (name === "toggleAutofire") controls.autofire = !controls.autofire;
     if (name === "resetControls") resetControls();
@@ -947,7 +1005,10 @@ const Game = (function () {
       prevFire = state.input.fire;
       prevPurge = state.input.purge;
       // After the action, so the step that toggled it already shows it.
-      if (state.screen === "options") OPTIONS_TELEMETRY.detail = Telemetry.enabled() ? "ON" : "OFF";
+      if (state.screen === "options") {
+        OPTIONS_TELEMETRY.detail = Telemetry.enabled() ? "ON" : "OFF";
+        refreshSoundRows();
+      }
       if (state.screen === "controls" || state.screen === "keyboard" || state.screen === "gamepad") refreshControlRows();
       return;
     }
@@ -1167,7 +1228,21 @@ const Game = (function () {
     stats.lastSteps = steps;
     stats.accumulator = accumulator;
 
+    audioFrame();
     draw();
+  }
+
+  // ⛔ THE MUSIC FOLLOWS THE SCREEN, ONCE PER FRAME (CS009 P3; GDD 11.2). After
+  // the steps, so a screen a step changed is heard on this frame, and before
+  // draw(). ⛔ It writes no `state` and draws nothing. setState() is idempotent,
+  // and update() is the lookahead scheduler. Both return early with no context,
+  // so headless and before the first gesture this is two no-ops. ⛔ It runs on
+  // EVERY frame, not on a screen change: a setState() before the gesture is
+  // dropped, and the next frame's call is what starts the music.
+  function audioFrame() {
+    MusicSys.setState(musicStateFor(state.screen, optionsFrom, state.mode,
+                                    C.MUSIC_TRACK_CHOICES[sound.track]));
+    MusicSys.update();
   }
 
   function rafFrame(tMs) {
@@ -1219,6 +1294,7 @@ const Game = (function () {
     hitStopLeft = 0;
     syncedScreen = null;
     resetControls();
+    resetSound();
     stats.frames = 0; stats.ticks = 0; stats.lastSteps = 0; stats.accumulator = 0;
   }
 

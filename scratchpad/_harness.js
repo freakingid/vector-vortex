@@ -253,6 +253,8 @@ function buildGame(opts = {}) {
     // kit-audio and the game's instances (16/19, CS009 P1)
     "AUDIO_VERSION", "AUDIO_BUSES", "createAudioEngine", "createMusic",
     "AudioSys", "MusicSys", "MUSIC_TRACKS",
+    // music by screen (19-sfx.js, CS009 P3)
+    "musicStateFor", "MUSIC_SILENCE",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of

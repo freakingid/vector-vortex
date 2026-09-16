@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.5 · Changeset: CS009 (P2 done 2026-09-16 — P3 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.5 · Changeset: CS009 (P3 done 2026-09-16 — P4 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS009
 
@@ -9,13 +9,14 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 | Phase | Commit | One line |
 |---|---|---|
 | P1 | `edfc2e1` | The engine: kit-input 0.7.0 `onGesture`, kit-audio 0.1.0 (four buses, the scheduler with the stall resync), the harness fake. No sound yet. 6 of 6 mutations red |
-| P2 | this commit | `tools/music-lab.html` (SOLO, MUTE, gain/cutoff, PASS/FAIL, COPY TABLE) and the `title` (32 s) and `pulse` (108 s, A→B→C) tables. Lab BLOCK A/B identical to `16`/`17`. 8 of 8 mutations red |
+| P2 | `3809eba` | `tools/music-lab.html` (SOLO, MUTE, gain/cutoff, PASS/FAIL, COPY TABLE) and the `title` (32 s) and `pulse` (108 s, A→B→C) tables. Lab BLOCK A/B identical to `16`/`17`. 8 of 8 mutations red |
+| P3 | this commit | Music by screen (`musicStateFor()`, `audioFrame()` once per frame) and OPTIONS' MASTER / MUSIC / SFX / VOICE VOLUME and MUSIC TRACK rows, one generalised row mode. `test-cs008-p6.js`'s three assertions rewritten in place. 9 of 9 mutations red |
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 443.0 KB); the
+- `node build.js` produces `dist/vector-vortex.html` (24 modules, 448.6 KB); the
   manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **45 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **46 test files, all green, zero skips.**
 - **CS009 P1 — the engine.** `16-audio-engine.js` is kit-audio **0.1.0**
   (`.NOTES.md`). `19-sfx.js` builds `AudioSys` / `MusicSys` from `C`, and
   `AudioSys.unlock()` is kit-input **0.7.0**'s `onGesture`. ⛔ `ctx` is null
@@ -25,8 +26,14 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 - **CS009 P2 — music-lab and two tracks.** `tools/music-lab.html` plays
   `MUSIC_TRACKS` (`17-audio-tracks.js`): `title` 32 s, `pulse` 108 s (A→B→C),
   no `tier`, worst step 9 and 14 nodes of 16. ⚠ **The tracks are unauditioned;
-  the lab is where Paul judges them (A6).** Nothing waits on it. The music plays
-  nowhere in the game yet (P3).
+  the lab is where Paul judges them (A6).** Nothing waits on it.
+- **CS009 P3 — music in the game and the sound rows.** `musicStateFor()`
+  (`19-sfx.js`, pure) picks `title`, the gameplay track or silence from the
+  screen; `audioFrame()` runs it once per `Game.frame()`, after the steps and
+  before `draw()`. OPTIONS has MASTER / MUSIC / SFX / VOICE VOLUME and MUSIC
+  TRACK (AUTO / PULSE) after CREDITS, session-only in the `sound` object beside
+  `controls`. ⛔ One row mode: `adjusting` is the row's `adjust` key into
+  `ADJUST` (`23-main.js`), the sensitivity rows included.
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -104,8 +111,16 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   `// 21-telemetry.js` or `// 22-meta.js`. (4) No platform RNG: the noise is
   `mulberry32(C.AUDIO_NOISE_SEED)`.
 - ⛔ **`MusicSys.setState()` BEFORE THE FIRST GESTURE IS DROPPED** (ported
-  as-is: it returns on a null `ctx` without recording the name). P3's frame
-  hook must call it every frame, not once on a screen change.
+  as-is: it returns on a null `ctx` without recording the name). That is why
+  `audioFrame()` calls it every frame. ⛔ Never move it onto a screen change.
+- ⚠ **The VOICE row controls an empty bus (A3).** It moves `AudioSys.voice`,
+  which nothing feeds. Whatever feeds it needs its own GDD section and changeset.
+- ⛔ **OPTIONS HAS TEN ROWS, AND THE WINDOW SHOWS SEVEN.** A test that reads its
+  labels scrolls the window (`test-cs008-p6.js`), and a detail lookup puts the
+  cursor near the row first. ⛔ Rows added to OPTIONS go before BACK, never above
+  TELEMETRY: the closed tests navigate it by index.
+- ⛔ **`Game.reset()` restores the sound rows too** (`resetSound()`, a `setVol`
+  per bus). A test claiming a volume survives a quit uses `quitToTitle()` alone.
 - ⛔ **A test that counts scheduled steps counts NOTES, never distinct start
   times.** A late step clamps to `currentTime`, so a burst collapses to one
   instant. That reading hid a deleted resync (`log/CS009.md`, P1).
@@ -143,9 +158,10 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 - ⛔ **`frame()` drains `hitStopLeft` only on `"play"` and `"gameover"`.** Every
   other screen HOLDS a freeze. A new screen that should drain one is added there
   by name.
-- ⛔ **While a CONTROLS row owns the input, the menu still steps and its answer
-  is ignored** (`stepControlMode()`, CS008 P7). ⛔ **CS009's volume row must do
-  the same**, or a Purge held past its exit backs out of the page.
+- ⛔ **While a row owns the input, the menu still steps and its answer is
+  ignored** (`stepControlMode()`, CS008 P7; OPTIONS' sound rows since CS009 P3).
+  Remove the ignored step and a Purge held past a row's exit backs out of the
+  page (P3's M2).
 - ⛔ **`Game.reset()` restores the controls** (`resetControls()`). A test
   claiming a setting SURVIVES a quit uses `Game.quitToTitle()` alone.
 - ⛔ **`Game.draw()` must not name `Telemetry`** (`test-cs007-p4.js`), and ⚠
@@ -160,7 +176,8 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
   a played `lives <= LIVES_MAX` bound cannot fail. The cap's proof is
   `test-cs008-p2.js`'s staged rows.
 - ⚠ **`C.MENU_COL_W` is 460** so "MOUSE SENSITIVITY" clears an adjusting detail.
-  A longer row label (CS009's) needs the same arithmetic.
+  CS009's sound rows fit (`test-cs009-p3.js`). A longer label needs the same
+  arithmetic.
 - ⚠ **The touch buttons and the top-centre pause target are live but not
   drawn.** No changeset owns them.
 - ⚠ **A dead craft is not drawn once the freeze is spent**, so the game-over
@@ -205,10 +222,9 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 
 - ⛔ **CS009 — the over-cap life sound.** `addScore()`'s `else` branch names the
   seat (GDD 4.4, "never silently swallowed").
-- ⛔ **CS009 — OPTIONS' Sound/Music row** (Paul's U5). It is a row mode on a menu
-  page; see the Known issue above.
-- ⛔ **CS011 — persistence of the Start Depth record, the Controls settings and
-  the bindings.** All three are session-only. `levelRecord()` is the one
+- ⛔ **CS011 — persistence of the Start Depth record, the Controls settings, the
+  bindings, the four volumes and the MUSIC TRACK setting.** All are
+  session-only. `levelRecord()` is the one
   function re-pointed at the profile store.
 - ⛔ **CS011 — the `'quit'` and `'died'` leaderboard submits at `quitToTitle()`'s
   seat**, in the order its comment gives (read whether a run was playing BEFORE
@@ -233,11 +249,11 @@ goes**, not to this file (`CLAUDE.md`, Session rules, 2026-08-31).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS009 P3, music in the game and the OPTIONS rows
+## Next up — ⛔ CS009 P4, `tools/sfx-lab.html` and the SFX player
 
 ⛔ **CS009 is planned** (2026-09-16, at `d1847e2`): `PLANNED-FEATURES-CS009.md`
 and `IMPLEMENTATION-PHASES-CS009.md`, six phases. Every design call is
-answered (plan §0, A1–A9; `DECISIONS.md` pointer written in P1). Paste P3's
+answered (plan §0, A1–A9; `DECISIONS.md` pointer written in P1). Paste P4's
 prompt from `IMPLEMENTATION-PHASES-CS009.md`.
 
 ⛔ **What the plan measured that every CS009 phase must respect:**
@@ -249,8 +265,8 @@ prompt from `IMPLEMENTATION-PHASES-CS009.md`.
    `setTimeout` scan must strip comments.
 2. ⛔ **Orbital Overhaul's scheduler bursts 931 notes after a 60 s stall**
    (plan §1.3); a hidden tab is a shipped pause source here. ✅ P1 resyncs.
-3. ⛔ **The OPTIONS rows go after CREDITS** — above TELEMETRY they turn 99 closed
-   assertions red (plan §1.8).
+3. ✅ **The OPTIONS rows went after CREDITS** (P3). Above TELEMETRY they turn 99
+   closed assertions red (plan §1.8).
 4. ⚠ SETTLED — the Surger charge tone stays audible over music at every tier;
    P5's headless headroom gate stands in for the hardware check.
 5. ⛔ No baseline moves in CS009 (plan §9).
