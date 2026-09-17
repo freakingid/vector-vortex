@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.8 · Changeset: CS012 (planned; §0 open) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.8 · Changeset: CS012 (P1 of 6 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 3/5
 
 ## Phase ledger — CS012
 
@@ -8,14 +8,19 @@ Version: 0.0.8 · Changeset: CS012 (planned; §0 open) · Wells: 16/16 · Enemie
 P1 `drive`; P2 mode flags, the Reaver, Overdrive's schedule; P3 OVERDRIVE on MODE,
 its own board, SCORES' OVERDRIVE view, the record per mode; P4 the combo; P5 Jump;
 P6 the tenth soak and the close. This ledger gets one line per phase. CS011's
-ledger is in `log/CS011.md`.
+ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
+`log/CS012.md`.
+
+| Phase | Commit | One line |
+|---|---|---|
+| P1 | this commit | `drive` (138 BPM, 36 bars A→B→C, six layers, untiered, unmarked; kick `beat: true`) in `17-audio-tracks.js` and both labs; `C.MODE_TRACK.overdrive`, DRIVE on MUSIC TRACK; `tracks` 3. `test-cs012-p1.js` (55). Headroom 1.0345 → 0.3505; worst 13 nodes. Four closed files in place (three outside plan §11). 9 of 9 red |
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules + 3 inlined kit,
-  586.6 KB); the manifest is checked both directions against `src/`, and a
+  594.7 KB); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **60 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **61 test files, all green, zero skips** (101 s).
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -61,7 +66,8 @@ ledger is in `log/CS011.md`.
 - ⛔ **A seat writes no `state` and draws nothing.** The Surger tone is one held
   voice per telegraphing Surger, keyed in a `Map` in `19-sfx.js`. ⛔ The headroom
   gate (`test-cs009-p5.js`, ⚠ provisional) is D16's limiter curve model: 0.450
-  against 0.3512 `pulse` and 0.3408 `title`. ⛔ It holds only at the rendered
+  against 0.3512 `pulse` and 0.3408 `title`; `drive`'s is its own
+  (`test-cs012-p1.js`, 1e-9 s tie tolerance), 0.3505. ⛔ It holds only at the rendered
   settings, so `test-cs010-p1.js` pins `C.MUSIC_LIMIT` to D2's literals.
 - ⚠ **SETTLED — MUSIC IS STRUCK, NEVER SWELLED** (Paul, 2026-09-16; `CLAUDE.md`
   Audio, GDD §11.3). ✅ Paul's lab picks are ported: 120 BPM on both tracks, every
@@ -177,7 +183,28 @@ ledger is in `log/CS011.md`.
 - ⚠ `test-cs007-p4.js:479`'s comment still names `Profiles.keyFor` (a closed
   file; not an assertion).
 
-### Audio (CS009, CS010)
+### Audio (CS009, CS010, CS012 P1)
+
+- ⚠ **FINDING (CS012 P1, MEASURED): THE HEADROOM GATE CANNOT CATCH A LOUDER
+  TRACK.** Under D16's curve (ratio 20, makeup +13.68 dB) a doubled layer moves
+  the model by 1/20 of its dB (`drive`'s kick ×2: 0.3505 → 0.3564); red needs an
+  input of 152.8. The plan's "doubling one layer's gain turns it red" was a
+  false prediction; `test-cs012-p1.js` proves the gate reads the gains and goes
+  red without the limiter instead. Whether the gate should also bound the
+  limiter's INPUT is Paul's call, not a phase's.
+- ⛔ **`drive` IS UNTIERED, UNMARKED AND UNHEARD** (O13). Its gains are the
+  composer's and no mix was rendered. ⛔ **Paul's lab port (a later commit)
+  rewrites `test-cs012-p1.js`'s "no tier" and "no audition mark" assertions in
+  place**, and a tier on a layer the lab marks PASS is all `test-cs009-p2.js`
+  allows. music-lab's slowest step for `drive` is 76 BPM.
+- ⚠ **sfx-lab plays only `pulse` in context** (`test-cs009-p4.js` pins
+  `tracks: { pulse: … }`), so the Surger tone over `drive` has no lab audition.
+- ✅ **R11 is closed:** an Overdrive run (`startGame(seed, { mode: "overdrive" })`)
+  plays `drive` on AUTO. ⛔ `test-cs012-p1.js`'s reload starts `startGame(9)` and
+  asserts `state.mode === "classic"`, and its OPTIONS driver steps right 1 from
+  PLAY: P3's MODE work must keep both or repair them in place.
+- ⛔ **One `beat: true` layer per track**: `pulse`'s `heart`, `drive`'s `kick`
+  (`test-cs010-p4.js` reads `title` and `pulse`; `test-cs012-p1.js` reads `drive`).
 
 - ⚠ **R2 — A PAD-ONLY PLAYER IS SILENT UNTIL A KEY, CLICK OR TAP** (PREDICTED).
   kit-input's `onGesture` fires on `keydown`, `mousedown` and `touchend` only.
@@ -230,7 +257,8 @@ ledger is in `log/CS011.md`.
   times.**
 - ⚠ **`test-cs009-p5.js`'s headroom sort compares exact floats**: a tempo whose
   `stepDur` is not a binary fraction (138 BPM) reads a back-to-back pair as an
-  overlap. A future tempo port repairs that fixture in place.
+  overlap. A future tempo port repairs that fixture in place. (`drive`'s own gate
+  sorts ends 1e-9 s early: 417 such pairs, none at its loudest moment.)
 
 ### Menus, input and the front door (CS008)
 
@@ -322,9 +350,9 @@ ledger is in `log/CS011.md`.
   Start Depth 81 run peaked at 100,078 /s against the deployed 100,000.
 - ⛔ **CS012 — the director's combo input and the Overdrive intensity
   re-measure** (Paul's D6): `INT_W_COMBO` is fed 0 in Classic.
-- ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
-  `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
-  2 → 3.
+- ✅ **CS012 P1 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`,
+  `"drive"` appended to `C.MUSIC_TRACK_CHOICES`, `tracks` 3. ⛔ Its lab session
+  (PASS marks, tiers, balance) is Paul's and ports as its own commit.
 - The Overdrive `PTS_REAVER`, `PTS_MIMIC`, `PTS_WARDEN` are unread — CS012's.
 - ⛔ **CS015 — achievements** (Paul's M4), planned once Overdrive exists.
 - ✅ **`C.TELEMETRY_PLACEHOLDER` is one key, `maxCombo`**, which goes with GDD
@@ -342,9 +370,9 @@ ledger is in `log/CS011.md`.
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — CS012 P1 (`drive`)
+## Next up — CS012 P2 (the mode flags, the Reaver, Overdrive's schedule)
 
-Run `IMPLEMENTATION-PHASES-CS012.md` P1 in a new session.
-⛔ **Remind Paul at the end of P1 and P2:** P3 needs the `vector-vortex-overdrive`
+Run `IMPLEMENTATION-PHASES-CS012.md` P2 in a new session.
+⛔ **Remind Paul at the end of P2** (reminded at the end of P1): P3 needs the `vector-vortex-overdrive`
 entry in coinless-kit's `registry.js`, deployed, with its commit named in this
 file (plan O11). F1 (Classic's rate bound) can ride in the same edit.

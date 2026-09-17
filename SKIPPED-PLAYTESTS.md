@@ -277,6 +277,20 @@ for.
 - **Knobs:** `C.RIM_PULSE_TIME`, `C.RIM_PULSE_W`, `C.RIM_PULSE_ALPHA`; which
   layer carries `beat: true` (a three-file data edit).
 
+### CS012 P1 — `drive` by ear
+- **Would have done:** played `drive` through two loops on laptop speakers,
+  headphones and a phone (MUSIC TRACK DRIVE in a Classic run, since Overdrive is
+  not choosable until P3), then switched between PULSE and DRIVE mid-run, and
+  watched the rim through the kick.
+- **Trying to learn:** whether `drive` reads as the flagship, driving and
+  struck; whether the composer's balance holds (no mix was rendered: the kick
+  and bass may swallow the `lead`, the noise `snare` and `hat` may be harsh, and
+  the F1 bass roots at 44 Hz may vanish on small speakers); whether it sits
+  level with `pulse` on a track change; whether 138 BPM is the tempo.
+- **Knobs:** every `drive` gain, cutoff and the tempo (music-lab, COPY TABLE).
+  ⛔ The solo audition, PASS marks and tiers are Paul's lab work, not a
+  playtest; they port as their own commit.
+
 ### CS011 P4 — NAME on a pad, a phone and a keyboard
 - **Would have done:** named a new profile and renamed it on a gamepad (D-pad
   and stick), on a phone by drag and tap, and on a keyboard by typing; then

@@ -188,7 +188,9 @@ const CASES = [
   ["controls.autofire", "true", "a string"], ["controls.autofire", DEL, "missing"], ["controls.mirror", 1, "a number"],
   ["sound.master", 11, "above AUDIO_VOL_STEPS"], ["sound.music", -1, "negative"], ["sound.sfx", "9", "a string"],
   ["sound.voice", 2.5, "not whole"], ["sound.voice", DEL, "missing"],
-  ["sound.track", "drive", "not a choice"], ["sound.track", 1, "an index"], ["sound.track", DEL, "missing"],
+  // ⛔ REPAIRED IN PLACE (CS012 P1): this planted "drive", which CS012 R10 made a
+  // choice. "title" names a track and is never a MUSIC TRACK choice.
+  ["sound.track", "title", "not a choice"], ["sound.track", 1, "an index"], ["sound.track", DEL, "missing"],
   ["controls.keys", DEL, "missing"], ["controls.keys", "wasd", "a string"],
   ["controls.keys.fire", ["p", "z"], "a reserved key (pause)"], ["controls.keys.fire", ["7", "z"], "a digit"],
   ["controls.keys.fire", ["a", "z"], "a duplicate (LEFT's A)"], ["controls.keys.jump", [null, null], "an unbound action"],

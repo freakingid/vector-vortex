@@ -1,6 +1,7 @@
 // test-cs010-p4.js — CS010 P4: the rim pulse (GDD 11.6; plan §6; Paul's D10).
-// Asserts what P4 owns: `heart` alone carries `beat: true`, and COPY TABLE keeps
-// it; the onset ring and beatGlow(); played on the fake, the rim glow on EVERY
+// Asserts what P4 owns: `heart` alone carries `beat: true` of `title` and `pulse`
+// (CS012's `drive` marks its own), and COPY TABLE keeps it; the onset ring and
+// beatGlow(); played on the fake, the rim glow on EVERY
 // frame equals the reading of the onsets the clock has REACHED; 0 headless, on
 // the title and under pause; draw() writes no state and spends no draw; only the
 // rim's two strokes move, and its width stays under the cap.
@@ -40,7 +41,10 @@ H.assert(X.noteBeat !== null && X.beatGlow !== null, "noteBeat and beatGlow are 
 {
   const marked = [];
   for (const [k, t] of Object.entries(X.MUSIC_TRACKS)) for (const L of t.layers) if (L.beat) marked.push(k + "." + L.name);
-  H.eq(marked.join(","), "pulse.heart", "⛔ exactly one layer is marked beat: pulse's heart");
+  // ⛔ REWRITTEN IN PLACE (CS012 P1). This counted every track. CS012 O13 gives
+  // `drive` its own beat layer (test-cs012-p1.js), so the claim is read over the
+  // two tracks this phase marked: of title's and pulse's layers, only heart.
+  H.eq(marked.filter(m => /^(title|pulse)\./.test(m)).join(","), "pulse.heart", "⛔ exactly one layer of title and pulse is marked beat: pulse's heart");
   H.assert(/beat: true, audition: "pass", steps: heart \}/.test(script), "the mark sits before the audition mark on heart's line");
 }
 

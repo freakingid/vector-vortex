@@ -35,8 +35,11 @@ const script = H.extractScript(fs.readFileSync(path.join(ROOT, "dist", "vector-v
   const X = H.buildGame();
   const { C } = X;
   H.eq(typeof X.musicStateFor, "function", "musicStateFor is a top-level function");
-  H.eq(JSON.stringify(C.MODE_TRACK), JSON.stringify({ classic: "pulse" }), "C.MODE_TRACK is { classic: \"pulse\" }");
-  H.eq(JSON.stringify(C.MUSIC_TRACK_CHOICES), JSON.stringify(["auto", "pulse"]), "C.MUSIC_TRACK_CHOICES is AUTO / PULSE (A4)");
+  // ⛔ REWRITTEN IN PLACE (CS012 P1). These were { classic: "pulse" } and AUTO /
+  // PULSE. CS012 R10 gives Overdrive its own track and appends DRIVE, a choice
+  // in either mode; the claim, that the map and the row are exactly these, holds.
+  H.eq(JSON.stringify(C.MODE_TRACK), JSON.stringify({ classic: "pulse", overdrive: "drive" }), "C.MODE_TRACK is { classic: \"pulse\", overdrive: \"drive\" }");
+  H.eq(JSON.stringify(C.MUSIC_TRACK_CHOICES), JSON.stringify(["auto", "pulse", "drive"]), "C.MUSIC_TRACK_CHOICES is AUTO / PULSE / DRIVE (A4, R10)");
   H.assert(!(X.MUSIC_SILENCE in X.MUSIC_TRACKS), `the silence name "${X.MUSIC_SILENCE}" names no track`);
 
   const TITLE_SIDE = ["title", "mode", "depth"];
@@ -297,14 +300,16 @@ H.eq(state.screen, "options", "⛔ Escape leaves the row, not OPTIONS");
 H.eq(detail("MUSIC VOLUME"), "80%", "Escape keeps 80%");
 H.close(A.vol.music, 0.8, 1e-12, "and the music bus holds 0.8");
 
-// MUSIC TRACK: AUTO / PULSE, clamped at both ends.
+// MUSIC TRACK: AUTO / PULSE / DRIVE (CS012 R10), clamped at both ends.
 right(3); press(FIRE);
 H.eq(detail("MUSIC TRACK"), "‹" + "AUTO›", "MUSIC TRACK arms");
 right(1);
 H.eq(detail("MUSIC TRACK"), "‹" + "PULSE›", "one step: PULSE");
 noOverlap("MUSIC TRACK armed on PULSE");
 right(3);
-H.eq(detail("MUSIC TRACK"), "‹" + "PULSE›", "clamped at PULSE");
+// ⛔ REWRITTEN IN PLACE (CS012 P1). This was "clamped at PULSE". R10 appends
+// DRIVE, so the top clamp is the row's last choice, DRIVE.
+H.eq(detail("MUSIC TRACK"), "‹" + "DRIVE›", "clamped at DRIVE");
 left(5);
 H.eq(detail("MUSIC TRACK"), "‹" + "AUTO›", "clamped at AUTO");
 right(1); press(PURGE);

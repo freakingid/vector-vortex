@@ -543,12 +543,12 @@ const C = {
   AUDIO_VOL_RAMP:       0.03,   // s. ⛔ a volume change ramps, never a bare .value set.
   MUSIC_STEP_NODE_MAX:  16,     // ⚠ provisional ceiling on nodes one scheduled step creates
   // Music by screen (CS009 P3; GDD 11.7, 13). A mode's own gameplay track, which
-  // the MUSIC TRACK row's AUTO resolves through. CS012 adds overdrive: "drive".
-  MODE_TRACK:           { classic: "pulse" },
+  // the MUSIC TRACK row's AUTO resolves through. Overdrive's is `drive` (CS012 P1).
+  MODE_TRACK:           { classic: "pulse", overdrive: "drive" },
   // The MUSIC TRACK row's choices in rotate order (Paul's A4). The first is the
-  // default. "auto" is the mode's track; any other entry names a track, and
-  // CS012 appends "drive".
-  MUSIC_TRACK_CHOICES:  ["auto", "pulse"],
+  // default. "auto" is the mode's track; any other entry names a track and plays
+  // it in either mode (CS012 R10). ⛔ Saved by NAME: never rename or remove one.
+  MUSIC_TRACK_CHOICES:  ["auto", "pulse", "drive"],
 
   // ---- SFX (GDD 11.8) -----------------------------------------------------
   // ⛔ PORTED VERBATIM FROM tools/sfx-lab.html (CS009 P4, Paul's A7). Each
