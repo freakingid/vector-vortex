@@ -9,14 +9,16 @@
 // a store's keys(), scopes(), clear() or usage().
 //
 // WHAT A PROFILE KEEPS (CS011 P2): `settings` (23-main.js's CONTROLS, KEYBOARD,
-// GAMEPAD and sound rows), `progress` (the Start Depth record) and `telemetry`
-// (the ring's rows). ⛔ The telemetry capture switch is never stored.
+// GAMEPAD and sound rows), `progress` (the Start Depth record, ⛔ v2 and PER MODE
+// since CS012 P3) and `telemetry` (the ring's rows). ⛔ The telemetry capture
+// switch is never stored.
 //
 // THE RUN AND THE LOCAL TOP 10 (CS011 P3): `scores` (root), written through
 // createScores() below, the future kit-scores (src/22-meta.NOTES.md).
 //
-// THE ONLINE BOARD (CS011 P5): `Leaderboard`, the one surface over the bridged
-// kit-leaderboard. Its offline queue is the kit's own storage, not the game's.
+// THE ONLINE BOARDS (CS011 P5; CS012 P3): `Leaderboard`, the one surface over the
+// bridged kit-leaderboard, holding ⛔ ONE CLIENT PER MODE. Their offline queues
+// are the kit's own storage, not the game's.
 
 // ---------------------------------------------------------------------------
 // THE STORE AND THE PROFILE (GDD 15.1, 15.2). CS011 P1.
@@ -89,44 +91,66 @@ const Profiles = (function () {
 // ⛔ THE ONLY READER OF window.KitLeaderboard, and EVERY METHOD IS A NO-OP
 // WITHOUT IT (CLAUDE.md, Leaderboard). The module arrives through the shell's
 // ES-module bridge, which is async and fails on file:// by design, so the kit
-// client is made LAZILY, on the first call that finds the global, and a call
+// clients are made LAZILY, on the first call that finds the global, and a call
 // before that finds nothing and does nothing. A create() that throws is not
-// retried. ⛔ Nothing here throws into the game: the kit's submit() never
-// rejects, and its promise is still caught.
+// retried, per client. ⛔ Nothing here throws into the game: the kit's submit()
+// never rejects, and its promise is still caught.
+//
+// ⛔ ONE CLIENT PER MODE, ONE BOARD EACH (CS012 P3, O11, R8). The Worker keeps a
+// player's best row per game id and has no per-mode boards, so an Overdrive run
+// posting to `vector-vortex` would compete with that player's Classic best.
+// beginRun() and submit() route by state.mode; load() takes the mode SCORES is
+// showing; queueLength() sums both queues (the kit keys its offline queue
+// coinless.lb.<gameId>.v1, so the two never share one). ⛔ C.GAME_ID is NOT a
+// board id: it is kit-storage's keyspace (boot() below).
 //
 // ⛔ The submit reads `state` at the run's end and writes none. Its stats are
-// exactly the Worker registry's seven keys for `vector-vortex`
-// (coinless-kit `services/leaderboard/src/registry.js`): an unknown key flags the
-// row (test-cs011-p5.js reads that file, never a copied list).
+// exactly the Worker registry's seven keys for the run's board (coinless-kit
+// `services/leaderboard/src/registry.js`, the same seven for both ids): an
+// unknown key flags the row (test-cs012-p3.js reads that file, never a copied
+// list).
 const Leaderboard = (function () {
-  let client = null;
-  let broken = false;
+  // ⛔ THE MODES IN C's KEY ORDER, which is the order the clients are made in:
+  // Classic first (test-cs011-p5.js reads creates[0] as Classic's).
+  const MODES = Object.keys(C.LEADERBOARD_GAME_IDS);
+  const clients = {};
+  const broken = {};
+  for (const m of MODES) { clients[m] = null; broken[m] = false; }
   // ⛔ THE STALE-RESPONSE TOKEN: a board that answers after a newer load() began
-  // is dropped.
+  // is dropped. One token across both boards — only one load is ever shown.
   let token = 0;
 
-  function instance() {
-    if (client !== null || broken) return client;
+  // Makes every client that is neither made nor broken, in MODES order.
+  function make() {
     const kit = window.KitLeaderboard;
-    if (!kit || typeof kit.create !== "function") return null;
-    try {
-      client = kit.create({
-        endpoint: C.LEADERBOARD_ENDPOINT,
-        gameId: C.GAME_ID,
-        gameVersion: C.GAME_VERSION,
-        // A callback, never a value: a switch or a rename is read at submit time.
-        getPlayer: () => Profiles.player(),
-      });
-    } catch (e) {
-      broken = true;
-      client = null;
+    if (!kit || typeof kit.create !== "function") return;
+    for (const mode of MODES) {
+      if (clients[mode] !== null || broken[mode]) continue;
+      try {
+        clients[mode] = kit.create({
+          endpoint: C.LEADERBOARD_ENDPOINT,
+          gameId: C.LEADERBOARD_GAME_IDS[mode],
+          gameVersion: C.GAME_VERSION,
+          // A callback, never a value: a switch or a rename is read at submit time.
+          getPlayer: () => Profiles.player(),
+        });
+      } catch (e) {
+        broken[mode] = true;
+        clients[mode] = null;
+      }
     }
-    return client;
   }
 
-  // Plan R9's payload. `durationS` is simulation seconds, pause excluded, and an
-  // integer as the Worker demands. `max_combo` is C.TELEMETRY_PLACEHOLDER's until
-  // CS012 gives the combo a source.
+  // The client for one mode, or null. An unknown mode is null and never throws.
+  function instance(mode) {
+    if (!Object.prototype.hasOwnProperty.call(clients, mode)) return null;
+    if (clients[mode] === null && !broken[mode]) make();
+    return clients[mode];
+  }
+
+  // Plan R9's payload, on the run's own board. `durationS` is simulation seconds,
+  // pause excluded, and an integer as the Worker demands. `max_combo` is
+  // C.TELEMETRY_PLACEHOLDER's until CS012 P4 gives the combo a source.
   function payload(outcome) {
     return {
       metric: state.score,
@@ -145,38 +169,48 @@ const Leaderboard = (function () {
   }
 
   return {
-    // Whether the module loaded: SCORES' VIEW row exists only then.
-    present() { return instance() !== null; },
+    // Whether the module loaded: SCORES' VIEW row exists only then. True as soon
+    // as ANY board's client was made — the module is the thing being asked about.
+    present() {
+      make();
+      return MODES.some(m => clients[m] !== null);
+    },
     // Meta.runStarted(): the run id is minted at the START (the kit's
-    // idempotency key).
+    // idempotency key), on the run's own board.
     beginRun() {
-      const lb = instance();
+      const lb = instance(state.mode);
       if (lb === null) return;
       try { lb.beginRun(); } catch (e) { /* no run id: the Worker refuses this run's submit */ }
     },
-    // Meta.runEnded(), when the run was eligible.
+    // Meta.runEnded(), when the run was eligible. ⛔ The run's mode picks the
+    // board: an Overdrive run never reaches Classic's.
     submit(outcome) {
-      const lb = instance();
+      const lb = instance(state.mode);
       if (lb === null) return;
       try {
         const p = lb.submit(payload(outcome));
         if (p && typeof p.catch === "function") p.catch(() => {});
       } catch (e) { /* absence of a board is the normal path */ }
     },
-    // The kit's offline queue, for the title's line. 0 without the module.
+    // The kit's offline queue, for the title's line: ⛔ BOTH BOARDS SUMMED, so a
+    // queued Overdrive row is counted. 0 without the module.
     queueLength() {
-      const lb = instance();
-      if (lb === null) return 0;
-      try {
-        const n = lb.queueLength();
-        return Number.isInteger(n) && n > 0 ? n : 0;
-      } catch (e) { return 0; }
+      let total = 0;
+      for (const mode of MODES) {
+        const lb = instance(mode);
+        if (lb === null) continue;
+        try {
+          const n = lb.queueLength();
+          if (Number.isInteger(n) && n > 0) total += n;
+        } catch (e) { /* a board that cannot count queues nothing */ }
+      }
+      return total;
     },
     // The ONLINE view: done(board) with { entries: [...] }, or done(null) when
-    // the board could not be reached. ⛔ Only the NEWEST load answers. Without
-    // the module, done is never called.
-    load(done) {
-      const lb = instance();
+    // the board could not be reached. ⛔ Only the NEWEST load answers, whichever
+    // mode it was for. Without the module, done is never called.
+    load(mode, done) {
+      const lb = instance(mode);
       const t = ++token;
       if (lb === null) return;
       const answer = b => { if (t === token) done(b); };
@@ -326,14 +360,19 @@ const Meta = (function () {
       gameId: C.GAME_ID,
       keys: {
         settings:  { version: 1 },
-        progress:  { version: 1 },
+        // ⛔ v2 IS PER MODE (CS012 P3, O12): { classic, overdrive }, so an
+        // Overdrive clear never unlocks a Classic start. ⛔ A shape change bumps
+        // the VERSION and supplies a migrate, never a new key name (CLAUDE.md,
+        // Save data) — a rename would drop every player's record.
+        progress:  { version: 2, migrate: migrateProgress },
         // ⛔ BUMP THIS WITH TELEMETRY_FIELDS (21-telemetry.js): the stored rows are
         // arrays in that order, and an envelope of another version reads empty.
         telemetry: { version: 1 },
         scores:    { version: 1 },
       },
     });
-    // ⛔ `modes` are state.mode's two values; OVERDRIVE's list waits for CS012.
+    // ⛔ `modes` are state.mode's two values. Both lists are shown from CS012 P3,
+    // where SCORES gained its MODE row; `overdrive` was already kept apart here.
     Scores = createScores({ store: Store, key: "scores", perMode: C.SCORES_PER_MODE,
                             modes: ["classic", "overdrive"] });
     // ⛔ legacyRosterKey is `null`, NEVER '': kit-profile reads an empty string
@@ -448,35 +487,75 @@ function createScores(options) {
 // of what earlier runs reached has to survive exactly that. A field there would
 // reset on every restart and the list would never grow.
 //
-// ⛔ levelRecord() IS THE ONE ROUTE TO IT. Its one writer is the clear edge in
-// Game.update() (23-main.js) and its one reader is startDepthOptions() below.
-// Since CS011 P2 it is the ACTIVE PROFILE's `progress` { highestCleared } (Paul's
-// M8): "the highest level ever cleared by that profile", so a change of profile
-// changes the list. Read on every call, never cached, so a switch needs no hook.
-// A stored value that is not a whole number >= 0 reads as 0.
-const _profileLevelRecord = {
-  highestCleared() {
-    const d = Profiles.scope().get("progress", null);
-    const n = d !== null && typeof d === "object" ? d.highestCleared : undefined;
-    return Number.isInteger(n) && n >= 0 ? n : 0;
-  },
-  noteCleared(level) {
-    if (level > this.highestCleared()) Profiles.scope().set("progress", { highestCleared: level });
-  },
-};
+// ⛔ levelRecord(mode) IS THE ONE ROUTE TO IT. Its one writer is the clear edge
+// in Game.update() (23-main.js) and its one reader is startDepthOptions() below.
+// Since CS011 P2 it is the ACTIVE PROFILE's `progress` (Paul's M8): "the highest
+// level ever cleared by that profile", so a change of profile changes the list.
+// Read on every call, never cached, so a switch needs no hook. A stored value
+// that is not a whole number >= 0 reads as 0.
+//
+// ⛔ AND SINCE CS012 P3 IT IS PER MODE (O12): `progress` v2 is
+// { classic, overdrive }, because a clear in either mode would otherwise extend
+// both modes' START DEPTH lists — and the Classic list pays Classic's start
+// bonus onto Classic's board. ⛔ THE MODE ARGUMENT IS OPTIONAL and defaults to
+// state.mode, the pattern the heat accessors' level argument set; MODE's choice
+// is not state.mode yet, so START DEPTH passes its pending mode explicitly.
+const RECORD_MODES = Object.keys(C.MODE_FLAGS);
 
-function levelRecord() {
-  return _profileLevelRecord;
+// v1 was one { highestCleared } for BOTH modes (CS008 P3). Its value is
+// Classic's: Overdrive was not choosable, so no Overdrive clear can exist.
+// ⛔ Pure, and it never calls back into the store (kit-storage's contract); an
+// origin version it cannot read returns undefined, and the stored bytes stand.
+function migrateProgress(fromVersion, data) {
+  if (fromVersion !== 1) return undefined;
+  const n = data !== null && typeof data === "object" ? data.highestCleared : undefined;
+  const out = {};
+  for (const m of RECORD_MODES) out[m] = 0;
+  out.classic = Number.isInteger(n) && n >= 0 ? n : 0;
+  return out;
 }
 
-// The Start Depth list, ascending (GDD 4.6). C.START_DEPTH_FIRST on a first
-// session; thereafter every odd depth up to the highest level cleared, snapped
-// DOWN to odd, and never past C.START_DEPTH_CAP. Clearing 14 offers 13;
-// clearing 90 offers 81. ⛔ The first list is never shrunk — a record below 9
-// still offers 1–9.
-function startDepthOptions() {
+// The stored value as two whole numbers, whatever is there.
+function readProgress() {
+  const d = Profiles.scope().get("progress", null);
+  const out = {};
+  for (const m of RECORD_MODES) {
+    const n = d !== null && typeof d === "object" ? d[m] : undefined;
+    out[m] = Number.isInteger(n) && n >= 0 ? n : 0;
+  }
+  return out;
+}
+
+// ⛔ A WRITE CARRIES THE OTHER MODE'S RECORD THROUGH: the key holds both, so
+// noteCleared() re-reads and writes the pair, never one field.
+function makeLevelRecord(mode) {
+  return {
+    highestCleared() { return readProgress()[mode]; },
+    noteCleared(level) {
+      const all = readProgress();
+      if (level > all[mode]) {
+        all[mode] = level;
+        Profiles.scope().set("progress", all);
+      }
+    },
+  };
+}
+
+const _profileLevelRecord = {};
+for (const m of RECORD_MODES) _profileLevelRecord[m] = makeLevelRecord(m);
+
+function levelRecord(mode) {
+  return _profileLevelRecord[mode === undefined ? state.mode : mode];
+}
+
+// The Start Depth list, ascending (GDD 4.6), for one mode. C.START_DEPTH_FIRST
+// on a first session; thereafter every odd depth up to the highest level cleared
+// IN THAT MODE, snapped DOWN to odd, and never past C.START_DEPTH_CAP. Clearing
+// 14 offers 13; clearing 90 offers 81. ⛔ The first list is never shrunk — a
+// record below 9 still offers 1–9.
+function startDepthOptions(mode) {
   const out = C.START_DEPTH_FIRST.slice();
-  const cleared = levelRecord().highestCleared();
+  const cleared = levelRecord(mode).highestCleared();
   const snapped = cleared % 2 === 1 ? cleared : cleared - 1;
   const top = Math.min(C.START_DEPTH_CAP, snapped);
   for (let d = out[out.length - 1] + 2; d <= top; d += 2) out.push(d);

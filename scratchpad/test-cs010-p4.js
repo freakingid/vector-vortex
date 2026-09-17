@@ -207,7 +207,7 @@ function halfFrame() {
 function liveStep() { const want = G.stats.ticks + 1; for (let n = 0; G.stats.ticks < want && n < 8; n++) halfFrame(); }
 function steps(n) { for (let i = 0; i < n; i++) liveStep(); }
 const key = k => ({ down: () => G.input.keyDown(k), up: () => G.input.keyUp(k) });
-const FIRE = key(" "), ESC = key("Escape");
+const FIRE = key(" "), ESC = key("Escape"), RIGHT = key("ArrowRight");
 function press(b) { b.down(); liveStep(); b.up(); liveStep(); }
 
 G.reset(); G.frame(0); G.quitToTitle(); steps(2);
@@ -217,7 +217,10 @@ G.reset(); G.frame(0); G.quitToTitle(); steps(2);
   H.eq(M.state, "title", "fixture: the title plays");
   H.eq(lit, 0, "⛔ the title never pulses");
 }
-press(FIRE); press(FIRE);
+// ⛔ REPAIRED IN PLACE AT CS012 P3 (O9): OVERDRIVE is MODE's first row and its
+// default highlight, so the one step down restores this file's precondition, a
+// CLASSIC run — `pulse` is the track whose `heart` carries beat: true here.
+press(FIRE); press(RIGHT); press(FIRE);
 FIRE.down();
 for (let n = 0; state.screen !== "play" && n < 16; n++) halfFrame();
 FIRE.up();
@@ -273,7 +276,7 @@ H.eq(drawDraws, 0, "⛔ draw() spent no draw from the run's stream");
   const pressZ = k => { ZG.input.keyDown(k); stepZ(); stepZ(); ZG.input.keyUp(k); stepZ(); stepZ(); };
   ZG.reset(); ZG.frame(0); ZG.quitToTitle();
   for (let i = 0; i < 4; i++) stepZ();
-  pressZ(" "); pressZ(" ");
+  pressZ(" "); pressZ("ArrowRight"); pressZ(" ");     // PLAY, OVERDRIVE -> CLASSIC, CLASSIC
   ZG.input.keyDown(" ");
   for (let n = 0; Zs.screen !== "play" && n < 16; n++) stepZ();
   ZG.input.keyUp(" ");

@@ -158,8 +158,12 @@ H.assert(M.track === X.MUSIC_TRACKS.title && M.trackGain !== null, "the title sc
 }
 
 // Into play: MODE, CLASSIC, START DEPTH 1.
+// ⛔ REPAIRED IN PLACE AT CS012 P3 (O9): OVERDRIVE is MODE's first row, so one
+// step down restores this file's precondition — a CLASSIC run, whose AUTO track
+// is `pulse`. Every claim below is about the crossfades, not about the mode.
 const titleGain = M.trackGain;
 press(FIRE); H.eq(M.state, "title", "MODE plays `title`");
+right(1);                                       // OVERDRIVE -> CLASSIC
 press(FIRE); H.eq(M.state, "title", "START DEPTH plays `title`");
 FIRE.down(); liveStep();
 H.eq(state.screen, "play", "fixture: a run from the front door");

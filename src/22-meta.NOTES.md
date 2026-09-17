@@ -78,3 +78,25 @@ the game's profile or its row shape. `test-cs011-p3.js` runs it over a plain
 `Map`-backed store, separate from the game's instance.
 
 **Backport status.** `not yet`. No kit-scores module exists in coinless-kit.
+
+### 2026-09-17 — no change to the module (CS012 P3)
+
+**What changed.** Nothing in `createScores`. Recorded because the changeset that
+made Overdrive playable exercised the module's per-mode table for the first
+time on both modes: rows now land in `classic` and `overdrive` from real runs,
+SCORES lists either through a MODE row, and the `modes` option is what keeps
+them apart.
+
+**Why it matters to a backport.** The `modes` option was written on the
+assumption that a caller declares its modes once and the module has no opinion
+about which one is "current". That held: the mode reaches `qualifies` / `add` /
+`list` as an argument, from the game's `state.mode` at the run's end and from
+the SCORES screen's own row, and the module needed no notion of a default, a
+current mode, or a mode order.
+
+**What is deliberately NOT here.** Vector Vortex's Start Depth record is also
+per mode as of CS012 P3, but it lives in `22-meta.js`'s game glue over the
+profile's `progress` key, not in this module. kit-scores keeps score tables and
+nothing else.
+
+**Backport status.** `not yet`. No kit-scores module exists in coinless-kit.

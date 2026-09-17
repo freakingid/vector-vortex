@@ -203,6 +203,12 @@ function nextWell() {
 //
 // ⛔ NOTHING HERE VALIDATES opts. The list a player picks from is
 // startDepthOptions() (22-meta.js); this is the mechanism under it.
+// ⛔ THE LAST RUN STARTED THIS SESSION, for SCORES' entry mode (CS012 P3, O10).
+// Not in `state`: startGame() rewrites that, and quitToTitle() puts "classic"
+// back, so the mode a player just played would be lost by the time they reach
+// SCORES. null until the session's first run. A reload starts it over.
+let lastRunMode = null;
+
 function startGame(seed, opts) {
   Object.assign(state, newState());
   state.seed = (seed === undefined || seed === null) ? (Date.now() >>> 0) : (seed >>> 0);
@@ -212,6 +218,7 @@ function startGame(seed, opts) {
   state.level = state.startDepth;
   state.wellIndex = (state.level - 1) % WELLS.length;
   enterWell();
+  lastRunMode = state.mode;
   // ⛔ THE RUN'S START SEAT (CS011 P3, plan R7), last. It opens the run's meta
   // record outside `state` and drops one still open; it writes no `state`.
   Meta.runStarted();
@@ -654,14 +661,17 @@ const Game = (function () {
       { label: "SCORES",  detail: "", enabled: true, action: "toScores" },
       TITLE_PROFILE,
     ] },
-    // ⛔ M1: OVERDRIVE is shown and cannot be chosen until CS012. GDD 13's
-    // "Overdrive is the default highlight" waits for it too — the cursor
-    // skips a disabled row, so CLASSIC is highlighted.
+    // ⛔ OVERDRIVE IS THE DEFAULT HIGHLIGHT (GDD 13; CS012 P3, O9), and it is
+    // the row ORDER that says so: the menu model puts the cursor on the first
+    // enabled row, so OVERDRIVE first IS the highlight. Nothing else marks it.
+    // ⛔ Classic is the purist option, not a tutorial — same colour, same
+    // weight, one row down.
     mode: { title: "MODE", lines: [], back: "toTitle", items: [
-      { label: "CLASSIC",   detail: "",       enabled: true,  action: "pickClassic" },
-      { label: "OVERDRIVE", detail: "LOCKED", enabled: false, action: "pickOverdrive" },
+      { label: "OVERDRIVE", detail: "", enabled: true, action: "pickOverdrive" },
+      { label: "CLASSIC",   detail: "", enabled: true, action: "pickClassic" },
     ] },
-    // Rows rebuilt on entry from startDepthOptions(). ⛔ NO COUNTDOWN (GDD 4.6).
+    // Rows rebuilt on entry from startDepthOptions(pendingMode) — ⛔ the record is
+    // per mode (CS012 P3). ⛔ NO COUNTDOWN (GDD 4.6).
     depth: { title: "START DEPTH", lines: [], back: "toMode", items: [] },
     // Over the frozen board (U4). ⛔ RESUME IS INSTANT — no countdown (GDD 16.3).
     pause: { title: "PAUSED", lines: [], back: "resume", items: [
@@ -730,6 +740,11 @@ const Game = (function () {
   // The mode the MODE screen chose, carried to the depth screen's startGame().
   // Not in state: no run exists yet, and startGame() rewrites state anyway.
   let pendingMode = "classic";
+
+  // ⛔ O10's "MODE's first row", read OFF MODE (CS012 P3): the mode each row
+  // picks, in the row order, so SCORES' MODE row and the MODE screen cannot
+  // disagree about which mode comes first or how many there are.
+  const SCORES_MODES = SCREENS.mode.items.map(r => (r.action === "pickOverdrive" ? "overdrive" : "classic"));
 
   // Where OPTIONS was opened from, "title" or "pause" — its BACK goes there.
   // Written by the two rows that open it; its sub-pages come back to OPTIONS.
@@ -1034,8 +1049,10 @@ const Game = (function () {
     SOUND_ROWS.track.detail = shown("track", C.MUSIC_TRACK_CHOICES[sound.track].toUpperCase());
   }
 
+  // ⛔ BUILT FOR pendingMode, NEVER state.mode (CS012 P3, O12): the record is per
+  // mode, and at MODE no run has started, so state.mode is the last run's.
   function buildDepthRows() {
-    const list = startDepthOptions();
+    const list = startDepthOptions(pendingMode);
     const rows = SCREENS.depth.items;
     rows.length = 0;
     for (let i = 0; i < list.length; i++) {
@@ -1049,20 +1066,29 @@ const Game = (function () {
   // the leaderboard module is present (Paul's M5); without it SCORES is P3's.
   let scoresView = "local";
   const SCORES_VIEW = { label: "VIEW", detail: "LOCAL", enabled: true, action: "toggleScoresView" };
+  // ⛔ AND ITS MODE (CS012 P3, O10): the FIRST row, always, module or not. It
+  // cycles the same two modes as MODE, in MODE's order, and each mode has its own
+  // local table (Meta.scores) and its own online board (Leaderboard.load).
+  let scoresMode = SCORES_MODES[0];
+  const SCORES_MODE = { label: "MODE", detail: "", enabled: true, action: "toggleScoresMode" };
   // The ONLINE view's answer: "loading", "failed" or "loaded", and the board's
   // entries once loaded.
   let onlineStatus = "loading";
   let onlineEntries = [];
 
-  // SCORES' rows (CS011 P3, plan R15): `n NAME` and the score in plain digits,
-  // then BACK. CLASSIC only until CS012 makes OVERDRIVE choosable. ⛔ Rebuilt on
-  // entry, on VIEW and when the board answers, never in draw().
+  // SCORES' rows (CS011 P3, plan R15; CS012 P3, O10): MODE first, then VIEW while
+  // the module is there, then `n NAME` and the score in plain digits, then BACK.
+  // ⛔ Rebuilt on entry, on MODE, on VIEW and when a board answers, never in
+  // draw().
   function buildScoreRows() {
     const online = scoresView === "online";
     const scr = SCREENS.scores;
+    const label = scoresMode.toUpperCase();
     scr.lines.length = 0;
-    scr.lines.push(online ? "CLASSIC \u00B7 ONLINE" : "CLASSIC \u00B7 LOCAL");
+    scr.lines.push(label + (online ? " \u00B7 ONLINE" : " \u00B7 LOCAL"));
     scr.items.length = 0;
+    SCORES_MODE.detail = label;
+    scr.items.push(SCORES_MODE);
     if (Leaderboard.present()) {
       SCORES_VIEW.detail = online ? "ONLINE" : "LOCAL";
       scr.items.push(SCORES_VIEW);
@@ -1081,7 +1107,7 @@ const Game = (function () {
       const p = Profiles.current();
       if (p && p.name === C.PROFILE_ANONYMOUS_NAME) scr.lines.push("NAME YOUR PROFILE TO POST UNDER YOUR NAME");
     } else {
-      const list = Meta.scores("classic");
+      const list = Meta.scores(scoresMode);
       if (list.length === 0) scr.lines.push("NO SCORES YET");
       for (let i = 0; i < list.length; i++) {
         const name = typeof list[i].profileName === "string" ? list[i].profileName : "";
@@ -1092,12 +1118,25 @@ const Game = (function () {
   }
 
   // The board's answer (Leaderboard.load(), which drops a stale one). It is
-  // ignored once the player has left the ONLINE view.
+  // ignored once the player has left the ONLINE view. ⛔ A MODE step re-loads,
+  // so the token drops the outgoing mode's answer exactly as it drops a stale one.
   function onBoard(board) {
     if (state.screen !== "scores" || scoresView !== "online") return;
     onlineStatus = board === null ? "failed" : "loaded";
     onlineEntries = board === null ? [] : board.entries.slice(0, C.LEADERBOARD_BOARD_LIMIT);
     buildScoreRows();
+  }
+
+  // Rebuild the rows for whatever MODE and VIEW now say, fetching that mode's
+  // board when the view is ONLINE. ⛔ The ONE place a load begins from a menu
+  // step, so MODE and VIEW cannot answer the question differently.
+  function loadScoresView() {
+    if (scoresView === "online") {
+      onlineStatus = "loading";
+      onlineEntries = [];
+      buildScoreRows();
+      Leaderboard.load(scoresMode, onBoard);
+    } else buildScoreRows();
   }
 
   // The title's one info line (plan R16, Paul's M5): the kit's offline queue,
@@ -1301,15 +1340,23 @@ const Game = (function () {
     if (name === "exportTelemetry") exportTelemetry();
     if (name === "resume") resumeRun();
     if (name === "toMode")    state.screen = "mode";
-    if (name === "toScores")  { scoresView = "local"; buildScoreRows(); state.screen = "scores"; }
+    // ⛔ EVERY ENTRY OPENS LOCAL, on the mode of the last run STARTED this
+    // session, else MODE's first row (CS012 P3, O10).
+    if (name === "toScores")  {
+      scoresView = "local";
+      scoresMode = lastRunMode === null ? SCORES_MODES[0] : lastRunMode;
+      buildScoreRows();
+      state.screen = "scores";
+    }
+    // The MODE row cycles MODE's rows in order. ⛔ On ONLINE it reloads: the two
+    // boards are separate fetches, and the old mode's rows must not stand.
+    if (name === "toggleScoresMode") {
+      scoresMode = SCORES_MODES[(SCORES_MODES.indexOf(scoresMode) + 1) % SCORES_MODES.length];
+      loadScoresView();
+    }
     if (name === "toggleScoresView") {
       scoresView = scoresView === "local" ? "online" : "local";
-      if (scoresView === "online") {
-        onlineStatus = "loading";
-        onlineEntries = [];
-        buildScoreRows();
-        Leaderboard.load(onBoard);
-      } else buildScoreRows();
+      loadScoresView();
     }
     // CS011 P4. SELECT goes back to PROFILE, where ACTIVE has moved; a delete
     // does too, and a refused one stays on DELETE with the kit's reason (R12).
@@ -1328,8 +1375,11 @@ const Game = (function () {
       const r = Profiles.remove(pageId);
       if (r.ok) openProfiles(); else SCREENS.profileDelete.lines[1] = reasonLine(r.reason);
     }
-    if (name === "pickClassic") {
-      pendingMode = "classic";
+    // ⛔ THE MODE'S ONE CARRIER IS pendingMode (CS012 P3, O9): no run exists yet,
+    // so state.mode still names the LAST run's mode, and START DEPTH's list is
+    // built for the mode just chosen — not for that stale one (O12).
+    if (name === "pickClassic" || name === "pickOverdrive") {
+      pendingMode = name === "pickOverdrive" ? "overdrive" : "classic";
       buildDepthRows();
       state.screen = "depth";
     }
@@ -1517,6 +1567,10 @@ const Game = (function () {
     // fixed order (12-scoring.js).
     // ⛔ AND THE SESSION'S HIGHEST LEVEL CLEARED IS WRITTEN AT THE SAME EDGE
     // (GDD 4.6; 22-meta.js). Not in state: it has to outlive startGame().
+    // ⛔ THE RECORD IS PER MODE (CS012 P3, O12), and the bare call is right HERE
+    // and almost nowhere else: a run is live, so levelRecord()'s default IS this
+    // run's mode. Off play state.mode names the LAST run's, which is why MODE's
+    // START DEPTH passes pendingMode instead.
     if (wellCleared(state)) {
       state.tally.wellsCleared++;
       sfx("wellClear");

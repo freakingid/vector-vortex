@@ -35,6 +35,14 @@ backport packet.
 | `lib/kit-leaderboard/kit-leaderboard.js` | 0.2.1 | module bridge → `window.KitLeaderboard` | No online board; local scores unaffected |
 | `lib/kit-names/kit-names.js` | 0.1.0 | imported by kit-leaderboard, beside it | The bridge's import fails; as above |
 
+⛔ **The game makes TWO instances of kit-leaderboard, one per mode** (CS012 P3),
+over `C.LEADERBOARD_GAME_IDS`: `vector-vortex` and `vector-vortex-overdrive`.
+That is a usage change, not a module change — the file is still 0.2.1 and
+unedited, and two `create()` calls are inside its contract, each with its own
+offline queue at `coinless.lb.<gameId>.v1`. One file, one bridge tag, one
+`window.KitLeaderboard`; absence still means the game plays with no online board
+in either mode.
+
 ### Inlined at build — not runtime files (CS011 P1, Paul's M1)
 
 `build.js`'s `KIT_INLINE` wraps these into the single HTML, **unedited in `lib/`**,

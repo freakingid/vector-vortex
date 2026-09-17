@@ -364,7 +364,8 @@ This is the original's SkillStep, credited as the first selectable difficulty in
 - **`startGame(seed, opts)`**, `opts` = `{ mode, startDepth }`. `state.mode` and `state.startDepth` are fields with defaults `"classic"` and 1, so ⛔ **`startGame(seed)` is bit-identical to `startGame(seed, { mode: "classic", startDepth: 1 })`** — every closed test calls the short form. `state.level` is the start depth, `wellIndex` is the same `(level − 1) mod 16`, no draw is spent and `bandRoll` stays 0.
 - **`startBonus(d)`** (`12-scoring.js`) reads `C.START_BONUS_SCALE` 800, `C.START_BONUS_EXP` 1.6 and `C.START_BONUS_ROUND` 100.
 - ⛔ **Paid on clearing the starting well** (Paul, S2), in `clearBonuses()` after §7's three, through `addScore()`, when `state.level === state.startDepth`. No "paid" flag: the level only rises, so the test is true on exactly one clear edge per run. A run that ends in its starting well is never paid; ⛔ a life lost there, then a clear, still pays it (Paul, 2026-09-13 — the death already costs the no-death bonus). A clear on the game-over step pays it like the other three (§7's stopped-run rule: score, no life).
-- **The list** is `startDepthOptions()` (`22-meta.js`): `C.START_DEPTH_FIRST` `[1, 3, 5, 7, 9]`, extended by every odd depth up to the highest level cleared snapped down to odd, capped at `C.START_DEPTH_CAP` 81. ⛔ **"Ever cleared by that profile" is the active profile's `progress` `{ highestCleared }`** (CS011 P2, Paul's M8; §15.1): written at the clear edge, read on every call, and ⛔ **not in `state`**, because it must survive `startGame()`. `levelRecord()` is the one route to it, so a change of profile changes the list. A stored value that is not a whole number ≥ 0 reads as 0.
+- **The list** is `startDepthOptions(mode)` (`22-meta.js`): `C.START_DEPTH_FIRST` `[1, 3, 5, 7, 9]`, extended by every odd depth up to the highest level cleared snapped down to odd, capped at `C.START_DEPTH_CAP` 81. ⛔ **"Ever cleared by that profile" is the active profile's `progress`** (CS011 P2, Paul's M8; §15.1): written at the clear edge, read on every call, and ⛔ **not in `state`**, because it must survive `startGame()`. `levelRecord(mode)` is the one route to it, so a change of profile changes the list. A stored value that is not a whole number ≥ 0 reads as 0.
+- ⛔ **AND THE RECORD IS PER MODE** (CS012 P3, O12; §15.1). `progress` is **v2**, `{ classic, overdrive }`, migrated from v1's one `{ highestCleared }` into `classic` — Overdrive was not choosable before CS012, so no Overdrive clear can predate the bump. A clear extends only the run's own mode's list, and the key holds both: `noteCleared()` re-reads and writes the pair. ⛔ **The mode argument is optional and defaults to `state.mode`**, the pattern the heat accessors' level argument set. **MODE's choice is not `state.mode` yet** — no run exists — so START DEPTH is built for the screen's `pendingMode` (`buildDepthRows()`, `23-main.js`), never for the last run's mode. Why per mode: a shared record would let an Overdrive clear unlock a Classic start, and the Classic list pays Classic's start bonus onto Classic's board.
 - ⚠ A run starting past 99 would get the modulo well and no colour roll (§3.6). Unreachable while the cap is 81, which lands in the Green band below `C.BAND_RNG_LEVEL`.
 
 ---
@@ -940,14 +941,14 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 | Screen | Rows | Back |
 |---|---|---|
 | Title | PLAY, OPTIONS, SCORES (CS011 P3), PROFILE (CS011 P4), whose detail is the active profile's name, written on every title step. ⛔ CS011's rows go after OPTIONS: the closed tests navigate the title by index. One info line, `n SCORES QUEUED` (`1 SCORE QUEUED`), only while kit-leaderboard's offline queue is not empty, written on every title step (CS011 P5), never in `draw()` | — |
-| Mode | CLASSIC; OVERDRIVE shown locked (M1) | Title |
+| Mode | ⛔ **OVERDRIVE, then CLASSIC** (CS012 P3, O9). Both enabled. ⛔ **The row ORDER is the default highlight** — the menu model puts the cursor on the first enabled row, so §13's "Overdrive is the default highlight" needs no mark, no colour and no flag. CLASSIC is the purist option, one row down, in the same colour. The row chosen is carried as `pendingMode`, and START DEPTH is built for it (§4.6) | Title |
 | Start Depth | `startDepthOptions()` (§4.6), each row with its `startBonus()`. ⛔ No countdown | Mode |
 | Pause | RESUME, OPTIONS, QUIT TO TITLE (U4), over the frozen board | RESUME |
 | Options | TELEMETRY (ON/OFF), EXPORT (TO CONSOLE), CONTROLS ›, CREDITS ›, MASTER VOLUME, MUSIC VOLUME, SFX VOLUME, VOICE VOLUME, MUSIC TRACK, BACK (U5; CS009's A1) | Title or pause — wherever it was opened from |
 | Controls | MOUSE SENSITIVITY, TOUCH SENSITIVITY, LEFT-HANDED TOUCH, TOUCH AUTO-FIRE, KEYBOARD ›, GAMEPAD ›, RESET TO DEFAULTS, BACK (U7) | Options |
 | Keyboard, Gamepad | LEFT, RIGHT, FIRE, PURGE and JUMP, two slots each, then BACK. One line above the rows shows a refusal's reason | Controls |
 | Credits | `C.CREDITS_LINES`, then `VERSION` + `C.GAME_VERSION` (U6). ⚠ Placeholder copy; Paul replaces it before ship. ⛔ §18: no mention of the original game or its publisher | Options |
-| Scores | CS011 P3 (plan R15). The info line `CLASSIC · LOCAL`, plus `NO SCORES YET` as a second line when the table is empty. Then one enabled row per entry: the label is `n NAME`, the detail is the score in plain digits, and the row has no action, so rotate only scrolls. BACK is last. ⛔ The rows are rebuilt on entry (`buildScoreRows()`), never in `draw()`. CLASSIC only until CS012. **ONLINE (CS011 P5, Paul's M5):** only while kit-leaderboard is present, a first row VIEW switches LOCAL / ONLINE, and every entry opens LOCAL. ONLINE's info line is `CLASSIC · ONLINE`, then `LOADING…`, `COULD NOT REACH THE BOARD` or `NO SCORES YET`; its rows are `rank NAME` / the score, and a flagged row's score ends in `*`. While the active profile is named ANONYMOUS a last line reads `NAME YOUR PROFILE TO POST UNDER YOUR NAME` (M9). The rows are rebuilt when the board answers, and only the newest load's answer counts | Title |
+| Scores | CS011 P3 (plan R15); CS012 P3 (O10). ⛔ **A first row MODE**, always, module or not: its detail is the mode shown, and confirming it cycles MODE's rows in MODE's order. Then **VIEW** (CS011 P5, Paul's M5), only while kit-leaderboard is present, switching LOCAL / ONLINE. Then the entries, then BACK. The info line is `<MODE> · LOCAL` or `<MODE> · ONLINE`, plus `NO SCORES YET` when that mode's table is empty. A LOCAL entry's label is `n NAME`, its detail the score in plain digits, and it has no action, so rotate only scrolls. ⛔ **Every entry opens on LOCAL, and on the mode of the last run STARTED this session, else MODE's first row** — with no run yet that is OVERDRIVE. ONLINE shows `LOADING…`, `COULD NOT REACH THE BOARD` or `NO SCORES YET`; its rows are `rank NAME` / the score, and a flagged row's score ends in `*`. While the active profile is named ANONYMOUS a last line reads `NAME YOUR PROFILE TO POST UNDER YOUR NAME` (M9). ⛔ **ONLINE loads the SHOWN mode's board** (§15.4), and a MODE step on ONLINE re-loads: the stale-answer token drops the outgoing mode's answer exactly as it drops an older load's. ⛔ **The rows are rebuilt on entry, on MODE, on VIEW and when a board answers, never in `draw()`** | Title |
 | Profile | CS011 P4 (plan R16). One row per profile, labelled with its name, with detail ACTIVE on the active one; NEW PROFILE, disabled at `C.PROFILE_MAX`; BACK. ⛔ Rebuilt on entry (`openProfiles()`), never in `draw()`. A profile's row opens its page | Title |
 | A profile's page | Titled with the profile's name. SELECT activates it through `Profiles.select()` (§15.2) and returns to PROFILE; RENAME opens NAME; DELETE; BACK | Profile |
 | Delete | Titled DELETE. Its lines are the profile's name and a refusal's reason. ⛔ NO first, then YES. YES deletes (§15.2) and returns to PROFILE; a refusal stays here, and kit-profile's `last_profile` reads LAST PROFILE | The page |
@@ -1246,9 +1247,12 @@ Attract mode after `ATTRACT_IDLE` (20 s).
 | Dive | Thorn-dodge | Ring-flight |
 | Extra enemies | No | Reaver, Warden, Mimic |
 | Music | `pulse` | `drive` |
-| Leaderboard | Own board: game id `vector-vortex` (CS011) | Own board: CS012's. The Worker keeps each player's best row per game id and has no per-mode boards, so Overdrive cannot share `vector-vortex` (CS011 plan §1.4) |
+| Leaderboard | Own board: game id `vector-vortex` (CS011) | Own board: game id `vector-vortex-overdrive` (CS012 P3, O11). The Worker keeps each player's best row per game id and has no per-mode boards, so Overdrive cannot share `vector-vortex` (CS011 plan §1.4) |
+| Start Depth record | Its own, `progress` v2's `classic` | Its own, `progress` v2's `overdrive` (CS012 P3, O12; §4.6) |
 
-Both available from first launch. Overdrive is the default highlight; Classic is presented as the purist option, not a tutorial.
+Both available from first launch. ⛔ **Overdrive is the default highlight, and the MODE screen's row ORDER is how that ships** (CS012 P3, O9; §10.5): OVERDRIVE first, CLASSIC second, both enabled, same colour. Classic is presented as the purist option, not a tutorial.
+
+⛔ **The two board ids live in `C.LEADERBOARD_GAME_IDS`, keyed by mode.** ⛔ `C.GAME_ID` is **not** a board id: it is kit-storage's keyspace (§15.1), and an Overdrive run saves under `coinless.vector-vortex.*` like every other.
 
 ---
 
@@ -1362,7 +1366,7 @@ reads an empty string as "use the default" and imports `afd_profiles_v1`.
 | Declared key | Scope | Notes |
 |---|---|---|
 | `settings` | Per-profile, via `Profiles.scope()` | Options, bindings, track choice |
-| `progress` | Per-profile | `{ highestCleared }`, the Start Depth record (§4.6; Paul's M8) |
+| `progress` | Per-profile | ⛔ **v2 since CS012 P3** (O12): `{ classic, overdrive }`, the Start Depth record PER MODE (§4.6; Paul's M8). v1 was one `{ highestCleared }`; its `migrate` moves that value to `classic` and starts `overdrive` at 0, because Overdrive was not choosable before the bump. ⛔ The key NAME did not change |
 | `achievements` | Per-profile | Lifetime + weekly + tiers. ⛔ **Not declared until CS015** |
 | `scores` | Root store, shared across profiles | Records stamped `profileId`/`profileName` |
 | `telemetry` | Per-profile | ⛔ Lazy — untouched unless capture is on |
@@ -1372,7 +1376,10 @@ The profile roster itself (the root `profiles` key) is `kit-profile`'s, not ours
 ⛔ **Blocked storage plays the same game** (CS011 P6). kit-storage's probe fails, every key reads and writes an in-memory map, and nothing is saved past the page. The ninth soak (`test-cs011-p6.js`) plays one front-door session over a working store and over a blocked one, and the whole-board hash matches on every frame, so persistence cannot steer a run. The same session proves no enumeration read, only declared keys in storage (`profiles`, `scores`, and `settings` / `progress` / `telemetry` at the root or under `p1.`), and a reload that brings back the selected profile, its settings, its Start Depth record and the table.
 
 ⛔ **A row-shape change bumps that key's declared version and supplies a
-`migrate`, never a new key name.**
+`migrate`, never a new key name.** ⛔ **`progress` v2 is the first one done**
+(CS012 P3): the `migrate` is pure, never calls back into the store, returns
+`undefined` for an origin version it cannot read — which leaves the stored bytes
+alone — and kit-storage writes its result back at v2 (`test-cs012-p3.js`).
 
 ⛔ **New state is additive under known-value-else-default loading.** Removing a
 field needs no migration — a saved value for a deleted field orphans harmlessly.
@@ -1410,6 +1417,7 @@ Top 10 per mode. `vv_scores_v1` stays one shared machine-wide table with records
   - **`'quit'`:** the top of `quitToTitle()` records when `state.screen === "pause"`, read before the overwrite. Game over's QUIT TO TITLE comes through the same function, but its run already ended, so it records nothing.
   - **`'died'`:** `frame()` records after its step loop and before the audio frame, when the screen is `"gameover"` and a run is open. ⛔ **Never inside `killSkimmer()`.** A clear on the step that spends the last life pays after that function returns (§7), and a Dive death returns from `update()` early. Only the frame has the final score.
   - `Meta.runEnded(outcome)` closes the run first, so a second call does nothing. It then records the row if the run is eligible and places, keeps the rank for game over, and writes telemetry (§15.6).
+- ⛔ **Shipped whole at CS012 P3.** SCORES lists either mode through its MODE row (§10.5), so GDD §19's "local top 10 per mode" is met: an Overdrive run's row lands in `overdrive` and a Classic run's in `classic`, one shared machine-wide table, `C.SCORES_PER_MODE` rows each.
 - ⛔ **The gate is `Meta.eligible()`, and it is the only one** (§15.4). A run is ineligible once a debug bench action reaches `runAction()` while the screen is `"play"`: a spawn digit `1`–`6`, `0` (`spawnRow`) or `w` (`cycleWell`). Paul's M6 makes such a run ineligible for both boards. `t` and `e` touch no simulation, so they do not affect eligibility. Every other run counts, including runs from a Start Depth and both outcomes.
 - ⛔ **`Meta` writes no `state`, spends no draw and draws nothing.** `test-cs011-p3.js` hashes `state` around every `Meta` call.
 
@@ -1417,13 +1425,21 @@ Top 10 per mode. `vv_scores_v1` stays one shared machine-wide table with records
 
 ⛔ **One `Leaderboard` object is the only call surface for `window.KitLeaderboard`.** Nothing else reads that global except the ES-module bridge tag, which writes it (the rename flow's notice comes from kit-profile since CS011 P4). Every entry point is safe to call with the module absent.
 
+⛔ **ONE BOARD PER MODE, AND `Leaderboard` HOLDS ONE KIT CLIENT FOR EACH** (CS012 P3, O11, R8). The ids are `C.LEADERBOARD_GAME_IDS`: `vector-vortex` for Classic, `vector-vortex-overdrive` for Overdrive, both registered in coinless-kit's `registry.js`. The Worker keeps a player's best row per game id and has no per-mode boards, so a shared id would make an Overdrive run compete with that player's Classic best.
+- **Both clients are made at once**, by the first call that finds the module, Classic's first (`C.LEADERBOARD_GAME_IDS`' key order). ⛔ **A `create()` that throws is not retried, per client.**
+- **`beginRun()` and `submit(outcome)` route by `state.mode`**, so a run only ever reaches its own board. RESTART keeps the mode, and so keeps the client.
+- **`load(mode, done)`** fetches the board SCORES is showing, and one stale-answer token covers both: only the newest load answers, whichever mode it was for.
+- **`queueLength()` sums both queues.** The kit keys its offline queue `coinless.lb.<gameId>.v1`, so the two never share one, and the title's line counts a queued Overdrive row.
+- ⛔ **kit-leaderboard is unedited.** Two `create()` calls are inside its contract; its version stays **0.2.1**.
+- ⛔ **`C.GAME_ID` is NOT a board id.** It is kit-storage's keyspace (§15.1). Changing it would orphan every save.
+
 ⛔ **`Meta.eligible()` gates every `submit()`**, and it is the same gate the local top-10 check uses. Extend both together or neither. (This line named `Leaderboard.eligible()` until the CS011 close; no such method was built, and `Meta.runEnded()` reads the one gate once for both.)
 
 ⛔ **`quitToTitle()` submits `outcome: 'quit'` only when the game was actually playing at the moment it is called, checked *before* that function overwrites the state** — the same function is also game-over's "Quit to Title" row and must never double-submit.
 
 ⚠ **SETTLED — `'completed'` has no call site.** Escalating levels forever, no win condition (§3.6). Only `'died'` and `'quit'` are ever submitted. Do not invent a trigger to fill the enum.
 
-**Registration required outside this repo** (✅ done: the deployed Worker lists `vector-vortex`, `GET /v1/health`, 2026-09-16): add `vector-vortex` to the Worker's `services/leaderboard/src/registry.js`. ⛔ **The registry is readable** at `github.com/freakingid/coinless-kit` — read it rather than guessing, because an unregistered stats key flags every row it posts. Orbital Overhaul shipped exactly that bug in CS033.
+**Registration required outside this repo** (✅ done: the deployed Worker lists `vector-vortex` and, since Paul's O11 commit `e2efed5` (2026-09-16), `vector-vortex-overdrive`; `GET /v1/health`): add each game id to the Worker's `services/leaderboard/src/registry.js`. ⛔ **The registry is readable** at `github.com/freakingid/coinless-kit` — read it rather than guessing, because an unregistered stats key flags every row it posts. Orbital Overhaul shipped exactly that bug in CS033.
 
 Proposed `statsFields`: `level_reached`, `mode`, `start_depth`, `wells_cleared`, `purges_spent`, `max_combo`, `deaths`. A mismatch only flags, never rejects, so extending later is a one-line change — but still a deliberate one, not filler.
 
@@ -1436,7 +1452,9 @@ Known kit gap: rate limiting is not enforced in production on the Workers Free p
 - **The payload** (plan R9): `metric` is `state.score`; `durationS` is `Math.round(state.time)`, simulation seconds with pause excluded; `outcome`; and `stats` with exactly the registry's seven keys: `level_reached` (`state.level`), `mode`, `start_depth`, `wells_cleared`, `purges_spent`, `deaths` (off `state.tally`) and `max_combo` from `C.TELEMETRY_PLACEHOLDER.maxCombo`, so CS012 changes one source. `test-cs011-p5.js` reads the keys from coinless-kit's `registry.js` at `f0b0eb2`.
 - **M9:** a run on an unnamed profile submits as ANONYMOUS, with no prompt and no block. The ONLINE view's hint says how to post under a name (§10.5).
 - **The ONLINE view** loads `fetchBoard({ window: "all", limit: C.LEADERBOARD_BOARD_LIMIT })`, and a token drops every answer but the newest load's. There is no time-window switch.
-- ✅ **The registry's `maxMetricPerSecond` is 100,000** (Paul's M7, raised from 1,200 and redeployed after the CS011 close; coinless-kit `e9a4c2c`). The worst measured rate is 86,616/s (CS011 plan §1.5). Rows posted before the redeploy keep their flag.
+- ✅ **The registry's `maxMetricPerSecond` is 150,000 on BOTH ids** (Paul's O11 commit `e2efed5`, 2026-09-16, which also took CS012's F1 finding: a strong Start Depth 81 Classic run measured 100,078/s against the old 100,000). The two entries carry the same seven `statsFields`, `maxMetric` 10,000,000 and durations 5–86,400 s. Rows posted before a redeploy keep their flag. ⛔ **`test-cs012-p3.js` pins `e2efed5`, never `f8d34f3`**: that commit replaced `vector-vortex` rather than adding beside it.
+
+⛔ **Shipped, CS012 P3.** An Overdrive run submits once to `vector-vortex-overdrive` and never to Classic's board, a Classic run the reverse, and a bench run to neither — the ONE gate is unchanged. The stats keys are read from coinless-kit's registry at Paul's commit for each id, never copied (`test-cs012-p3.js`).
 
 ### 15.5 Achievements
 
@@ -1704,6 +1722,12 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 - ✅ **Met — `vector-vortex` registered, stats keys read from the real registry.** The payload's stats keys equal coinless-kit's `registry.js` at `f0b0eb2` (`test-cs011-p5.js`), and the deployed Worker lists the game. Its `maxMetricPerSecond` is 100,000 since Paul's redeploy (M7), so deep Start Depth runs are not flagged.
 - ✗ **CS015's — achievements** (Paul's M4).
 - ✅ **Met — telemetry opt-in, off at launch, `TELEMETRY_FIELDS` and `push()` in agreement.** CS007's (`test-cs007-p4.js`); the switch is never stored and the rows persist per profile as arrays, rejected on a version or length mismatch (`test-cs011-p2.js`).
+
+⛔ **Meta at CS012 P3 (2026-09-17).** Items unchanged since CS011 keep the verdicts above.
+- ✅ **Met, since CS012 P3 — local top 10 per mode.** SCORES lists either mode through its MODE row (§10.5), an Overdrive run's row lands in `overdrive` and a Classic run's in `classic`, and the entry mode is the last run started this session (`test-cs012-p3.js`).
+- ✅ **Met, since CS012 P3 — separate online boards.** `Leaderboard` holds one kit client per mode over `C.LEADERBOARD_GAME_IDS`, and a run submits to its own board and never the other's; a bench run to neither; the title's queued line sums both queues (`test-cs012-p3.js`). Both ids are registered and deployed (Paul's O11 commit `e2efed5`).
+- ✅ **Still met — stats keys read from the real registry**, now for BOTH ids, at Paul's commit rather than a copied list (`test-cs012-p3.js`). Without that repo the read SKIPS loudly.
+- ✅ **Still met — no storage enumeration and one route to storage**, across the `progress` v2 bump: a shape change bumped the declared version and supplied a `migrate`, and the key name did not move (§15.1).
 
 **Quality** — all 12 test groups pass; 60 fps under budget on both targets; nothing obscures `depth < 0.25`; concat build behaviourally identical to `src/`; plays from `file://`; no Atari terminology anywhere including identifiers.
 

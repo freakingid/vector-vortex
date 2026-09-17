@@ -52,7 +52,10 @@ function readRegistry() {
 // ---------------------------------------------------------------------------
 
 function fakeKit() {
-  const rec = { creates: [], beginRuns: 0, submits: [], fetches: [], pending: [], queue: 0 };
+  // ⛔ THE QUEUE IS PER BOARD since CS012 P3 (R8): the kit keys its offline queue
+  // coinless.lb.<gameId>.v1, so one fake serving two clients must count them
+  // apart — this file's claim is the LINE's wording, not the sum.
+  const rec = { creates: [], beginRuns: 0, submits: [], fetches: [], pending: [], queues: {} };
   rec.module = {
     create(config) {
       rec.creates.push(config);
@@ -66,7 +69,7 @@ function fakeKit() {
           rec.fetches.push(opts);
           return new Promise((res, rej) => rec.pending.push({ res, rej }));
         },
-        queueLength() { return rec.queue; },
+        queueLength() { return rec.queues[config.gameId] || 0; },
         flushQueue() { return Promise.resolve({ sent: 0, failed: 0, dropped: 0 }); },
       };
     },
@@ -98,7 +101,9 @@ function session(X) {
     ok: () => press(" "),
     boot: () => { G.frame(0); steps(2); },                           // trap 1
     draw: () => { X.view = null; G.draw(); return X.view; },
-    play: () => { S.ok(); S.ok(); S.ok(); },                         // title → PLAY → CLASSIC → LEVEL 1
+    // ⛔ THE right(1) IS CS012 P3's REPAIR (O9): OVERDRIVE is MODE's first row, so
+    // one step down restores this file's precondition, a CLASSIC run.
+    play: () => { S.ok(); S.right(1); S.ok(); S.ok(); },             // title → PLAY → CLASSIC → LEVEL 1
     toScores: () => { S.right(2); S.ok(); },                         // title → SCORES
     // The last life spent, then frames until a step has run on game over.
     die: () => {
@@ -125,12 +130,14 @@ function session(X) {
   H.eq(J(S.draw().lines), "[]", "⛔ no module: the title has no info line");
   S.toScores();
   const v = S.draw();
-  H.eq(J([st.screen, v.lines, v.items.map(r => r.label)]), J(["scores", ["CLASSIC · LOCAL", "NO SCORES YET"], ["BACK"]]),
-       "⛔ no module: SCORES has no VIEW row (P3's screen)");
+  // ⛔ CS012 P3 (O10): the MODE row is there with or without the module, and with
+  // no run started this session SCORES opens on MODE's first row, OVERDRIVE.
+  H.eq(J([st.screen, v.lines, v.items.map(r => r.label)]), J(["scores", ["OVERDRIVE · LOCAL", "NO SCORES YET"], ["MODE", "BACK"]]),
+       "⛔ no module: SCORES has no VIEW row (P3's screen), and MODE stays");
   S.press("Escape");
   let answered = 0;
   H.eq(J([LB.present(), LB.queueLength()]), "[false,0]", "no module: present() false, queueLength() 0");
-  LB.beginRun(); LB.submit("died"); LB.load(() => { answered++; });
+  LB.beginRun(); LB.submit("died"); LB.load("classic", () => { answered++; });
   await drain();
   H.eq(answered, 0, "no module: load() never answers");
   S.play();
@@ -138,6 +145,7 @@ function session(X) {
   X.addScore(300);
   S.die();
   H.eq(J([st.screen, X.Scores.list("classic").length]), J(["gameover", 1]), "⛔ no module: the run plays to game over and records locally");
+  H.eq(st.mode, "classic", "fixture: and it was a CLASSIC run");
 
   // The bridge is async: a module landing after boot is picked up by the next
   // call that looks, and nothing before it reached a fake it never saw.
@@ -145,8 +153,11 @@ function session(X) {
   X._env.win.KitLeaderboard = rec.module;
   H.eq(rec.creates.length, 0, "fixture: installing the module calls nothing");
   S.right(1); S.ok();                                                // QUIT TO TITLE
-  H.eq(J([st.screen, rec.creates.length, rec.submits.length]), J(["title", 1, 0]),
-       "⛔ a late module is created on the next title step, and the ended run is not submitted after the fact");
+  // ⛔ REWRITTEN IN PLACE AT CS012 P3 (R8): ONE CLIENT PER MODE, both made by the
+  // first call that finds the module. The claim — that a late module is picked up
+  // and the ended run is not submitted after the fact — is unchanged.
+  H.eq(J([st.screen, rec.creates.length, rec.submits.length]), J(["title", 2, 0]),
+       "⛔ a late module makes both clients on the next title step, and the ended run is not submitted after the fact");
 }
 
 // ---------------------------------------------------------------------------
@@ -160,10 +171,13 @@ X._env.win.KitLeaderboard = rec.module;
 S.boot();
 
 {
-  H.eq(rec.creates.length, 1, "⛔ the client is made once, lazily");
+  // ⛔ REWRITTEN IN PLACE AT CS012 P3 (R8): one client PER MODE, made once each,
+  // lazily, on the first call that finds the module — Classic's first, because
+  // C.LEADERBOARD_GAME_IDS names it first. test-cs012-p3.js owns the two ids.
+  H.eq(rec.creates.length, 2, "⛔ the clients are made once each, lazily: one per mode");
   const cfg = rec.creates[0];
   H.eq(J([cfg.endpoint, cfg.gameId, cfg.gameVersion]), J([C.LEADERBOARD_ENDPOINT, C.GAME_ID, C.GAME_VERSION]),
-       "⛔ create() gets C's endpoint, game id and version");
+       "⛔ the FIRST create() is Classic's, and gets C's endpoint, game id and version");
   H.eq(C.LEADERBOARD_ENDPOINT, "https://scores.coinlessgames.com", "C.LEADERBOARD_ENDPOINT (plan R18)");
   H.eq(typeof cfg.getPlayer, "function", "getPlayer is a callback");
 }
@@ -257,17 +271,22 @@ function checkPayload(sub, label) {
 
 const board = entries => ({ gameId: "vector-vortex", window: "all", entries });
 
+// ⛔ REWRITTEN IN PLACE AT CS012 P3 (O10): SCORES gained a MODE row FIRST, so
+// VIEW is row 1 and every entry here steps down to it once. The entry mode is the
+// last run started this session, CLASSIC, which is the mode every line below
+// names — the claims are the four ONLINE states, the stale drop and the hint.
 {
   S.toScores();
+  S.right(1);                                                        // MODE → VIEW
   let v = S.draw();
-  H.eq(J([st.screen, v.items[0].label, v.items[0].detail, v.lines[0]]), J(["scores", "VIEW", "LOCAL", "CLASSIC · LOCAL"]),
-       "⛔ with the module SCORES opens LOCAL, with a VIEW row");
-  H.eq(v.items.slice(1, -1).length, X.Scores.list("classic").length, "and LOCAL still lists the local table");
+  H.eq(J([st.screen, v.items[1].label, v.items[1].detail, v.lines[0]]), J(["scores", "VIEW", "LOCAL", "CLASSIC · LOCAL"]),
+       "⛔ with the module SCORES opens LOCAL, with a VIEW row after MODE");
+  H.eq(v.items.slice(2, -1).length, X.Scores.list("classic").length, "and LOCAL still lists the local table");
   S.ok();                                                            // VIEW → ONLINE
   v = S.draw();
   H.eq(J(rec.fetches), J([{ window: "all", limit: C.LEADERBOARD_BOARD_LIMIT }]), "⛔ ONLINE fetches the all-time top 10");
   H.eq(J([v.lines, v.items.map(r => [r.label, r.detail])]),
-       J([["CLASSIC · ONLINE", "LOADING…", HINT], [["VIEW", "ONLINE"], ["BACK", ""]]]),
+       J([["CLASSIC · ONLINE", "LOADING…", HINT], [["MODE", "CLASSIC"], ["VIEW", "ONLINE"], ["BACK", ""]]]),
        "⛔ LOADING…, and M9's hint while the profile is ANONYMOUS");
 
   S.ok(); S.ok();                                                    // LOCAL, ONLINE again
@@ -280,7 +299,7 @@ const board = entries => ({ gameId: "vector-vortex", window: "all", entries });
   await drain();
   v = S.draw();
   H.eq(J([v.lines, v.items.map(r => [r.label, r.detail])]),
-       J([["CLASSIC · ONLINE", HINT], [["VIEW", "ONLINE"], ["1 ACE", "5000"], ["2 ANONYMOUS", "1234*"], ["BACK", ""]]]),
+       J([["CLASSIC · ONLINE", HINT], [["MODE", "CLASSIC"], ["VIEW", "ONLINE"], ["1 ACE", "5000"], ["2 ANONYMOUS", "1234*"], ["BACK", ""]]]),
        "⛔ reached: `rank NAME` / score, a flagged row ends in `*`");
 
   S.ok(); S.ok();
@@ -292,7 +311,7 @@ const board = entries => ({ gameId: "vector-vortex", window: "all", entries });
   rec.pending[3].res(board([]));
   await drain();
   v = S.draw();
-  H.eq(J([v.lines, v.items.map(r => r.label)]), J([["CLASSIC · ONLINE", "NO SCORES YET", HINT], ["VIEW", "BACK"]]),
+  H.eq(J([v.lines, v.items.map(r => r.label)]), J([["CLASSIC · ONLINE", "NO SCORES YET", HINT], ["MODE", "VIEW", "BACK"]]),
        "⛔ empty: NO SCORES YET");
 
   // A named profile: no hint, and the next submit carries the name.
@@ -326,10 +345,11 @@ const board = entries => ({ gameId: "vector-vortex", window: "all", entries });
   M._env.win.KitLeaderboard = r.module;
   MS.boot();
   MS.toScores();
+  MS.right(1);                                                       // MODE → VIEW
   MS.ok(); MS.ok(); MS.ok();
   r.pending[0].res(board([{ rank: 1, displayName: "STALE", metric: 1, flagged: false }]));
   await drain();
-  H.eq(MS.draw().items[1].label, "1 STALE", "⛔ MUTATION: with no stale token the older response is drawn");
+  H.eq(MS.draw().items[2].label, "1 STALE", "⛔ MUTATION: with no stale token the older response is drawn");
 }
 
 // ---------------------------------------------------------------------------
@@ -338,19 +358,19 @@ const board = entries => ({ gameId: "vector-vortex", window: "all", entries });
 
 {
   H.eq(st.screen, "title", "fixture: on the title");
-  rec.queue = 0;
+  rec.queues[C.GAME_ID] = 0;
   S.steps(1);
   H.eq(J(S.draw().lines), "[]", "⛔ an empty queue: no line");
-  rec.queue = 3;
+  rec.queues[C.GAME_ID] = 3;
   H.eq(J(S.draw().lines), "[]", "⛔ the line is written in update(), never in draw()");
   S.steps(1);
   const v = S.draw();
   H.eq(J([v.lines, v.items.map(r => r.label)]), J([["3 SCORES QUEUED"], ["PLAY", "OPTIONS", "SCORES", "PROFILE"]]),
        "⛔ three queued: \"3 SCORES QUEUED\", the four rows unchanged");
-  rec.queue = 1;
+  rec.queues[C.GAME_ID] = 1;
   S.steps(1);
   H.eq(J(S.draw().lines), J(["1 SCORE QUEUED"]), "one queued: singular");
-  rec.queue = 0;
+  rec.queues[C.GAME_ID] = 0;
   S.steps(1);
   H.eq(J(S.draw().lines), "[]", "and the line goes when the queue empties");
 }

@@ -100,7 +100,10 @@ function session(X) {
     reset: () => { G.reset(); clock = 0; },
     boot: () => { G.frame(0); steps(2); },                           // trap 1
     // Title → PLAY → CLASSIC → LEVEL 1, through the menus.
-    play: () => { S.ok(); S.ok(); S.ok(); },
+    // ⛔ THE right(1) IS CS012 P3's REPAIR (O9): OVERDRIVE is MODE's first row and
+    // its default highlight, so one step down restores this file's precondition,
+    // a CLASSIC run — which is the mode every row and line below is about.
+    play: () => { S.ok(); S.right(1); S.ok(); S.ok(); },
     // Frames until the death freeze has drained and a step has run on game over.
     settle: () => { for (let n = 0; n < 400 && (G.hitStopLeft > 0 || X.state.screen !== "gameover"); n++) halfFrame(); steps(2); },
     draw: () => { X.view = null; G.draw(); return X.view; },
@@ -382,9 +385,13 @@ for (const k of ["1", "2", "3", "4", "5", "6", "0", "w"]) {
   S.right(2); S.ok();
   H.eq(state.screen, "scores", "fixture: SCORES");
   v = S.draw();
-  H.eq(J([v.title, v.lines]), J(["SCORES", ["CLASSIC · LOCAL", "NO SCORES YET"]]), "⛔ empty: the info line and NO SCORES YET");
-  H.eq(J(v.items.map(r => r.label)), J(["BACK"]), "and BACK alone");
-  S.ok();
+  // ⛔ REWRITTEN IN PLACE AT CS012 P3 (O10): SCORES gained a MODE row, FIRST and
+  // always, and its info line names the mode shown. With no run started this
+  // session the entry mode is MODE's first row, OVERDRIVE. The claims — the info
+  // line, NO SCORES YET, BACK last, and rows rebuilt on entry — are unchanged.
+  H.eq(J([v.title, v.lines]), J(["SCORES", ["OVERDRIVE · LOCAL", "NO SCORES YET"]]), "⛔ empty: the info line and NO SCORES YET");
+  H.eq(J(v.items.map(r => r.label)), J(["MODE", "BACK"]), "and MODE, then BACK");
+  S.right(1); S.ok();
   H.eq(state.screen, "title", "⛔ BACK returns to the title");
 
   for (const s of [40, 9000, 1002815]) X.Scores.add("classic", { score: s, profileName: "ABCDEFGHIJKL" });
@@ -400,16 +407,21 @@ for (const k of ["1", "2", "3", "4", "5", "6", "0", "w"]) {
   S.right(1); S.ok();
   S.right(2); S.ok();
   v = S.draw();
-  H.eq(J(v.lines), J(["CLASSIC · LOCAL"]), "a list: one info line");
-  const want = X.Scores.list("classic").map((r, i) => ({ label: (i + 1) + " " + r.profileName, detail: String(r.score), enabled: true }));
+  // ⛔ CS012 P3 (O10): a run was started this session, so SCORES opens on ITS
+  // mode — CLASSIC — and the MODE row is row 0, ahead of the entries.
+  H.eq(J(v.lines), J(["CLASSIC · LOCAL"]), "a list: one info line, on the last run's mode");
+  const want = [{ label: "MODE", detail: "CLASSIC", enabled: true }];
+  for (const [i, r] of X.Scores.list("classic").entries()) {
+    want.push({ label: (i + 1) + " " + r.profileName, detail: String(r.score), enabled: true });
+  }
   want.push({ label: "BACK", detail: "", enabled: true });
-  H.eq(J(v.items), J(want), "⛔ SCORES' rows equal list(\"classic\"): `n NAME`, plain digits, enabled, then BACK");
-  H.eq(v.items[0].detail, "1002815", "fixture: no separators");
+  H.eq(J(v.items), J(want), "⛔ SCORES' rows equal list(\"classic\"): `n NAME`, plain digits, enabled, after MODE and before BACK");
+  H.eq(v.items[1].detail, "1002815", "fixture: no separators");
   X.Scores.add("classic", { score: 2000000, profileName: "LATE" });
-  H.eq(S.draw().items[0].label, "1 ABCDEFGHIJKL", "⛔ rows are rebuilt on entry, never in draw()");
+  H.eq(S.draw().items[1].label, "1 ABCDEFGHIJKL", "⛔ rows are rebuilt on entry, never in draw()");
   S.press("Escape");
   S.right(2); S.ok();
-  H.eq(S.draw().items[0].label, "1 LATE", "and the next entry shows the new row");
+  H.eq(S.draw().items[1].label, "1 LATE", "and the next entry shows the new row");
   S.right(3);
   H.eq(state.screen, "scores", "rotate scrolls the rows without leaving");
 }

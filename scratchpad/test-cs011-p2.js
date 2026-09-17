@@ -124,8 +124,11 @@ X1.startGame(1, { startDepth: 14 });
 X1.state.spawn.remaining = 0;
 X1.state.enemies.length = 0;
 X1.Game.update(C.FIXED_DT);
-H.eq(J(JSON.parse(store.get(NS + "progress") || "null")), J({ v: 1, d: { highestCleared: 14 } }),
-     "⛔ the clear edge writes `progress` { highestCleared: 14 }");
+// ⛔ REWRITTEN IN PLACE AT CS012 P3 (O12): `progress` is v2 and PER MODE, so the
+// clear edge writes the run's mode's field and carries the other through. The
+// claim — that the clear edge is what writes the record — is unchanged.
+H.eq(J(JSON.parse(store.get(NS + "progress") || "null")), J({ v: 2, d: { classic: 14, overdrive: 0 } }),
+     "⛔ the clear edge writes `progress` v2 { classic: 14, overdrive: 0 }");
 
 // ⛔ Game.reset() writes nothing.
 {
@@ -159,9 +162,12 @@ for (const [label, want] of [["MASTER VOLUME", "70%"], ["MUSIC VOLUME", "40%"], 
                              ["VOICE VOLUME", "20%"], ["MUSIC TRACK", "PULSE"]]) {
   H.eq(S2.detail(label), want, `row: ${label} ${want}`);
 }
-H.eq(J(X2.startDepthOptions()), J([1, 3, 5, 7, 9, 11, 13]), "⛔ a reload's Start Depth list reaches 13");
-S2.back(); S2.back(); S2.ok(); S2.ok();
-H.eq(X2.state.screen, "depth", "fixture: START DEPTH in the reload");
+H.eq(J(X2.startDepthOptions("classic")), J([1, 3, 5, 7, 9, 11, 13]), "⛔ a reload's Start Depth list reaches 13");
+// ⛔ REPAIRED IN PLACE AT CS012 P3 (O9): OVERDRIVE is MODE's first row, and the
+// record above is CLASSIC's, so the one step down is what restores the screen
+// this assertion was always about.
+S2.back(); S2.back(); S2.ok(); S2.right(1); S2.ok();
+H.eq(X2.state.screen, "depth", "fixture: START DEPTH in the reload, through CLASSIC");
 S2.right(10);
 H.assert(S2.drawn().includes("LEVEL 13") && !S2.drawn().includes("LEVEL 15"), "⛔ and the screen shows LEVEL 13 last");
 
@@ -223,8 +229,10 @@ H.eq(J(held(plantAndLoad("garbage"))), J(DEF), "a stored value that is not an ob
 }
 H.eq(J(held(plantAndLoad(GOOD))), J(GOOD), "non-vacuous: the unplanted value loads whole");
 {
-  const m = new Map([[NS + "progress", J({ v: 1, d: { highestCleared: "14" } })]]);
-  H.eq(build({ store: m }).levelRecord().highestCleared(), 0, "⛔ a `progress` record that is not a whole number reads 0");
+  // ⛔ REPAIRED IN PLACE AT CS012 P3 (O12): planted at the DECLARED version, so
+  // this stays the read path's claim and not the new migrate's.
+  const m = new Map([[NS + "progress", J({ v: 2, d: { classic: "14", overdrive: 3.5 } })]]);
+  H.eq(build({ store: m }).levelRecord("classic").highestCleared(), 0, "⛔ a `progress` record that is not a whole number reads 0");
 }
 
 // ---------------------------------------------------------------------------
@@ -245,23 +253,23 @@ function musicThenSwitch(X) {
 const P = new Map([[NS + "profiles", ROSTER]]);
 const XP = build({ store: P });
 const SP = musicThenSwitch(XP);
-XP.levelRecord().noteCleared(14);
+XP.levelRecord("classic").noteCleared(14);
 H.eq(XP.Profiles.current().id, "p1", "fixture: p1 selected");
 H.eq(held(XP).sound.music, VOL, "⛔ reset before load: p1, which never set MUSIC VOLUME, hears the default");
 H.eq(XP.Profiles.scope().has("settings"), false, "⛔ and the switch stored nothing for p1");
 SP.toControls(); SP.adjust(3);                               // p1: MOUSE ×1.3
-XP.levelRecord().noteCleared(30);
+XP.levelRecord("classic").noteCleared(30);
 const read = k => { const s = P.get(k); return s === undefined ? null : JSON.parse(s).d; };
 H.eq(J([read(NS + "settings").sound.music, read(NS + "settings").controls.mouse]), "[4,10]",
      "⛔ p0's settings are at coinless.vector-vortex.settings (music 40%, mouse ×1.0)");
 H.eq(J([read(NS + "p1.settings").sound.music, read(NS + "p1.settings").controls.mouse]), "[10,13]",
      "⛔ p1's are at coinless.vector-vortex.p1.settings (music 100%, mouse ×1.3)");
 H.eq(read(NS + "progress"), null, "p0 cleared nothing");
-H.eq(read(NS + "p1.progress").highestCleared, 30, "⛔ p1's record is at coinless.vector-vortex.p1.progress");
-H.eq(XP.startDepthOptions().pop(), 29, "p1's Start Depth list reaches 29");
+H.eq(read(NS + "p1.progress").classic, 30, "⛔ p1's record is at coinless.vector-vortex.p1.progress");
+H.eq(XP.startDepthOptions("classic").pop(), 29, "p1's Start Depth list reaches 29");
 XP.Profiles.select("p0");
 H.eq(J([held(XP).sound.music, held(XP).controls.mouse]), "[4,10]", "⛔ back to p0: its music, and the default mouse");
-H.eq(XP.startDepthOptions().pop(), 9, "⛔ a change of profile changes the Start Depth list");
+H.eq(XP.startDepthOptions("classic").pop(), 9, "⛔ a change of profile changes the Start Depth list");
 XP.Profiles.select("p1");
 H.eq(J([held(XP).sound.music, held(XP).controls.mouse]), "[10,13]", "⛔ and to p1 again: its own");
 {

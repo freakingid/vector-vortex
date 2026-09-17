@@ -278,8 +278,12 @@ for (let k = 0; k < CASES; k++) {
   try {
     rec.onTitle = state.screen === "title" && G.menu.cursor === 0;
     press(" ");                                            // PLAY
+    // ⛔ REPAIRED IN PLACE AT CS012 P3 (O9): OVERDRIVE is MODE's first row and
+    // the default highlight now, so the one step down is what keeps this soak's
+    // precondition — a CLASSIC run — exactly as it always was.
+    tapRight();                                            // OVERDRIVE -> CLASSIC
     press(" ");                                            // CLASSIC
-    const row = X.startDepthOptions().indexOf(depth);
+    const row = X.startDepthOptions("classic").indexOf(depth);
     for (let n = 0; n < row; n++) tapRight();
     const calls0 = X.startGame.calls;
     press(" ");                                            // LEVEL d

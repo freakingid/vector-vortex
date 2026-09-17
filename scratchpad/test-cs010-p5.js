@@ -346,7 +346,7 @@ function session(mode) {
   }
 
   frameAt(0);
-  X.levelRecord().noteCleared(RECORD);
+  X.levelRecord("classic").noteCleared(RECORD);   // the record is per mode (CS012 P3)
   liveStep(); liveStep();                   // trap 2: the title's entry step
   out.ctxBeforePress = A.ctx !== null;
 
@@ -362,8 +362,11 @@ function session(mode) {
         press("Escape");
       }
       press(" ");                                          // PLAY
+      // ⛔ REPAIRED IN PLACE AT CS012 P3 (O9): OVERDRIVE is MODE's first row, so
+      // one step down restores this soak's precondition, a CLASSIC run.
+      tapRight();                                          // OVERDRIVE -> CLASSIC
       press(" ");                                          // CLASSIC
-      const row = X.startDepthOptions().indexOf(depth);
+      const row = X.startDepthOptions("classic").indexOf(depth);
       for (let n = 0; n < row; n++) tapRight();
       press(" ");                                          // LEVEL d
       r.started = row >= 0 && state.screen === "play" && state.level === depth;

@@ -231,15 +231,19 @@ function session(storage) {
     out.exceptions.push(`setup: ${err && err.stack ? err.stack.split("\n").slice(0, 3).join(" | ") : err}`);
   }
 
-  X.levelRecord().noteCleared(RECORD);      // trap 3, on SOAK
+  X.levelRecord("classic").noteCleared(RECORD);   // trap 3, on SOAK (per mode, CS012 P3)
 
   for (let k = 0; k < DEPTHS.length; k++) {
     const depth = DEPTHS[k];
     const r = { depth, started: false, restarted: false, quit: false };
     try {
       press(" ");                                          // PLAY
+      // ⛔ REPAIRED IN PLACE AT CS012 P3 (O9): OVERDRIVE is MODE's first row, so
+      // one step down restores this soak's precondition — a CLASSIC run on both
+      // sides of the paired session, which is what makes the hashes comparable.
+      right(1);                                            // OVERDRIVE -> CLASSIC
       press(" ");                                          // CLASSIC
-      const row = X.startDepthOptions().indexOf(depth);
+      const row = X.startDepthOptions("classic").indexOf(depth);
       for (let n = 0; n < row; n++) right(1);
       press(" ");                                          // LEVEL d
       r.started = row >= 0 && state.screen === "play" && state.level === depth;

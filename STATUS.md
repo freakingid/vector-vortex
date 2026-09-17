@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.8 · Changeset: CS012 (P2 of 6 done) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5
+Version: 0.0.8 · Changeset: CS012 (P3 of 6 done) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5
 
 ## Phase ledger — CS012
 
@@ -13,15 +13,16 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 
 | Phase | Commit | One line |
 |---|---|---|
-| P1 | this commit | `drive` (138 BPM, 36 bars A→B→C, six layers, untiered, unmarked; kick `beat: true`) in `17-audio-tracks.js` and both labs; `C.MODE_TRACK.overdrive`, DRIVE on MUSIC TRACK; `tracks` 3. `test-cs012-p1.js` (55). Headroom 1.0345 → 0.3505; worst 13 nodes. Four closed files in place (three outside plan §11). 9 of 9 red |
-| P2 | this commit | `C.MODE_FLAGS` + `modeHas()`; `C.SPAWN_SCHEDULE_OVERDRIVE` merged by `eligibleKinds(level, mode)`; `07-enemies-overdrive.js`, `Reaver extends Vaulter` (hop ÷ 1.6, hunts mid-climb); `REAVER_POLY`; kill pitch 1.15 via sfx-lab's new KILL PITCH table. `COUNTS` 7 / 10. `test-cs012-p2.js` (158). One closed edit (`test-cs009-p4.js` voices). 12 of 12 mutations red |
+| P1 | `79a4840` | `drive` (138 BPM, 36 bars A→B→C, six layers, untiered, unmarked; kick `beat: true`) in `17-audio-tracks.js` and both labs; `C.MODE_TRACK.overdrive`, DRIVE on MUSIC TRACK; `tracks` 3. `test-cs012-p1.js` (55). Headroom 1.0345 → 0.3505; worst 13 nodes. Four closed files in place (three outside plan §11). 9 of 9 red |
+| P2 | `7fdbf43` | `C.MODE_FLAGS` + `modeHas()`; `C.SPAWN_SCHEDULE_OVERDRIVE` merged by `eligibleKinds(level, mode)`; `07-enemies-overdrive.js`, `Reaver extends Vaulter` (hop ÷ 1.6, hunts mid-climb); `REAVER_POLY`; kill pitch 1.15 via sfx-lab's new KILL PITCH table. `COUNTS` 7 / 10. `test-cs012-p2.js` (158). One closed edit (`test-cs009-p4.js` voices). 12 of 12 mutations red |
+| P3 | this commit | MODE: OVERDRIVE enabled and FIRST (the row order IS GDD §13's highlight), carried as `pendingMode`; `C.LEADERBOARD_GAME_IDS` and one kit client per mode, routed by `state.mode`, `load(mode, done)`, `queueLength()` summing both; SCORES' MODE row, per-mode LOCAL and ONLINE, entry on the last run's mode; `progress` **v2** `{ classic, overdrive }` with a `migrate`, `levelRecord(mode)` / `startDepthOptions(mode)`. `test-cs012-p3.js` (93). 13 closed files repaired in place, every one in plan §11 — no unlisted red. 10 of 10 mutations red. ⚠ This file is 424 lines, over its ~400: P6's close compresses |
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
-  620.9 KB); the manifest is checked both directions against `src/`, and a
+  614.0 KB); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **62 test files, all green, zero skips**.
+- `node scratchpad/run-all.js`: **63 test files, all green, zero skips**.
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -129,17 +130,23 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   ⛔ **ONE GATE, `Meta.eligible()`**, read once for the row and the submit; a
   bench digit, `0` or `w` in play closes it. ⛔ **Meta writes no `state`**
   (`test-cs011-p3.js`, `-p6.js` hash around every call).
-- ⛔ **CS012 — Overdrive's board.** `Leaderboard.submit()` sends `mode` in stats but
-  one `C.GAME_ID`, so an Overdrive run would post to Classic's board, and the
-  Worker keeps one best row per player per id. `max_combo` reads
-  `C.TELEMETRY_PLACEHOLDER.maxCombo` (one source to change). SCORES lists CLASSIC
-  only; `createScores` already keeps `overdrive` apart.
+- ⛔ **`Leaderboard` HOLDS ONE KIT CLIENT PER MODE** (CS012 P3), over
+  `C.LEADERBOARD_GAME_IDS`, both made by the first call that finds the module,
+  Classic first (C's key order, which `test-cs011-p5.js` reads); a throwing
+  `create()` is not retried, per client. `beginRun()`/`submit()` route by
+  `state.mode`, `load(mode, done)` fetches the board SCORES shows, `queueLength()`
+  **sums both**. ⛔ **`C.GAME_ID` is the SAVE keyspace, never a board id.** ⛔ **One
+  stale token covers both** — a MODE step on ONLINE is a newer load. ⚠ `max_combo`
+  still reads `C.TELEMETRY_PLACEHOLDER.maxCombo` — P4's.
 - ⛔ **`Leaderboard` IS THE ONE READER OF `window.KitLeaderboard` AND IS LAZY ON
   EVERY CALL** until it finds the global. The harness never runs the bridge; a
-  test that wants a board sets a fake on `X._env.win`. ⛔ SCORES' VIEW row exists
-  only with the module, and every entry opens LOCAL.
-- ⚠ **`test-cs011-p5.js` reads coinless-kit's `registry.js` with `git show
-  f0b0eb2:`** from `../coinless-kit`; without that repo it SKIPS loudly.
+  test that wants a board sets a fake on `X._env.win`, and a fake serving both
+  clients must count its queues per `gameId`. ⛔ SCORES' VIEW row exists only with
+  the module, and every entry opens LOCAL.
+- ⚠ **TWO TESTS READ coinless-kit's `registry.js`**, from `../coinless-kit`, and
+  each SKIPS LOUDLY without it: `test-cs011-p5.js` at `git show f0b0eb2:` and
+  **`test-cs012-p3.js` at `e2efed5`** (Paul's O11 commit; ⛔ never `f8d34f3`).
+  ⛔ **P6 cannot close with a skip.**
 - ⛔ **Texts pinned by a closed `mutate`, each exactly once in the build.**
   `test-cs011-p2.js`: `hooks.resetSettings();` and
   `if (!on && state.screen !== "play") Meta.saveTelemetry();`.
@@ -156,8 +163,17 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   order by `test-cs011-p3.js` and `-p4.js`, and `test-cs011-p6.js` navigates the
   title, OPTIONS (MUSIC VOLUME at 5, CONTROLS at 2) and PROFILE by index. The
   queued line is the title's one info line. Game over has three lines.
-- ⛔ **A score row stamps `profileName` when the run ends.** SCORES' rows are
-  rebuilt on entry, on VIEW and when the board answers, never in `draw()`.
+- ⛔ **MODE IS `OVERDRIVE`, THEN `CLASSIC`, BOTH ENABLED** (CS012 P3, O9), and ⛔
+  **the row ORDER is GDD §13's default highlight** — no mark, no colour, no flag.
+  A driver that wants a Classic run steps ONE row down first; thirteen closed
+  files carry that repair. The row writes `pendingMode`, and ⛔ **START DEPTH is
+  built for `pendingMode`, never `state.mode`**, which at MODE names the LAST run's.
+- ⛔ **SCORES' ROWS ARE MODE, VIEW (module only), THE ENTRIES, BACK**, so **VIEW is
+  row 1**. ⛔ Rebuilt on entry, on MODE, on VIEW and when a board answers, never in
+  `draw()`. ⛔ **The entry mode is the last run STARTED this session**
+  (`lastRunMode`, a module-level `let` written by `startGame()`), else MODE's first
+  row. `SCORES_MODES` is read OFF `SCREENS.mode.items`, so they cannot drift.
+- ⛔ **A score row stamps `profileName` when the run ends.**
 - ⛔ **NAME steps in place of the menu model** (`stepName()`, beside
   `stepControlMode()`), and the text mode is armed and ended in `syncScreen()`
   only. ⚠ **On NAME the keyboard's default Fire and Purge keys type** (Space, Z, X;
@@ -166,8 +182,13 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   CALLS**, the reverse of R12's wording (Paul, 2026-09-16). Do not "restore" R12.
 - ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP** (`test-cs011-p2.js`). `t` turning
   capture off in play writes nothing; the rows wait for the next seat. ⛔ **A
-  settings save runs inside `update()`** on a menu step, and `levelRecord()`
+  settings save runs inside `update()`** on a menu step, and `levelRecord(mode)`
   reads storage on every call (never cache it).
+- ⛔ **`progress` IS v2 AND PER MODE** (CS012 P3, O12): `{ classic, overdrive }`,
+  `migrate`d from v1's `{ highestCleared }` into `classic`; ⛔ the key name did not
+  move. `levelRecord(mode)` / `startDepthOptions(mode)` default to `state.mode`,
+  and `readProgress()` returns BOTH modes so `noteCleared()` writes the pair.
+  ⛔ **A console unlock is `levelRecord("classic").noteCleared(81)`.**
 - ⛔ **A switch runs `beforeChange` (rows to the OUTGOING scope), then `change`:
   `resetSettings()`, the incoming `settings`, an emptied ring.** SELECT, a new
   profile and deleting the active profile all switch this way.
@@ -353,21 +374,22 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 
 ## Carried tasks
 
-- ✅ **The deployed Worker lists `vector-vortex`** (`GET /v1/health`,
-  2026-09-16), and **Paul's M7 redeploy is done** (2026-09-16): `maxMetricPerSecond`
-  100,000 at coinless-kit `e9a4c2c`, over the worst measured 86,616/s. Rows posted
-  before it keep their flag (the Worker flags at insert). ⚠ The deployed
-  `statsFields` cannot be read remotely; the repo's registry has all seven.
-- ⛔ **CS012 — Overdrive's online board** (its own game id, registered), SCORES'
-  OVERDRIVE view, and `max_combo`'s real source (above, Meta).
-  ✅ **Paul's O11 registry edit is done: coinless-kit `e2efed5`** (2026-09-16).
-  `vector-vortex-overdrive` and `vector-vortex` both at `maxMetricPerSecond`
-  150,000 (F1's raise), the same seven `statsFields`, `maxMetric` and durations.
-  MEASURED 2026-09-16: `GET /v1/health` lists `orbital-overhaul`, `vector-vortex`,
-  `vector-vortex-overdrive`, and both boards answer (empty). ⛔ **P3's test pins
-  `e2efed5`, never `f8d34f3`**: that commit replaced `vector-vortex` rather than
+- ✅ **Both boards are registered and deployed.** Paul's O11 commit, coinless-kit
+  `e2efed5` (2026-09-16), has `vector-vortex` and `vector-vortex-overdrive` at
+  `maxMetricPerSecond` **150,000**, the same seven `statsFields`, `maxMetric`
+  10,000,000 and durations 5–86,400 s. MEASURED 2026-09-16: `GET /v1/health` lists
+  `orbital-overhaul`, `vector-vortex`, `vector-vortex-overdrive`, and both boards
+  answer (empty). ⛔ Never pin `f8d34f3`: it replaced `vector-vortex` rather than
   adding beside it, and was live for a few minutes (Classic submits answered
-  `INVALID_GAME`, which kit-leaderboard drops); `e2efed5` restored it.
+  `INVALID_GAME`, which kit-leaderboard drops); `e2efed5` restored it. ⚠ The
+  deployed `statsFields` cannot be read remotely; the repo's registry has all seven.
+- ✅ **F1 IS CLOSED, BY PAUL, IN THAT SAME COMMIT.** The plan measured (§1.5) a
+  sharp-bot Start Depth 81 **Classic** run at 100,078/s against the then-deployed
+  100,000 — a legitimate run would have been flagged. `e2efed5` raised Classic's
+  bound to 150,000 too. Nothing is outstanding.
+- ✅ **CS012 P3 — Overdrive's online board and SCORES' OVERDRIVE view shipped**
+  (above, Meta). ⛔ **`max_combo`'s real source is still P4's**: it reads
+  `C.TELEMETRY_PLACEHOLDER.maxCombo`, one source to change.
 - ⛔ **CS012 — the director's combo input and the Overdrive intensity
   re-measure** (Paul's D6): `INT_W_COMBO` is fed 0 in Classic.
 - ✅ **CS012 P1 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`,
@@ -392,7 +414,11 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 - ⛔ **`C.MODE_FLAGS` / `modeHas()` have no game reader yet**; P4 (combo) and P5
   (Jump) are the first. `modeHas(name)` defaults to `state.mode`.
 
-## Next up — CS012 P3 (Overdrive at the front door, and its own board)
+## Next up — CS012 P4 (the combo)
 
-Run `IMPLEMENTATION-PHASES-CS012.md` P3 in a new session.
-✅ P3's registry precondition is met (coinless-kit `e2efed5`, Carried tasks).
+Run `IMPLEMENTATION-PHASES-CS012.md` P4 in a new session.
+⛔ It owns `max_combo`'s real source (`state.combo.peak`), the deletion of
+`C.TELEMETRY_PLACEHOLDER`, `STATE_FIELDS` + `CS012: ["combo"]`, and plan §11's
+placeholder edits (`test-cs007-p4.js:154`, `:157`; `test-cs008-p3.js:155–156`;
+`test-cs008-p2.js:387–388`; `test-cs011-p5.js:239` — ⚠ P3 rewrote that file, so
+find it by its text, not its line number).

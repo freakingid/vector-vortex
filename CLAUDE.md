@@ -421,13 +421,20 @@ over storage in game code.** `22-meta.js` is the only file that calls storage.
 | Declared key | Scope |
 |---|---|
 | `settings` | Per-profile |
-| `progress` | Per-profile (the Start Depth record) |
+| `progress` | Per-profile — **v2**, `{ classic, overdrive }`: the Start Depth record PER MODE (CS012 P3), migrated from v1's `{ highestCleared }` into `classic` |
 | `achievements` | Per-profile — ⛔ **not declared until CS015** |
 | `scores` | Root, shared across profiles |
 | `telemetry` | Per-profile, lazy |
 
 ⛔ **A row-shape change bumps that key's declared version and supplies a
 `migrate`, never a new key name.** Renaming a key silently wipes player data.
+⛔ **A `migrate` is pure and never calls back into the store**, and returns
+`undefined` for an origin version it cannot read — the stored bytes then stand.
+
+⛔ **`C.GAME_ID` IS THE SAVE KEYSPACE AND NOTHING ELSE.** Every key is
+`coinless.<C.GAME_ID>.<key>`, in both modes. The online boards are
+`C.LEADERBOARD_GAME_IDS`, keyed by mode (Leaderboard, below). Never reach for
+`C.GAME_ID` when what is wanted is a board.
 
 ⛔ **New state is additive, under known-value-else-default loading.** Removing a
 field needs no migration — a saved value for a deleted field orphans harmlessly.
@@ -457,6 +464,16 @@ fallback: an opaque origin (sandboxed embed) is never a secure context, and
 ⛔ **One `Leaderboard` object is the only call surface for
 `window.KitLeaderboard`.** Every entry point is safe to call with the module
 absent.
+
+⛔ **TWO BOARDS, ONE PER MODE, AND ONE KIT CLIENT EACH** (CS012 P3).
+`C.LEADERBOARD_GAME_IDS` is `{ classic: "vector-vortex", overdrive:
+"vector-vortex-overdrive" }`, both registered in coinless-kit. Both clients are
+made by the first call that finds the module, Classic first; a throwing
+`create()` is not retried, per client. `beginRun()` and `submit()` route by
+`state.mode`, `load(mode, done)` fetches the board SCORES is showing under one
+stale-answer token, and `queueLength()` **sums both**. ⛔ **`C.GAME_ID` is NOT a
+board id** — it is the save keyspace (below). ⛔ **Same gate for both:**
+`Meta.eligible()`.
 
 ⛔ **`Meta.eligible()` gates every `submit()`**, and it is the same gate
 the local top-10 check uses. Extend both together or neither.

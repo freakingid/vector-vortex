@@ -26,6 +26,24 @@ any submission — an unregistered stats key flags every row it posts.
 Stats keys for this game: `level_reached`, `mode`, `start_depth`,
 `wells_cleared`, `purges_spent`, `max_combo`, `deaths`.
 
+### Usage note — two instances, one per game mode (Vector Vortex CS012 P3, 2026-09-17)
+
+⛔ **No module change, and no version bump.** Recorded here because it is the
+first caller to hold more than one client, and a reviewer should know the
+contract covers it.
+
+Vector Vortex's two modes post to two registered ids, `vector-vortex` and
+`vector-vortex-overdrive`, because the Worker keeps a player's best row per game
+id and has no per-mode boards. The game calls `create()` twice, once per id, and
+routes `beginRun()` / `submit()` by the run's mode, `fetchBoard()` by the board
+being shown, and sums both `queueLength()`s for its "n scores queued" line.
+
+Nothing in the module had to change: `create()` closes over its own `gameId`,
+derives its queue key `coinless.lb.<gameId>.v1` from it, and `fetchBoard()` sends
+the instance's id. Two instances therefore keep two independent offline queues
+and never cross. Each adds its own `online` listener and flushes its own queue
+once at creation — worth knowing if a caller ever holds many.
+
 ## Changes
 
 ### 2026-09-16 — `beginRun()` mints without `crypto.randomUUID` (`VERSION` 0.2.0 → 0.2.1)

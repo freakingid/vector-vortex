@@ -255,7 +255,7 @@ function seconds(s) { for (let i = 0, n = Math.round(s * 1000 / (MS / 2)); i < n
 // last life is re-armed every frame and cannot die by accident.
 function guarded(s) { for (let i = 0, n = Math.round(s * 1000 / (MS / 2)); i < n; i++) { state.invulnTime = 0; halfFrame(); } }
 const key = k => ({ down: () => G.input.keyDown(k), up: () => G.input.keyUp(k) });
-const FIRE = key(" "), ESC = key("Escape");
+const FIRE = key(" "), ESC = key("Escape"), RIGHT = key("ArrowRight");
 function press(b) { b.down(); liveStep(); b.up(); liveStep(); }
 const sweepLog = () => rec.automation.filter(a => a.node === M.sweep && a.param === "frequency");
 const duckRamps = () => rec.automation.filter(a => a.node === M.duck && a.fn === "linearRampToValueAtTime");
@@ -273,7 +273,9 @@ halfFrame();
 H.eq(M.state, "title", "fixture: the title plays");
 H.eq(M.sweepLevel, 1, "the title's sweep is open");
 H.eq(M.ducked, false, "the title does not duck");
-press(FIRE); press(FIRE);
+// ⛔ REPAIRED IN PLACE AT CS012 P3 (O9): one step down to CLASSIC, so every
+// run below is Classic's, as this file was written for.
+press(FIRE); press(RIGHT); press(FIRE);
 H.eq(state.screen, "depth", "fixture: START DEPTH");
 H.eq(M.ducked, false, "START DEPTH does not duck");
 
@@ -282,6 +284,7 @@ function enterPlay(tag) {
   FIRE.down();
   for (let n = 0; state.screen !== "play" && n < 16; n++) halfFrame();
   H.eq(state.screen, "play", `fixture: ${tag}`);
+  H.eq(state.mode, "classic", `fixture: ${tag} is a CLASSIC run (CS012 P3's MODE repair)`);
   H.eq(resets - r0, 1, `⛔ ${tag}: the first play frame resets the director once`);
   H.eq(D.level, 0, `⛔ ${tag}: the run starts from 0`);
   H.eq(M.intensity, 0, `${tag}: and so does the music's intensity`);
@@ -402,7 +405,7 @@ enterPlay("a run from the front door");
   H.eq(M.ducked, false, "⛔ the title's OPTIONS does not duck");
   press(ESC);
   H.eq(state.screen, "title", "fixture: back at the title");
-  press(FIRE); press(FIRE);
+  press(FIRE); press(RIGHT); press(FIRE);          // PLAY, OVERDRIVE -> CLASSIC (CS012 P3)
   enterPlay("a second run from the title");
 }
 

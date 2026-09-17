@@ -20,7 +20,10 @@ run. The shipped values stand as they are.
   in `DECISIONS.md` and delete the entry.
 
 **If one is ever run.** `START DEPTH` reaches a level; in the browser console,
-`levelRecord().noteCleared(81)` unlocks every odd level to 81 for that session.
+`levelRecord("classic").noteCleared(81)` unlocks every odd level to 81 for that
+session, and `levelRecord("overdrive").noteCleared(81)` does the same for
+Overdrive — ⛔ **the record is per mode since CS012 P3**, and a bare
+`levelRecord()` reads `state.mode`, which on the title is the LAST run's.
 `w` changes the well **shape**, not the level. Bench keys: `1`–`6` spawn one of
 each Classic kind in your lane, `0` spawns the full staggered row. `t` turns
 telemetry capture on, and `e` prints the CSV to the console.
@@ -356,3 +359,28 @@ for.
   `C.REAVER_SIZE`, `C.REAVER_COLOR` (split it from `VAULTER_COLOR`),
   `C.REAVER_HOP_RATE` (⛔ the hop only, O1); the kill pitch through sfx-lab's KILL
   PITCH table (B 1.06, C 1.33).
+
+## CS012 P3 — MODE's default highlight, and SCORES' layout
+
+- **Changeset / phase:** CS012 P3 (Overdrive at the front door, and its own board).
+- **What Paul would have done:** boot the game, press PLAY, and look at MODE
+  without choosing anything; then back out to SCORES and step its MODE and VIEW
+  rows on a machine with a few local scores and a reachable board.
+- **What we were trying to learn:** two things a headless test cannot answer.
+  (1) MODE now ships GDD §13's "Overdrive is the default highlight" purely as
+  ROW ORDER — OVERDRIVE first, CLASSIC second, both enabled, same colour, no
+  mark. Does that actually read as a recommendation, or does it read as an
+  arbitrary order, so that a first-time player picks Overdrive without knowing
+  the difference? The alternative shape is a detail string, a colour, or a line
+  above the rows. (2) SCORES now opens with MODE as its first row and VIEW as
+  its second, and the info line carries the mode (`OVERDRIVE · ONLINE`). Is two
+  cycling rows above the table one row too many to scan, and does the info line
+  do enough work that the MODE row's detail is redundant?
+- **Knobs:** the order of `SCREENS.mode.items` (`23-main.js`); a detail string on
+  either MODE row; `C.MENU_COLOR` / `C.MENU_IDLE_COLOR` if the highlight wants a
+  colour; the order of SCORES' MODE and VIEW rows and whether VIEW cycles four
+  states instead (O10's alternative); the info line's wording in
+  `buildScoreRows()`.
+- ⚠ The entry mode — "the mode of the last run started this session, else MODE's
+  first row" (O10) — is the part most likely to surprise, and it is also the part
+  a person would notice in one session and a test cannot judge.

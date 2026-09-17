@@ -170,10 +170,11 @@ function session(X) {
   const press = k => { G.input.keyDown(k); liveStep(); G.input.keyUp(k); liveStep(); };
   return {
     // title → PLAY → CLASSIC → LEVEL 1, then passive on one life until game over.
+    // ⛔ The ArrowRight is CS012 P3's repair (O9): OVERDRIVE is MODE's first row.
     playToGameOver() {
       G.frame(0);
       liveStep(); liveStep();
-      press(" "); press(" "); press(" ");
+      press(" "); press("ArrowRight"); press(" "); press(" ");
       const started = X.state.screen === "play";
       X.state.lives = 1;
       for (let n = 0; X.state.screen === "play" && n < 400000; n++) halfFrame();

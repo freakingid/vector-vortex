@@ -230,7 +230,7 @@ function session(audio) {
   }
 
   frameAt(0);
-  X.levelRecord().noteCleared(RECORD);      // trap 3
+  X.levelRecord("classic").noteCleared(RECORD);   // trap 3 (the record is per mode, CS012 P3)
   liveStep(); liveStep();                   // trap 2: the title's entry step
   out.ctxBeforePress = A.ctx !== null;
 
@@ -243,8 +243,12 @@ function session(audio) {
       press("Escape");                                     // back to the title
       r.backed = state.screen === "title";
       press(" ");                                          // PLAY
+      // ⛔ REPAIRED IN PLACE AT CS012 P3 (O9): OVERDRIVE is MODE's first row, so
+      // one step down restores this session's precondition, a CLASSIC run — which
+      // is what makes AUTO resolve to `pulse` here.
+      tapRight();                                          // OVERDRIVE -> CLASSIC
       press(" ");                                          // CLASSIC
-      const row = X.startDepthOptions().indexOf(depth);
+      const row = X.startDepthOptions("classic").indexOf(depth);
       for (let n = 0; n < row; n++) tapRight();
       press(" ");                                          // LEVEL d
       r.started = row >= 0 && state.screen === "play" && state.level === depth && state.startDepth === depth;

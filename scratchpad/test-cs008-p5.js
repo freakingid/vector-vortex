@@ -1,7 +1,8 @@
 // test-cs008-p5.js — CS008 P5: the screens (GDD 10.5, 4.4, 4.6, 13; plan §6).
 // Asserts what P5 owns: boot is the title; title → mode → depth → play → death
 // → game over → RESTART, and → QUIT TO TITLE, on all four devices through the
-// input sink only; OVERDRIVE cannot be chosen; Purge and Escape back out; a
+// input sink only; MODE's two rows and its default highlight; Purge and Escape
+// back out; a
 // keyboard tap is one row; the simulation stops on every non-play screen; the
 // HUD per H4; kit-input 0.4.0's menu touch; no `restart` action in the build.
 //
@@ -179,12 +180,16 @@ for (const dev of DEVICES) {
   press(dev, "fire");
   H.eq(state.screen, "mode", `${L}: and PLAY opens it again`);
 
+  // ⛔ REWRITTEN IN PLACE AT CS012 P3 (O9): OVERDRIVE is choosable and FIRST,
+  // so the claim "a disabled row is never the cursor" no longer has a screen to
+  // stand on — the pure-model check below still holds it. What this driver owns
+  // is the flow, and its run is CLASSIC, so it steps one row down to reach it.
   dev.rotate(1);
-  H.eq(G.menu.cursor, 0, `${L}: ⛔ rotating toward OVERDRIVE leaves CLASSIC highlighted`);
+  H.eq(G.menu.cursor, 1, `${L}: ⛔ OVERDRIVE is the default highlight, and one row down is CLASSIC`);
   press(dev, "fire");
   H.eq(state.screen, "depth", `${L}: CLASSIC opens START DEPTH`);
   assertH4(L);
-  const list = X.startDepthOptions();
+  const list = X.startDepthOptions("classic");
   H.assert(list.length >= 3, `${L}: fixture — the list has a third row`);
 
   dev.rotate(2);
@@ -258,7 +263,7 @@ for (const [label, backOut] of [["Purge", () => press(KB, "purge")],
   press(KB, "fire");                                         // mode
   backOut();
   H.eq(state.screen, "title", `⛔ ${label} backs out of MODE to the title`);
-  press(KB, "fire"); press(KB, "fire");                      // depth
+  press(KB, "fire"); keyTaps(1); press(KB, "fire");          // depth, through CLASSIC
   backOut();
   H.eq(state.screen, "mode", `⛔ ${label} backs out of START DEPTH to MODE`);
   toTitle();
@@ -268,8 +273,9 @@ for (const [label, backOut] of [["Purge", () => press(KB, "purge")],
   assertH4("options");
   backOut();
   H.eq(state.screen, "title", `⛔ ${label} backs out of OPTIONS to the title`);
-  press(KB, "fire"); press(KB, "fire"); press(KB, "fire");   // a run
+  press(KB, "fire"); keyTaps(1); press(KB, "fire"); press(KB, "fire");   // a CLASSIC run
   H.eq(state.screen, "play", "fixture: a run for the game over");
+  H.eq(state.mode, "classic", "fixture: and it is CLASSIC");
   die(label);
   runFreeze();
   steps(2);
@@ -281,7 +287,7 @@ for (const [label, backOut] of [["Purge", () => press(KB, "purge")],
 // P6: Escape in play now PAUSES (U4) and a second Escape resumes; the claim that
 // neither press reaches game over is unchanged.
 toTitle();
-press(KB, "fire"); press(KB, "fire"); press(KB, "fire");
+press(KB, "fire"); keyTaps(1); press(KB, "fire"); press(KB, "fire");
 press(esc, "back");
 H.eq(state.screen, "pause", "Escape in play pauses (CS008 P6)");
 press(esc, "back");
@@ -292,7 +298,13 @@ steps(2);
 H.eq(state.screen, "gameover", "⛔ an Escape pressed in play is not banked into game over");
 
 // ---------------------------------------------------------------------------
-// ⛔ OVERDRIVE IS SHOWN AND CANNOT BE CHOSEN (M1)
+// ⛔ MODE'S TWO ROWS AND ITS DEFAULT HIGHLIGHT
+//
+// ⛔ REWRITTEN IN PLACE AT CS012 P3 (O9). M1 shipped OVERDRIVE as a LOCKED row
+// this file asserted could not be chosen; CS012 P3 enables it and puts it FIRST,
+// which is how GDD §13's "Overdrive is the default highlight" is delivered — the
+// menu model puts the cursor on the first enabled row. The claim is the same
+// one, about MODE's presentation; only the answer moved.
 // ---------------------------------------------------------------------------
 
 toTitle();
@@ -304,12 +316,17 @@ ctx2d.fillText = (str) => texts.push({ str, color: ctx2d.fillStyle });
 G.draw();
 ctx2d.fillText = prevFill;
 const od = texts.find(t => t.str === "OVERDRIVE");
-H.assert(od && od.color === C.MENU_LOCKED_COLOR, "OVERDRIVE is drawn, in the locked colour");
+H.assert(od && od.color !== C.MENU_LOCKED_COLOR, "⛔ OVERDRIVE is drawn, and NOT in the locked colour");
+H.eq(G.menu.cursor, 0, "⛔ MODE opens on OVERDRIVE: the default highlight is the row order");
 keyTaps(3);
-H.eq(G.menu.cursor, 0, "⛔ three taps toward OVERDRIVE leave the cursor on CLASSIC");
+H.eq(G.menu.cursor, 1, "⛔ three taps clamp on CLASSIC: MODE has exactly two rows");
+keyTaps(-3);
+H.eq(G.menu.cursor, 0, "and three back clamp on OVERDRIVE");
 press(KB, "fire");
 press(KB, "fire");
-H.eq(state.mode, "classic", "⛔ and the run that follows is CLASSIC");
+H.eq(state.mode, "overdrive", "⛔ and the run that follows the default highlight is OVERDRIVE");
+G.quitToTitle();
+steps(2);
 
 const m = X.createMenu({ rotateStep: 1 });
 const two = { back: null, items: [{ enabled: true, action: "a" }, { enabled: false, action: "b" }] };
@@ -323,10 +340,12 @@ H.eq(m.step(two, snap(0, true, false)), "a", "and confirm returns the enabled ro
 // ⛔ A KEYBOARD TAP IS ONE ROW; a flick is several; the ends clamp
 // ---------------------------------------------------------------------------
 
-X.levelRecord().noteCleared(81);
+// ⛔ THE RECORD IS PER MODE SINCE CS012 P3 (O12), so the 41-row list this
+// fixture needs is CLASSIC's, and MODE is stepped one row down to reach it.
+X.levelRecord("classic").noteCleared(81);
 toTitle();
-press(KB, "fire"); press(KB, "fire");
-const rows = X.startDepthOptions().length;
+press(KB, "fire"); keyTaps(1); press(KB, "fire");
+const rows = X.startDepthOptions("classic").length;
 H.eq(rows, 41, "fixture: the list is 1..81 odd");
 for (let n = 1; n * C.FIXED_DT * 1000 < C.KEY_TAP_MS; n++) {
   const c0 = G.menu.cursor;

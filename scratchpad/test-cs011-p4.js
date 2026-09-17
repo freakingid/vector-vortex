@@ -443,8 +443,11 @@ const toYes = S => { S.right(2); S.ok(); S.right(1); S.ok(); };     // the page 
   X.Profiles.select(mid);
   hooks.applySettings({ sound: { master: 9 } });
   X.Meta.saveSettings();
-  X.levelRecord().noteCleared(12);
-  X.Store.scope(last).set("progress", { highestCleared: 5 });
+  X.levelRecord("classic").noteCleared(12);
+  // ⛔ REPAIRED IN PLACE AT CS012 P3 (O12): `progress` is v2 { classic, overdrive },
+  // so the planted key takes that shape and the precondition — LAST has a stored
+  // record for the delete to remove — stands as it always did.
+  X.Store.scope(last).set("progress", { classic: 5, overdrive: 0 });
   H.assert(store.has(NS + mid + ".settings") && store.has(NS + mid + ".progress"), "fixture: MID stores settings and progress");
   S.toProfile();
   S.toPage(1);
@@ -476,7 +479,7 @@ function deleteLast(opts) {
   S.boot();
   X.Game.settingsHooks.applySettings({ sound: { master: 6 } });
   X.Meta.saveSettings();
-  X.levelRecord().noteCleared(9);
+  X.levelRecord("classic").noteCleared(9);
   S.toProfile();
   S.toPage(0);
   toYes(S);
@@ -500,10 +503,10 @@ function deleteP0(opts) {
   S.boot();
   X.Game.settingsHooks.applySettings({ sound: { master: 2 } });
   X.Meta.saveSettings();
-  X.levelRecord().noteCleared(5);
+  X.levelRecord("classic").noteCleared(5);
   X.Scores.add("classic", { score: 77, profileId: "p0", profileName: "ANONYMOUS" });
   const keep = X.Profiles.create("KEEP").profile.id;
-  X.Store.scope(keep).set("progress", { highestCleared: 3 });
+  X.Store.scope(keep).set("progress", { classic: 3, overdrive: 0 });   // v2's shape (CS012 P3)
   X.Telemetry.setEnabled(true);                                      // beforeChange writes p0's rows on the way out (P2)
   const reads0 = X._env.storageReads;
   S.toProfile();

@@ -796,13 +796,23 @@ const C = {
   // no default. The board is the top LEADERBOARD_BOARD_LIMIT players, all time.
   LEADERBOARD_ENDPOINT: "https://scores.coinlessgames.com",
   LEADERBOARD_BOARD_LIMIT: 10,
+  // ⛔ ONE BOARD PER MODE (GDD 13, 15.4; CS012 P3, O11). The Worker keeps each
+  // player's best row per game id and has no per-mode boards, so Overdrive
+  // cannot share Classic's. Both ids are registered in coinless-kit's
+  // services/leaderboard/src/registry.js. ⛔ THIS IS NOT GAME_ID: that is
+  // kit-storage's keyspace (below), and renaming it would wipe every save.
+  // ⛔ The key order is the order the clients are made in (22-meta.js).
+  LEADERBOARD_GAME_IDS: { classic: "vector-vortex", overdrive: "vector-vortex-overdrive" },
   // kit-profile's name for the silent first profile (Paul's M2), passed to it at
   // boot so the ONLINE view's hint (M9) reads the same name the kit wrote.
   PROFILE_ANONYMOUS_NAME: "ANONYMOUS",
 
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.8",   // ⚠ 0.0.2 was never written here — see log/CS006.md
-  GAME_ID:              "vector-vortex",   // must match the Worker registry
+  // ⛔ THE SAVE KEYSPACE, AND NOTHING ELSE (kit-storage: coinless.<GAME_ID>.<key>).
+  // ⛔ Never change it: every stored key would be orphaned. The online boards are
+  // LEADERBOARD_GAME_IDS above, one per mode (CS012 P3).
+  GAME_ID:              "vector-vortex",
 };
 
 // ---------------------------------------------------------------------------
