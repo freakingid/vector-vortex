@@ -30,22 +30,50 @@ let Store = null;
 // table on the machine, every row stamped with the profile that set it.
 let Scores = null;
 
-// The game's wrapper over kit-profile. P1 needs the active profile and its store;
-// the roster operations arrive with the PROFILE screen (CS011 P4).
+// The game's wrapper over kit-profile: the active profile and its store (P1), and
+// the roster operations the PROFILE screens call (CS011 P4).
 const Profiles = (function () {
   let kit = null;
+  // ⛔ THE DECLARED PER-PROFILE KEYS, which a delete removes BY NAME (plan R12).
+  // Never `scores` or `profiles`: those are root keys, and `p0`'s scope IS the
+  // root store. `achievements` joins this list at CS015.
+  const OWN_KEYS = ["settings", "progress", "telemetry"];
   return {
+    // kit-profile's rename notice and kit-names' length, for NAME (R13, R14).
+    NAME_CHANGE_NOTICE: KitProfile.NAME_CHANGE_NOTICE,
+    MAX_NAME_LENGTH: KitNames.MAX_NAME_LENGTH,
     attach(instance) { kit = instance; },
     // The active profile's store. ⛔ Profile `p0`'s is the ROOT store, beside
     // `scores` and `profiles` (kit-profile's scope rule).
     scope() { return kit.scope(); },
     // ⛔ THE ONE SWITCH (plan R11). kit-profile fires `beforeChange` and `change`
     // around it, and Meta's handler resets to shipped defaults BEFORE it loads.
-    // The roster operations that also switch arrive with CS011 P4.
+    // A new profile is selected through it (CS011 P4), and remove() below
+    // switches through it when the active profile goes.
     select(id) { return kit.select(id); },
     // { id, name, playerId } — mints the playerId if it is absent (kit-profile).
     current() { return kit.current(); },
     list() { return kit.list(); },
+    // { ok, profile, reason } and { ok, reason }. Validation is kit-names', through
+    // kit-profile, and nothing else (R13). Neither selects.
+    create(name) { return kit.create(name); },
+    rename(id, name) { return kit.rename(id, name); },
+    // ⛔ DELETE (plan R12): kit-profile's remove(), THEN the profile's keys, one
+    // remove(key) each. ⛔ NEVER clear(): it enumerates storage, and on `p0` it
+    // takes `scores` and `profiles` with it.
+    // ⚠ THE KIT GOES FIRST, the reverse of R12's wording (log/CS011.md, P4). It
+    // refuses the last profile, and a refused delete must leave that profile's
+    // data where it was. Removing the ACTIVE profile switches inside the kit, and
+    // `beforeChange` writes the outgoing telemetry rows (P2), so the keys go
+    // after that write. kit-profile's scope(id) still answers for a removed id.
+    remove(id) {
+      const r = kit.remove(id);
+      if (r.ok) {
+        const scope = kit.scope(id);
+        for (const key of OWN_KEYS) scope.remove(key);
+      }
+      return r;
+    },
   };
 })();
 

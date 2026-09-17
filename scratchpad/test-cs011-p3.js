@@ -377,7 +377,8 @@ for (const k of ["1", "2", "3", "4", "5", "6", "0", "w"]) {
   const X = build(), S = session(X), state = X.state;
   S.boot();
   let v = S.draw();
-  H.eq(J(v.items.map(r => r.label)), J(["PLAY", "OPTIONS", "SCORES"]), "⛔ the title's rows: SCORES after OPTIONS");
+  // CS011 P4 appended PROFILE (plan R16): rewritten in place, SCORES still third.
+  H.eq(J(v.items.map(r => r.label)), J(["PLAY", "OPTIONS", "SCORES", "PROFILE"]), "⛔ the title's rows: SCORES after OPTIONS");
   S.right(2); S.ok();
   H.eq(state.screen, "scores", "fixture: SCORES");
   v = S.draw();

@@ -276,3 +276,15 @@ for.
   lift reads as lanes lighting.
 - **Knobs:** `C.RIM_PULSE_TIME`, `C.RIM_PULSE_W`, `C.RIM_PULSE_ALPHA`; which
   layer carries `beat: true` (a three-file data edit).
+
+### CS011 P4 — NAME on a pad, a phone and a keyboard
+- **Would have done:** named a new profile and renamed it on a gamepad (D-pad
+  and stick), on a phone by drag and tap, and on a keyboard by typing; then
+  deleted one.
+- **Trying to learn:** whether one wheel entry per lane is too slow on a pad
+  and too twitchy on a stick or a drag; whether `|` reads as a cursor and SPACE
+  reads as a character; whether the mixed-case notice sits right among the
+  capitals; whether a keyboard player, whose Space and Z type, finds Enter.
+- **Knobs:** `C.MENU_ROTATE_STEP` (shared with every menu), `C.NAME_WHEEL`'s
+  order, `C.NOTICE_WRAP`; the cursor mark and the SPACE label in
+  `refreshNameLines()`.

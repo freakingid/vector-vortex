@@ -627,6 +627,9 @@ const Game = (function () {
   // Above SCREENS, which builds those pages' rows from it.
   const CONTROL_ACTIONS = ["left", "right", "fire", "purge", "jump"];
   const OPTIONS_TELEMETRY = { label: "TELEMETRY", detail: "OFF", enabled: true, action: "toggleTelemetry" };
+  // CS011 P4 (plan R16). Its detail, the active profile's name, is written on
+  // every title step in update(), so a rename or a switch shows on return.
+  const TITLE_PROFILE = { label: "PROFILE", detail: "", enabled: true, action: "toProfiles" };
   const CTL_ROWS = {
     mouse:    { label: "MOUSE SENSITIVITY", detail: "", enabled: true, action: "adjust", adjust: "mouse" },
     touch:    { label: "TOUCH SENSITIVITY", detail: "", enabled: true, action: "adjust", adjust: "touch" },
@@ -649,6 +652,7 @@ const Game = (function () {
       // ⛔ CS011's rows go AFTER OPTIONS (plan R16): the closed tests navigate the
       // title by index.
       { label: "SCORES",  detail: "", enabled: true, action: "toScores" },
+      TITLE_PROFILE,
     ] },
     // ⛔ M1: OVERDRIVE is shown and cannot be chosen until CS012. GDD 13's
     // "Overdrive is the default highlight" waits for it too — the cursor
@@ -697,6 +701,24 @@ const Game = (function () {
     // buildScoreRows(), ⛔ never in draw(). A row is enabled so rotate scrolls,
     // and has no action.
     scores: { title: "SCORES", lines: [], back: "toTitle", items: [] },
+    // CS011 P4 (plan R12, R13, R16). PROFILE's rows are rebuilt on entry by
+    // openProfiles(): one per profile, NEW PROFILE, BACK.
+    profile: { title: "PROFILE", lines: [], back: "toTitle", items: [] },
+    // One profile's page. Its title is that profile's name, written on entry.
+    profilePage: { title: "", lines: [], back: "toProfiles", items: [
+      { label: "SELECT", detail: "", enabled: true, action: "selectProfile" },
+      { label: "RENAME", detail: "", enabled: true, action: "renameProfile" },
+      { label: "DELETE", detail: "", enabled: true, action: "toDeleteProfile" },
+      { label: "BACK",   detail: "", enabled: true, action: "toProfiles" },
+    ] },
+    // ⛔ NO FIRST (R12). The lines are the profile's name and a refusal's reason.
+    profileDelete: { title: "DELETE", lines: ["", ""], back: "backToProfilePage", items: [
+      { label: "NO",  detail: "", enabled: true, action: "backToProfilePage" },
+      { label: "YES", detail: "", enabled: true, action: "deleteProfile" },
+    ] },
+    // NAME, for NEW PROFILE and RENAME. ⛔ NO ROWS: stepName() drives the wheel,
+    // and refreshNameLines() writes the lines. `back` is Escape's cancel.
+    profileName: { title: "", lines: [], back: "cancelName", items: [] },
     // Over the frozen board. Its three lines are filled per frame by draw(); the
     // third names the run's placing (CS011 P3), or is empty.
     gameover: { title: "GAME OVER", lines: ["", "", ""], back: "quitToTitle", items: [
@@ -1038,6 +1060,154 @@ const Game = (function () {
     scr.items.push({ label: "BACK", detail: "", enabled: true, action: "toTitle" });
   }
 
+  // ---- PROFILE, a profile's page, DELETE and NAME (GDD 10.5, 15.2; CS011 P4) --
+  //
+  // Reached from the title only, where no run exists (kit-profile: switch from
+  // the title). ⛔ EVERY SWITCH IS Profiles.select() OR kit-profile's remove(),
+  // so each runs P2's reset-then-load through Meta's handler. ⛔ Every screen
+  // change here is a `state.screen` write that syncScreen() notices.
+  let pageId = null;          // the profile whose page (and DELETE) is open
+  let nameEdit = null;        // NAME's buffer: { rename: id or null, text, wheel, acc, note }
+  const _still = { rotate: 0, fire: false, purge: false, jump: false };
+
+  // A kit reason as a line: invalid_name → INVALID NAME, name_taken → NAME TAKEN,
+  // roster_full → ROSTER FULL, last_profile → LAST PROFILE.
+  function reasonLine(reason) { return String(reason).toUpperCase().replace(/_/g, " "); }
+
+  function nameOfProfile(id) {
+    const p = Profiles.list().find(q => q.id === id);
+    return p ? p.name : "";
+  }
+
+  // Greedy word wrap to lines of at most `width` characters. A "\n" always
+  // breaks, and a word longer than a line is cut, so the kit's notice fits
+  // however it is reworded upstream (plan K8).
+  function wrapLines(text, width) {
+    const out = [];
+    for (const para of String(text).split("\n")) {
+      let line = "";
+      for (let word of para.split(" ")) {
+        while (word.length > width) {
+          if (line !== "") { out.push(line); line = ""; }
+          out.push(word.slice(0, width));
+          word = word.slice(width);
+        }
+        if (line === "") line = word;
+        else if (line.length + 1 + word.length <= width) line += " " + word;
+        else { out.push(line); line = word; }
+      }
+      out.push(line);
+    }
+    return out;
+  }
+  // RENAME's notice (R14), wrapped once: the kit's string is a constant.
+  const NOTICE_LINES = wrapLines(Profiles.NAME_CHANGE_NOTICE, C.NOTICE_WRAP);
+
+  // PROFILE's rows, rebuilt on every entry, never in draw().
+  function openProfiles() {
+    const scr = SCREENS.profile, list = Profiles.list(), active = Profiles.current();
+    scr.items.length = 0;
+    for (const p of list) {
+      scr.items.push({ label: p.name, detail: active && p.id === active.id ? "ACTIVE" : "", enabled: true,
+                       action: "openProfile", id: p.id });
+    }
+    scr.items.push({ label: "NEW PROFILE", detail: "", enabled: list.length < C.PROFILE_MAX, action: "newProfile" });
+    scr.items.push({ label: "BACK", detail: "", enabled: true, action: "toTitle" });
+    state.screen = "profile";
+  }
+
+  function openProfilePage(id) {
+    pageId = id;
+    SCREENS.profilePage.title = nameOfProfile(id);
+    state.screen = "profilePage";
+  }
+
+  // NAME starts EMPTY on NEW and on RENAME, with the wheel on its first entry.
+  function openName(renameId) {
+    nameEdit = { rename: renameId, text: "", wheel: 0, acc: 0, note: "" };
+    SCREENS.profileName.title = renameId === null ? "NEW PROFILE" : "RENAME";
+    refreshNameLines();
+    state.screen = "profileName";
+  }
+
+  // The name so far and its cursor mark, the wheel, the reason, and on RENAME
+  // the notice. Written in update() and on entry, ⛔ never in draw().
+  function refreshNameLines() {
+    const lines = SCREENS.profileName.lines;
+    const entry = C.NAME_WHEEL[nameEdit.wheel];
+    lines.length = 0;
+    lines.push(nameEdit.text + "|", "‹ " + (entry === " " ? "SPACE" : entry) + " ›", nameEdit.note);
+    if (nameEdit.rename !== null) for (const l of NOTICE_LINES) lines.push(l);
+  }
+
+  // ⛔ ONE EDIT PATH FOR THE WHEEL AND THE KEYBOARD. Each sounds only when it
+  // changed something. The buffer holds at most kit-names' MAX_NAME_LENGTH, so
+  // every line fits; what a name may be is still the kit's call at commit.
+  function nameAppend(ch) {
+    if (nameEdit.text.length >= Profiles.MAX_NAME_LENGTH) return;
+    nameEdit.text += ch.toUpperCase();
+    sfx("menuConfirm");
+  }
+  function nameDelete() {
+    if (nameEdit.text === "") return;
+    nameEdit.text = nameEdit.text.slice(0, -1);
+    sfx("menuBack");
+  }
+  function cancelName() {
+    sfx("menuBack");
+    if (nameEdit.rename === null) openProfiles(); else openProfilePage(nameEdit.rename);
+  }
+  // kit-profile's create or rename; a refusal's reason stays on the page until
+  // the next commit. ⛔ A new profile is activated through select() (R11).
+  function nameCommit() {
+    sfx("menuConfirm");
+    const id = nameEdit.rename;
+    const r = id === null ? Profiles.create(nameEdit.text) : Profiles.rename(id, nameEdit.text);
+    if (!r.ok) { nameEdit.note = reasonLine(r.reason); return; }
+    if (id === null) { Profiles.select(r.profile.id); openProfiles(); }
+    else openProfilePage(id);
+  }
+
+  // kit-input 0.8.0's text mode, delivered inside input.sample(). A commit there
+  // changes the screen, and update()'s second syncScreen() ends the mode.
+  function onNameText(r) {
+    if (state.screen !== "profileName" || nameEdit === null) return;
+    if (r.ch !== undefined) nameAppend(r.ch);
+    else if (r.del) nameDelete();
+    else if (r.done) nameCommit();
+  }
+
+  // NAME's step, in place of the menu's (R13). Rotate steps the wheel by whole
+  // MENU_ROTATE_STEP and wraps; Fire appends, deletes on DEL and commits on END;
+  // Purge deletes, or cancels an empty name. ⛔ Escape is the menu's queued
+  // back, so the model steps on a still snapshot, which hands over that and
+  // nothing else. The entry step acts on nothing, like the menu's.
+  function stepName(screen) {
+    const inp = state.input;
+    const fireEdge = inp.fire && !prevFire, purgeEdge = inp.purge && !prevPurge;
+    const entering = menuEntering;
+    menuEntering = false;
+    const back = menu.step(screen, _still);
+    if (entering) { nameEdit.acc = 0; return; }
+    if (back) { cancelName(); return; }
+    nameEdit.acc += inp.rotate;
+    const whole = Math.trunc(nameEdit.acc / C.MENU_ROTATE_STEP);
+    if (whole !== 0) {
+      const n = C.NAME_WHEEL.length;
+      nameEdit.acc -= whole * C.MENU_ROTATE_STEP;
+      nameEdit.wheel = ((nameEdit.wheel + whole) % n + n) % n;
+      sfx("menuMove");
+    }
+    if (fireEdge) {
+      const entry = C.NAME_WHEEL[nameEdit.wheel];
+      if (entry === "DEL") nameDelete();
+      else if (entry === "END") nameCommit();
+      else nameAppend(entry);
+    } else if (purgeEdge) {
+      if (nameEdit.text === "") cancelName(); else nameDelete();
+    }
+  }
+
   // ⛔ THE ONE WAY OUT OF A RUN TO THE TITLE (GDD 15.4), and P6's pause menu
   // calls it too. It overwrites the run with shipped defaults, so the title
   // shows no stale board, and clears any freeze a quit from pause could land
@@ -1083,6 +1253,23 @@ const Game = (function () {
     if (name === "resume") resumeRun();
     if (name === "toMode")    state.screen = "mode";
     if (name === "toScores")  { buildScoreRows(); state.screen = "scores"; }
+    // CS011 P4. SELECT goes back to PROFILE, where ACTIVE has moved; a delete
+    // does too, and a refused one stays on DELETE with the kit's reason (R12).
+    if (name === "toProfiles") openProfiles();
+    if (name === "openProfile") openProfilePage(screen.items[menu.cursor].id);
+    if (name === "backToProfilePage") openProfilePage(pageId);
+    if (name === "newProfile") openName(null);
+    if (name === "selectProfile") { Profiles.select(pageId); openProfiles(); }
+    if (name === "renameProfile") openName(pageId);
+    if (name === "toDeleteProfile") {
+      SCREENS.profileDelete.lines[0] = nameOfProfile(pageId);
+      SCREENS.profileDelete.lines[1] = "";
+      state.screen = "profileDelete";
+    }
+    if (name === "deleteProfile") {
+      const r = Profiles.remove(pageId);
+      if (r.ok) openProfiles(); else SCREENS.profileDelete.lines[1] = reasonLine(r.reason);
+    }
     if (name === "pickClassic") {
       pendingMode = "classic";
       buildDepthRows();
@@ -1122,6 +1309,9 @@ const Game = (function () {
                       touchTopTarget: inPlay });
     // A row that owned the input does not follow the player off its page.
     endControlModes();
+    // ⛔ THE TEXT MODE IS ARMED ON NAME AND ENDED EVERYWHERE ELSE (CS011 P4, R13),
+    // after endControlModes(): kit-input 0.8.0 never arms it beside a capture.
+    input.captureText(state.screen === "profileName" ? onNameText : null);
     menu.reset();
   }
 
@@ -1152,6 +1342,7 @@ const Game = (function () {
       const screen = SCREENS[state.screen];
       if (screen) {
         if (adjusting !== null || capturing !== null) stepControlMode(screen);
+        else if (state.screen === "profileName") stepName(screen);
         else {
           // ⛔ THE MENU SOUNDS (CS009 P5; plan §7), read off the step's answer:
           // the screen's back action is `menuBack`, any other action
@@ -1173,6 +1364,8 @@ const Game = (function () {
         refreshSoundRows();
       }
       if (state.screen === "controls" || state.screen === "keyboard" || state.screen === "gamepad") refreshControlRows();
+      if (state.screen === "title") { const p = Profiles.current(); TITLE_PROFILE.detail = p ? p.name : ""; }
+      if (state.screen === "profileName") refreshNameLines();
       return;
     }
 

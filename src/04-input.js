@@ -39,7 +39,7 @@
 // lets a headless test replay a recorded event list with no DOM at all, which
 // is what makes the determinism guarantee (GDD 17.1) testable.
 
-const INPUT_VERSION = "0.7.0";
+const INPUT_VERSION = "0.8.0";
 
 // Default bindings, matched case-insensitively. These are NOT tunables — a
 // keymap is this module's own default and a host replaces it wholesale through
@@ -239,6 +239,20 @@ function createInput(options) {
   const swallowedButtons = new Set();
   const gpPrev = [];            // raw pressed state per button at the last poll
 
+  // ---- text mode (0.8.0) ---------------------------------------------------
+  // captureText(cb) arms a TEXT MODE until captureText(null). While it is armed,
+  // a key press whose normalised name is ONE character of [a-z0-9 _-] is handed
+  // to cb as { ch }, Backspace as { del: true } and Enter as { done: true },
+  // during sample(), in press order. ⛔ THOSE KEYS AND SHIFT REACH NO BINDING, NO
+  // STRUCT FIELD AND NO NAMED ACTION: each is swallowed until released, as a
+  // captured key is, so its auto-repeat is nothing too, and a key already held
+  // when the mode arms is not a press. Every other key, the mouse, touch and the
+  // pad behave as they always do. ⛔ A capture and a text mode never arm
+  // together: arming either ends the other.
+  const TEXT_CHAR = /^[a-z0-9 _-]$/;
+  let textCb = null;
+  const textQueue = [];         // { ch } | { del } | { done } awaiting dispatch in sample()
+
   // One record per rotation direction. `emitted` is how much of a lane this
   // press has already delivered, which is what makes the tap exact.
   const axis = {
@@ -287,6 +301,15 @@ function createInput(options) {
       captured = { cb: captureCb, result: { key: k } };
       captureCb = null;
       return true;
+    }
+    if (textCb !== null) {
+      const ev = TEXT_CHAR.test(k) ? { ch: k } : k === "backspace" ? { del: true }
+               : k === "enter" ? { done: true } : null;
+      if (ev !== null || k === "shift") {
+        swallowedKeys.add(k);
+        if (ev !== null) textQueue.push(ev);
+        return true;
+      }
     }
     pressed.add(k);
 
@@ -549,6 +572,10 @@ function createInput(options) {
       captured = null;
       c.cb(c.result);
     }
+    // Then the text mode's keys (0.8.0). Every captureText() call empties the
+    // queue, so a cb that ends or re-arms the mode drops the rest of this batch.
+    for (let i = 0; i < textQueue.length && textCb !== null; i++) textCb(textQueue[i]);
+    textQueue.length = 0;
     if (queued.length) {
       if (onAction) for (let i = 0; i < queued.length; i++) onAction(queued[i]);
       queued.length = 0;
@@ -678,6 +705,17 @@ function createInput(options) {
     if (cb !== null && typeof cb !== "function") throw new Error("captureNext: cb must be a function or null");
     captureCb = cb;
     if (cb === null) captured = null;
+    else { textCb = null; textQueue.length = 0; }   // ⛔ never beside a text mode (0.8.0)
+  }
+
+  // captureText(cb) arms the text mode; captureText(null) ends it (0.8.0). Either
+  // call drops keys not yet dispatched. ⛔ Arming it disarms a capture, and like a
+  // capture it survives reset(): it is a request, not held input.
+  function captureText(cb) {
+    if (cb !== null && typeof cb !== "function") throw new Error("captureText: cb must be a function or null");
+    textCb = cb;
+    textQueue.length = 0;
+    if (cb !== null) { captureCb = null; captured = null; }
   }
 
   function reset() {
@@ -687,6 +725,7 @@ function createInput(options) {
     gpPrev.length = 0;
     buttons.clear();
     queued.length = 0;
+    textQueue.length = 0;
     hiddenPending = false;
     for (const name of Object.keys(gamepadActionHeld)) gamepadActionHeld[name] = false;
     for (const name of Object.keys(axis)) {
@@ -842,7 +881,7 @@ function createInput(options) {
   return {
     VERSION: INPUT_VERSION,
     sample, reset, configure, setting,
-    setBindings, setGamepadButtons, getBindings, getGamepadButtons, captureNext,
+    setBindings, setGamepadButtons, getBindings, getGamepadButtons, captureNext, captureText,
     keyDown, keyUp, mouseMove, setButton,
     touchStart, touchMove, touchEnd, pollGamepads, pageHidden,
     attach, detach,

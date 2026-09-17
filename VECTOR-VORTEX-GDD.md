@@ -27,7 +27,7 @@ Modelled on Orbital Overhaul's §0 read contract. A future session reads §0 + �
 | 8 | Difficulty | The heat clock, introduction schedule |
 | 9 | Controls | Any input path; runtime settings and rebinding (9.5) |
 | 10 | Visual design | Rendering, glow, HUD, readability |
-| 10.5 | Screens and menus | Title, mode, Start Depth, scores, options, credits, controls and rebinding, game over, pause and its five sources; the screen state machine; the menu model; menu input on any device |
+| 10.5 | Screens and menus | Title, mode, Start Depth, scores, profiles and name entry, options, credits, controls and rebinding, game over, pause and its five sources; the screen state machine; the menu model; menu input on any device |
 | 11 | **Audio** | Music, SFX, the intensity director |
 | 12 | Onboarding | Prompts, attract mode, first-run |
 | 13 | Modes | Classic vs Overdrive gating |
@@ -825,6 +825,12 @@ state.input = { rotate: 0, fire: false, purge: false, jump: false }
 - `setBindings(keys)` and `setGamepadButtons(map)` replace a map wholesale. ⛔ **Neither will bind a key or button that is also a named action.** The gamepad map now names `left` and `right` too, the D-pad's buttons (14 and 15 by default), and they still ride §9.2's tap/hold model.
 - `captureNext(cb)` hands the next key press or pad button press to `cb`. ⛔ **A captured press never reaches the struct or a named action**, and it stays swallowed until released.
 
+**Name entry (CS011 P4, kit-input 0.8.0; Paul's M3).** `captureText(cb)` arms a text mode until `captureText(null)`, and the NAME page (§10.5) arms it on entry and ends it on leaving.
+- While it is armed, a key press of one character of `[a-z0-9 _-]` reaches `cb` as `{ ch }`, Backspace as `{ del: true }` and Enter as `{ done: true }`, during `sample()`, in press order.
+- ⛔ **Those keys and Shift reach no binding, no struct field and no named action.** Each is swallowed until released, like a captured key, so its auto-repeat types nothing, and a key already held when the mode arms is not typed. Arrows, Escape, the mouse, touch and the pad behave as on any menu.
+- ⛔ **A capture and a text mode never arm together.** Arming either ends the other.
+- ⚠ **So on NAME the keyboard's default Fire and Purge keys (Space, Z, Shift, X) type or do nothing.** A keyboard player types; the wheel is rotate and fire on the other devices, or on a keyboard with a Fire key outside that set (MEASURED, `test-cs011-p4.js`).
+
 See `src/04-input.NOTES.md`.
 
 ---
@@ -868,7 +874,7 @@ Score top-left, lives bottom-left, level and band top-right, Purge charge bottom
 
 ### 10.5 Screens and menus
 
-**Shipped, CS008 P5, P6 and P7.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"play"`, `"pause"`, `"gameover"`, `"options"`, `"controls"`, `"keyboard"`, `"gamepad"`, `"credits"`, and since CS011 P3 `"scores"`.
+**Shipped, CS008 P5, P6 and P7.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"play"`, `"pause"`, `"gameover"`, `"options"`, `"controls"`, `"keyboard"`, `"gamepad"`, `"credits"`, since CS011 P3 `"scores"`, and since CS011 P4 `"profile"`, `"profilePage"`, `"profileDelete"` and `"profileName"`.
 
 ```
 boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH ──row──► PLAY ──last life──► GAME OVER
@@ -877,6 +883,13 @@ boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH �
                           │ ◄─back                    TITLE ◄──QUIT TO TITLE / back────┘
 
 TITLE ──SCORES──► SCORES ──back──► TITLE                                        (CS011 P3)
+
+TITLE ──PROFILE──► PROFILE ──back──► TITLE                                      (CS011 P4)
+                     ├──a profile──► PAGE ──SELECT (activates) / back──► PROFILE
+                     │                 ├──RENAME──► NAME ──commit / cancel──► PAGE
+                     │                 └──DELETE──► DELETE ──YES, deleted──► PROFILE
+                     │                                └──NO / back──► PAGE    (a refusal stays, with its reason)
+                     └──NEW PROFILE──► NAME ──commit (activates) / cancel──► PROFILE
 
 PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
                          ├──QUIT TO TITLE──► TITLE
@@ -889,7 +902,7 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 
 | Screen | Rows | Back |
 |---|---|---|
-| Title | PLAY, OPTIONS, SCORES (CS011 P3). ⛔ CS011's rows go after OPTIONS: the closed tests navigate the title by index | — |
+| Title | PLAY, OPTIONS, SCORES (CS011 P3), PROFILE (CS011 P4), whose detail is the active profile's name, written on every title step. ⛔ CS011's rows go after OPTIONS: the closed tests navigate the title by index | — |
 | Mode | CLASSIC; OVERDRIVE shown locked (M1) | Title |
 | Start Depth | `startDepthOptions()` (§4.6), each row with its `startBonus()`. ⛔ No countdown | Mode |
 | Pause | RESUME, OPTIONS, QUIT TO TITLE (U4), over the frozen board | RESUME |
@@ -898,12 +911,24 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 | Keyboard, Gamepad | LEFT, RIGHT, FIRE, PURGE and JUMP, two slots each, then BACK. One line above the rows shows a refusal's reason | Controls |
 | Credits | `C.CREDITS_LINES`, then `VERSION` + `C.GAME_VERSION` (U6). ⚠ Placeholder copy; Paul replaces it before ship. ⛔ §18: no mention of the original game or its publisher | Options |
 | Scores | CS011 P3 (plan R15). The info line `CLASSIC · LOCAL`, plus `NO SCORES YET` as a second line when the table is empty. Then one enabled row per entry: the label is `n NAME`, the detail is the score in plain digits, and the row has no action, so rotate only scrolls. BACK is last. ⛔ The rows are rebuilt on entry (`buildScoreRows()`), never in `draw()`. CLASSIC only until CS012 | Title |
+| Profile | CS011 P4 (plan R16). One row per profile, labelled with its name, with detail ACTIVE on the active one; NEW PROFILE, disabled at `C.PROFILE_MAX`; BACK. ⛔ Rebuilt on entry (`openProfiles()`), never in `draw()`. A profile's row opens its page | Title |
+| A profile's page | Titled with the profile's name. SELECT activates it through `Profiles.select()` (§15.2) and returns to PROFILE; RENAME opens NAME; DELETE; BACK | Profile |
+| Delete | Titled DELETE. Its lines are the profile's name and a refusal's reason. ⛔ NO first, then YES. YES deletes (§15.2) and returns to PROFILE; a refusal stays here, and kit-profile's `last_profile` reads LAST PROFILE | The page |
+| Name | Used by NEW PROFILE (titled NEW PROFILE) and RENAME (titled RENAME). ⛔ No rows. Its lines are the name so far with a vertical-bar cursor mark, the wheel's entry as `‹ X ›` (space shows as SPACE), the reason, and on RENAME kit-profile's `NAME_CHANGE_NOTICE`, word-wrapped at `C.NOTICE_WRAP` (60) characters. See "Name entry" below | Cancel: PROFILE from NEW, the page from RENAME |
 | Game over | SCORE and LEVEL lines, then a third line: `NEW HIGH SCORE #n` when the run placed (§15.3), otherwise empty. Then RESTART and QUIT TO TITLE (U2) | Title, via `quitToTitle()` |
 
 - ⛔ **Every screen but play is a simulation stop** (§4.4). `Game.update()` samples input, runs the menu step and returns: no clock, no spawner, no entity pass.
 - ⛔ **Boot is the title, and no run exists until a Start Depth row calls `startGame(time seed, { mode, startDepth })`.** `newState().screen` stays `"play"`, because every closed test starts a run through `reset()` and `startGame()`.
 - **RESTART** is `startGame(time seed, { mode, startDepth })` with the run's own two parameters: same mode, same Start Depth, new seed (U2).
 - ⛔ **`quitToTitle()` overwrites the run with `newState()`**, so the title shows no stale board. ✅ **Since CS011 P3 its first line is the `'quit'` seat** (§15.3): `screen === "pause"` is read before the overwrite. Game over's QUIT row goes through it too, and records nothing for a run that already died.
+
+**Name entry (Paul's M3; plan R13, R14; shipped CS011 P4).**
+- **The wheel is `C.NAME_WHEEL`:** A–Z, 0–9, space, `_`, `-`, then the DEL and END marks. Rotate steps it one entry per whole `MENU_ROTATE_STEP`, and it wraps. It starts on A, and the name starts empty, on RENAME too.
+- **Fire** appends the entry, deletes on DEL and commits on END. **Purge** deletes the last character, or cancels when the name is empty. **Escape** cancels. On a keyboard, the text mode (§9.5): a letter, digit, space, `_` or `-` appends, Backspace deletes and Enter commits.
+- The name holds at most kit-names' `MAX_NAME_LENGTH` (12), so every line fits. ⛔ **What a name may be is kit-names' `validateName`, through kit-profile's `create` or `rename`, and nothing else.** A refusal's `reason` shows as INVALID NAME, NAME TAKEN or ROSTER FULL, and NAME stays open.
+- A committed NEW PROFILE is created, then activated through `select()`, and PROFILE shows. A committed RENAME returns to the page.
+- ⛔ **NAME steps in place of the menu model** (`stepName()`). The model steps on a still snapshot only to hand over a queued Escape, and NAME's entry step acts on nothing, as a menu's does. The lines are written in `update()`, never in `draw()`.
+- Sounds, ⚠ provisional: a wheel step `menuMove`; an append or a commit `menuConfirm`; a delete or a cancel `menuBack`; a typed key sounds as its wheel twin; and nothing sounds when nothing changed.
 
 **Pause (Paul, U4; shipped CS008 P6).** Five sources, all live in play only (the Dive and a death freeze are play):
 - **Escape.** It stays the named action `back`, and `back` in play pauses. A key maps to one action, and Escape has to mean pause in play and back on a menu.
@@ -1317,6 +1342,13 @@ field needs no migration — a saved value for a deleted field orphans harmlessl
 ⛔ **Mint via a `crypto.randomUUID` → `crypto.getRandomValues` fallback.** An opaque origin (sandboxed iframe, itch.io-style embed) is never a secure context, and `randomUUID` is secure-context-only — this exact bug was found and fixed in `kit-profile` and most likely still exists in Orbital Overhaul.
 
 **RESOLVED 2026-08-30** — `kit-profile` is vendored into `lib/` at a pinned `VERSION` and used directly, not reimplemented locally. See §21 and `DECISIONS.md`.
+
+⛔ **Shipped, CS011.** The roster screens are §10.5's PROFILE, a profile's page, DELETE and NAME (CS011 P4).
+- **`Profiles` in `22-meta.js` wraps kit-profile:** `scope()`, `current()`, `list()`, `select(id)`, `create(name)`, `rename(id, name)` and `remove(id)`. Only `select()` switches, apart from a `remove()` of the active profile, which switches inside the kit. Both run Meta's reset-then-load (P2).
+- **A new profile and SELECT are activations.** RENAME keeps the `id` and the `playerId`, and a score row keeps the name it was stamped with (§15.3).
+- ⛔ **Deleting a profile is kit-profile's `remove(id)`, then that profile's scope's `remove(key)` for each of `settings`, `progress` and `telemetry`.** ⛔ **Never `clear()`:** it enumerates storage, and on `p0`, whose scope is the root store, it would take `scores` and `profiles` too. `achievements` joins the list at CS015.
+- ⚠ **The kit goes first, the reverse of plan R12's wording** (MEASURED, `test-cs011-p4.js`'s mutation). The kit refuses the last profile (`last_profile`), and a refused delete must delete nothing; with the keys removed first, the refusal wiped the profile's settings and progress. Deleting the active profile switches inside the kit, where `beforeChange` writes the outgoing telemetry rows; with the keys first, that write outlived the delete. The kit's `scope(id)` still answers for a removed id.
+- **Deleting the active profile activates `roster[0]`** (the kit's rule), and the last profile cannot be deleted.
 
 ### 15.3 Local high scores
 

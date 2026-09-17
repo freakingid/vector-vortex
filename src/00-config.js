@@ -746,6 +746,11 @@ const C = {
   // The phases that read the rest of the group add them (plan §2).
   PROFILE_MAX:          8,      // kit-profile's roster ceiling (its create() refuses past it)
   SCORES_PER_MODE:      10,     // the local table's rows per mode (GDD 15.3; CS011 P3)
+  // NAME's wheel (plan R13; CS011 P4): kit-names' charset in the order A–Z, 0–9,
+  // space, _, -, then the two marks. A one-character entry appends; DEL and END
+  // are the marks 23-main.js reads by name.
+  NAME_WHEEL:           "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-".split("").concat(["DEL", "END"]),
+  NOTICE_WRAP:          60,     // chars per line of RENAME's notice (R14: 60 × 18.6 px = 1,116 px of 1,280)
 
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.7",   // ⚠ 0.0.2 was never written here — see log/CS006.md

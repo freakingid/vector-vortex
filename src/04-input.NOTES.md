@@ -2,7 +2,7 @@
 
 **Module:** `src/04-input.js`
 **Vendored from:** *originated here (Vector Vortex), destined for coinless-kit as `kit-input`*
-**Current version:** `0.7.0`
+**Current version:** `0.8.0`
 **Depends on:** nothing
 
 ---
@@ -78,6 +78,7 @@ input.setBindings({ left: ["a"], right: ["d"], fire: ["q"], purge: ["x"], jump: 
 input.setGamepadButtons({ fire: [0], jump: [4], purge: [5], left: [14], right: [15] });
 input.getBindings(); input.getGamepadButtons(); // copies, in the setters' shape
 input.captureNext(r => { /* r is { key } or { button } */ });  // captureNext(null) disarms
+input.captureText(r => { /* r is { ch }, { del: true } or { done: true } */ });  // captureText(null) ends it
 input.detach();
 ```
 
@@ -330,5 +331,42 @@ until a key, click or tap.
 says only "a user gesture happened, inside its handler". Nothing references a
 config object, game object or game function, and the host's suite still scans
 this module's slice for both.
+
+**Backport status.** `not yet`.
+
+### 2026-09-16 — a text mode (`VERSION` 0.7.0 → 0.8.0)
+
+**What changed.** One method, `captureText(cb)`, which arms a text mode until
+`captureText(null)`. Absent a call, the module is 0.7.0 exactly.
+- While it is armed, a key press whose normalised name is one character of
+  `[a-z0-9 _-]` reaches `cb` as `{ ch }` (lowercase, as every key is
+  normalised). Backspace reaches it as `{ del: true }` and Enter as
+  `{ done: true }`. Each is dispatched during `sample()`, in press order, after a
+  capture's result and before the named actions.
+- ⛔ **Those keys and Shift reach no binding, no struct field and no named
+  action.** Each is swallowed until released, the capture path's rule, so its
+  auto-repeat does nothing and a key already held when the mode arms is not a
+  press. `keyDown()` returns `true` for them, so `attach()` stops the browser
+  default (Space scrolling, Backspace navigating).
+- Every other key (the arrows, Escape, Tab), the mouse, touch and the pad
+  behave as before. The D-pad's synthetic keys are not one character, so they
+  still rotate.
+- ⛔ **A capture and a text mode never arm together.** `captureNext(cb)` ends the
+  text mode, and `captureText(cb)` disarms a capture and drops an undispatched
+  result. Every `captureText()` call empties the queue, so a `cb` that ends the
+  mode drops the rest of that sample's keys. The mode survives `reset()`, and
+  `reset()` empties the queue.
+
+**Why.** Vector Vortex CS011 P4, name entry (Paul's M3): a wheel driven by rotate
+and fire on every device, plus typing on a keyboard. Letters, digits and space
+are bound as rotate, fire, purge, jump and debug actions there, so typing
+through the ordinary key path would fire them.
+
+**Game-agnostic?** Yes. The character set is kit-names' name charset, not a
+Vector Vortex rule, and the module does not know what a name, a wheel or a
+profile is. It hands characters to whatever `cb` the host gives and swallows
+them from the host's own bindings and actions. Nothing references a config
+object, game object or game function, and the host's suite still scans this
+module's slice for both.
 
 **Backport status.** `not yet`.
