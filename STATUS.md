@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.7 · Changeset: CS011 (P1 built 2026-09-16 — P2 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.7 · Changeset: CS011 (P2 built 2026-09-16 — P3 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS011
 
@@ -12,8 +12,8 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 | Phase | Builds | State |
 |---|---|---|
 | P1 | kit-names / kit-storage / kit-profile inlined at build; the store; the silent ANONYMOUS profile; harness storage options; the CS015 renumber; the Save-data rule rewording | ✅ built: `KIT_INLINE` + `wrapKitModule()`, `Store` / `Profiles` / `Meta.boot()`, harness `store` / `storage` / `crypto` / `mutate` / `storageReads`, `test-cs011-p1.js` (62); three closed files in place; the `lastUsed` finding accepted by Paul |
-| P2 | Settings, the Start Depth record (`progress`) and telemetry rows saved per profile; reset-before-load on a switch | next |
-| P3 | The local top 10 per mode; the run's three seats; the bench flag; SCORES; game over's placing line | — |
+| P2 | Settings, the Start Depth record (`progress`) and telemetry rows saved per profile; reset-before-load on a switch | ✅ built: `settings` / `progress` / `telemetry` per profile, `Meta.boot(Game.settingsHooks)`, `Profiles.select()`, `Telemetry.snapshot()` / `restore()`, `Meta.runEnded` stub, `test-cs011-p2.js` (135); `test-cs008-p7.js:436` in place |
+| P3 | The local top 10 per mode; the run's three seats; the bench flag; SCORES; game over's placing line | next |
 | P4 | kit-input 0.8.0's text mode; PROFILE, a profile's page, DELETE, the NAME wheel | — |
 | P5 | kit-leaderboard 0.2.1; `Leaderboard`; the submits; SCORES' ONLINE view; the queued line | — |
 | P6 | The ninth soak (working vs blocked storage, one hash; a reload); the close | — |
@@ -21,9 +21,9 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules + 3 inlined kit,
-  547.5 KB); the manifest is checked both directions against `src/`, and a
+  556.9 KB); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **55 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **56 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -57,7 +57,7 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
   resync, the SFX player) and kit-input **0.7.0**'s `onGesture`. `title` and
   `pulse`, untiered, from `tools/music-lab.html`. Music by screen
   (`musicStateFor()`, `audioFrame()` once per frame). OPTIONS' MASTER / MUSIC /
-  SFX / VOICE VOLUME and MUSIC TRACK, session-only. `C.SFX` (Paul's 21 picks from
+  SFX / VOICE VOLUME and MUSIC TRACK (saved per profile since CS011 P2). `C.SFX` (Paul's 21 picks from
   `tools/sfx-lab.html`) at 23 `sfx(name, voice)` seats, `sfxVoice` as the eighth
   contract field, the held Surger tone and the over-cap life sound. Phase ledger,
   mutation records, baseline ledger and the §10 verdicts are in `log/CS009.md`;
@@ -218,7 +218,9 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
   cursor near the row first. ⛔ Rows added to OPTIONS go before BACK, never above
   TELEMETRY: the closed tests navigate it by index.
 - ⛔ **`Game.reset()` restores the sound rows too** (`resetSound()`, a `setVol`
-  per bus). A test claiming a volume survives a quit uses `quitToTitle()` alone.
+  per bus) **and writes nothing** (CS011 P2). A test claiming a volume survives a
+  quit uses `quitToTitle()` alone; one claiming it survives a RELOAD builds again
+  over the same `Map` without a `reset()`.
 - ⛔ **A test that counts scheduled steps counts NOTES, never distinct start
   times.** A late step clamps to `currentTime`, so a burst collapses to one
   instant. That reading hid a deleted resync (`log/CS009.md`, P1).
@@ -263,8 +265,10 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
   ignored** (`stepControlMode()`, CS008 P7; OPTIONS' sound rows since CS009 P3).
   Remove the ignored step and a Purge held past a row's exit backs out of the
   page (P3's M2).
-- ⛔ **`Game.reset()` restores the controls** (`resetControls()`). A test
-  claiming a setting SURVIVES a quit uses `Game.quitToTitle()` alone.
+- ⛔ **`Game.reset()` restores the controls** (`resetControls()`) **and writes
+  nothing**. A test claiming a setting SURVIVES a quit uses `Game.quitToTitle()`
+  alone. ⛔ The stored `settings` outlive it, so a closed test that changes a row
+  leaves the harness `Map` holding it.
 - ⛔ **`Game.draw()` must not name `Telemetry`** (`test-cs007-p4.js`), and ⚠
   **that test finds the telemetry module by the text `// 22-meta.js`** — never
   start a comment line with a module file name.
@@ -362,30 +366,43 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS011 P2
+## Next up — ⛔ CS011 P3
 
-Paste P2's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards P1 leaves
-(reasoning in `log/CS011.md`, P1):
+Paste P3's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards P1 and P2
+leave (reasoning in `log/CS011.md`):
+- ⛔ **`Meta.runEnded(outcome)` is P2's stub and has no caller.** It writes the
+  telemetry rows; P3 calls it from R7's two seats and adds the record. ⛔ The
+  `'died'` seat is in `frame()` after the steps, which is not a play step, so the
+  write is legal there. Never inside `killSkimmer()` or `update()`.
+- ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP** (`test-cs011-p2.js`, a `Store.set`
+  spy by screen). ⚠ Reading taken: `t` turning capture off in play writes
+  nothing; the rows wait for the next seat. `autoPause` writes AFTER
+  `pauseRun()`, so its step is a pause step.
+- ⛔ **A SETTINGS SAVE RUNS INSIDE `update()`** on a menu step (an adjust step,
+  a toggle, a capture in `input.sample()`, RESET). It writes no `state`. A test
+  that counts stored bytes across menu presses will see them.
+- ⛔ **`levelRecord()` reads storage on every call**, and the clear edge writes
+  `progress` from inside a play step (plan: writer untouched). It is one small
+  key; do not cache it, or a switch shows the outgoing profile's list.
+- ⛔ **A switch runs `beforeChange` (rows written to the OUTGOING scope), then
+  `change`: `resetSettings()`, the incoming `settings`, and an emptied ring**,
+  refilled from the incoming profile if capture is on (⚠ Claude's reading: the
+  rows belong to the profile that recorded them). P4's create / remove switch
+  through the same kit events, so they inherit it.
+- ⛔ **Two texts are pinned by `test-cs011-p2.js`'s `mutate`, each exactly once
+  in the build:** `hooks.resetSettings();` and
+  `if (!on && state.screen !== "play") Meta.saveTelemetry();`.
+- ⚠ **A `Store.set` spy sees only `p0`'s writes**: `p0`'s scope IS `Store`, and
+  kit-storage builds a new object for every other `scope()` call.
 - ⚠ **PLAN FINDING — the stored `lastUsed` stays `""` after a first boot.**
-  On an empty install `createAnonymous()` makes `p0`, which is already the kit's
-  `activeId`, so the prompt's `select()` is kit-profile's no-op (`:550`).
-  `Meta.boot()` calls `current()` so the `playerId` is minted. A reload selects
-  `roster[0]`, the same profile (asserted). ⛔ **Do not "fix" this by renaming
-  `legacyProfileId`**: that moves `p0` off the root store. ✅ **Accepted by
-  Paul, 2026-09-16** (behaviour-neutral; `lib/` stays unedited).
-- ⛔ **`onProfileEvent` is empty.** `beforeChange` and `change` must be wired
-  (reset, THEN load) before anything can select a second profile.
-- ⛔ **`src/21-telemetry.js:22` and `00-config.js`'s Telemetry comment still say
-  `Profiles.keyFor` / "no Profiles in the build".** P2 rewrites them (comments
-  only; `test-cs007-p4.js` strips comments before it scans).
-- ⛔ **`test-cs008-p7.js:436` now reads `Profiles.scope().has("settings")`**;
-  P2 rewrites it again, to its persisted form.
+  Accepted by Paul, 2026-09-16. ⛔ **Do not "fix" it by renaming
+  `legacyProfileId`**: that moves `p0` off the root store.
 - ⛔ **The inline banner is a DASH rule** (`// ---…`), never `// ===…`: seven
   closed banner scans would read an equals banner as a module missing from
-  `src/`. The three bodies sit inside `20-achievements.js`'s slice.
-- ⛔ **The boot block runs inside the harness**: `Meta.boot()` (before
-  `Game.start()`; `Store` is null until it runs) writes the `profiles` key in
-  every build, so a "no write" test compares snapshots, never `store.size === 0`.
+  `src/`. ⛔ Never start a comment line with a module file name.
+- ⛔ **The boot block runs inside the harness**: `Meta.boot()` writes the
+  `profiles` key and loads the selected profile's settings in every build, so a
+  "no write" test compares snapshots, never `store.size === 0`.
 - ⛔ **`legacyRosterKey: null`, never `''`.** ⛔ **Profile `p0`'s scope is the
   ROOT store.**
 - ⛔ **kit-leaderboard cannot be inlined**: `test-cs009-p1.js:508` bans its
@@ -394,6 +411,3 @@ Paste P2's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards P1 leaves
   `killSkimmer()`**, so the `'died'` record is taken in `frame()` after the steps.
 - ⛔ **Typed letters and digits are bound today** (`a d z x c`, space, `1`–`6`,
   `0`, `w`, `t`, `e`, `p`): name entry needs P4's text mode.
-- ⚠ **A full telemetry ring is 2.41 M characters as row objects** (46 % of
-  Chromium's ~5.24 M quota) and 0.89 M as arrays. It is stored as arrays and never
-  written mid-play.

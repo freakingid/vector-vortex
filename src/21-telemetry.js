@@ -18,16 +18,11 @@
 // make a capture-on run diverge from a capture-off one — GDD 17.1's replay
 // guarantee failing inside the one system built to observe it.
 //
-// ⛔ NO PERSISTENCE THIS CHANGESET, and the reason is a shipped rule rather than
-// a preference. kit-storage owns the keyspace and Profiles.keyFor(base) is the
-// one route from a store's base name to the key it reads (CLAUDE.md, Save
-// data); 22-meta.js holds only CS008 P3's in-memory Start Depth record, so
-// there is no keyspace and no Profiles in this build. Writing rows anywhere
-// today would mean the game choosing a raw localStorage key name, which is
-// forbidden outright. ⛔ CS011 owns persistence,
-// the profile scope and GDD 15.6's read() envelope-version rejection — and it
-// is wiring rather than a rewrite, because the row shape and the export exist.
-// ⛔ THERE IS NO STORAGE CALL IN THIS FILE AND THERE MUST NOT BE ONE.
+// ⛔ PERSISTED PER PROFILE SINCE CS011 P2, AND NOT FROM HERE. 22-meta.js owns
+// the `telemetry` key's get and set through Profiles.scope() (CLAUDE.md, Save
+// data); this file hands it snapshot() and takes restore(), and the envelope's
+// declared version is GDD 15.6's read() rejection. ⛔ THERE IS NO STORAGE CALL
+// IN THIS FILE AND THERE MUST NOT BE ONE (test-cs007-p4.js).
 //
 // ⛔ NOT ON CLAUDE.md's EXTRACTION LIST. Six modules are built kit-shaped from
 // v1 and this is not one of them, so it reads `state` and `C` directly like
@@ -71,6 +66,12 @@
 //   level_reached -> level      mode -> mode            start_depth -> startDepth
 //   wells_cleared -> wellsCleared               purges_spent -> purgesSpent
 //   max_combo -> maxCombo       deaths -> deaths
+//
+// ⛔ THE STORED ROWS ARE ARRAYS IN THIS ORDER (CS011 P2, plan R17). A column
+// added, removed or moved BUMPS `telemetry`'s declared version in 22-meta.js's
+// Store, in the same commit: kit-storage then reads an old envelope as empty,
+// which is GDD 15.6's read() rejection. A stored row of the wrong length
+// restores empty too, but a reorder of the same length only the bump catches.
 //
 // ⛔ ALL EIGHT HEAT-DERIVED VALUES ARE SAMPLED, not the six the phase prompt
 // enumerated: CLAUDE.md names SEVEN accessors and heat() itself, and
@@ -385,11 +386,49 @@ const Telemetry = (function () {
     return text;
   }
 
+  // ⛔ THE STORED FORM (CS011 P2, plan R17): the rows oldest-first as ARRAYS in
+  // TELEMETRY_FIELDS order, and the wrap latch. Arrays, not row objects: a full
+  // ring is 0.89 M characters this way and 2.41 M the other (plan §1.6).
+  function snapshot() {
+    const all = rows();
+    const out = new Array(all.length);
+    for (let i = 0; i < all.length; i++) {
+      const r = all[i], a = new Array(TELEMETRY_FIELDS.length);
+      for (let k = 0; k < TELEMETRY_FIELDS.length; k++) a[k] = r[TELEMETRY_FIELDS[k]];
+      out[i] = a;
+    }
+    return { rows: out, wrapped };
+  }
+
+  // Replaces the ring with a snapshot()'s rows. ⛔ ALL OR NOTHING: anything that
+  // is not that shape, or ANY row whose length is not TELEMETRY_FIELDS.length,
+  // leaves the ring empty — a stale column list exports as nothing rather than
+  // as a column of "undefined" (GDD 15.6). Does not touch the capture switch.
+  // Returns the rows held.
+  function restore(data) {
+    clear();
+    if (data === null || typeof data !== "object" || !Array.isArray(data.rows)) return 0;
+    const src = data.rows;
+    for (let i = 0; i < src.length; i++) {
+      if (!Array.isArray(src[i]) || src[i].length !== TELEMETRY_FIELDS.length) return 0;
+    }
+    const from = Math.max(0, src.length - C.TELEMETRY_CAP);
+    for (let i = from; i < src.length; i++) {
+      const row = {};
+      for (let k = 0; k < TELEMETRY_FIELDS.length; k++) row[TELEMETRY_FIELDS[k]] = src[i][k];
+      ring[head] = row;
+      head = (head + 1) % C.TELEMETRY_CAP;
+      count++;
+    }
+    wrapped = data.wrapped === true || from > 0;
+    return count;
+  }
+
   return {
     fields: TELEMETRY_FIELDS,
     kinds: TELEMETRY_KINDS,
     enabled, setEnabled, toggle,
-    sample, push, rows, clear, csv, exportCsv,
+    sample, push, rows, clear, csv, exportCsv, snapshot, restore,
     get count() { return count; },
     get wrapped() { return wrapped; },
   };

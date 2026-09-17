@@ -4,7 +4,7 @@
 // each page setting changes the struct live; rebinding (the old key dead, a
 // clash swaps, a reserved key refused, a swap that unbinds refused); a capture
 // never reaches state.input; RESET TO DEFAULTS restores everything; the HUD's
-// mirror side is the live flag; nothing is stored.
+// mirror side is the live flag; RESET stores the defaults (CS011 P2).
 //
 // ⛔ TRAPS IN THE FIXTURES.
 //  1. Driven through Game.frame() at half a step per frame (test-cs008-p6.js).
@@ -411,7 +411,7 @@ press(conf); btn(6).down(); liveStep(); btn(6).up(); liveStep();
 H.assert(lineText().includes("FIRE NEEDS A BUTTON"), "⛔ a swap that leaves FIRE with no button is refused");
 H.eq(detail("FIRE 1"), "LT", "and FIRE keeps its button");
 
-// RESET TO DEFAULTS restores everything, and nothing is stored.
+// RESET TO DEFAULTS restores everything, and stores the defaults (CS011 P2).
 press(SHIFT);
 H.eq(state.screen, "controls", "fixture: back on CONTROLS, cursor on its first row");
 {
@@ -433,7 +433,13 @@ H.eq(state.screen, "controls", "fixture: back on CONTROLS, cursor on its first r
   H.eq(G.input.setting("inputMirror"), C.INPUT_MIRROR, "⛔ RESET restores C.INPUT_MIRROR");
   H.eq(detail("TOUCH AUTO-FIRE"), C.TOUCH_AUTOFIRE ? "ON" : "OFF", "⛔ RESET restores C.TOUCH_AUTOFIRE");
   H.eq(detail("TOUCH SENSITIVITY"), "×1.0", "and the rows show it");
-  H.eq(X.Profiles.scope().has("settings"), false, "⛔ session-only: RESET TO DEFAULTS stores no settings key");
+  const slots = m => { const o = {}; for (const a of ["left", "right", "fire", "purge", "jump"]) o[a] = [m[a][0] ?? null, m[a][1] ?? null]; return o; };
+  const vol = C.AUDIO_VOL_DEFAULT;
+  H.eq(JSON.stringify(X.Profiles.scope().get("settings", null)), JSON.stringify({
+    controls: { mouse: 10, touch: 10, autofire: C.TOUCH_AUTOFIRE, mirror: C.INPUT_MIRROR,
+                keys: slots(X.INPUT_KEYS_DEFAULT), pad: slots({ fire: [0], jump: [4, 6], purge: [5, 7], left: [14], right: [15] }) },
+    sound: { master: vol, music: vol, sfx: vol, voice: vol, track: C.MUSIC_TRACK_CHOICES[0] } }),
+       "⛔ RESET TO DEFAULTS stores the shipped defaults in the profile's settings (CS011 P2)");
 }
 
 // The HUD draws over the new pages when OPTIONS was opened from pause (H4).

@@ -725,13 +725,9 @@ const C = {
   RIM_PULSE_RING:       8,      // onset times held; the lookahead holds at most two
 
   // ---- Telemetry (GDD 15.6) -----------------------------------------------
-  // ⛔ THE RING IS IN MEMORY AND NOTHING IS PERSISTED THIS CHANGESET.
-  // kit-storage owns the keyspace and Profiles.keyFor(base) is the one route to
-  // a key (CLAUDE.md, Save data); 22-meta.js is still a placeholder, so there is
-  // no keyspace and no Profiles in the build. Writing telemetry anywhere today
-  // would mean the game choosing a raw localStorage key name, which is
-  // forbidden outright. CS011 owns persistence, the profile scope and read()'s
-  // envelope-version rejection.
+  // The ring lives in memory and is saved per profile since CS011 P2, as arrays,
+  // at 22-meta.js's seats and never mid-play (plan R17). ⛔ The capture switch
+  // is never stored. Its declared version is 22-meta.js's `telemetry` key.
   TELEMETRY_CAP:        4096,   // rows. ⛔ the ring DROPS the oldest and latches
                                 // `wrapped`; a total read off a wrapped buffer
                                 // is wrong, so the export says so in its header.

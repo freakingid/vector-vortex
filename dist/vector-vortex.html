@@ -774,13 +774,9 @@ const C = {
   RIM_PULSE_RING:       8,      // onset times held; the lookahead holds at most two
 
   // ---- Telemetry (GDD 15.6) -----------------------------------------------
-  // ⛔ THE RING IS IN MEMORY AND NOTHING IS PERSISTED THIS CHANGESET.
-  // kit-storage owns the keyspace and Profiles.keyFor(base) is the one route to
-  // a key (CLAUDE.md, Save data); 22-meta.js is still a placeholder, so there is
-  // no keyspace and no Profiles in the build. Writing telemetry anywhere today
-  // would mean the game choosing a raw localStorage key name, which is
-  // forbidden outright. CS011 owns persistence, the profile scope and read()'s
-  // envelope-version rejection.
+  // The ring lives in memory and is saved per profile since CS011 P2, as arrays,
+  // at 22-meta.js's seats and never mid-play (plan R17). ⛔ The capture switch
+  // is never stored. Its declared version is 22-meta.js's `telemetry` key.
   TELEMETRY_CAP:        4096,   // rows. ⛔ the ring DROPS the oldest and latches
                                 // `wrapped`; a total read off a wrapped buffer
                                 // is wrong, so the export says so in its header.
@@ -9189,16 +9185,11 @@ return { VERSION, NAME_CHANGE_NOTICE: KitNames.NAME_CHANGE_NOTICE, create };
 // make a capture-on run diverge from a capture-off one — GDD 17.1's replay
 // guarantee failing inside the one system built to observe it.
 //
-// ⛔ NO PERSISTENCE THIS CHANGESET, and the reason is a shipped rule rather than
-// a preference. kit-storage owns the keyspace and Profiles.keyFor(base) is the
-// one route from a store's base name to the key it reads (CLAUDE.md, Save
-// data); 22-meta.js holds only CS008 P3's in-memory Start Depth record, so
-// there is no keyspace and no Profiles in this build. Writing rows anywhere
-// today would mean the game choosing a raw localStorage key name, which is
-// forbidden outright. ⛔ CS011 owns persistence,
-// the profile scope and GDD 15.6's read() envelope-version rejection — and it
-// is wiring rather than a rewrite, because the row shape and the export exist.
-// ⛔ THERE IS NO STORAGE CALL IN THIS FILE AND THERE MUST NOT BE ONE.
+// ⛔ PERSISTED PER PROFILE SINCE CS011 P2, AND NOT FROM HERE. 22-meta.js owns
+// the `telemetry` key's get and set through Profiles.scope() (CLAUDE.md, Save
+// data); this file hands it snapshot() and takes restore(), and the envelope's
+// declared version is GDD 15.6's read() rejection. ⛔ THERE IS NO STORAGE CALL
+// IN THIS FILE AND THERE MUST NOT BE ONE (test-cs007-p4.js).
 //
 // ⛔ NOT ON CLAUDE.md's EXTRACTION LIST. Six modules are built kit-shaped from
 // v1 and this is not one of them, so it reads `state` and `C` directly like
@@ -9242,6 +9233,12 @@ return { VERSION, NAME_CHANGE_NOTICE: KitNames.NAME_CHANGE_NOTICE, create };
 //   level_reached -> level      mode -> mode            start_depth -> startDepth
 //   wells_cleared -> wellsCleared               purges_spent -> purgesSpent
 //   max_combo -> maxCombo       deaths -> deaths
+//
+// ⛔ THE STORED ROWS ARE ARRAYS IN THIS ORDER (CS011 P2, plan R17). A column
+// added, removed or moved BUMPS `telemetry`'s declared version in 22-meta.js's
+// Store, in the same commit: kit-storage then reads an old envelope as empty,
+// which is GDD 15.6's read() rejection. A stored row of the wrong length
+// restores empty too, but a reorder of the same length only the bump catches.
 //
 // ⛔ ALL EIGHT HEAT-DERIVED VALUES ARE SAMPLED, not the six the phase prompt
 // enumerated: CLAUDE.md names SEVEN accessors and heat() itself, and
@@ -9556,11 +9553,49 @@ const Telemetry = (function () {
     return text;
   }
 
+  // ⛔ THE STORED FORM (CS011 P2, plan R17): the rows oldest-first as ARRAYS in
+  // TELEMETRY_FIELDS order, and the wrap latch. Arrays, not row objects: a full
+  // ring is 0.89 M characters this way and 2.41 M the other (plan §1.6).
+  function snapshot() {
+    const all = rows();
+    const out = new Array(all.length);
+    for (let i = 0; i < all.length; i++) {
+      const r = all[i], a = new Array(TELEMETRY_FIELDS.length);
+      for (let k = 0; k < TELEMETRY_FIELDS.length; k++) a[k] = r[TELEMETRY_FIELDS[k]];
+      out[i] = a;
+    }
+    return { rows: out, wrapped };
+  }
+
+  // Replaces the ring with a snapshot()'s rows. ⛔ ALL OR NOTHING: anything that
+  // is not that shape, or ANY row whose length is not TELEMETRY_FIELDS.length,
+  // leaves the ring empty — a stale column list exports as nothing rather than
+  // as a column of "undefined" (GDD 15.6). Does not touch the capture switch.
+  // Returns the rows held.
+  function restore(data) {
+    clear();
+    if (data === null || typeof data !== "object" || !Array.isArray(data.rows)) return 0;
+    const src = data.rows;
+    for (let i = 0; i < src.length; i++) {
+      if (!Array.isArray(src[i]) || src[i].length !== TELEMETRY_FIELDS.length) return 0;
+    }
+    const from = Math.max(0, src.length - C.TELEMETRY_CAP);
+    for (let i = from; i < src.length; i++) {
+      const row = {};
+      for (let k = 0; k < TELEMETRY_FIELDS.length; k++) row[TELEMETRY_FIELDS[k]] = src[i][k];
+      ring[head] = row;
+      head = (head + 1) % C.TELEMETRY_CAP;
+      count++;
+    }
+    wrapped = data.wrapped === true || from > 0;
+    return count;
+  }
+
   return {
     fields: TELEMETRY_FIELDS,
     kinds: TELEMETRY_KINDS,
     enabled, setEnabled, toggle,
-    sample, push, rows, clear, csv, exportCsv,
+    sample, push, rows, clear, csv, exportCsv, snapshot, restore,
     get count() { return count; },
     get wrapped() { return wrapped; },
   };
@@ -9579,8 +9614,9 @@ const Telemetry = (function () {
 // store (CLAUDE.md, Save data). ⛔ The game never enumerates storage — no call to
 // a store's keys(), scopes(), clear() or usage().
 //
-// ⚠ NO SETTING OR RECORD IS SAVED YET. levelRecord() below is still the
-// in-memory SESSION record (Paul, S1) until CS011 P2 re-points it at `progress`.
+// WHAT A PROFILE KEEPS (CS011 P2): `settings` (23-main.js's CONTROLS, KEYBOARD,
+// GAMEPAD and sound rows), `progress` (the Start Depth record) and `telemetry`
+// (the ring's rows). ⛔ The telemetry capture switch is never stored.
 
 // ---------------------------------------------------------------------------
 // THE STORE AND THE PROFILE (GDD 15.1, 15.2). CS011 P1.
@@ -9602,6 +9638,10 @@ const Profiles = (function () {
     // The active profile's store. ⛔ Profile `p0`'s is the ROOT store, beside
     // `scores` and `profiles` (kit-profile's scope rule).
     scope() { return kit.scope(); },
+    // ⛔ THE ONE SWITCH (plan R11). kit-profile fires `beforeChange` and `change`
+    // around it, and Meta's handler resets to shipped defaults BEFORE it loads.
+    // The roster operations that also switch arrive with CS011 P4.
+    select(id) { return kit.select(id); },
     // { id, name, playerId } — mints the playerId if it is absent (kit-profile).
     current() { return kit.current(); },
     list() { return kit.list(); },
@@ -9611,18 +9651,79 @@ const Profiles = (function () {
 const Meta = (function () {
   let booted = false;
 
-  // kit-profile's events. ⚠ `beforeChange` and `change` must be handled before a
-  // second profile can be selected; CS011 P2 wires them (reset, THEN load).
-  function onProfileEvent(name, detail) {}
+  // 23-main.js's three settings callbacks, handed over at boot (plan R11):
+  // resetSettings() (the shipped defaults, ⛔ writing nothing), applySettings(data)
+  // (each VALID field of a stored `settings`, leaving the rest as they are) and
+  // settingsSnapshot() (what `settings` stores).
+  let hooks = null;
 
-  function boot() {
+  // ⛔ RESET, THEN LOAD (CLAUDE.md, Save data). applySettings() skips a missing or
+  // invalid field, so a field the incoming profile never stored keeps whatever
+  // the runtime holds: the reset is what makes that the shipped default rather
+  // than the outgoing profile's value (test-cs011-p2.js's mutation).
+  function activateSettings() {
+    hooks.resetSettings();
+    hooks.applySettings(Profiles.scope().get("settings", null));
+  }
+
+  // ⛔ ON EVERY CHANGE (plan R10): an adjust step that moved a value, a toggle, a
+  // capture that bound, RESET TO DEFAULTS. Never from Game.reset().
+  function saveSettings() {
+    if (!booted) return;
+    Profiles.scope().set("settings", hooks.settingsSnapshot());
+  }
+
+  // ⛔ TELEMETRY IS WRITTEN ONLY WHILE CAPTURE IS ON OR ROWS EXIST (plan R17), and
+  // only at its seats: capture turned off, autoPause, before a profile switch,
+  // and a run's end. ⛔ NEVER ON A TIMER AND NEVER INSIDE A PLAY STEP: a full
+  // ring costs a frame to stringify (plan §1.6). The callers own that second
+  // rule; this function cannot see the step.
+  function saveTelemetry() {
+    if (!booted) return;
+    if (!Telemetry.enabled() && Telemetry.count === 0) return;
+    Profiles.scope().set("telemetry", Telemetry.snapshot());
+  }
+
+  // Read when capture turns on with an empty ring, and when EXPORT finds the ring
+  // empty. A stored envelope of another version, or a row of the wrong length,
+  // restores empty (GDD 15.6).
+  function loadTelemetry() {
+    if (!booted) return;
+    Telemetry.restore(Profiles.scope().get("telemetry", null));
+  }
+
+  // ⛔ THE RUN'S END — A STUB UNTIL CS011 P3, which calls it from the two seats
+  // (plan R7: the top of quitToTitle() from pause, and frame() at game over)
+  // and adds the score record. Its telemetry write is P2's.
+  function runEnded(outcome) {
+    saveTelemetry();
+  }
+
+  // kit-profile's events. `beforeChange` still names the OUTGOING profile, so its
+  // rows go to that profile's store. `change` names the INCOMING one: the reset,
+  // then its settings. The ring belongs to the profile that recorded it, so it
+  // is emptied too, and refilled from the incoming profile while capture is on
+  // (the same read a capture turned on with an empty ring makes).
+  function onProfileEvent(name, detail) {
+    if (name === "beforeChange") saveTelemetry();
+    if (name === "change") {
+      activateSettings();
+      Telemetry.clear();
+      if (Telemetry.enabled()) loadTelemetry();
+    }
+  }
+
+  function boot(settingsHooks) {
     if (booted) return;
     booted = true;
+    hooks = settingsHooks;
     Store = KitStorage.create({
       gameId: C.GAME_ID,
       keys: {
         settings:  { version: 1 },
         progress:  { version: 1 },
+        // ⛔ BUMP THIS WITH TELEMETRY_FIELDS (21-telemetry.js): the stored rows are
+        // arrays in that order, and an envelope of another version reads empty.
         telemetry: { version: 1 },
         scores:    { version: 1 },
       },
@@ -9646,9 +9747,11 @@ const Meta = (function () {
       if (made.ok) kit.select(made.profile.id);
       kit.current();
     }
+    // The selected profile's settings, over the evaluation-time defaults.
+    activateSettings();
   }
 
-  return { boot };
+  return { boot, saveSettings, saveTelemetry, loadTelemetry, runEnded };
 })();
 
 // ---------------------------------------------------------------------------
@@ -9659,21 +9762,25 @@ const Meta = (function () {
 // of what earlier runs reached has to survive exactly that. A field there would
 // reset on every restart and the list would never grow.
 //
-// ⛔ levelRecord() IS THE ONE FUNCTION CS011 RE-POINTS. Its one writer is the
-// clear edge in Game.update() (23-main.js) and its one reader is
-// startDepthOptions() below; both go through it, so swapping the session record
-// for the profile store ("highest level ever cleared by that profile") is this
-// function's body and nothing else.
-const _sessionLevelRecord = (function () {
-  let highest = 0;
-  return {
-    highestCleared() { return highest; },
-    noteCleared(level) { if (level > highest) highest = level; },
-  };
-})();
+// ⛔ levelRecord() IS THE ONE ROUTE TO IT. Its one writer is the clear edge in
+// Game.update() (23-main.js) and its one reader is startDepthOptions() below.
+// Since CS011 P2 it is the ACTIVE PROFILE's `progress` { highestCleared } (Paul's
+// M8): "the highest level ever cleared by that profile", so a change of profile
+// changes the list. Read on every call, never cached, so a switch needs no hook.
+// A stored value that is not a whole number >= 0 reads as 0.
+const _profileLevelRecord = {
+  highestCleared() {
+    const d = Profiles.scope().get("progress", null);
+    const n = d !== null && typeof d === "object" ? d.highestCleared : undefined;
+    return Number.isInteger(n) && n >= 0 ? n : 0;
+  },
+  noteCleared(level) {
+    if (level > this.highestCleared()) Profiles.scope().set("progress", { highestCleared: level });
+  },
+};
 
 function levelRecord() {
-  return _sessionLevelRecord;
+  return _profileLevelRecord;
 }
 
 // The Start Depth list, ascending (GDD 4.6). C.START_DEPTH_FIRST on a first
@@ -10238,7 +10345,9 @@ const Game = (function () {
       if (state.screen === "pause") resumeRun();
       else pauseRun();
     }
-    if (name === "autoPause") pauseRun();
+    // ⛔ The page going hidden is a telemetry seat (CS011 P2, plan R17). After the
+    // pause, so a hidden run's step is a pause step, never a play step.
+    if (name === "autoPause") { pauseRun(); Meta.saveTelemetry(); }
 
     // The debug bench. ⚠ THE ⚠ TEMPORARY MARKER THAT USED TO OPEN THIS LINE IS
     // GONE, and CS007 P3 is where it stopped being true — see DEBUG_SPAWN_ACTIONS
@@ -10261,13 +10370,24 @@ const Game = (function () {
   // rows both call these (CS008 P6). CAPTURE IS OFF AT EVERY LAUNCH AND IS NEVER
   // PERSISTED (GDD 15.6): the OPTIONS row is a control surface over the same
   // module-level switch, not a settings store for it.
+  // ⛔ THE ROWS ARE PERSISTED (CS011 P2, plan R17): turned on with an empty ring,
+  // the profile's stored rows are read back; turned off, they are written. ⛔ NOT
+  // FROM A PLAY STEP: `t` in play turns capture off and writes nothing, and the
+  // rows are written at the next seat (autoPause, a switch, the run's end).
   function toggleTelemetry() {
-    console.log("telemetry capture: " + (Telemetry.toggle() ? "ON" : "off") +
+    const on = Telemetry.toggle();
+    if (on && Telemetry.count === 0) Meta.loadTelemetry();
+    if (!on && state.screen !== "play") Meta.saveTelemetry();
+    console.log("telemetry capture: " + (on ? "ON" : "off") +
                 " (" + Telemetry.count + " rows)");
   }
   // ⛔ console.log, never an <a download> and never a fetch — see
   // 21-telemetry.js. It is the only export path that works on file://.
-  function exportTelemetry() { Telemetry.exportCsv(); }
+  // An empty ring exports the profile's stored rows (CS011 P2).
+  function exportTelemetry() {
+    if (Telemetry.count === 0) Meta.loadTelemetry();
+    Telemetry.exportCsv();
+  }
 
   // ⛔ PAUSE APPLIES ON "play" ONLY (plan §7) — a dive and a death freeze are
   // both play. Called from inside input.sample(), which also runs in the
@@ -10389,8 +10509,9 @@ const Game = (function () {
 
   // ---- the CONTROLS page (GDD 9, 10.5; CS008 P7) ----------------------------
   //
-  // ⛔ SESSION-ONLY until CS011: nothing here is stored, and quitToTitle() keeps
-  // it because it lives outside `state`. The kit holds the live values; this
+  // ⛔ SAVED PER PROFILE since CS011 P2 (settingsSnapshot() below), on every
+  // change and never from Game.reset(); quitToTitle() keeps it because it lives
+  // outside `state`. The kit holds the live values; this
   // holds what the page shows — the sensitivity multipliers as whole steps, the
   // auto-fire SETTING (syncScreen() applies it in play only), and the bindings
   // as two slots per action, a slot being null when empty.
@@ -10436,8 +10557,9 @@ const Game = (function () {
 
   // ---- the sound rows on OPTIONS (GDD 10.5, 11.1; CS009 P3) -----------------
   //
-  // ⛔ SESSION-ONLY until CS011, exactly as `controls` is: outside `state`, so
-  // quitToTitle() keeps them, and Game.reset() restores them (resetSound()).
+  // ⛔ SAVED PER PROFILE since CS011 P2, exactly as `controls` is: outside
+  // `state`, so quitToTitle() keeps them, and Game.reset() restores them
+  // (resetSound()) and writes nothing. `track` is stored by NAME.
   // A volume is whole steps, 0..C.AUDIO_VOL_STEPS, and its gain is linear,
   // steps / STEPS (plan §0). `track` indexes C.MUSIC_TRACK_CHOICES.
   // ⛔ The VOICE row moves a bus nothing feeds (Paul's A3).
@@ -10486,6 +10608,74 @@ const Game = (function () {
     input.setGamepadButtons(fromSlots(controls.pad));
     endControlModes();
   }
+  // ---- what a profile keeps (CS011 P2; plan R10, R11) -----------------------
+  //
+  // The three callbacks Meta.boot() takes. ⛔ resetSettings() WRITES NOTHING: it is the
+  // switch's reset, and Game.reset() is the same two calls.
+  function resetSettings() {
+    resetControls();
+    resetSound();
+  }
+
+  function settingsSnapshot() {
+    const pairs = slots => { const o = {}; for (const a of CONTROL_ACTIONS) o[a] = slots[a].slice(); return o; };
+    return {
+      controls: { mouse: controls.mouse, touch: controls.touch, autofire: controls.autofire,
+                  mirror: input.setting("inputMirror"), keys: pairs(controls.keys), pad: pairs(controls.pad) },
+      sound: { master: sound.master, music: sound.music, sfx: sound.sfx, voice: sound.voice,
+               track: C.MUSIC_TRACK_CHOICES[sound.track] },
+    };
+  }
+
+  // A stored page of two slots per action, or null. ⛔ WHOLE OR NOT AT ALL: every
+  // action keeps a binding, no key is reserved (Start on a pad), nothing is
+  // bound twice, and a key is lowercase as a capture delivers it.
+  function validPage(page, keys) {
+    if (page === null || typeof page !== "object" || Array.isArray(page)) return null;
+    const out = {}, seen = new Set();
+    for (const a of CONTROL_ACTIONS) {
+      const pair = page[a];
+      if (!Array.isArray(pair) || pair.length !== 2 || (pair[0] === null && pair[1] === null)) return null;
+      for (const v of pair) {
+        if (v === null) continue;
+        const ok = keys ? typeof v === "string" && v !== "" && v === v.toLowerCase() && !reservedKey(v)
+                        : Number.isInteger(v) && v >= 0 && v !== C.GAMEPAD_PAUSE_BUTTON;
+        if (!ok || seen.has(v)) return null;
+        seen.add(v);
+      }
+      out[a] = pair.slice();
+    }
+    return out;
+  }
+
+  // ⛔ KNOWN-VALUE-ELSE-DEFAULT, PER FIELD (plan R10). A field that is missing or
+  // invalid is SKIPPED, so it keeps what the runtime holds: Meta resets to the
+  // shipped defaults first, and without that reset a skipped field is the
+  // outgoing profile's. Writes nothing.
+  function applySettings(data) {
+    const obj = v => v !== null && typeof v === "object" ? v : {};
+    const c = obj(obj(data).controls), snd = obj(obj(data).sound);
+    const whole = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+    for (const k of ["mouse", "touch", "master", "music", "sfx", "voice"]) {
+      const v = k === "mouse" || k === "touch" ? c[k] : snd[k];
+      if (whole(v, ADJUST[k].lo, ADJUST[k].hi)) ADJUST[k].set(v);
+    }
+    if (typeof snd.track === "string" && C.MUSIC_TRACK_CHOICES.indexOf(snd.track) >= 0) {
+      ADJUST.track.set(C.MUSIC_TRACK_CHOICES.indexOf(snd.track));
+    }
+    if (typeof c.autofire === "boolean") controls.autofire = c.autofire;
+    if (typeof c.mirror === "boolean") input.configure({ inputMirror: c.mirror });
+    // The kit validates too, and throws before writing: a page it refuses stays
+    // at its defaults.
+    const keys = validPage(c.keys, true), pad = validPage(c.pad, false);
+    if (keys !== null) {
+      try { input.setBindings(fromSlots(keys)); controls.keys = keys; } catch (err) { /* defaults */ }
+    }
+    if (pad !== null) {
+      try { input.setGamepadButtons(fromSlots(pad)); controls.pad = pad; } catch (err) { /* defaults */ }
+    }
+  }
+
   function endControlModes() {
     if (capturing !== null) input.captureNext(null);
     capturing = null;
@@ -10542,6 +10732,7 @@ const Game = (function () {
     if (keys) { controls.keys = next; input.setBindings(fromSlots(next)); }
     else { controls.pad = next; input.setGamepadButtons(fromSlots(next)); }
     pageNote = "";
+    Meta.saveSettings();
   }
 
   // A step on a menu page while a row owns the input — CONTROLS' and its pages'
@@ -10559,7 +10750,7 @@ const Game = (function () {
         adjustAcc -= whole * C.MENU_ROTATE_STEP;
         const a = ADJUST[adjusting];
         const n = Math.min(a.hi, Math.max(a.lo, a.get() + whole));
-        if (n !== a.get()) { a.set(n); sfx("menuMove"); }
+        if (n !== a.get()) { a.set(n); sfx("menuMove"); Meta.saveSettings(); }
       }
       if (fireEdge || purgeEdge) adjusting = null;           // ⛔ any exit keeps the value
     } else if (fireEdge || purgeEdge) {
@@ -10645,9 +10836,10 @@ const Game = (function () {
     if (name === "toGamepad") state.screen = "gamepad";
     if (name === "backToControls") state.screen = "controls";
     if (name === "adjust") { adjusting = screen.items[menu.cursor].adjust; adjustAcc = 0; }
-    if (name === "toggleMirror") input.configure({ inputMirror: !input.setting("inputMirror") });
-    if (name === "toggleAutofire") controls.autofire = !controls.autofire;
-    if (name === "resetControls") resetControls();
+    // ⛔ Each of these three is a settings change, and saves (CS011 P2).
+    if (name === "toggleMirror") { input.configure({ inputMirror: !input.setting("inputMirror") }); Meta.saveSettings(); }
+    if (name === "toggleAutofire") { controls.autofire = !controls.autofire; Meta.saveSettings(); }
+    if (name === "resetControls") { resetControls(); Meta.saveSettings(); }
     if (name === "rebind") {
       const row = screen.items[menu.cursor];
       capturing = { page: state.screen, bind: row.bind, slot: row.slot };
@@ -11085,7 +11277,8 @@ const Game = (function () {
   }
 
   // Shipped defaults, from 02-state.js's one field list. Used by the suite to
-  // start every case from the same place.
+  // start every case from the same place. ⛔ It WRITES NOTHING to storage
+  // (CS011 P2): the settings it restores stay as the profile stored them.
   function reset() {
     Object.assign(state, newState());
     input.reset();
@@ -11105,6 +11298,8 @@ const Game = (function () {
     frame, update, draw, hitStop,
     quitToTitle,
     input, menu, stats,
+    // CS011 P2: handed to Meta.boot() by the boot block.
+    settingsHooks: { resetSettings, applySettings, settingsSnapshot },
     get hitStopLeft() { return hitStopLeft; },
     get running() { return running; },
   };
@@ -11123,7 +11318,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
   state.screen = "title";
   // ⛔ THE STORE AND THE PROFILE BEFORE THE LOOP (CS011 P1, GDD 15.1). This runs
   // in the headless harness too, so a boot-time write lands in every test build.
-  Meta.boot();
+  Meta.boot(Game.settingsHooks);
   Game.start();
 }
 

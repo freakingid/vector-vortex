@@ -364,7 +364,7 @@ This is the original's SkillStep, credited as the first selectable difficulty in
 - **`startGame(seed, opts)`**, `opts` = `{ mode, startDepth }`. `state.mode` and `state.startDepth` are fields with defaults `"classic"` and 1, so ⛔ **`startGame(seed)` is bit-identical to `startGame(seed, { mode: "classic", startDepth: 1 })`** — every closed test calls the short form. `state.level` is the start depth, `wellIndex` is the same `(level − 1) mod 16`, no draw is spent and `bandRoll` stays 0.
 - **`startBonus(d)`** (`12-scoring.js`) reads `C.START_BONUS_SCALE` 800, `C.START_BONUS_EXP` 1.6 and `C.START_BONUS_ROUND` 100.
 - ⛔ **Paid on clearing the starting well** (Paul, S2), in `clearBonuses()` after §7's three, through `addScore()`, when `state.level === state.startDepth`. No "paid" flag: the level only rises, so the test is true on exactly one clear edge per run. A run that ends in its starting well is never paid; ⛔ a life lost there, then a clear, still pays it (Paul, 2026-09-13 — the death already costs the no-death bonus). A clear on the game-over step pays it like the other three (§7's stopped-run rule: score, no life).
-- **The list** is `startDepthOptions()` (`22-meta.js`): `C.START_DEPTH_FIRST` `[1, 3, 5, 7, 9]`, extended by every odd depth up to the highest level cleared snapped down to odd, capped at `C.START_DEPTH_CAP` 81. ⚠ **"Ever cleared by that profile" is a SESSION record until CS011** (Paul, S1): in memory, written at the clear edge, and ⛔ **not in `state`**, because it must survive `startGame()`. `levelRecord()` is the one function CS011 re-points at the profile store.
+- **The list** is `startDepthOptions()` (`22-meta.js`): `C.START_DEPTH_FIRST` `[1, 3, 5, 7, 9]`, extended by every odd depth up to the highest level cleared snapped down to odd, capped at `C.START_DEPTH_CAP` 81. ⛔ **"Ever cleared by that profile" is the active profile's `progress` `{ highestCleared }`** (CS011 P2, Paul's M8; §15.1): written at the clear edge, read on every call, and ⛔ **not in `state`**, because it must survive `startGame()`. `levelRecord()` is the one route to it, so a change of profile changes the list. A stored value that is not a whole number ≥ 0 reads as 0.
 - ⚠ A run starting past 99 would get the modulo well and no colour roll (§3.6). Unreachable while the cap is 81, which lands in the Green band below `C.BAND_RNG_LEVEL`.
 
 ---
@@ -917,13 +917,13 @@ Pause rules:
 
 **Options (Paul, U5; shipped CS008 P6).** TELEMETRY and EXPORT call the same two functions as the `t` and `e` bench keys (`toggleTelemetry()`, `exportTelemetry()` in `23-main.js`). The row's ON/OFF detail is written from the switch on every Options step, never in `draw()`. ⛔ Capture is still off at every launch and never persisted (§15.6). Options is reachable from the title and from pause, and its BACK returns there.
 
-**Sound and music (Paul, A1–A4; shipped CS009 P3).** ⛔ **Session-only until CS011**, like the Controls page: the settings live outside `state`, a quit to the title keeps them, and `Game.reset()` restores the defaults.
+**Sound and music (Paul, A1–A4; shipped CS009 P3).** ⛔ **Saved per profile** (CS011 P2), like the Controls page: the settings live outside `state`, a quit to the title keeps them, and `Game.reset()` restores the defaults and writes nothing. MUSIC TRACK is stored by name.
 - ⛔ **The five rows go after CREDITS and before BACK.** Above TELEMETRY they move the row indices the closed tests navigate by (plan §1.8). Ten rows outgrow `MENU_VISIBLE_ROWS`, so the window scrolls.
 - **MASTER / MUSIC / SFX / VOICE VOLUME are 0–100 % in 10 % steps, default 100 %** (`C.AUDIO_VOL_STEPS`, `C.AUDIO_VOL_DEFAULT`). The gain is linear, steps / 10, and every change goes through `AudioSys.setVol`, which ramps over `C.AUDIO_VOL_RAMP`. ⛔ **VOICE controls a bus nothing feeds** (A3).
 - **MUSIC TRACK is AUTO / PULSE** (`C.MUSIC_TRACK_CHOICES`, A4). AUTO plays the mode's track (`C.MODE_TRACK`), and PULSE forces `pulse`. `drive` joins at CS012. A change is heard at once (§11.7).
 - **Every row works like a sensitivity row.** Fire arms it and the detail shows `‹100%›`. Rotate changes the value live, one step per whole `MENU_ROTATE_STEP`, clamped at both ends. ⛔ Fire, Purge or Escape leaves the row **and keeps the value**, and never leaves OPTIONS. It is the same row mode as the Controls page (`adjusting` is the row's key), so the menu still steps under it and a held Purge does not back out. The details are written in `update()`, never in `draw()`.
 
-**Controls (Paul, U7 and U8; shipped CS008 P7).** ⛔ **Session-only until CS011**: nothing is stored, and a quit to the title keeps every setting.
+**Controls (Paul, U7 and U8; shipped CS008 P7).** ⛔ **Saved per profile** (CS011 P2), in the profile's `settings` (§15.1), on every change: an adjust step that moved a value, a toggle, a capture that bound, RESET TO DEFAULTS. A quit to the title keeps every setting. They load per field, known-value-else-default; a KEYBOARD or GAMEPAD page loads whole only if every action keeps a binding, no key is reserved and nothing is bound twice, else that page's defaults. ⛔ A profile switch resets to the shipped defaults before it loads (§15.2).
 - **Sensitivity rows are ×`C.SENS_MIN_MULT` 0.5 to ×`C.SENS_MAX_MULT` 2.0 of `MOUSE_SENS` / `TOUCH_SENS`, in `C.SENS_STEP` 0.1 steps.** Paul confirmed the range (2026-09-13). ×1.0 is the shipped constant exactly.
 - **Fire on a sensitivity row arms it** (Paul, 2026-09-13), and the detail shows `‹×1.2›`. Rotate then changes the value live, one step per whole `MENU_ROTATE_STEP`, clamped at both ends. ⛔ Fire, Purge or Escape leaves the row **and keeps the value**, and never leaves the page.
 - **LEFT-HANDED TOUCH** flips kit-input's mirror at once. **TOUCH AUTO-FIRE** is the setting `syncScreen()` applies on entering play; ⛔ on every menu, auto-fire stays off.
@@ -1078,7 +1078,7 @@ The scheduler emits kick and snare events to the render layer; the rim pulses on
 | `rush` | Overdrive alt | ~150 BPM, aggressive |
 | `deep` | Both | ~124 BPM, dubby, wide |
 
-Selectable in Options, persisted per profile, cycled exactly like Orbital Overhaul's `settings.musicTrack`. ⚠ Session-only until CS011 persists it (§10.5).
+Selectable in Options, persisted per profile, cycled exactly like Orbital Overhaul's `settings.musicTrack`. Saved per profile by name since CS011 P2 (§10.5).
 
 **Shipped, CS009 P2 — `title` and `pulse`**, in `src/17-audio-tracks.js` (`buildTitleTrack`, `buildPulseTrack`, `MUSIC_TRACKS`). `drive` is CS012's (Paul's A5); `rush` and `deep` are post-ship. ⛔ Every layer is written as a part, to pass §11.4(c) played solo, and the tune is in the foundation because every layer is.
 
@@ -1390,7 +1390,11 @@ This is a tuning and debugging instrument. Because the simulation is determinist
 
 **The ring and the surface.** `C.TELEMETRY_CAP` rows, sampled every `C.TELEMETRY_INTERVAL` seconds of **simulation** time from `update()` — never from `draw()`, which runs on a frame clock. ⛔ **The ring latches `wrapped` on the first row it drops and the export reports it in the header block**; a total read off a silently wrapped buffer is wrong and nothing else would say so. **The surface is the Options screen's TELEMETRY and EXPORT rows plus the `t` / `e` bench keys** (CS008 P6, §10.5). Both call the same toggle and the same export. The bench keys stay until CS017's debug-key decision. ⛔ **Export writes the CSV to `console.log`** — the only path that works on `file://` — with a `navigator.clipboard` attempt beside it inside a try/catch. Never an `<a download>`, never a `fetch`.
 
-⛔ **Nothing is persisted before CS011.** `kit-storage` owns the keyspace and `Profiles.keyFor(base)` is the one route to a key; `22-meta.js` has no keyspace and no `Profiles` yet (CS008 P3 put only the in-memory Start Depth record there), so writing rows today would mean the game choosing a raw `localStorage` key name. CS011 owns persistence, the profile scope and `read()`'s envelope-version rejection above.
+**Persistence — shipped, CS011 P2 (plan R17).** The rows are saved per profile in `telemetry`, through `Profiles.scope()` in `22-meta.js`; ⛔ `21-telemetry.js` names no storage and only hands over `snapshot()` (`{ rows, wrapped }`, each row an ARRAY in `TELEMETRY_FIELDS` order: 0.89 M characters for a full ring against 2.41 M as objects) and takes `restore(data)`.
+- ⛔ **Written only while capture is on or rows exist, at four seats:** capture turned off, `autoPause`, before a profile switch (`beforeChange`), and a run's end (`Meta.runEnded`, seated by CS011 P3). ⛔ **Never on a timer and never inside a play step**: `t` turning capture off in play writes nothing, and the next seat writes the rows.
+- **Read** when capture turns on with an empty ring, and when EXPORT finds the ring empty. A switch empties the ring and, with capture on, reads the incoming profile's rows.
+- ⛔ **The `read()` rejection above is the declared version.** `telemetry`'s version in `22-meta.js`'s `Store` is bumped with the column list; an envelope of any other version reads empty, and so does a stored row whose length is not `TELEMETRY_FIELDS.length`.
+- ⛔ The capture switch itself is never stored.
 
 ---
 

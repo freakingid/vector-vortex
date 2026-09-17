@@ -543,7 +543,9 @@ const Game = (function () {
       if (state.screen === "pause") resumeRun();
       else pauseRun();
     }
-    if (name === "autoPause") pauseRun();
+    // ⛔ The page going hidden is a telemetry seat (CS011 P2, plan R17). After the
+    // pause, so a hidden run's step is a pause step, never a play step.
+    if (name === "autoPause") { pauseRun(); Meta.saveTelemetry(); }
 
     // The debug bench. ⚠ THE ⚠ TEMPORARY MARKER THAT USED TO OPEN THIS LINE IS
     // GONE, and CS007 P3 is where it stopped being true — see DEBUG_SPAWN_ACTIONS
@@ -566,13 +568,24 @@ const Game = (function () {
   // rows both call these (CS008 P6). CAPTURE IS OFF AT EVERY LAUNCH AND IS NEVER
   // PERSISTED (GDD 15.6): the OPTIONS row is a control surface over the same
   // module-level switch, not a settings store for it.
+  // ⛔ THE ROWS ARE PERSISTED (CS011 P2, plan R17): turned on with an empty ring,
+  // the profile's stored rows are read back; turned off, they are written. ⛔ NOT
+  // FROM A PLAY STEP: `t` in play turns capture off and writes nothing, and the
+  // rows are written at the next seat (autoPause, a switch, the run's end).
   function toggleTelemetry() {
-    console.log("telemetry capture: " + (Telemetry.toggle() ? "ON" : "off") +
+    const on = Telemetry.toggle();
+    if (on && Telemetry.count === 0) Meta.loadTelemetry();
+    if (!on && state.screen !== "play") Meta.saveTelemetry();
+    console.log("telemetry capture: " + (on ? "ON" : "off") +
                 " (" + Telemetry.count + " rows)");
   }
   // ⛔ console.log, never an <a download> and never a fetch — see
   // 21-telemetry.js. It is the only export path that works on file://.
-  function exportTelemetry() { Telemetry.exportCsv(); }
+  // An empty ring exports the profile's stored rows (CS011 P2).
+  function exportTelemetry() {
+    if (Telemetry.count === 0) Meta.loadTelemetry();
+    Telemetry.exportCsv();
+  }
 
   // ⛔ PAUSE APPLIES ON "play" ONLY (plan §7) — a dive and a death freeze are
   // both play. Called from inside input.sample(), which also runs in the
@@ -694,8 +707,9 @@ const Game = (function () {
 
   // ---- the CONTROLS page (GDD 9, 10.5; CS008 P7) ----------------------------
   //
-  // ⛔ SESSION-ONLY until CS011: nothing here is stored, and quitToTitle() keeps
-  // it because it lives outside `state`. The kit holds the live values; this
+  // ⛔ SAVED PER PROFILE since CS011 P2 (settingsSnapshot() below), on every
+  // change and never from Game.reset(); quitToTitle() keeps it because it lives
+  // outside `state`. The kit holds the live values; this
   // holds what the page shows — the sensitivity multipliers as whole steps, the
   // auto-fire SETTING (syncScreen() applies it in play only), and the bindings
   // as two slots per action, a slot being null when empty.
@@ -741,8 +755,9 @@ const Game = (function () {
 
   // ---- the sound rows on OPTIONS (GDD 10.5, 11.1; CS009 P3) -----------------
   //
-  // ⛔ SESSION-ONLY until CS011, exactly as `controls` is: outside `state`, so
-  // quitToTitle() keeps them, and Game.reset() restores them (resetSound()).
+  // ⛔ SAVED PER PROFILE since CS011 P2, exactly as `controls` is: outside
+  // `state`, so quitToTitle() keeps them, and Game.reset() restores them
+  // (resetSound()) and writes nothing. `track` is stored by NAME.
   // A volume is whole steps, 0..C.AUDIO_VOL_STEPS, and its gain is linear,
   // steps / STEPS (plan §0). `track` indexes C.MUSIC_TRACK_CHOICES.
   // ⛔ The VOICE row moves a bus nothing feeds (Paul's A3).
@@ -791,6 +806,74 @@ const Game = (function () {
     input.setGamepadButtons(fromSlots(controls.pad));
     endControlModes();
   }
+  // ---- what a profile keeps (CS011 P2; plan R10, R11) -----------------------
+  //
+  // The three callbacks Meta.boot() takes. ⛔ resetSettings() WRITES NOTHING: it is the
+  // switch's reset, and Game.reset() is the same two calls.
+  function resetSettings() {
+    resetControls();
+    resetSound();
+  }
+
+  function settingsSnapshot() {
+    const pairs = slots => { const o = {}; for (const a of CONTROL_ACTIONS) o[a] = slots[a].slice(); return o; };
+    return {
+      controls: { mouse: controls.mouse, touch: controls.touch, autofire: controls.autofire,
+                  mirror: input.setting("inputMirror"), keys: pairs(controls.keys), pad: pairs(controls.pad) },
+      sound: { master: sound.master, music: sound.music, sfx: sound.sfx, voice: sound.voice,
+               track: C.MUSIC_TRACK_CHOICES[sound.track] },
+    };
+  }
+
+  // A stored page of two slots per action, or null. ⛔ WHOLE OR NOT AT ALL: every
+  // action keeps a binding, no key is reserved (Start on a pad), nothing is
+  // bound twice, and a key is lowercase as a capture delivers it.
+  function validPage(page, keys) {
+    if (page === null || typeof page !== "object" || Array.isArray(page)) return null;
+    const out = {}, seen = new Set();
+    for (const a of CONTROL_ACTIONS) {
+      const pair = page[a];
+      if (!Array.isArray(pair) || pair.length !== 2 || (pair[0] === null && pair[1] === null)) return null;
+      for (const v of pair) {
+        if (v === null) continue;
+        const ok = keys ? typeof v === "string" && v !== "" && v === v.toLowerCase() && !reservedKey(v)
+                        : Number.isInteger(v) && v >= 0 && v !== C.GAMEPAD_PAUSE_BUTTON;
+        if (!ok || seen.has(v)) return null;
+        seen.add(v);
+      }
+      out[a] = pair.slice();
+    }
+    return out;
+  }
+
+  // ⛔ KNOWN-VALUE-ELSE-DEFAULT, PER FIELD (plan R10). A field that is missing or
+  // invalid is SKIPPED, so it keeps what the runtime holds: Meta resets to the
+  // shipped defaults first, and without that reset a skipped field is the
+  // outgoing profile's. Writes nothing.
+  function applySettings(data) {
+    const obj = v => v !== null && typeof v === "object" ? v : {};
+    const c = obj(obj(data).controls), snd = obj(obj(data).sound);
+    const whole = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+    for (const k of ["mouse", "touch", "master", "music", "sfx", "voice"]) {
+      const v = k === "mouse" || k === "touch" ? c[k] : snd[k];
+      if (whole(v, ADJUST[k].lo, ADJUST[k].hi)) ADJUST[k].set(v);
+    }
+    if (typeof snd.track === "string" && C.MUSIC_TRACK_CHOICES.indexOf(snd.track) >= 0) {
+      ADJUST.track.set(C.MUSIC_TRACK_CHOICES.indexOf(snd.track));
+    }
+    if (typeof c.autofire === "boolean") controls.autofire = c.autofire;
+    if (typeof c.mirror === "boolean") input.configure({ inputMirror: c.mirror });
+    // The kit validates too, and throws before writing: a page it refuses stays
+    // at its defaults.
+    const keys = validPage(c.keys, true), pad = validPage(c.pad, false);
+    if (keys !== null) {
+      try { input.setBindings(fromSlots(keys)); controls.keys = keys; } catch (err) { /* defaults */ }
+    }
+    if (pad !== null) {
+      try { input.setGamepadButtons(fromSlots(pad)); controls.pad = pad; } catch (err) { /* defaults */ }
+    }
+  }
+
   function endControlModes() {
     if (capturing !== null) input.captureNext(null);
     capturing = null;
@@ -847,6 +930,7 @@ const Game = (function () {
     if (keys) { controls.keys = next; input.setBindings(fromSlots(next)); }
     else { controls.pad = next; input.setGamepadButtons(fromSlots(next)); }
     pageNote = "";
+    Meta.saveSettings();
   }
 
   // A step on a menu page while a row owns the input — CONTROLS' and its pages'
@@ -864,7 +948,7 @@ const Game = (function () {
         adjustAcc -= whole * C.MENU_ROTATE_STEP;
         const a = ADJUST[adjusting];
         const n = Math.min(a.hi, Math.max(a.lo, a.get() + whole));
-        if (n !== a.get()) { a.set(n); sfx("menuMove"); }
+        if (n !== a.get()) { a.set(n); sfx("menuMove"); Meta.saveSettings(); }
       }
       if (fireEdge || purgeEdge) adjusting = null;           // ⛔ any exit keeps the value
     } else if (fireEdge || purgeEdge) {
@@ -950,9 +1034,10 @@ const Game = (function () {
     if (name === "toGamepad") state.screen = "gamepad";
     if (name === "backToControls") state.screen = "controls";
     if (name === "adjust") { adjusting = screen.items[menu.cursor].adjust; adjustAcc = 0; }
-    if (name === "toggleMirror") input.configure({ inputMirror: !input.setting("inputMirror") });
-    if (name === "toggleAutofire") controls.autofire = !controls.autofire;
-    if (name === "resetControls") resetControls();
+    // ⛔ Each of these three is a settings change, and saves (CS011 P2).
+    if (name === "toggleMirror") { input.configure({ inputMirror: !input.setting("inputMirror") }); Meta.saveSettings(); }
+    if (name === "toggleAutofire") { controls.autofire = !controls.autofire; Meta.saveSettings(); }
+    if (name === "resetControls") { resetControls(); Meta.saveSettings(); }
     if (name === "rebind") {
       const row = screen.items[menu.cursor];
       capturing = { page: state.screen, bind: row.bind, slot: row.slot };
@@ -1390,7 +1475,8 @@ const Game = (function () {
   }
 
   // Shipped defaults, from 02-state.js's one field list. Used by the suite to
-  // start every case from the same place.
+  // start every case from the same place. ⛔ It WRITES NOTHING to storage
+  // (CS011 P2): the settings it restores stay as the profile stored them.
   function reset() {
     Object.assign(state, newState());
     input.reset();
@@ -1410,6 +1496,8 @@ const Game = (function () {
     frame, update, draw, hitStop,
     quitToTitle,
     input, menu, stats,
+    // CS011 P2: handed to Meta.boot() by the boot block.
+    settingsHooks: { resetSettings, applySettings, settingsSnapshot },
     get hitStopLeft() { return hitStopLeft; },
     get running() { return running; },
   };
@@ -1428,6 +1516,6 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
   state.screen = "title";
   // ⛔ THE STORE AND THE PROFILE BEFORE THE LOOP (CS011 P1, GDD 15.1). This runs
   // in the headless harness too, so a boot-time write lands in every test build.
-  Meta.boot();
+  Meta.boot(Game.settingsHooks);
   Game.start();
 }
