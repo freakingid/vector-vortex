@@ -11,7 +11,7 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 
 | Phase | Builds | State |
 |---|---|---|
-| P1 | kit-names / kit-storage / kit-profile inlined at build; the store; the silent ANONYMOUS profile; harness storage options; the CS015 renumber; the Save-data rule rewording | ✅ built: `KIT_INLINE` + `wrapKitModule()`, `Store` / `Profiles` / `Meta.boot()`, harness `store` / `storage` / `crypto` / `mutate` / `storageReads`, `test-cs011-p1.js` (62); three closed files in place; ⚠ one plan finding (the `lastUsed` byte, below) |
+| P1 | kit-names / kit-storage / kit-profile inlined at build; the store; the silent ANONYMOUS profile; harness storage options; the CS015 renumber; the Save-data rule rewording | ✅ built: `KIT_INLINE` + `wrapKitModule()`, `Store` / `Profiles` / `Meta.boot()`, harness `store` / `storage` / `crypto` / `mutate` / `storageReads`, `test-cs011-p1.js` (62); three closed files in place; the `lastUsed` finding accepted by Paul |
 | P2 | Settings, the Start Depth record (`progress`) and telemetry rows saved per profile; reset-before-load on a switch | next |
 | P3 | The local top 10 per mode; the run's three seats; the bench flag; SCORES; game over's placing line | — |
 | P4 | kit-input 0.8.0's text mode; PROFILE, a profile's page, DELETE, the NAME wheel | — |
@@ -371,8 +371,8 @@ Paste P2's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards P1 leaves
   `activeId`, so the prompt's `select()` is kit-profile's no-op (`:550`).
   `Meta.boot()` calls `current()` so the `playerId` is minted. A reload selects
   `roster[0]`, the same profile (asserted). ⛔ **Do not "fix" this by renaming
-  `legacyProfileId`**: that moves `p0` off the root store. For Paul: it is
-  behaviour-neutral, but it differs from the prompt's wording.
+  `legacyProfileId`**: that moves `p0` off the root store. ✅ **Accepted by
+  Paul, 2026-09-16** (behaviour-neutral; `lib/` stays unedited).
 - ⛔ **`onProfileEvent` is empty.** `beforeChange` and `change` must be wired
   (reset, THEN load) before anything can select a second profile.
 - ⛔ **`src/21-telemetry.js:22` and `00-config.js`'s Telemetry comment still say
