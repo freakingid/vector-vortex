@@ -1,14 +1,14 @@
 # Vector Vortex — STATUS
-Version: 0.0.8 · Changeset: CS012 (not yet planned) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.8 · Changeset: CS012 (planned; §0 open) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS012
 
-**Not planned.** CS012 is Overdrive core (`ROADMAP.md`): mode flags, Jump, the
-combo multiplier, the Reaver and the `drive` track, plus the carried combo input
-to the director, the Overdrive intensity re-measure and Overdrive's own online
-board. Its planning session writes `PLANNED-FEATURES-CS012.md` and
-`IMPLEMENTATION-PHASES-CS012.md`, and this ledger gets one line per phase.
-CS011's ledger is in `log/CS011.md`.
+**Planned at `de53c0d`; ⛔ not runnable until Paul answers O1–O16**
+(`PLANNED-FEATURES-CS012.md` §0). Six phases (`IMPLEMENTATION-PHASES-CS012.md`):
+P1 `drive`; P2 mode flags, the Reaver, Overdrive's schedule; P3 OVERDRIVE on MODE,
+its own board, SCORES' OVERDRIVE view, the record per mode; P4 the combo; P5 Jump;
+P6 the tenth soak and the close. This ledger gets one line per phase. CS011's
+ledger is in `log/CS011.md`.
 
 ## Working / verified
 
@@ -304,7 +304,13 @@ CS011's ledger is in `log/CS011.md`.
 
 ## Open questions (blocking)
 
-- None.
+- ⛔ **O1–O16, `PLANNED-FEATURES-CS012.md` §0.** Each carries its measurement and a
+  recommendation; answers go in §0's ✅ Answer column before P1 runs. The four
+  with the widest reach: **O1** (a Reaver climbing at 1.6× breaches GDD §4.4's
+  respawn guarantee at every level, MEASURED), **O3** (+0.5 per kill sustains
+  ~×7 on played boards, twice §14.4's ×3–4, MEASURED with bots), **O9**
+  (OVERDRIVE as MODE's default highlight reds 9 closed files, MEASURED) and
+  **O11** (Overdrive's board id and Paul's registry entry).
 
 ## Carried tasks
 
@@ -315,6 +321,11 @@ CS011's ledger is in `log/CS011.md`.
   `statsFields` cannot be read remotely; the repo's registry has all seven.
 - ⛔ **CS012 — Overdrive's online board** (its own game id, registered), SCORES'
   OVERDRIVE view, and `max_combo`'s real source (above, Meta).
+  ⛔ **Before CS012 P3, Paul's:** the `vector-vortex-overdrive` entry in
+  coinless-kit's `registry.js`, deployed, and its commit named here (plan O11).
+  MEASURED 2026-09-16: an unregistered id answers `INVALID_GAME`, which
+  kit-leaderboard drops rather than queues. ⚠ **Plan F1:** a sharp-bot Classic
+  Start Depth 81 run peaked at 100,078 /s against the deployed 100,000.
 - ⛔ **CS012 — the director's combo input and the Overdrive intensity
   re-measure** (Paul's D6): `INT_W_COMBO` is fed 0 in Classic.
 - ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
@@ -337,12 +348,9 @@ CS011's ledger is in `log/CS011.md`.
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS012 planning
+## Next up — ⛔ Paul answers CS012 §0, then P1
 
-A planning session (`CLAUDE.md`, session rules): it writes
-`PLANNED-FEATURES-CS012.md` and `IMPLEMENTATION-PHASES-CS012.md` and no code.
-Read `ROADMAP.md`'s CS012 row, GDD §11.4, §11.7, §13, §14.2, §14.4 and §14.6,
-and `log/CS010.md` and `log/CS011.md`'s "Carried forward". ⛔ Beyond ROADMAP's
-row, CS012 inherits three carried items that change saved or posted data: the
-Overdrive game id and its registry entry, `max_combo`'s source (which deletes
-`C.TELEMETRY_PLACEHOLDER.maxCombo`), and a SCORES view for OVERDRIVE.
+`PLANNED-FEATURES-CS012.md` §0 (O1–O16) is open. Once each answer is written into
+its ✅ column, run `IMPLEMENTATION-PHASES-CS012.md` P1 (`drive`). An answer that
+changes a phase's shape rather than a value is re-planned first (that file's
+header).
