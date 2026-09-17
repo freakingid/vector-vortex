@@ -294,6 +294,8 @@ function buildGame(opts = {}) {
     "noteBeat", "beatGlow",
     // the inlined kit, the store, the profile and Meta (build.js, 22-meta.js, CS011 P1)
     "KitNames", "KitStorage", "KitProfile", "Store", "Profiles", "Meta",
+    // the local top 10 (22-meta.js, CS011 P3)
+    "Scores", "createScores",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of

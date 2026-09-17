@@ -745,6 +745,7 @@ const C = {
   // ---- Meta: profiles, saves, scores (GDD 15) — CS011 ----------------------
   // The phases that read the rest of the group add them (plan §2).
   PROFILE_MAX:          8,      // kit-profile's roster ceiling (its create() refuses past it)
+  SCORES_PER_MODE:      10,     // the local table's rows per mode (GDD 15.3; CS011 P3)
 
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.7",   // ⚠ 0.0.2 was never written here — see log/CS006.md

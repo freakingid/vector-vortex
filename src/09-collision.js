@@ -275,9 +275,10 @@ function killSkimmer(state) {
   // lets this forced value behave correctly on the way out.
   state.purgeLatched = true;
 
-  // ⛔ THE STOP (GDD 4.4). Its menu is CS008 P5's (23-main.js) and the score
-  // submission is CS011's; all this writes is the screen, which stops stepping
-  // the gameplay systems, in Game.update(). The freeze below still runs — the
+  // ⛔ THE STOP (GDD 4.4). Its menu is CS008 P5's (23-main.js). ⛔ The run's
+  // record is NOT taken here but in frame(), after the steps (CS011 P3): a clear
+  // on this step still pays after this returns. All this writes is the screen,
+  // which stops stepping the gameplay systems, in Game.update(). The freeze below still runs — the
   // last death of a run reads exactly like the others.
   if (state.lives <= 0) {
     state.lives = 0;

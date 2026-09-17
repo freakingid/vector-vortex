@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.7 · Changeset: CS011 (P2 built 2026-09-16 — P3 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.7 · Changeset: CS011 (P3 built 2026-09-16 — P4 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS011
 
@@ -13,17 +13,17 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 |---|---|---|
 | P1 | kit-names / kit-storage / kit-profile inlined at build; the store; the silent ANONYMOUS profile; harness storage options; the CS015 renumber; the Save-data rule rewording | ✅ built: `KIT_INLINE` + `wrapKitModule()`, `Store` / `Profiles` / `Meta.boot()`, harness `store` / `storage` / `crypto` / `mutate` / `storageReads`, `test-cs011-p1.js` (62); three closed files in place; the `lastUsed` finding accepted by Paul |
 | P2 | Settings, the Start Depth record (`progress`) and telemetry rows saved per profile; reset-before-load on a switch | ✅ built: `settings` / `progress` / `telemetry` per profile, `Meta.boot(Game.settingsHooks)`, `Profiles.select()`, `Telemetry.snapshot()` / `restore()`, `Meta.runEnded` stub, `test-cs011-p2.js` (135); `test-cs008-p7.js:436` in place |
-| P3 | The local top 10 per mode; the run's three seats; the bench flag; SCORES; game over's placing line | next |
-| P4 | kit-input 0.8.0's text mode; PROFILE, a profile's page, DELETE, the NAME wheel | — |
+| P3 | The local top 10 per mode; the run's three seats; the bench flag; SCORES; game over's placing line | ✅ built: `createScores` + `src/22-meta.NOTES.md`, `Meta.runStarted` / `benchUsed` / `eligible` / `runOpen` / `runEnded` / `scores` / `lastPlace`, SCORES, game over's third line, `test-cs011-p3.js` (83); no closed file edited |
+| P4 | kit-input 0.8.0's text mode; PROFILE, a profile's page, DELETE, the NAME wheel | next |
 | P5 | kit-leaderboard 0.2.1; `Leaderboard`; the submits; SCORES' ONLINE view; the queued line | — |
 | P6 | The ninth soak (working vs blocked storage, one hash; a reload); the close | — |
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules + 3 inlined kit,
-  556.9 KB); the manifest is checked both directions against `src/`, and a
+  565.6 KB); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **56 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **57 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -366,18 +366,30 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS011 P3
+## Next up — ⛔ CS011 P4
 
-Paste P3's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards P1 and P2
+Paste P4's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards P1–P3
 leave (reasoning in `log/CS011.md`):
-- ⛔ **`Meta.runEnded(outcome)` is P2's stub and has no caller.** It writes the
-  telemetry rows; P3 calls it from R7's two seats and adds the record. ⛔ The
-  `'died'` seat is in `frame()` after the steps, which is not a play step, so the
-  write is legal there. Never inside `killSkimmer()` or `update()`.
+- ⛔ **THE RUN'S END IS `Meta.runEnded(outcome)`, AND P5's SUBMIT HANGS OFF IT**,
+  gated by `Meta.eligible()` read BEFORE the run closes. Its seats: `startGame()`'s
+  last line, `quitToTitle()`'s first (on pause), `frame()` after the steps. ⚠ It
+  does nothing, telemetry included, when no run is open, so a `Game.reset()`
+  board with no `startGame()` records nothing. `Game.reset()` does not drop a run.
+- ⛔ **`test-cs011-p3.js`'s `mutate` pins three texts, each exactly once in the
+  build:** `if (state.screen === "gameover" && Meta.runOpen()) Meta.runEnded("died");`,
+  `return run !== null && !run.bench;` and `sfx("gameOver");`.
+- ⛔ **Never write the text `audioFrame()` inside `frame()`, comments included**
+  (MEASURED, P3): `test-cs009-p3.js` counts it there.
+- ⛔ **The title has three rows (PLAY, OPTIONS, SCORES), and P4's PROFILE goes
+  after SCORES**: `test-cs011-p3.js` asserts the three labels in order, so P4
+  rewrites that one assertion in place. Game over has three lines.
+- ⛔ **A score row stamps `profileName` when the run ends**, and SCORES shows that
+  stamp. A P4 rename or delete must leave it alone. SCORES' rows are rebuilt on
+  entry (`buildScoreRows()`), never in `draw()`; P5's ONLINE view has the same
+  rule.
 - ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP** (`test-cs011-p2.js`, a `Store.set`
   spy by screen). ⚠ Reading taken: `t` turning capture off in play writes
-  nothing; the rows wait for the next seat. `autoPause` writes AFTER
-  `pauseRun()`, so its step is a pause step.
+  nothing; the rows wait for the next seat. `autoPause` writes after `pauseRun()`.
 - ⛔ **A SETTINGS SAVE RUNS INSIDE `update()`** on a menu step (an adjust step,
   a toggle, a capture in `input.sample()`, RESET). It writes no `state`. A test
   that counts stored bytes across menu presses will see them.
@@ -407,7 +419,5 @@ leave (reasoning in `log/CS011.md`):
   ROOT store.**
 - ⛔ **kit-leaderboard cannot be inlined**: `test-cs009-p1.js:508` bans its
   `setTimeout` and `test-cs002-p1.js` its `addEventListener`.
-- ⛔ **A clear on the step that spends the last life scores after
-  `killSkimmer()`**, so the `'died'` record is taken in `frame()` after the steps.
 - ⛔ **Typed letters and digits are bound today** (`a d z x c`, space, `1`–`6`,
   `0`, `w`, `t`, `e`, `p`): name entry needs P4's text mode.

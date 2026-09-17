@@ -27,7 +27,7 @@ Modelled on Orbital Overhaul's §0 read contract. A future session reads §0 + �
 | 8 | Difficulty | The heat clock, introduction schedule |
 | 9 | Controls | Any input path; runtime settings and rebinding (9.5) |
 | 10 | Visual design | Rendering, glow, HUD, readability |
-| 10.5 | Screens and menus | Title, mode, Start Depth, options, credits, controls and rebinding, game over, pause and its five sources; the screen state machine; the menu model; menu input on any device |
+| 10.5 | Screens and menus | Title, mode, Start Depth, scores, options, credits, controls and rebinding, game over, pause and its five sources; the screen state machine; the menu model; menu input on any device |
 | 11 | **Audio** | Music, SFX, the intensity director |
 | 12 | Onboarding | Prompts, attract mode, first-run |
 | 13 | Modes | Classic vs Overdrive gating |
@@ -304,9 +304,9 @@ Start 3. Extra life at 20,000 then every 40,000. Reserve cap 6; awards past the 
 
 ⛔ **Shipped, CS008 P4 — the fragmentation.** While `skimmer.dead`, `Game.draw()` draws `drawFragments()` (`14-render-entities.js`, a kit-fx primitive) **instead of** the craft: each segment of the craft's own outline drifts outward from its centroid by `FRAG_DRIFT × t`, turns by `±FRAG_SPIN × t` alternating by segment, and fades as `1 − t` (Paul, U9). ⛔ **`t` is hit-stop progress**, `fragmentT(hitStopLeft, HIT_STOP_DEATH)` — no RNG and no second clock, so identical progress draws identically and the freeze the player is watching is the animation. Every death goes through `killSkimmer()`'s freeze, so a Dive death fragments too. Once the freeze is spent the craft is not drawn until the respawn step, and after the last life it stays gone.
 
-Zero lives sets `screen = "gameover"`, which is a ⛔ **stop, not a screen**: `Game.update()` returns early above everything, so no clock, no spawner, no entity pass, no collision and no level advance run, while `draw()` is untouched and the board the player died on stays up. CS008 owns the game-over UI and the real restart flow; the submission is CS011's.
+Zero lives sets `screen = "gameover"`, which is a ⛔ **stop, not a screen**: `Game.update()` returns early above everything, so no clock, no spawner, no entity pass, no collision and no level advance run, while `draw()` is untouched and the board the player died on stays up. CS008 owns the game-over UI and the real restart flow. The run's record is taken in `frame()` after the steps, never here (CS011 P3, §15.3).
 
-⛔ **Shipped, CS008 P5 — the stop is still a stop, and now it has a menu.** The early return became `screen !== "play"`, in the same place, so every screen that is not play stops the simulation the same way. Game over's menu (RESTART / QUIT TO TITLE) is the only thing that steps there, over the frozen board, and it is inert during the death freeze (§10.5). The `r` debug restart is deleted. The submission is still CS011's.
+⛔ **Shipped, CS008 P5 — the stop is still a stop, and now it has a menu.** The early return became `screen !== "play"`, in the same place, so every screen that is not play stops the simulation the same way. Game over's menu (RESTART / QUIT TO TITLE) is the only thing that steps there, over the frozen board, and it is inert during the death freeze (§10.5). The `r` debug restart is deleted. The run's record is §15.3's (CS011 P3).
 
 ⛔ **Shipped, CS008 P2 — extra lives.** `addScore()` (`12-scoring.js`, §7) is the **only** place a life is awarded. The next milestone is a field, `state.nextLife`, born at `EXTRA_LIFE_FIRST` (20,000); crossing it adds a life if `lives < LIVES_MAX` and advances it by `EXTRA_LIFE_EVERY` (40,000) **either way** — 20k, 60k, 100k, 140k … (Paul, P3s). A `while` pays one award that crosses two milestones twice. ⚠ **An award past the cap is lost**: the milestone moves on and nothing is banked. ✅ **Since CS009 P5 it is not silent**: `addScore()` plays `lifeLost` for each award refused at the cap, and `extraLife` for each one paid. ⛔ Only on a live run — a milestone crossed on the game-over step is not a refused award (the rule below), so it plays neither. ⛔ **A stopped run scores but gains no life** (Paul, 2026-09-13). A clear edge on the step that spends the last life — only a Weaver bolt can kill on a clearing step, measured 0 times in 268 game overs — still pays its bonuses, because the edge runs after `killSkimmer()`. The points count toward the final score, but `addScore()` awards no life while `screen === "gameover"`, so `lives` stays 0 on the stop and the milestone is spent.
 
@@ -868,13 +868,15 @@ Score top-left, lives bottom-left, level and band top-right, Purge charge bottom
 
 ### 10.5 Screens and menus
 
-**Shipped, CS008 P5, P6 and P7.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"play"`, `"pause"`, `"gameover"`, `"options"`, `"controls"`, `"keyboard"`, `"gamepad"`, `"credits"`.
+**Shipped, CS008 P5, P6 and P7.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"play"`, `"pause"`, `"gameover"`, `"options"`, `"controls"`, `"keyboard"`, `"gamepad"`, `"credits"`, and since CS011 P3 `"scores"`.
 
 ```
 boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH ──row──► PLAY ──last life──► GAME OVER
           │  ◄──back───  │  ◄────back────     │                  ▲                  │  │
           └──OPTIONS──► OPTIONS                                  └────RESTART───────┘  │
                           │ ◄─back                    TITLE ◄──QUIT TO TITLE / back────┘
+
+TITLE ──SCORES──► SCORES ──back──► TITLE                                        (CS011 P3)
 
 PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
                          ├──QUIT TO TITLE──► TITLE
@@ -887,7 +889,7 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 
 | Screen | Rows | Back |
 |---|---|---|
-| Title | PLAY, OPTIONS | — |
+| Title | PLAY, OPTIONS, SCORES (CS011 P3). ⛔ CS011's rows go after OPTIONS: the closed tests navigate the title by index | — |
 | Mode | CLASSIC; OVERDRIVE shown locked (M1) | Title |
 | Start Depth | `startDepthOptions()` (§4.6), each row with its `startBonus()`. ⛔ No countdown | Mode |
 | Pause | RESUME, OPTIONS, QUIT TO TITLE (U4), over the frozen board | RESUME |
@@ -895,12 +897,13 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 | Controls | MOUSE SENSITIVITY, TOUCH SENSITIVITY, LEFT-HANDED TOUCH, TOUCH AUTO-FIRE, KEYBOARD ›, GAMEPAD ›, RESET TO DEFAULTS, BACK (U7) | Options |
 | Keyboard, Gamepad | LEFT, RIGHT, FIRE, PURGE and JUMP, two slots each, then BACK. One line above the rows shows a refusal's reason | Controls |
 | Credits | `C.CREDITS_LINES`, then `VERSION` + `C.GAME_VERSION` (U6). ⚠ Placeholder copy; Paul replaces it before ship. ⛔ §18: no mention of the original game or its publisher | Options |
-| Game over | SCORE and LEVEL lines, then RESTART and QUIT TO TITLE (U2) | Title, via `quitToTitle()` |
+| Scores | CS011 P3 (plan R15). The info line `CLASSIC · LOCAL`, plus `NO SCORES YET` as a second line when the table is empty. Then one enabled row per entry: the label is `n NAME`, the detail is the score in plain digits, and the row has no action, so rotate only scrolls. BACK is last. ⛔ The rows are rebuilt on entry (`buildScoreRows()`), never in `draw()`. CLASSIC only until CS012 | Title |
+| Game over | SCORE and LEVEL lines, then a third line: `NEW HIGH SCORE #n` when the run placed (§15.3), otherwise empty. Then RESTART and QUIT TO TITLE (U2) | Title, via `quitToTitle()` |
 
 - ⛔ **Every screen but play is a simulation stop** (§4.4). `Game.update()` samples input, runs the menu step and returns: no clock, no spawner, no entity pass.
 - ⛔ **Boot is the title, and no run exists until a Start Depth row calls `startGame(time seed, { mode, startDepth })`.** `newState().screen` stays `"play"`, because every closed test starts a run through `reset()` and `startGame()`.
 - **RESTART** is `startGame(time seed, { mode, startDepth })` with the run's own two parameters: same mode, same Start Depth, new seed (U2).
-- ⛔ **`quitToTitle()` overwrites the run with `newState()`**, so the title shows no stale board. CS011 adds the `'quit'` submit at its top, and §15.4's ordering is written at the function: whether the run was *playing* is read before the overwrite. Game over's QUIT row goes through it too, and must never submit `'quit'` for a run that already died.
+- ⛔ **`quitToTitle()` overwrites the run with `newState()`**, so the title shows no stale board. ✅ **Since CS011 P3 its first line is the `'quit'` seat** (§15.3): `screen === "pause"` is read before the overwrite. Game over's QUIT row goes through it too, and records nothing for a run that already died.
 
 **Pause (Paul, U4; shipped CS008 P6).** Five sources, all live in play only (the Dive and a death freeze are play):
 - **Escape.** It stays the named action `back`, and `back` in play pauses. A key maps to one action, and Escape has to mean pause in play and back on a menu.
@@ -1318,6 +1321,19 @@ field needs no migration — a saved value for a deleted field orphans harmlessl
 ### 15.3 Local high scores
 
 Top 10 per mode. `vv_scores_v1` stays one shared machine-wide table with records additively stamped `profileId` / `profileName`, matching Orbital Overhaul.
+
+⛔ **Shipped, CS011 P3.**
+- **The shape.** The table is the ROOT key `scores` v1, `{ classic: [...], overdrive: [...] }`, best first, at most `C.SCORES_PER_MODE` (10) per mode. It is shared by every profile on the machine, so the key name above is superseded, as is every raw key name (§15.1).
+- **One row** (plan R9): `{ score, level, startDepth, wells, deaths, durationS, outcome, ts, profileId, profileName, build }`. `profileName` is the name the profile has when the run ends, so a later rename or delete leaves the row as it was.
+- **The table is kit-shaped:** `createScores({ store, key, perMode, modes })` in `22-meta.js`, with `qualifies(mode, score)`, `add(mode, row)` (returns the rank, or 0) and `list(mode)`. It reads no `C` and no `state`, and is the draft of kit-scores (`src/22-meta.NOTES.md`).
+- ⛔ **A row places with `score > 0` and a place in its mode's top 10. A tie goes below** the rows already holding that score. The table is re-read on every call and loads known-value-else-default.
+- ⛔ **The run has three seats**, and its record lives in `Meta`'s closure, never in `state`, because `startGame()` rewrites `state`:
+  - **Start:** the last line of `startGame()` calls `Meta.runStarted()`. It drops a run that is still open without recording it.
+  - **`'quit'`:** the top of `quitToTitle()` records when `state.screen === "pause"`, read before the overwrite. Game over's QUIT TO TITLE comes through the same function, but its run already ended, so it records nothing.
+  - **`'died'`:** `frame()` records after its step loop and before the audio frame, when the screen is `"gameover"` and a run is open. ⛔ **Never inside `killSkimmer()`.** A clear on the step that spends the last life pays after that function returns (§7), and a Dive death returns from `update()` early. Only the frame has the final score.
+  - `Meta.runEnded(outcome)` closes the run first, so a second call does nothing. It then records the row if the run is eligible and places, keeps the rank for game over, and writes telemetry (§15.6).
+- ⛔ **The gate is `Meta.eligible()`, and it is the only one** (§15.4). A run is ineligible once a debug bench action reaches `runAction()` while the screen is `"play"`: a spawn digit `1`–`6`, `0` (`spawnRow`) or `w` (`cycleWell`). Paul's M6 makes such a run ineligible for both boards. `t` and `e` touch no simulation, so they do not affect eligibility. Every other run counts, including runs from a Start Depth and both outcomes.
+- ⛔ **`Meta` writes no `state`, spends no draw and draws nothing.** `test-cs011-p3.js` hashes `state` around every `Meta` call.
 
 ### 15.4 Online leaderboard
 

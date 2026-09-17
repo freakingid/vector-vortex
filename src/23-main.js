@@ -212,6 +212,9 @@ function startGame(seed, opts) {
   state.level = state.startDepth;
   state.wellIndex = (state.level - 1) % WELLS.length;
   enterWell();
+  // ⛔ THE RUN'S START SEAT (CS011 P3, plan R7), last. It opens the run's meta
+  // record outside `state` and drops one still open; it writes no `state`.
+  Meta.runStarted();
 }
 
 // ---------------------------------------------------------------------------
@@ -519,6 +522,13 @@ const Game = (function () {
   // not announce itself — it shows up as an input that works everywhere except
   // one screen. The listener is gone; this is the only route in.
   function runAction(name) {
+    // ⛔ THE BENCH FLAG (CS011 P3, plan R8; Paul's M6): a bench spawn or a well
+    // cycle IN PLAY makes the run ineligible for both boards. `t` and `e` touch
+    // no simulation and leave it eligible.
+    if (state.screen === "play" &&
+        (DEBUG_SPAWN_ACTIONS[name] !== undefined || name === "spawnRow" || name === "cycleWell")) {
+      Meta.benchUsed();
+    }
     if (name === "cycleWell") {
       state.wellIndex = (state.wellIndex + 1) % WELLS.length;
       // ⛔ Through the one path. A raw index swap leaves the previous well's
@@ -636,6 +646,9 @@ const Game = (function () {
     title: { title: "VECTOR VORTEX", lines: [], back: null, items: [
       { label: "PLAY",    detail: "", enabled: true, action: "toMode" },
       { label: "OPTIONS", detail: "", enabled: true, action: "toOptions" },
+      // ⛔ CS011's rows go AFTER OPTIONS (plan R16): the closed tests navigate the
+      // title by index.
+      { label: "SCORES",  detail: "", enabled: true, action: "toScores" },
     ] },
     // ⛔ M1: OVERDRIVE is shown and cannot be chosen until CS012. GDD 13's
     // "Overdrive is the default highlight" waits for it too — the cursor
@@ -680,8 +693,13 @@ const Game = (function () {
                back: "backToOptions", items: [
       { label: "BACK", detail: "", enabled: true, action: "backToOptions" },
     ] },
-    // Over the frozen board. Its two lines are filled per frame by draw().
-    gameover: { title: "GAME OVER", lines: ["", ""], back: "quitToTitle", items: [
+    // CS011 P3 (plan R15). The local top 10 for CLASSIC, rebuilt on entry by
+    // buildScoreRows(), ⛔ never in draw(). A row is enabled so rotate scrolls,
+    // and has no action.
+    scores: { title: "SCORES", lines: [], back: "toTitle", items: [] },
+    // Over the frozen board. Its three lines are filled per frame by draw(); the
+    // third names the run's placing (CS011 P3), or is empty.
+    gameover: { title: "GAME OVER", lines: ["", "", ""], back: "quitToTitle", items: [
       { label: "RESTART",       detail: "", enabled: true, action: "restartRun" },
       { label: "QUIT TO TITLE", detail: "", enabled: true, action: "quitToTitle" },
     ] },
@@ -1004,20 +1022,35 @@ const Game = (function () {
     }
   }
 
+  // SCORES' rows (CS011 P3, plan R15): `n NAME` and the score in plain digits,
+  // then BACK. CLASSIC only until CS012 makes OVERDRIVE choosable.
+  function buildScoreRows() {
+    const list = Meta.scores("classic");
+    const scr = SCREENS.scores;
+    scr.lines.length = 0;
+    scr.lines.push("CLASSIC \u00B7 LOCAL");
+    if (list.length === 0) scr.lines.push("NO SCORES YET");
+    scr.items.length = 0;
+    for (let i = 0; i < list.length; i++) {
+      const name = typeof list[i].profileName === "string" ? list[i].profileName : "";
+      scr.items.push({ label: (i + 1) + " " + name, detail: String(list[i].score), enabled: true, action: null });
+    }
+    scr.items.push({ label: "BACK", detail: "", enabled: true, action: "toTitle" });
+  }
+
   // ⛔ THE ONE WAY OUT OF A RUN TO THE TITLE (GDD 15.4), and P6's pause menu
   // calls it too. It overwrites the run with shipped defaults, so the title
   // shows no stale board, and clears any freeze a quit from pause could land
   // inside.
   //
-  // ⛔ CS011 SEATS THE 'quit' SUBMISSION AT THE TOP OF THIS FUNCTION, AND THE
-  // ORDER IS THE RULE. Whether a run was actually PLAYING must be read BEFORE the
-  // overwrite below, because the overwrite destroys the answer. This is also
-  // game over's QUIT TO TITLE row: that run already ended as 'died', so the check
-  // is `screen === "play"` (and P6's pause), never "anything but title" — the
-  // double submit GDD 15.4 forbids. P5 submits nothing. ⛔ Since P6 a quit also
-  // comes from the pause menu, so the playing check is `screen === "pause"`
-  // there, read before the overwrite like the rest.
+  // ⛔ THE 'quit' SEAT IS THE TOP OF THIS FUNCTION, AND THE ORDER IS THE RULE
+  // (CS011 P3, plan R7). Whether a run was PLAYING must be read BEFORE the
+  // overwrite below, because the overwrite destroys the answer. A quit comes
+  // from the pause menu, so the check is `screen === "pause"`. This is also game
+  // over's QUIT TO TITLE row: that run already ended as 'died' in frame(), so it
+  // must never record a 'quit' too — the double submit GDD 15.4 forbids.
   function quitToTitle() {
+    if (state.screen === "pause") Meta.runEnded("quit");
     Object.assign(state, newState());
     state.screen = "title";
     hitStopLeft = 0;
@@ -1049,6 +1082,7 @@ const Game = (function () {
     if (name === "exportTelemetry") exportTelemetry();
     if (name === "resume") resumeRun();
     if (name === "toMode")    state.screen = "mode";
+    if (name === "toScores")  { buildScoreRows(); state.screen = "scores"; }
     if (name === "pickClassic") {
       pendingMode = "classic";
       buildDepthRows();
@@ -1304,6 +1338,8 @@ const Game = (function () {
       if (screen === SCREENS.gameover) {
         screen.lines[0] = "SCORE " + state.score;
         screen.lines[1] = "LEVEL " + state.level;
+        // Meta's closure, set at the 'died' seat before this frame's draw.
+        screen.lines[2] = Meta.lastPlace() > 0 ? "NEW HIGH SCORE #" + Meta.lastPlace() : "";
       }
       _menuView.title = screen.title;
       _menuView.lines = screen.lines;
@@ -1365,6 +1401,14 @@ const Game = (function () {
     stats.frames++;
     stats.lastSteps = steps;
     stats.accumulator = accumulator;
+
+    // ⛔ THE 'died' SEAT (CS011 P3, plan R7): AFTER THE STEPS, BEFORE THE AUDIO FRAME.
+    // Never in killSkimmer(): a clear on the step that spends the last life pays
+    // its bonuses after that returns (GDD 7), and a Dive death returns from
+    // update() early, so the final score is known here and not before. Not a
+    // play step, so its storage writes are legal. Once per run: runEnded() closes
+    // it.
+    if (state.screen === "gameover" && Meta.runOpen()) Meta.runEnded("died");
 
     audioFrame();
     draw();

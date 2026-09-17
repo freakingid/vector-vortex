@@ -11,6 +11,9 @@
 // WHAT A PROFILE KEEPS (CS011 P2): `settings` (23-main.js's CONTROLS, KEYBOARD,
 // GAMEPAD and sound rows), `progress` (the Start Depth record) and `telemetry`
 // (the ring's rows). ⛔ The telemetry capture switch is never stored.
+//
+// THE RUN AND THE LOCAL TOP 10 (CS011 P3): `scores` (root), written through
+// createScores() below, the future kit-scores (src/22-meta.NOTES.md).
 
 // ---------------------------------------------------------------------------
 // THE STORE AND THE PROFILE (GDD 15.1, 15.2). CS011 P1.
@@ -22,6 +25,10 @@
 // ⛔ `achievements` IS NOT DECLARED until CS015 (plan R5). kit-profile declares
 // its own root `profiles` key.
 let Store = null;
+
+// The local top 10 (GDD 15.3), made in Meta.boot() over the ROOT store: one
+// table on the machine, every row stamped with the profile that set it.
+let Scores = null;
 
 // The game's wrapper over kit-profile. P1 needs the active profile and its store;
 // the roster operations arrive with the PROFILE screen (CS011 P4).
@@ -86,12 +93,70 @@ const Meta = (function () {
     Telemetry.restore(Profiles.scope().get("telemetry", null));
   }
 
-  // ⛔ THE RUN'S END — A STUB UNTIL CS011 P3, which calls it from the two seats
-  // (plan R7: the top of quitToTitle() from pause, and frame() at game over)
-  // and adds the score record. Its telemetry write is P2's.
+  // ---- the run (plan R6, R7, R8; CS011 P3) ----
+  //
+  // ⛔ NOT IN `state` (R6): startGame() rewrites it, and the record of a run has
+  // to outlive exactly that. ⛔ META WRITES NO `state`, SPENDS NO DRAW AND DRAWS
+  // NOTHING; it reads `state` at the run's end and nowhere else.
+  //
+  // `run` is null when no run is open, else { bench } — whether a debug bench
+  // action reached it in play. `placed` is the rank the last ended run took in
+  // the local table, 0 for none, kept for game over's line.
+  let run = null;
+  let placed = 0;
+
+  // startGame()'s last line. ⛔ A run still open is DROPPED, unrecorded: a
+  // second startGame() over a live run (the soaks' restarts) ends nothing.
+  function runStarted() {
+    run = { bench: false };
+    placed = 0;
+  }
+
+  // runAction(), for a bench digit, `spawnRow` or `cycleWell` in play (R8).
+  function benchUsed() {
+    if (run !== null) run.bench = true;
+  }
+
+  // ⛔ THE ONE GATE (CLAUDE.md, Leaderboard): the local table's check, and from
+  // P5 every submit. Extend both together or neither.
+  function eligible() {
+    return run !== null && !run.bench;
+  }
+
+  function runOpen() { return run !== null; }
+
+  // R9's local row. The profile's name is the one it has NOW, stamped, so a
+  // later rename or delete leaves the row as it was set.
+  function scoreRow(outcome) {
+    const p = Profiles.current();
+    return {
+      score: state.score, level: state.level, startDepth: state.startDepth,
+      wells: state.tally.wellsCleared, deaths: state.tally.deaths,
+      durationS: Math.round(state.time), outcome, ts: Date.now(),
+      profileId: p ? p.id : null, profileName: p ? p.name : null, build: C.GAME_VERSION,
+    };
+  }
+
+  // ⛔ THE RUN'S END, FROM TWO SEATS AND NO THIRD (plan R7): 'quit' at the top of
+  // quitToTitle() when the screen is pause, and 'died' in frame() after the
+  // steps. ⛔ NEVER FROM killSkimmer(): a clear on the step that spends the last
+  // life pays after it returns (GDD 7), and a Dive death returns from update()
+  // early, so only the frame knows the final score. It closes the run first, so
+  // a second call records nothing; then the row, if eligible and placed; then
+  // the telemetry write (P2's).
   function runEnded(outcome) {
+    if (run === null) return;
+    const ok = eligible();
+    run = null;
+    if (booted && ok && Scores.qualifies(state.mode, state.score)) {
+      placed = Scores.add(state.mode, scoreRow(outcome));
+    }
     saveTelemetry();
   }
+
+  // What the SCORES screen lists; [] before boot.
+  function scores(mode) { return booted ? Scores.list(mode) : []; }
+  function lastPlace() { return placed; }
 
   // kit-profile's events. `beforeChange` still names the OUTGOING profile, so its
   // rows go to that profile's store. `change` names the INCOMING one: the reset,
@@ -122,6 +187,9 @@ const Meta = (function () {
         scores:    { version: 1 },
       },
     });
+    // ⛔ `modes` are state.mode's two values; OVERDRIVE's list waits for CS012.
+    Scores = createScores({ store: Store, key: "scores", perMode: C.SCORES_PER_MODE,
+                            modes: ["classic", "overdrive"] });
     // ⛔ legacyRosterKey is `null`, NEVER '': kit-profile reads an empty string
     // as "use the default" and imports Orbital Overhaul's roster (plan R4).
     const kit = KitProfile.create({
@@ -145,8 +213,85 @@ const Meta = (function () {
     activateSettings();
   }
 
-  return { boot, saveSettings, saveTelemetry, loadTelemetry, runEnded };
+  return {
+    boot, saveSettings, saveTelemetry, loadTelemetry,
+    runStarted, benchUsed, eligible, runOpen, runEnded, scores, lastPlace,
+  };
 })();
+
+// ---------------------------------------------------------------------------
+// THE LOCAL TOP 10 — createScores() (GDD 15.3; plan R20). CS011 P3.
+// ---------------------------------------------------------------------------
+//
+// ⛔ KIT-SHAPED FROM ITS FIRST COMMIT: the future kit-scores
+// (src/22-meta.NOTES.md). It reads no `C`, no `state` and no game global.
+// Everything crosses as an option: `store` (anything with get(key, fallback)
+// and set(key, value), a kit-storage store here), `key` (declared by the
+// caller), `perMode` (rows kept per mode) and `modes` (the mode names).
+//
+// One stored value, { <mode>: [row, …] }, each list best first. A row is the
+// caller's object, copied; the table reads only its `score`. ⛔ A ROW PLACES
+// WITH score > 0 AND A PLACE IN ITS MODE'S TOP perMode, AND A TIE GOES BELOW
+// the rows already there. The stored value is read on every call and loads
+// known-value-else-default: a mode that is not an array reads empty, and a row
+// without a finite score > 0 is dropped. An undeclared mode throws, as an
+// undeclared kit-storage key does.
+function createScores(options) {
+  const opts = options || {};
+  const { store, key, perMode, modes } = opts;
+  if (!store || typeof store.get !== "function" || typeof store.set !== "function") {
+    throw new Error("createScores: options.store needs get() and set()");
+  }
+  if (typeof key !== "string" || key === "") throw new Error("createScores: options.key must be a non-empty string");
+  if (!Number.isInteger(perMode) || perMode < 1) throw new Error("createScores: options.perMode must be a whole number >= 1");
+  if (!Array.isArray(modes) || modes.length === 0) throw new Error("createScores: options.modes must be a non-empty array");
+
+  function known(mode) {
+    if (modes.indexOf(mode) < 0) throw new Error("createScores: undeclared mode " + JSON.stringify(mode));
+  }
+  const counts = r => r !== null && typeof r === "object" && Number.isFinite(r.score) && r.score > 0;
+
+  function readAll() {
+    const d = store.get(key, null);
+    const out = {};
+    for (const m of modes) {
+      const rows = d !== null && typeof d === "object" && Array.isArray(d[m]) ? d[m].filter(counts) : [];
+      rows.sort((a, b) => b.score - a.score);   // stable: equal scores keep their order
+      out[m] = rows.slice(0, perMode);
+    }
+    return out;
+  }
+
+  // The rank `score` would take, 1-based, below every row it ties; 0 for none.
+  function placeOf(rows, score) {
+    if (!(Number.isFinite(score) && score > 0)) return 0;
+    let i = 0;
+    while (i < rows.length && rows[i].score >= score) i++;
+    return i < perMode ? i + 1 : 0;
+  }
+
+  return {
+    qualifies(mode, score) {
+      known(mode);
+      return placeOf(readAll()[mode], score) > 0;
+    },
+    // The row's rank, or 0 and nothing written when it does not place.
+    add(mode, row) {
+      known(mode);
+      const all = readAll();
+      const rank = placeOf(all[mode], row ? row.score : undefined);
+      if (rank === 0) return 0;
+      all[mode].splice(rank - 1, 0, Object.assign({}, row));
+      all[mode].length = Math.min(all[mode].length, perMode);
+      store.set(key, all);
+      return rank;
+    },
+    list(mode) {
+      known(mode);
+      return readAll()[mode];
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // THE HIGHEST LEVEL CLEARED (GDD 4.6). CS008 P3.
