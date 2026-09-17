@@ -143,21 +143,28 @@ function collideShots(state, well) {
 // This header predicted 0 for the Drifter until CS005 P2; GDD 4.5 item 2's "any
 // depth" is about there being no safe PHASE — a Drifter kills you while it is
 // armoured, so you can neither shoot it nor touch it — and the Drifter ships on
-// the rim band with everything else. ⚠ Zero becomes honest as a RESTING value
-// the moment the craft can leave the rim (GDD 5's Dive, GDD 14.2's Jump) and
-// this pass has two depths to compare. Until then a PERMANENT zero is an
-// unaccountable death, and GDD 6.3 names that as the most common complaint
-// about games in this genre.
+// the rim band with everything else. A PERMANENT zero is an unaccountable
+// death, and GDD 6.3 names that as the most common complaint about games in
+// this genre.
 //
-// ⛔ CS006 P3 SETTLED WHICH OF THOSE TWO MOMENTS IT IS, AND IT IS THE JUMP
-// ALONE. The Dive shipped and is NOT that moment: Game.update() short-circuits
-// the whole gameplay pass while state.dive.active, so this function does not
-// run during a dive at all, and the sentence above stays literally true. GDD 5's
-// descent depth lives on state.dive and never on the craft (02-state.js,
-// 11-dive.js), and GDD 4.5 item 5 is a strike test in that module rather than a
-// killDepth here. GDD 14.2's Jump is the thing that puts a craft off the rim
-// WHILE THIS PASS IS RUNNING, and it is the one that gives this pass a second
-// depth to compare.
+// ⛔ AND IT IS STILL TRUE AFTER THE DIVE AND AFTER THE JUMP — BOTH OF WHICH
+// THIS HEADER PREDICTED WOULD END IT (CS006 P3, CS012 P5 R3). Neither gave the
+// craft a depth:
+//
+//   the Dive   Game.update() short-circuits the whole gameplay pass while
+//              state.dive.active, so this function does not run during one at
+//              all. GDD 5's descent depth lives on state.dive and never on the
+//              craft (02-state.js, 11-dive.js), and GDD 4.5 item 5 is a strike
+//              test in that module rather than a killDepth here.
+//   the Jump   airborne is a PHASE on state.jump (05-skimmer.js), and this
+//              function SKIPS ITS WHOLE PASS while it holds — see the skip in
+//              collideSkimmer() below. Immunity is a return, not an arithmetic
+//              comparison, so there is still exactly one two-depth comparison
+//              in the build and it is the dive strike's.
+//
+// ⛔ So `killDepth = 0` on a resting enemy stays as wrong as it was, and no
+// future session should "finish" it: the one honest zero is the Surger's
+// discharge window, below.
 //
 // ⚠ WHICH IS WHY THE SURGER'S ZERO IS RIGHT AND THE DRIFTER'S WOULD NOT BE, and
 // it is the same number both times. The Surger's lasts C.SURGE_DISCHARGE and is
@@ -203,9 +210,21 @@ function collideShots(state, well) {
 // leaves C13 at 0/24, because collideShots()' load-bearing `break` resolves one
 // enemy per shot per step. The sweep is 24/24 on all thirteen shootable shapes
 // and holds all three lethal ones (test-cs008-p1b.js).
+//
+// ⛔ AND SINCE CS012 P5, ONE SKIP ABOVE ALL OF IT: AIRBORNE (GDD 14.2; O6, R3).
+// The whole pass is skipped while state.jump.phase is "air" — contact death
+// AND the rim sweep together, because "immune to rim contact and Surger
+// discharge" is not a fire-gated privilege and a craft that is off the rim is
+// not touching what it flies over. It is ONE return rather than a term per
+// death condition, so every contact killer in the roster inherits it at once:
+// a Vaulter, a Carrier, a Weaver bolt, a riding or crossing Drifter, a Reaver
+// and a Surger's discharge are each staged and mutation-checked in
+// test-cs012-p5.js. ⛔ RECOVERY IS NOT COVERED — those C.JUMP_RECOVERY seconds
+// are on the rim and lethal, and that is the whole cost of the jump.
 function collideSkimmer(state, well) {
   const sk = state.skimmer;
   if (!sk || sk.dead) return;
+  if (jumpAirborne(state)) return;
 
   for (let i = 0; i < state.enemies.length; i++) {
     const e = state.enemies[i];
@@ -274,6 +293,15 @@ function killSkimmer(state) {
   // `held` every step rather than only clearing it on release, which is what
   // lets this forced value behave correctly on the way out.
   state.purgeLatched = true;
+
+  // ⛔ AND THE JUMP BUTTON WITH IT (CS012 P5; O6), for the identical reason and
+  // by the identical mechanism: updateJump() writes `latched` as `held` every
+  // step, so forcing it true here makes the first live step after the freeze
+  // read as "still held" and the button needs a genuine release before it can
+  // take off again. ⛔ Unconditional — in Classic updateJump() never runs, so
+  // the field is written and never read, which costs nothing and keeps this
+  // function free of a mode branch.
+  state.jump.latched = true;
 
   // ⛔ THE STOP (GDD 4.4). Its menu is CS008 P5's (23-main.js). ⛔ The run's
   // record is NOT taken here but in frame(), after the steps (CS011 P3): a clear

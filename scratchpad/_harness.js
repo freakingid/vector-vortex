@@ -225,6 +225,8 @@ function buildGame(opts = {}) {
     "newState", "createInput", "INPUT_KEYS_DEFAULT", "Game",
     // the Skimmer (05-skimmer.js, CS002 P2)
     "Skimmer", "SKIMMER_POLY", "skimmerPoints",
+    // the Jump — a PHASE on state.jump, never a craft depth (05-skimmer.js, CS012 P5)
+    "updateJump", "resetJump", "jumpAirborne", "jumpCanFire", "jumpLift",
     // shots (06-shots.js, 14-render-entities.js, CS002 P3)
     "Shot", "updateShots", "drawShot",
     // the RNG, the entity contract and the Vaulter (01/07/14, CS003 P1)
@@ -279,6 +281,8 @@ function buildGame(opts = {}) {
     "startBonus", "levelRecord", "startDepthOptions",
     // text, the HUD and the death fragmentation (13/14/15, CS008 P4)
     "drawText", "drawHud", "hudLayout", "PURGE_GLYPH_POLY", "drawFragments", "fragmentT",
+    // the jump glyph's shape data and its two readings (15-render-hud.js, CS012 P5)
+    "JUMP_GLYPH_POLY", "JUMP_RIM_POLY", "hudJumpAlpha", "hudJumpRing",
     // the menu model and the screens (15/23, CS008 P5)
     "createMenu", "drawMenu", "menuWindowStart",
     // kit-audio and the game's instances (16/19, CS009 P1)

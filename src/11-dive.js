@@ -82,6 +82,13 @@ function startDive(state) {
   state.dive.active = true;
   state.shots = [];
   state.enemies = state.enemies.filter(e => e.anchored && !e.dead);
+  // ⛔ A JUMP IN FLIGHT LANDS ON THE CLEAR STEP (GDD 14.2; CS012 P5, R4). The
+  // dive short-circuits the gameplay pass, so an airborne craft carried into
+  // one would hold its immunity, its lift and its music high-pass for the whole
+  // descent with no way to come down. Beside the shot clear for the same
+  // reason: what belongs to the well being left does not cross the throat.
+  // ⛔ THE DIVE THEREFORE ALWAYS STARTS GROUNDED, in either mode.
+  resetJump(state);
   // GDD 5's rising sweep. HERE, so a repeated dive plays it again (plan §7).
   sfx("dive");
 }

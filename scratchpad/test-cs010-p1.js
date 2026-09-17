@@ -1,9 +1,11 @@
 // test-cs010-p1.js — CS010 P1: kit-audio 0.3.0 (GDD 11.1, 11.5, 11.6, 11.8; plan §3).
+// ⛔ The VERSION and the route below were rewritten in place at CS012 P5, which
+// inserted the optional high-pass between the sweep and the limiter (0.4.0).
 // Asserts what P1 owns, on SYNTHETIC tables and the recording fake: the tier
 // gates latch to the bar line on the scheduler's grid and ramp 0 <-> 1 over
 // C.LAYER_CROSSFADE; setSweep follows D14 by setTargetAtTime; the limiter carries
 // C.MUSIC_LIMIT; a graph walk proves every track reaches `music` only through
-// sweep -> limiter -> duck -> dip; the duck and the dip ramp, stay in [0, 1] and
+// sweep -> high-pass -> limiter -> duck -> dip; the duck and the dip ramp, stay in [0, 1] and
 // get no bare .value; onBeat fires once per marked note at its start; absent
 // groups build nothing; the loader's new refusals; the kit slice's boundary.
 //
@@ -35,7 +37,7 @@ hasKnob(X, "LAYER_CROSSFADE", { def: 0.03 }, H);
 H.eq(C.LAYER_THRESHOLD[2], 0.25, "tier 2's threshold is 0.25 (D5)");
 H.eq(C.LAYER_THRESHOLD[3], 0.40, "tier 3's threshold is 0.40 (D5)");
 H.eq(C.LAYER_THRESHOLD[4], 0.80, "tier 4's key is unchanged (R10)");
-H.eq(X.AUDIO_VERSION, "0.3.0", "kit-audio is 0.3.0");
+H.eq(X.AUDIO_VERSION, "0.4.0", "kit-audio is 0.4.0");   // CS012 P5's high-pass, MINOR
 // ⛔ D16: the curve model stands in for the render ONLY at the rendered settings (D2).
 H.eq(JSON.stringify(C.MUSIC_LIMIT), JSON.stringify({ threshold: -24, knee: 0, ratio: 20, attack: 0.001, release: 0.10 }),
   "⛔ C.MUSIC_LIMIT is exactly the rendered limiter, D2 (the headroom model's premise)");
@@ -207,8 +209,12 @@ const ctx = A.ctx;
   H.assert(into(A.music).every(n => n === M.dipNode) && into(A.music).length === 1, "⛔ only the dip feeds the music bus");
   H.assert(into(M.dipNode).length === 1 && into(M.dipNode)[0] === M.duck, "⛔ only the duck feeds the dip");
   H.assert(into(M.duck).length === 1 && into(M.duck)[0] === L, "⛔ only the limiter feeds the duck");
-  H.assert(into(L).length === 1 && into(L)[0] === M.sweep, "⛔ only the sweep feeds the limiter");
-  // Walk every path out of every track gain: each ends sweep -> limiter -> duck -> dip -> music.
+  // ⛔ CS012 P5 put the high-pass between the sweep and the limiter (GDD 11.1),
+  // so what feeds the limiter moved by one node. The claim — ONE route, and the
+  // limiter sees the whole programme — is the same one.
+  H.assert(into(L).length === 1 && into(L)[0] === M.highpass, "⛔ only the high-pass feeds the limiter");
+  H.assert(into(M.highpass).length === 1 && into(M.highpass)[0] === M.sweep, "⛔ only the sweep feeds the high-pass");
+  // Walk every path out of every track gain: each ends sweep -> high-pass -> limiter -> duck -> dip -> music.
   const outs = node => rec.connections.filter(c => c.from === node).map(c => c.to);
   let paths = 0, bad = 0;
   for (const g of trackGains) {
@@ -218,7 +224,7 @@ const ctx = A.ctx;
       if (last === A.music || next.length === 0) {
         paths++;
         const tail = p.slice(1).map(n => n.id).join(">");
-        if (tail !== [M.sweep, L, M.duck, M.dipNode, A.music].map(n => n.id).join(">")) bad++;
+        if (tail !== [M.sweep, M.highpass, L, M.duck, M.dipNode, A.music].map(n => n.id).join(">")) bad++;
         continue;
       }
       for (const n of next) stack.push(p.concat([n]));

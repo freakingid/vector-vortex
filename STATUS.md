@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.8 · Changeset: CS012 (P3 of 6 done) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5
+Version: 0.0.8 · Changeset: CS012 (P1-P3 + P5 done; ⚠ P4 still open) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5
 
 ## Phase ledger — CS012
 
@@ -15,14 +15,15 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 |---|---|---|
 | P1 | `79a4840` | `drive` (138 BPM, 36 bars A→B→C, six layers, untiered, unmarked; kick `beat: true`) in `17-audio-tracks.js` and both labs; `C.MODE_TRACK.overdrive`, DRIVE on MUSIC TRACK; `tracks` 3. `test-cs012-p1.js` (55). Headroom 1.0345 → 0.3505; worst 13 nodes. Four closed files in place (three outside plan §11). 9 of 9 red |
 | P2 | `7fdbf43` | `C.MODE_FLAGS` + `modeHas()`; `C.SPAWN_SCHEDULE_OVERDRIVE` merged by `eligibleKinds(level, mode)`; `07-enemies-overdrive.js`, `Reaver extends Vaulter` (hop ÷ 1.6, hunts mid-climb); `REAVER_POLY`; kill pitch 1.15 via sfx-lab's new KILL PITCH table. `COUNTS` 7 / 10. `test-cs012-p2.js` (158). One closed edit (`test-cs009-p4.js` voices). 12 of 12 mutations red |
-| P3 | this commit | MODE: OVERDRIVE enabled and FIRST (the row order IS GDD §13's highlight), carried as `pendingMode`; `C.LEADERBOARD_GAME_IDS` and one kit client per mode, routed by `state.mode`, `load(mode, done)`, `queueLength()` summing both; SCORES' MODE row, per-mode LOCAL and ONLINE, entry on the last run's mode; `progress` **v2** `{ classic, overdrive }` with a `migrate`, `levelRecord(mode)` / `startDepthOptions(mode)`. `test-cs012-p3.js` (93). 13 closed files repaired in place, every one in plan §11 — no unlisted red. 10 of 10 mutations red. ⚠ This file is 424 lines, over its ~400: P6's close compresses |
+| P3 | `4a4a81c` | MODE: OVERDRIVE enabled and FIRST (the row order IS GDD §13's highlight), carried as `pendingMode`; `C.LEADERBOARD_GAME_IDS` and one kit client per mode, routed by `state.mode`, `load(mode, done)`, `queueLength()` summing both; SCORES' MODE row, per-mode LOCAL and ONLINE, entry on the last run's mode; `progress` **v2** `{ classic, overdrive }` with a `migrate`, `levelRecord(mode)` / `startDepthOptions(mode)`. `test-cs012-p3.js` (93). 13 closed files repaired in place, every one in plan §11 — no unlisted red. 10 of 10 mutations red |
+| P5 | this commit | THE JUMP: `state.jump` + `updateJump()` (a TOTAL no-op outside `modeHas("jump")`), O6's phases with the cooldown from LANDING; ONE skip in `collideSkimmer()` that takes the rim sweep with it; no fire airborne OR recovering; `resetJump()` at `enterWell()`, the respawn and `startDive()`; the draw-only lift + rim shadow; kit-audio **0.4.0**'s optional `highpass` group, `setHighpass()` from `audioFrame()`, both labs' BLOCK A; the Overdrive-only HUD glyph. `STATE_FIELDS.CS012: ["jump"]`. `test-cs012-p5.js` (172). ⚠ **Six closed assertions in three files repaired that plan §11 did NOT predict** (Audio, below). 15 of 15 mutations red. ⚠ **This file is 484 lines, over its ~400** (424 at P3): P6's close compresses |
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
-  614.0 KB); the manifest is checked both directions against `src/`, and a
+  638.8 KB); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **63 test files, all green, zero skips**.
+- `node scratchpad/run-all.js`: **64 test files, all green, zero skips**.
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -247,7 +248,26 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   skips `syncScreen()` would make its first step play a `menuMove`.
 - ⚠ **Every seat call is `sfx(`, scanned by `test-cs009-p5.js`**: each names its
   `C.SFX` event as a string literal, with no assignment in its arguments.
-- ⛔ **KIT-AUDIO 0.3.0.** Track gain → sweep → limiter → duck → dip → `music`.
+- ⛔ **KIT-AUDIO 0.4.0 (CS012 P5).** Track gain → sweep → **high-pass** → limiter
+  → duck → dip → `music`. ⛔ **The high-pass is BEFORE the limiter, with the
+  sweep** — both are tone controls on the programme, where the duck and dip are
+  after it because a duck in front of a limiter measured −1.9 dB.
+  `highpass: { hz, tc }` is optional like the rest; `setHighpass(on)` is
+  idempotent, called every frame from `audioFrame()` with `jumpAirborne(state)`,
+  and moves by `setTargetAtTime` — its "off" is a resting 0 Hz pass-through,
+  never a bypass. ⛔ **Its `Q` is a fixed Butterworth and NOT a tunable**: that is
+  what keeps `test-cs009-p5.js`'s D16 model standing unedited, and
+  `test-cs012-p5.js` RUNS that file in a child process rather than copying it.
+- ⚠ **FINDING (CS012 P5, MEASURED): EVERY KIT `VERSION` BUMP IS A CLOSED-FILE
+  EDIT, AND PLAN §11 DID NOT PREDICT IT.** Three closed files pin `AUDIO_VERSION`
+  by literal (`test-cs009-p1.js:100`, `test-cs009-p4.js:98`,
+  `test-cs010-p1.js:38`) and two pin the signal path node by node
+  (`test-cs009-p1.js`'s `gameRoute`; `test-cs010-p1.js`'s "only the sweep feeds
+  the limiter" and its path walk). All six were rewritten in place to 0.4.0 and
+  the new chain; none was deleted or weakened. ⛔ **A future plan that names a kit
+  version bump owes §11 a row per pinning file, and one for the path if the bump
+  moves a node.**
+- ⛔ **KIT-AUDIO'S OTHER GROUPS (CS010 P1).** Track gain → sweep → limiter → duck → dip → `music`.
   Every group is OPTIONAL; the duck node is always built. ⛔ A tier needs `gating`
   AND the track's `bar`. ⛔ `scheduleStep` never reads intensity. ⛔ The duck and
   dip pin from their own breakpoints, never `.value`.
@@ -325,6 +345,39 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   kit-fx and kit-menu extraction each owe an options argument.
 - ⚠ **A closed test may pin the literal text of a line a later phase changes.**
   ⛔ Pin only the argument the claim is about.
+
+### The Jump (CS012 P5)
+
+- ⛔ **AIRBORNE IS A PHASE, NOT A DEPTH.** `state.jump` `{ phase, t, cool,
+  latched }`; `collideSkimmer()` SKIPS ITS WHOLE PASS while `phase` is `"air"`,
+  which takes the rim sweep with it. ⛔ **There is still no Skimmer `depth` and
+  exactly ONE two-depth comparison in the build** (the dive strike). Six shipped
+  comments and two GDD sections predicted the Jump would end that; all were
+  corrected. ⛔ Do not re-open it.
+- ⛔ **`updateJump()` MUST STAY A TOTAL NO-OP OUTSIDE `modeHas("jump")`** — it
+  writes nothing, `latched` included. `test-cs012-p5.js` hashes a 4,000-step
+  Classic session with the jump key pressed every 50 steps against one without,
+  step by step, and ⛔ **only `state.input.jump` is set aside from that hash**.
+- ⛔ **THE COOLDOWN COUNTS FROM LANDING** (O6), and `JUMP_RECOVERY` is its first
+  beat rather than a fourth timer. Recovery is contact-lethal and cannot fire.
+- ⛔ **`resetJump()` HAS THREE CALLERS** — `enterWell()`, `respawnSkimmer()` and
+  `startDive()` — and ⛔ **it does NOT clear `latched`**, which is the Purge
+  charge's rule. `killSkimmer()` forces `latched` true.
+- ⛔ **SIGNATURES MOVED:** `skimmerPoints(well, lane, squash, lift)` (a fourth,
+  optional argument; three-argument callers are bit-identical) and
+  `Skimmer.draw(ctx, well, lift)`. The HUD view carries `jump`, `null` in
+  Classic.
+- ⛔ **`test-cs012-p5.js` PINS TWO TEXTS BY `mutate`, each exactly once in the
+  build:** `  if (jumpAirborne(state)) return;` (with its newline) and
+  `state.input.fire && jumpCanFire(state) &&`. It also `mutate`s
+  `  JUMP_LIFT:            0.12,` to prove the lift is draw-only.
+- ⚠ **It RUNS `test-cs009-p5.js` in a child process** (D16's headroom gate), so
+  a change that reddens that file reddens this one too, with a less useful
+  message.
+- ⛔ **A PHASE LENGTH IS NOT `Math.ceil(limit / C.FIXED_DT)`.** `1/60` is not a
+  binary fraction, so a count-up timer takes 54 steps to reach 0.90 s and **13**
+  to reach 0.20 s where `ceil` says 12. Assert the property (the first step at or
+  past the limit is the last in the phase), never the step count.
 
 ### The board (CS003–CS007)
 
@@ -411,14 +464,21 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 - ⛔ **The seven debug spawn actions ship until CS017** (Paul's H5 call).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 7 and `enemyKinds` 10 (CS012 P2, the
   Reaver). The next movers are CS013's Warden and Mimic.
-- ⛔ **`C.MODE_FLAGS` / `modeHas()` have no game reader yet**; P4 (combo) and P5
-  (Jump) are the first. `modeHas(name)` defaults to `state.mode`.
+- ✅ **`C.MODE_FLAGS` / `modeHas()` HAVE THEIR FIRST GAME READER** (CS012 P5):
+  `updateJump()` (`05-skimmer.js`) and `Game.draw()`'s HUD view. `modeHas(name)`
+  defaults to `state.mode`. P4's combo is the second.
 
 ## Next up — CS012 P4 (the combo)
 
-Run `IMPLEMENTATION-PHASES-CS012.md` P4 in a new session.
+Run `IMPLEMENTATION-PHASES-CS012.md` P4 in a new session. ⚠ **P5 ran before it**
+(above), so read its hazards in "The Jump" as well as this list.
 ⛔ It owns `max_combo`'s real source (`state.combo.peak`), the deletion of
-`C.TELEMETRY_PLACEHOLDER`, `STATE_FIELDS` + `CS012: ["combo"]`, and plan §11's
+`C.TELEMETRY_PLACEHOLDER`, `STATE_FIELDS` — ⛔ **the `CS012` key already exists
+and reads `["jump"]`, so P4 APPENDS `"combo"`** — and plan §11's
 placeholder edits (`test-cs007-p4.js:154`, `:157`; `test-cs008-p3.js:155–156`;
 `test-cs008-p2.js:387–388`; `test-cs011-p5.js:239` — ⚠ P3 rewrote that file, so
 find it by its text, not its line number).
+⛔ **Its HUD rectangle is CENTRE-TOP** (O8), where P5's jump glyph is beside the
+Purge glyph at the bottom-right — the two do not meet, and `test-cs012-p5.js`
+asserts the four CS008 rectangles are bit-identical with a jump glyph present.
+⛔ **`INT_W_COMBO` is still fed 0**, and `19-sfx.js` is unchanged (R5).

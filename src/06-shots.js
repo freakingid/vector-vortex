@@ -70,7 +70,14 @@ function updateShots(state, well, dt) {
   // ⛔ end-of-frame filter; a shot is never spliced out mid-loop (GDD 6.5).
   state.shots = state.shots.filter(s => !s.dead);
 
-  if (state.input.fire &&
+  // ⛔ NO SHOT LEAVES THE RIM OFF THE GROUND (GDD 14.2; O6, CS012 P5). Airborne
+  // the craft "can rotate, cannot fire"; recovering it is on the rim and
+  // lethal and still cannot fire, which is what stops the rim sweep (GDD 4.5)
+  // from saving a landing on a parked enemy. ⛔ The cooldown above still ages,
+  // so a landing is not also a cooldown wait. In Classic jumpCanFire() is
+  // always true — state.jump never leaves "ground" — so this line changes
+  // nothing there, to the bit (test-cs012-p5.js).
+  if (state.input.fire && jumpCanFire(state) &&
       state.shotCooldown >= C.SHOT_COOLDOWN &&
       state.shots.length < C.SHOT_MAX) {
     const lane = laneNormalize(well, Math.round(state.skimmer.lane));

@@ -62,6 +62,10 @@ const MusicSys = createMusic(AudioSys, {
   // gate is open, the sweep is fully open, and the duck and dip sit at unity.
   gating:    { thresholds: C.LAYER_THRESHOLD, ramp: C.LAYER_CROSSFADE },
   sweep:     { minHz: C.FILTER_MIN_HZ, maxHz: C.FILTER_MAX_HZ, q: C.FILTER_Q, tc: C.FILTER_TC },
+  // kit-audio 0.4.0's high-pass (CS012 P5; GDD 14.2's third airborne channel,
+  // O7). ⛔ It is driven by 23-main.js's audioFrame(), which is where the board
+  // is read — this file names no `state`, and the engine names no game term.
+  highpass:  { hz: C.JUMP_HP_HZ, tc: C.JUMP_HP_TC },
   limiter:   C.MUSIC_LIMIT,
   duck:      { gain: C.MUSIC_DUCK_GAIN, ramp: C.MUSIC_DUCK_RAMP, dipGain: C.MUSIC_DIP_GAIN, dipHold: C.MUSIC_DIP_HOLD },
   onBeat:    noteBeat,

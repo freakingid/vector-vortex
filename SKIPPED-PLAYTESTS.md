@@ -384,3 +384,43 @@ for.
 - ⚠ The entry mode — "the mode of the last run started this session, else MODE's
   first row" (O10) — is the part most likely to surprise, and it is also the part
   a person would notice in one session and a test cannot judge.
+
+## CS012 P5 — the three airborne channels, the high-pass by ear, and the jump on touch
+
+- **Changeset / phase:** CS012 P5 (the Jump).
+- **What Paul would have done:** three sittings. (1) An Overdrive run from
+  START DEPTH 7 with a mouse, jumping over rim Vaulters and Reavers and a
+  Surger's discharge, watching only the craft. (2) The same run with the
+  headphones on and the music up, listening for the moment the tune thins.
+  (3) The same run on a phone over `npm run serve`, thumb on the drag zone,
+  tapping the bottom-right button.
+- **What we were trying to learn:** GDD §14.2's ⛔ is the only acceptance
+  criterion in this changeset a headless test cannot touch — *"am I airborne?"
+  must be unmistakable on three independent channels*, and "unmistakable" is a
+  judgment. The suite proves all three are wired, that they engage on the
+  takeoff step and release on the landing step, and that none of them can move
+  the simulation. It cannot say whether **0.12 rim radii is visible** at a
+  glance on the sixteen wells (the shallow ones project the rim close to the
+  world edge, where the lift has least room), whether **a 0.6-alpha shadow
+  under a bright craft reads as a shadow** rather than as a second craft, or
+  whether **700 Hz is the thinning** rather than a mute — `drive`'s bass and
+  kick carry most of its weight, so the high-pass may read as the track
+  dropping out rather than lifting. Getting this wrong makes every death that
+  follows a landing feel arbitrary, which is the concern §14.2 names.
+  Sitting (3) is a different question: `TOUCH_BUTTON_R` 56 px at the
+  bottom-right corner with auto-fire on — ⛔ §9.3's coupling — is one thumb
+  doing two jobs, and whether a jump is reachable **without losing the drag**
+  is the thing that decides whether Overdrive is playable on a phone at all.
+- **Knobs:** `C.JUMP_LIFT` (0.12 rim radii), `C.JUMP_SHADOW_ALPHA` (0.6),
+  `C.JUMP_HP_HZ` (700) and `C.JUMP_HP_TC` (0.03); `C.JUMP_TIME`,
+  `C.JUMP_RECOVERY` and `C.JUMP_COOLDOWN` if the window feels wrong rather than
+  the read; `C.TOUCH_BUTTON_R` and the button's centre
+  (`touchButtonCenters()`, `04-input.js`) for the phone pass;
+  `C.HUD_JUMP_SIZE`, `C.HUD_JUMP_GAP` and `C.HUD_JUMP_CRAFT` for the glyph.
+- ⚠ **The alternative O7 flagged and we did not build:** the high-pass as a
+  short pulse at takeoff (~0.25 s) rather than one held for the whole jump. If
+  sitting (2) says the held filter reads as a dropout, that is the shape to
+  try — and it is a change to `audioFrame()`'s argument, not to kit-audio.
+- ⚠ The glyph's **art** is provisional on the same footing as the Purge glyph's
+  and the palette: the suite asserts where its rectangle is, never what it
+  looks like.

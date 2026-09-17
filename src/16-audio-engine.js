@@ -35,19 +35,34 @@
 //      on the scheduler's own grid; the source ramped at currentTime;
 //   6. (0.3.0) the sweep and the limiter, built once, between the track gain
 //      and the duck;
-//   7. (0.3.0) the dip node after the duck, and the onBeat report.
+//   7. (0.3.0) the dip node after the duck, and the onBeat report;
+//   8. (0.4.0) the optional high-pass between the sweep and the limiter, and
+//      setHighpass().
 // Ported in 0.3.0: the intensity setter's gate loop and setDuck(). Each new
-// group (gating, sweep, limiter, duck) is OPTIONAL: an absent group builds no
-// node, and the music behaves as 0.2.0 did.
+// group (gating, sweep, limiter, duck, highpass) is OPTIONAL: an absent group
+// builds no node, and the music behaves as 0.2.0 did.
 //
 // createSfxPlayer() (0.2.0) is new here, not a port: one-shot and held voices
 // built from recipe DATA, into the sfx bus. Its noise is injected too.
 
-const AUDIO_VERSION = "0.3.0";
+const AUDIO_VERSION = "0.4.0";
 
 // The four buses, in build order. master goes to the output; the other three
 // go to master. A bus nothing feeds yet is still built, so its volume row works.
 const AUDIO_BUSES = ["master", "music", "sfx", "voice"];
+
+// ⛔ A SECOND-ORDER BUTTERWORTH'S Q, IN dB — the units this audio API reads Q in
+// for a low-pass or a high-pass. It is the flattest response with no peak at
+// the cutoff, so a filter built with it is at or under unity at every
+// frequency and cannot raise a host's headroom budget. The optional high-pass
+// below is built at it, and is not a tunable: a peaking high-pass would be a
+// different effect, not a louder one.
+const AUDIO_BUTTERWORTH_Q = -3.0103;
+
+// The high-pass's resting cutoff: 0 Hz is a pass-through, so "off" is a
+// frequency and not a bypass switch — which is what lets it move by a time
+// constant in both directions instead of clicking in and out of the path.
+const AUDIO_HP_OFF_HZ = 0;
 
 // ⛔ Numeric tunables are REQUIRED, never defaulted (kit-input's rule): a
 // default here would be a second tuning surface competing with the host's.
@@ -223,17 +238,22 @@ function audioClamp01(f) {
 //   fadeOut    s — the fade when setState() names a silence
 //   noise      () => number in [0, 1) — fills the noise buffer
 //   layerSink  optional ({ ctx, track, index, layer, out }) => node | null
-// The optional groups (0.3.0). Absent, a group builds no node and changes nothing:
+// The optional groups (0.3.0, 0.4.0). Absent, a group builds no node and
+// changes nothing:
 //   gating     { thresholds: { 2, 3, 4 }, ramp } — tier gates and setIntensity(f)
 //   sweep      { minHz, maxHz, q, tc } — a low-pass and setSweep(f)
+//   highpass   { hz, tc } — a Butterworth high-pass and setHighpass(on)
 //   limiter    { threshold, knee, ratio, attack, release } — a compressor node
 //   duck       { gain, ramp, dipGain, dipHold } — setDuck(on) and dip()
 //   onBeat     optional (t) => void — each note of a `beat: true` layer, at its start
 //
 // Signal path: note envelopes -> layer gate -> [track gain, crossfaded]
-//   -> [sweep] -> [limiter] -> duck -> [dip] -> engine.music
+//   -> [sweep] -> [highpass] -> [limiter] -> duck -> [dip] -> engine.music
 // ⛔ The duck and the dip sit AFTER the limiter: in front of it, a 6 dB duck
 // comes out as about 2 dB.
+// ⛔ The high-pass sits BEFORE it, with the sweep: it is a tone change on the
+// programme and belongs on the same side of the limiter as the other one, so
+// what the limiter sees is the sound the host asked for.
 function createMusic(engine, options) {
   if (!engine || typeof engine.unlock !== "function") {
     throw new Error("createMusic: engine must come from createAudioEngine()");
@@ -258,6 +278,7 @@ function createMusic(engine, options) {
     for (const tier of [2, 3, 4]) audioRequireNum(gating.thresholds, "createMusic: options.gating.thresholds", tier);
   }
   const sweepOpts = audioGroup(opts, "sweep", ["minHz", "maxHz", "q", "tc"]);
+  const hpOpts    = audioGroup(opts, "highpass", ["hz", "tc"]);
   const limitOpts = audioGroup(opts, "limiter", ["threshold", "knee", "ratio", "attack", "release"]);
   const duckOpts  = audioGroup(opts, "duck", ["gain", "ramp", "dipGain", "dipHold"]);
   if (opts.onBeat !== undefined && typeof opts.onBeat !== "function") {
@@ -272,8 +293,9 @@ function createMusic(engine, options) {
     duck: null,          // GainNode: the menu duck, after the limiter. Unity without the duck group
     dipNode: null,       // GainNode after the duck (duck group only): the event dips
     limiter: null,       // compressor node (limiter group only)
+    highpass: null,      // high-pass BiquadFilterNode (highpass group only)
     sweep: null,         // low-pass BiquadFilterNode (sweep group only)
-    inlet: null,         // the node a track gain feeds: the first of sweep, limiter, duck
+    inlet: null,         // the node a track gain feeds: the first of sweep, highpass, limiter, duck
     trackGain: null,     // GainNode for the currently-scheduled track; replaced (crossfaded) on setState
     state: "off",        // current track name, or a name with no track (silence)
     track: null,         // the active step table, or null for a silence
@@ -284,6 +306,7 @@ function createMusic(engine, options) {
     intensity: 0,        // 0..1, held by setIntensity(); read only by the gates
     sweepLevel: 1,       // 0..1, held by setSweep(); 1 is fully open
     sweepTarget: null,   // Hz last targeted, so a per-frame setSweep() is idempotent
+    highpassed: false,   // last high-pass target, so a per-frame setHighpass() is idempotent
     ducked: false,       // last duck target, so a per-frame setDuck() is idempotent
     duckLevels: [],      // breakpoints scheduled on the duck (audioLevelAt)
     dipLevels: [],       // breakpoints scheduled on the dip
@@ -315,6 +338,19 @@ function createMusic(engine, options) {
         l.connect(out);
         this.limiter = l;
         out = l;
+      }
+      // ⛔ AFTER THE LIMITER IN BUILD ORDER IS BEFORE IT IN SIGNAL ORDER: this
+      // chain is wired downstream first, so the node built here feeds the
+      // limiter and the sweep below feeds this one. Built at the level held so
+      // far, never at a change, exactly like the duck.
+      if (hpOpts) {
+        const h = ctx.createBiquadFilter();
+        h.type = "highpass";
+        h.Q.value = AUDIO_BUTTERWORTH_Q;
+        h.frequency.value = this.highpassed ? hpOpts.hz : AUDIO_HP_OFF_HZ;
+        h.connect(out);
+        this.highpass = h;
+        out = h;
       }
       if (sweepOpts) {
         const s = ctx.createBiquadFilter();
@@ -387,6 +423,25 @@ function createMusic(engine, options) {
       if (hz === this.sweepTarget) return;
       this.sweepTarget = hz;
       this.sweep.frequency.setTargetAtTime(hz, engine.ctx.currentTime, sweepOpts.tc);
+    },
+
+    // ⛔ THE HIGH-PASS, ON OR OFF (0.4.0). Idempotent under per-frame calls —
+    // the host is expected to call it every frame with a boolean — so it
+    // automates on the flip and on nothing else. ⛔ It MOVES BY setTargetAtTime
+    // over highpass.tc and ⛔ NEVER by a bare .value after the graph is built:
+    // a .value during a ramp is a step, and this one's whole job is to arrive
+    // and leave without a click. "Off" is AUDIO_HP_OFF_HZ, a pass-through, so
+    // the node stays in the path and the transition is a frequency move.
+    setHighpass(on) {
+      if (!hpOpts) return;
+      on = !!on;
+      if (on === this.highpassed) return;
+      if (!engine.ctx) { this.highpassed = on; return; }   // no graph yet: ensureGraph honours it
+      this.ensureGraph();                                  // build at the CURRENT level first
+      this.highpassed = on;
+      if (!this.highpass) return;
+      this.highpass.frequency.setTargetAtTime(on ? hpOpts.hz : AUDIO_HP_OFF_HZ,
+                                              engine.ctx.currentTime, hpOpts.tc);
     },
 
     // The menu duck, OO's setDuck: idempotent under per-frame calls, and ⛔ a

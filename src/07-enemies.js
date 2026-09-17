@@ -66,13 +66,24 @@ class Enemy {
     // a kill zone, and an enemy spawned at the throat in the player's lane
     // kills them on the spawn step having travelled nowhere. See the Drifter's
     // constructor at the foot of this file for the whole reading of GDD 4.5
-    // item 2. ⚠ Zero becomes honest AS A RESTING VALUE the moment the craft can
-    // leave the rim WHILE THE COLLISION PASS IS RUNNING, and ⛔ that is GDD
-    // 14.2's Jump ALONE. CS006 P3 shipped GDD 5's Dive and it is NOT that
-    // moment: Game.update() short-circuits the whole gameplay pass while
-    // state.dive.active, so collideSkimmer() never sees a diving craft, the
-    // descent depth lives on state.dive rather than here (02-state.js), and
-    // GDD 4.5 item 5 is a strike test in 11-dive.js rather than a killDepth.
+    // item 2.
+    //
+    // ⛔ AND IT NEVER BECAME HONEST. This comment used to predict that zero
+    // would be a legitimate RESTING value the moment the craft could leave the
+    // rim while the collision pass was running, and that GDD 14.2's Jump was
+    // that moment. CS012 P5 shipped the Jump and it is not:
+    //
+    //   the Dive   (CS006 P3) short-circuits the whole gameplay pass, so
+    //              collideSkimmer() never sees a diving craft; the descent
+    //              depth lives on state.dive (02-state.js) and GDD 4.5 item 5
+    //              is a strike test in 11-dive.js rather than a killDepth.
+    //   the Jump   (CS012 P5) is a PHASE on state.jump (05-skimmer.js), and
+    //              collideSkimmer() SKIPS ITS WHOLE PASS while it is airborne.
+    //              Immunity is a return, not an arithmetic comparison, so that
+    //              pass still has no term for where the craft is.
+    //
+    // ⛔ So a resting zero is as wrong as it ever was, on every enemy, and
+    // there is nothing left that would make it right.
     //
     // ⛔ ONE ENTITY MUTATES THIS FIELD, AND THAT IS THE OTHER HALF OF THE RULE.
     // CS005 P3's Surger holds the rim band while it climbs and through its whole
@@ -976,7 +987,8 @@ class Drifter extends Enemy {
     // and the Weaver's bolt use, so retuning C.RIM_CONTACT_DEPTH moves every
     // rim-contact entity together. Two comments in this build predicted `0`
     // here (the base class above, and collideSkimmer's header in
-    // 09-collision.js) and CS005 P2 corrected both.
+    // 09-collision.js) and CS005 P2 corrected both; both then predicted the
+    // Jump would make zero honest, and CS012 P5 corrected that too.
     //
     // ⛔ WHY ZERO WOULD BE WRONG, AND IT IS NOT A TUNING OPINION.
     // collideSkimmer() is `e.depth >= e.killDepth` plus a lane match, and it
@@ -997,12 +1009,14 @@ class Drifter extends Enemy {
     // all and the Thorn has none outside the Dive. That is the distinction the
     // condition is listed separately for.
     //
-    // ⚠ Zero becomes honest the moment the craft can leave the rim — GDD 5's
-    // Dive, GDD 14.2's Jump — because collideSkimmer would then have two depths
-    // to compare. It is a ONE-LINE change at that point. ⛔ Do not give the
-    // Skimmer a `depth` field now to make it honest early: that is CS006's and
-    // CS012's work, and a collision pass with a Skimmer-depth term is a second
-    // thing to keep in step for no present benefit.
+    // ⛔ AND IT STAYS THE RIM BAND. This comment used to predict that zero
+    // would become honest once the craft could leave the rim — GDD 5's Dive,
+    // GDD 14.2's Jump — because collideSkimmer() would then have two depths to
+    // compare. Both shipped (CS006 P3, CS012 P5) and neither gave the craft a
+    // depth: the Dive short-circuits that pass and the Jump skips it. ⛔ Do not
+    // give the Skimmer a `depth` field to make this "honest": there is no
+    // second depth to compare it against, and the base class above has the
+    // whole reading.
     this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
 
     // ⛔ The heading, kept in step with what boundaryFrom() and laneHop() return

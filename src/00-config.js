@@ -628,9 +628,24 @@ const C = {
     classic:   { jump: false, combo: false },
     overdrive: { jump: true,  combo: true },
   },
+  // ⛔ THE JUMP'S FOUR TIMERS, AND ALL FOUR COUNT UP (GDD 14.2, 16.3; O6).
+  // JUMP_COOLDOWN runs from LANDING, and JUMP_RECOVERY is its first 0.20 s —
+  // so the longest a player can spend off the rim is 0.90 in 2.30 s, 39.1 %
+  // (MEASURED, plan §0's O6 table). Airborne the craft rotates and may Purge
+  // and cannot fire; recovering it is on the rim, contact-lethal, and can do
+  // neither. Raising JUMP_TIME or lowering JUMP_COOLDOWN moves that share.
   JUMP_TIME:            0.90,
   JUMP_RECOVERY:        0.20,
   JUMP_COOLDOWN:        1.40,
+  // ⛔ THE THREE AIRBORNE CHANNELS (GDD 14.2's ⛔; O7, O16). ⚠ All four values
+  // are provisional, the same standing as SKIMMER_COLOR. The first two are
+  // DRAW-TIME ONLY — `lane` and the depth model are untouched by a jump — and
+  // the third is kit-audio 0.4.0's optional high-pass group, passed in by
+  // 19-sfx.js. ⛔ The shadow is a STROKE at this alpha; nothing here is a fill.
+  JUMP_LIFT:            0.12,   // rim radii out from the well's centroid, at the apex
+  JUMP_SHADOW_ALPHA:    0.6,    // the rim shadow's glow alpha, under the lifted craft
+  JUMP_HP_HZ:           700,    // Hz: a clear thinning with the tune intact
+  JUMP_HP_TC:           0.03,   // s: the time constant of a de-click, not a sweep
   COMBO_WINDOW:         2.50,   // s
   COMBO_MAX:            8,
 
@@ -686,6 +701,16 @@ const C = {
   HUD_LINE_W:           2.0,    // px, icon and glyph stroke
   HUD_PURGE_SIZE:       30,     // px, the Purge glyph's diameter
   HUD_PURGE_DIM_ALPHA:  0.35,   // GDD 4.3 — the weak second use still waiting
+  // ⛔ THE JUMP GLYPH, OVERDRIVE ONLY (GDD 10.4, 16.3; O8). It sits LEFT of the
+  // Purge glyph on the same baseline, so the Classic HUD's four rectangles are
+  // bit-identical (test-cs012-p5.js). ⛔ HUD_JUMP_SIZE is the RING's diameter
+  // and the rectangle hudLayout() reports — the craft inside it is smaller —
+  // because the rectangle is what the readability and touch-button assertions
+  // are made against. ⚠ Provisional, like the Purge glyph's art.
+  HUD_JUMP_SIZE:        30,     // px, the readiness ring's diameter and the box
+  HUD_JUMP_GAP:         16,     // px between that box and the Purge glyph's
+  HUD_JUMP_CRAFT:       0.60,   // the craft glyph's width as a fraction of the box
+  HUD_JUMP_RING_SEG:    24,     // polyline segments in a FULL ring; a partial one uses its share
   // ⛔ H3: the touch-button side's items shift inward by this many
   // TOUCH_BUTTON_R — the button's far edge (margin 1.5 R + radius 1 R) and a
   // margin. The side is the mirror flag in the HUD view, never a detected device.

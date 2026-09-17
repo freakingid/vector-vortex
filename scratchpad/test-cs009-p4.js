@@ -95,7 +95,7 @@ same(labBlock("BLOCK SFX"), groupText, "BLOCK SFX (every candidate A) is identic
 // ---------------------------------------------------------------------------
 const X = H.buildGame({ audio: true });
 const { C, sfxCheckRecipe, createSfxPlayer, AudioSys, Sfx } = X;
-H.eq(X.AUDIO_VERSION, "0.3.0", "kit-audio is 0.3.0 (MINOR: the SFX player, then CS010's groups)");
+H.eq(X.AUDIO_VERSION, "0.4.0", "kit-audio is 0.4.0 (MINOR: the SFX player, CS010's groups, CS012's high-pass)");
 H.assert(typeof createSfxPlayer === "function" && typeof sfxCheckRecipe === "function", "createSfxPlayer and sfxCheckRecipe exist");
 H.assert(Sfx && typeof Sfx.play === "function" && typeof Sfx.hold === "function", "19-sfx.js builds the Sfx player");
 H.assert(/createSfxPlayer\(AudioSys, \{\s*noise: mulberry32\(C\.AUDIO_NOISE_SEED\),/.test(mods["19-sfx.js"]),

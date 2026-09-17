@@ -97,7 +97,7 @@ function inputOpts(C, extra) {
   const X = H.buildGame();
   const { C, AudioSys, MusicSys } = X;
   H.assert(X._audio === null, "the default build installs no fake");
-  H.eq(X.AUDIO_VERSION, "0.3.0", "kit-audio is 0.3.0");   // CS010 P1: the gates, sweep, limiter and duck, MINOR
+  H.eq(X.AUDIO_VERSION, "0.4.0", "kit-audio is 0.4.0");   // CS012 P5: the optional high-pass, MINOR
   H.assert(AudioSys && MusicSys, "AudioSys and MusicSys exist");
   for (const k of ["AUDIO_NOISE_SEED", "AUDIO_VOL_RAMP"]) hasKnob(X, k, null, H);
   hasKnob(X, "AUDIO_VOL_STEPS", { def: 10 }, H);
@@ -332,7 +332,11 @@ function distinctStarts(from) {
   const GM = XA.MusicSys;
   GM.setState("title");
   const feeds = (from, to) => !!from && !!to && rec.connections.some(c => c.from === from && c.to === to);
-  const gameRoute = feeds(GM.trackGain, GM.sweep) && feeds(GM.sweep, GM.limiter) && feeds(GM.limiter, GM.duck) &&
+  // ⛔ CS012 P5 inserted the high-pass between the sweep and the limiter (GDD
+  // 11.1). The CLAIM is unchanged — the game's music reaches the bus down one
+  // named chain and no other — and only the chain moved.
+  const gameRoute = feeds(GM.trackGain, GM.sweep) && feeds(GM.sweep, GM.highpass) &&
+    feeds(GM.highpass, GM.limiter) && feeds(GM.limiter, GM.duck) &&
     feeds(GM.duck, GM.dipNode) && feeds(GM.dipNode, A.music) && GM.limiter.kind === "compressor";
   GM.setState(XA.MUSIC_SILENCE);
   A.ctx.currentTime = 1.0;
@@ -341,7 +345,7 @@ function distinctStarts(from) {
   H.assert(M.duck && M.duck.gain.value === 1, "the duck node is built at unity");
   H.assert(rec.connections.some(c => c.from === M.duck && c.to === A.music), "the duck feeds the music bus");
   H.assert(M.trackGain && rec.connections.some(c => c.from === M.trackGain && c.to === M.duck) && gameRoute,
-    "the track gain feeds the duck with no groups, and the game's goes track gain → sweep → limiter → duck → dip → music");
+    "the track gain feeds the duck with no groups, and the game's goes track gain → sweep → high-pass → limiter → duck → dip → music");
   H.eq(M.layerGates.length, SYN_LAYERS.length, "one gate per layer");
   H.assert(M.layerGates.every(g => g.node.gain.value === 1), "every gate is open");
 

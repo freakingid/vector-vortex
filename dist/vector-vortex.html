@@ -677,9 +677,24 @@ const C = {
     classic:   { jump: false, combo: false },
     overdrive: { jump: true,  combo: true },
   },
+  // ⛔ THE JUMP'S FOUR TIMERS, AND ALL FOUR COUNT UP (GDD 14.2, 16.3; O6).
+  // JUMP_COOLDOWN runs from LANDING, and JUMP_RECOVERY is its first 0.20 s —
+  // so the longest a player can spend off the rim is 0.90 in 2.30 s, 39.1 %
+  // (MEASURED, plan §0's O6 table). Airborne the craft rotates and may Purge
+  // and cannot fire; recovering it is on the rim, contact-lethal, and can do
+  // neither. Raising JUMP_TIME or lowering JUMP_COOLDOWN moves that share.
   JUMP_TIME:            0.90,
   JUMP_RECOVERY:        0.20,
   JUMP_COOLDOWN:        1.40,
+  // ⛔ THE THREE AIRBORNE CHANNELS (GDD 14.2's ⛔; O7, O16). ⚠ All four values
+  // are provisional, the same standing as SKIMMER_COLOR. The first two are
+  // DRAW-TIME ONLY — `lane` and the depth model are untouched by a jump — and
+  // the third is kit-audio 0.4.0's optional high-pass group, passed in by
+  // 19-sfx.js. ⛔ The shadow is a STROKE at this alpha; nothing here is a fill.
+  JUMP_LIFT:            0.12,   // rim radii out from the well's centroid, at the apex
+  JUMP_SHADOW_ALPHA:    0.6,    // the rim shadow's glow alpha, under the lifted craft
+  JUMP_HP_HZ:           700,    // Hz: a clear thinning with the tune intact
+  JUMP_HP_TC:           0.03,   // s: the time constant of a de-click, not a sweep
   COMBO_WINDOW:         2.50,   // s
   COMBO_MAX:            8,
 
@@ -735,6 +750,16 @@ const C = {
   HUD_LINE_W:           2.0,    // px, icon and glyph stroke
   HUD_PURGE_SIZE:       30,     // px, the Purge glyph's diameter
   HUD_PURGE_DIM_ALPHA:  0.35,   // GDD 4.3 — the weak second use still waiting
+  // ⛔ THE JUMP GLYPH, OVERDRIVE ONLY (GDD 10.4, 16.3; O8). It sits LEFT of the
+  // Purge glyph on the same baseline, so the Classic HUD's four rectangles are
+  // bit-identical (test-cs012-p5.js). ⛔ HUD_JUMP_SIZE is the RING's diameter
+  // and the rectangle hudLayout() reports — the craft inside it is smaller —
+  // because the rectangle is what the readability and touch-button assertions
+  // are made against. ⚠ Provisional, like the Purge glyph's art.
+  HUD_JUMP_SIZE:        30,     // px, the readiness ring's diameter and the box
+  HUD_JUMP_GAP:         16,     // px between that box and the Purge glyph's
+  HUD_JUMP_CRAFT:       0.60,   // the craft glyph's width as a fraction of the box
+  HUD_JUMP_RING_SEG:    24,     // polyline segments in a FULL ring; a partial one uses its share
   // ⛔ H3: the touch-button side's items shift inward by this many
   // TOUCH_BUTTON_R — the button's far edge (margin 1.5 R + radius 1 R) and a
   // margin. The side is the mirror flag in the HUD view, never a detected device.
@@ -1256,7 +1281,11 @@ function newState() {
     // while `active` is one that cannot. It is also what keeps
     // 09-collision.js's "there is no term here for where the Skimmer is"
     // LITERALLY true — collideSkimmer() does not run during a dive at all.
-    // GDD 14.2's Jump is the thing that reopens that, and it is not this.
+    // ⛔ AND CS012 P5's JUMP DID NOT REOPEN IT EITHER (R3). This comment used
+    // to say the Jump was the thing that would: it is not. Airborne is a PHASE
+    // on state.jump (below), and collideSkimmer() skips its whole pass while
+    // it holds rather than comparing a craft depth against a killDepth. The
+    // build still has exactly one two-depth comparison, 11-dive.js's strike.
     //
     //   active  the whole gameplay pass is short-circuited while true
     //   phase   "grace" | "descent" — GDD 5's two beats
@@ -1266,6 +1295,30 @@ function newState() {
     //           LENGTH — comparing the two is the strike test and it is the
     //           only two-depth comparison in the build (11-dive.js).
     dive: { active: false, phase: "grace", timer: 0, depth: 1 },
+
+    // ⛔ THE JUMP (GDD 14.2; O6, R2, R3; 05-skimmer.js). Overdrive's, and
+    // updateJump() is a NO-OP in Classic — it writes nothing at all, not even
+    // `latched`, which is what makes a Classic run with the jump button held
+    // bit-identical to one without (test-cs012-p5.js).
+    //
+    // ⛔ AIRBORNE IS A PHASE, NOT A DEPTH. There is no `skimmer.depth` and
+    // 09-collision.js still has no term for where the craft is: it SKIPS the
+    // whole pass while `phase` is "air". The comments in this build that
+    // predicted the Jump would give that pass a second depth to compare were
+    // corrected at CS012 P5 to what shipped.
+    //
+    //   phase    "ground" | "air" | "recover"
+    //   t        counts UP inside the phase (GDD 16.3): toward C.JUMP_TIME
+    //            airborne, C.JUMP_RECOVERY recovering, unused on the ground
+    //   cool     counts UP toward C.JUMP_COOLDOWN FROM LANDING (O6), and is
+    //            born AT the threshold — already expired, so the first jump of
+    //            a well never waits. Recovery is its first C.JUMP_RECOVERY.
+    //   latched  "the jump button was held last step", exactly purgeLatched's
+    //            job: takeoff is the RISING edge, so a held button never
+    //            re-jumps. ⛔ killSkimmer() forces it true, and neither
+    //            enterWell() nor the respawn clears it — a button held across
+    //            a freeze or a well change needs a real release first.
+    jump: { phase: "ground", t: 0, cool: C.JUMP_COOLDOWN, latched: false },
 
     // ⛔ THE RUN'S CUMULATIVE COUNTERS (GDD 15.6; 21-telemetry.js). CS007 P4.
     //
@@ -2692,6 +2745,14 @@ function createInput(options) {
 // wrap at the seam; open wells CLAMP at two walls, and hitting one triggers a
 // WALL_SQUASH_MS squash that is ⛔ VISUAL ONLY and never writes `lane`.
 //
+// ⛔ THE JUMP IS A PHASE ON state.jump AND NEVER A Skimmer DEPTH (GDD 14.2;
+// CS012 P5, R3). updateJump() below is the whole rule, and it is a NO-OP
+// outside a mode whose C.MODE_FLAGS carry `jump`. The lift and the drop-shadow
+// are DRAW-TIME geometry — skimmerPoints() takes a lift and draw() strokes the
+// unlifted outline underneath — so `lane`, `depth` and the collision pass are
+// untouched by a jump. What airborne actually buys is one skip in
+// collideSkimmer() and one refusal in updateShots().
+//
 // ⛔ Entity contract (GDD 6.5): class, update, draw, dead. `dead` is set by
 // killSkimmer() (09-collision.js) and by nothing else — that is the ONE death
 // route, and CS003 P4 built the sequence hanging off it: a life spent, a
@@ -2731,26 +2792,141 @@ const SKIMMER_POLY = [
 // call; do not give it a callback.
 const _skimPts = SKIMMER_POLY.map(function () { return { x: 0, y: 0 }; });
 
-// Project the silhouette into screen space for a given lane and squash.
+// Project the silhouette into screen space for a given lane, squash and lift.
 //
 //   squash  0..1, the VISUAL wall-squash amount. It compresses the craft
 //           along the rim and stretches it down the well by the same factor —
 //           it is applied HERE, at projection time, and never anywhere near
 //           `lane`. GDD 3.5's "40 ms visual squash".
+//   lift    ⛔ OPTIONAL, and omitted it is 0, which is every caller that
+//           predates CS012 P5. In rim radii OUT from the well's centroid
+//           (GDD 14.2, O7): the airborne craft is pushed away from the centre
+//           along each projected point's own outward direction.
+//
+// ⛔ THE LIFT IS APPLIED AFTER THE PROJECTION AND NOT AS A DEPTH. perspective()
+// caps depth at 1, so a point "outside the rim" would silently collapse back
+// onto it; and a depth above 1 is not a thing the depth model has (GDD 3.2).
+// Leaving it here, in screen space, is also what keeps the lift draw-only —
+// with C.JUMP_LIFT at 0 the build is bit-identical (test-cs012-p5.js).
 //
 // Returns the shared scratch array. Copy out of it if you need to keep it.
-function skimmerPoints(well, lane, squash) {
+function skimmerPoints(well, lane, squash, lift) {
   const s = squash > 0 ? (squash > 1 ? 1 : squash) : 0;
   const half = C.SKIMMER_WIDTH / 2 * (1 - C.SKIMMER_SQUASH * s);
   const reach = 1 + C.SKIMMER_SQUASH * s;
+  const rise = lift > 0 ? lift * C.WELL_RADIUS : 0;
+  // The centroid in SCREEN space, on the same mapping screenPos() uses.
+  const c = rise > 0 ? wellCentroid(well) : null;
+  const ccx = c ? C.WELL_CX + c.x * C.WELL_RADIUS : 0;
+  const ccy = c ? C.WELL_CY + c.y * C.WELL_RADIUS : 0;
 
   for (let i = 0; i < SKIMMER_POLY.length; i++) {
     const p = SKIMMER_POLY[i];
     // Depth 1 IS the rim (GDD 3.2) — a definition, not a tunable. Every
     // silhouette offset is measured inward from it.
-    screenPos(well, lane + p.l * half, 1 + p.d * reach, _skimPts[i]);
+    const out = screenPos(well, lane + p.l * half, 1 + p.d * reach, _skimPts[i]);
+    if (rise > 0) {
+      const dx = out.x - ccx, dy = out.y - ccy;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > 0) { out.x += dx / d * rise; out.y += dy / d * rise; }
+    }
   }
   return _skimPts;
+}
+
+// ---------------------------------------------------------------------------
+// THE JUMP (GDD 14.2; O6, R2-R4) — Overdrive's, and a no-op everywhere else
+// ---------------------------------------------------------------------------
+//
+// ⛔ ONE BAG, state.jump (02-state.js), and ⛔ EVERY TIMER COUNTS UP (GDD 16.3).
+// The three phases and the one cooldown:
+//
+//   ground   `cool` counting up toward C.JUMP_COOLDOWN. Ready is
+//            `cool >= C.JUMP_COOLDOWN`, and a ready craft takes off on the
+//            RISING EDGE of input.jump.
+//   air      C.JUMP_TIME long. ⛔ Immune to every contact killer
+//            (09-collision.js skips its whole pass), cannot fire
+//            (06-shots.js), rotates at full speed, and MAY Purge — the Purge
+//            is a panic button and O6 leaves it alone.
+//   recover  C.JUMP_RECOVERY long, on the rim, ⛔ CONTACT-LETHAL, and it can
+//            neither fire nor jump. It is the cooldown's first beat, not a
+//            fourth timer: `cool` is reset at LANDING and recovery ends when
+//            it passes C.JUMP_RECOVERY.
+//
+// ⛔ THE NO-OP IS TOTAL. Outside a jump mode this function writes NOTHING —
+// not `latched`, not `cool` — so a Classic session with the jump button held
+// hashes step for step against one that never presses it (test-cs012-p5.js).
+// That is why the mode test is the first line and not a branch inside.
+//
+// ⛔ `mode` IS READ OFF THE STATE THAT WAS PASSED IN. This module reads no game
+// global but C, so modeHas() gets the mode explicitly rather than defaulting to
+// the `state` global (00-config.js).
+function updateJump(state, dt) {
+  if (!modeHas("jump", state.mode)) return;
+  const j = state.jump;
+
+  // ⛔ THE EDGE IS DETECTED HERE, exactly as updatePurge() detects the Purge's
+  // (09-collision.js): the input struct carries LEVELS on every device (GDD
+  // 9.5), and `latched` is written as `held` EVERY step rather than only
+  // cleared on release — which is what lets killSkimmer()'s forced `true`
+  // behave correctly on the way out of a death freeze.
+  const held = !!state.input.jump;
+  const rising = held && !j.latched;
+  j.latched = held;
+
+  if (j.cool < C.JUMP_COOLDOWN) j.cool += dt;
+
+  if (j.phase === "air") {
+    j.t += dt;
+    if (j.t >= C.JUMP_TIME) {
+      // ⛔ LANDING STARTS THE COOLDOWN (O6), so the longest cycle is
+      // C.JUMP_TIME + C.JUMP_COOLDOWN and the airborne share is fixed.
+      j.phase = "recover";
+      j.t = 0;
+      j.cool = 0;
+    }
+    return;
+  }
+
+  if (j.phase === "recover") {
+    j.t += dt;
+    if (j.t >= C.JUMP_RECOVERY) { j.phase = "ground"; j.t = 0; }
+    return;
+  }
+
+  // Grounded. ⛔ The rising edge AND a spent cooldown; a held button never
+  // re-jumps, because `latched` was already true on the step that took off.
+  if (rising && j.cool >= C.JUMP_COOLDOWN) { j.phase = "air"; j.t = 0; }
+}
+
+// ⛔ READY, GROUNDED, AND `latched` UNTOUCHED — the Purge charge's rule, for
+// the Purge charge's reason (09-collision.js, enterWell()). Called by
+// enterWell(), by the respawn, and by startDive() so a jump in flight when the
+// well clears LANDS on the clear step (R4) and the Dive is never airborne.
+function resetJump(state) {
+  const j = state.jump;
+  j.phase = "ground";
+  j.t = 0;
+  j.cool = C.JUMP_COOLDOWN;
+}
+
+// Is the craft off the rim this step? ⛔ The one predicate the collision pass,
+// the shot pass and the audio frame all read, so "airborne" has one definition.
+function jumpAirborne(state) { return state.jump.phase === "air"; }
+
+// May the craft fire? ⛔ No while airborne AND no while recovering (O6): the
+// rim sweep needs fire, so it cannot save a landing on a parked rim enemy.
+function jumpCanFire(state) { return state.jump.phase === "ground"; }
+
+// 0..C.JUMP_LIFT, a parabola over C.JUMP_TIME: nothing at takeoff, the apex at
+// half time, nothing at landing. ⛔ DRAW-TIME ONLY, and it takes the BAG rather
+// than `state` — a value crossing the boundary, like skimmerBlinkVisible()'s
+// timer. Recovering and grounded read 0: the craft is on the rim.
+function jumpLift(jump) {
+  if (!jump || jump.phase !== "air" || !(C.JUMP_TIME > 0)) return 0;
+  const u = jump.t / C.JUMP_TIME;
+  const k = u < 0 ? 0 : (u > 1 ? 1 : u);
+  return C.JUMP_LIFT * 4 * k * (1 - k);
 }
 
 // Is the craft drawn on this frame? ⛔ VISUAL ONLY, and read by draw code
@@ -2877,8 +3053,24 @@ class Skimmer {
   // sprite, no texture, nothing solid. The craft draws at full alpha even in
   // the dim band (GDD 3.7) — the band dims the WELL, and a player who cannot
   // see their own craft is the failure that rule is protecting against.
-  draw(ctx, well) {
-    drawPoly(ctx, skimmerPoints(well, this.lane, this.squashAmount()), true);
+  //
+  // ⛔ `lift` IS OPTIONAL AND IS TWO OF GDD 14.2's THREE AIRBORNE CHANNELS
+  // (O7). Above 0 the craft is drawn raised off the rim line, and its own
+  // outline is stroked FLAT ON THE RIM underneath at C.JUMP_SHADOW_ALPHA —
+  // the drop-shadow, and ⛔ a stroke, never a fill. The shadow goes down first
+  // so the craft reads over it. Game.draw() is where the value comes from
+  // (jumpLift(state.jump)); nothing here reads `state`.
+  //
+  // ⛔ skimmerPoints() returns the ONE shared scratch array, so the shadow's
+  // path must be built and stroked before the lifted points overwrite it —
+  // which is exactly what drawPoly + glowStroke do, in that order.
+  draw(ctx, well, lift) {
+    const squash = this.squashAmount();
+    if (lift > 0) {
+      drawPoly(ctx, skimmerPoints(well, this.lane, squash), true);
+      glowStroke(ctx, C.SKIMMER_COLOR, C.LINE_W_RIM, C.JUMP_SHADOW_ALPHA);
+    }
+    drawPoly(ctx, skimmerPoints(well, this.lane, squash, lift), true);
     glowStroke(ctx, C.SKIMMER_COLOR, C.LINE_W_RIM, 1);
   }
 }
@@ -2958,7 +3150,14 @@ function updateShots(state, well, dt) {
   // ⛔ end-of-frame filter; a shot is never spliced out mid-loop (GDD 6.5).
   state.shots = state.shots.filter(s => !s.dead);
 
-  if (state.input.fire &&
+  // ⛔ NO SHOT LEAVES THE RIM OFF THE GROUND (GDD 14.2; O6, CS012 P5). Airborne
+  // the craft "can rotate, cannot fire"; recovering it is on the rim and
+  // lethal and still cannot fire, which is what stops the rim sweep (GDD 4.5)
+  // from saving a landing on a parked enemy. ⛔ The cooldown above still ages,
+  // so a landing is not also a cooldown wait. In Classic jumpCanFire() is
+  // always true — state.jump never leaves "ground" — so this line changes
+  // nothing there, to the bit (test-cs012-p5.js).
+  if (state.input.fire && jumpCanFire(state) &&
       state.shotCooldown >= C.SHOT_COOLDOWN &&
       state.shots.length < C.SHOT_MAX) {
     const lane = laneNormalize(well, Math.round(state.skimmer.lane));
@@ -3044,13 +3243,24 @@ class Enemy {
     // a kill zone, and an enemy spawned at the throat in the player's lane
     // kills them on the spawn step having travelled nowhere. See the Drifter's
     // constructor at the foot of this file for the whole reading of GDD 4.5
-    // item 2. ⚠ Zero becomes honest AS A RESTING VALUE the moment the craft can
-    // leave the rim WHILE THE COLLISION PASS IS RUNNING, and ⛔ that is GDD
-    // 14.2's Jump ALONE. CS006 P3 shipped GDD 5's Dive and it is NOT that
-    // moment: Game.update() short-circuits the whole gameplay pass while
-    // state.dive.active, so collideSkimmer() never sees a diving craft, the
-    // descent depth lives on state.dive rather than here (02-state.js), and
-    // GDD 4.5 item 5 is a strike test in 11-dive.js rather than a killDepth.
+    // item 2.
+    //
+    // ⛔ AND IT NEVER BECAME HONEST. This comment used to predict that zero
+    // would be a legitimate RESTING value the moment the craft could leave the
+    // rim while the collision pass was running, and that GDD 14.2's Jump was
+    // that moment. CS012 P5 shipped the Jump and it is not:
+    //
+    //   the Dive   (CS006 P3) short-circuits the whole gameplay pass, so
+    //              collideSkimmer() never sees a diving craft; the descent
+    //              depth lives on state.dive (02-state.js) and GDD 4.5 item 5
+    //              is a strike test in 11-dive.js rather than a killDepth.
+    //   the Jump   (CS012 P5) is a PHASE on state.jump (05-skimmer.js), and
+    //              collideSkimmer() SKIPS ITS WHOLE PASS while it is airborne.
+    //              Immunity is a return, not an arithmetic comparison, so that
+    //              pass still has no term for where the craft is.
+    //
+    // ⛔ So a resting zero is as wrong as it ever was, on every enemy, and
+    // there is nothing left that would make it right.
     //
     // ⛔ ONE ENTITY MUTATES THIS FIELD, AND THAT IS THE OTHER HALF OF THE RULE.
     // CS005 P3's Surger holds the rim band while it climbs and through its whole
@@ -3954,7 +4164,8 @@ class Drifter extends Enemy {
     // and the Weaver's bolt use, so retuning C.RIM_CONTACT_DEPTH moves every
     // rim-contact entity together. Two comments in this build predicted `0`
     // here (the base class above, and collideSkimmer's header in
-    // 09-collision.js) and CS005 P2 corrected both.
+    // 09-collision.js) and CS005 P2 corrected both; both then predicted the
+    // Jump would make zero honest, and CS012 P5 corrected that too.
     //
     // ⛔ WHY ZERO WOULD BE WRONG, AND IT IS NOT A TUNING OPINION.
     // collideSkimmer() is `e.depth >= e.killDepth` plus a lane match, and it
@@ -3975,12 +4186,14 @@ class Drifter extends Enemy {
     // all and the Thorn has none outside the Dive. That is the distinction the
     // condition is listed separately for.
     //
-    // ⚠ Zero becomes honest the moment the craft can leave the rim — GDD 5's
-    // Dive, GDD 14.2's Jump — because collideSkimmer would then have two depths
-    // to compare. It is a ONE-LINE change at that point. ⛔ Do not give the
-    // Skimmer a `depth` field now to make it honest early: that is CS006's and
-    // CS012's work, and a collision pass with a Skimmer-depth term is a second
-    // thing to keep in step for no present benefit.
+    // ⛔ AND IT STAYS THE RIM BAND. This comment used to predict that zero
+    // would become honest once the craft could leave the rim — GDD 5's Dive,
+    // GDD 14.2's Jump — because collideSkimmer() would then have two depths to
+    // compare. Both shipped (CS006 P3, CS012 P5) and neither gave the craft a
+    // depth: the Dive short-circuits that pass and the Jump skips it. ⛔ Do not
+    // give the Skimmer a `depth` field to make this "honest": there is no
+    // second depth to compare it against, and the base class above has the
+    // whole reading.
     this.killDepth = 1 - C.RIM_CONTACT_DEPTH;
 
     // ⛔ The heading, kept in step with what boundaryFrom() and laneHop() return
@@ -4973,21 +5186,28 @@ function collideShots(state, well) {
 // This header predicted 0 for the Drifter until CS005 P2; GDD 4.5 item 2's "any
 // depth" is about there being no safe PHASE — a Drifter kills you while it is
 // armoured, so you can neither shoot it nor touch it — and the Drifter ships on
-// the rim band with everything else. ⚠ Zero becomes honest as a RESTING value
-// the moment the craft can leave the rim (GDD 5's Dive, GDD 14.2's Jump) and
-// this pass has two depths to compare. Until then a PERMANENT zero is an
-// unaccountable death, and GDD 6.3 names that as the most common complaint
-// about games in this genre.
+// the rim band with everything else. A PERMANENT zero is an unaccountable
+// death, and GDD 6.3 names that as the most common complaint about games in
+// this genre.
 //
-// ⛔ CS006 P3 SETTLED WHICH OF THOSE TWO MOMENTS IT IS, AND IT IS THE JUMP
-// ALONE. The Dive shipped and is NOT that moment: Game.update() short-circuits
-// the whole gameplay pass while state.dive.active, so this function does not
-// run during a dive at all, and the sentence above stays literally true. GDD 5's
-// descent depth lives on state.dive and never on the craft (02-state.js,
-// 11-dive.js), and GDD 4.5 item 5 is a strike test in that module rather than a
-// killDepth here. GDD 14.2's Jump is the thing that puts a craft off the rim
-// WHILE THIS PASS IS RUNNING, and it is the one that gives this pass a second
-// depth to compare.
+// ⛔ AND IT IS STILL TRUE AFTER THE DIVE AND AFTER THE JUMP — BOTH OF WHICH
+// THIS HEADER PREDICTED WOULD END IT (CS006 P3, CS012 P5 R3). Neither gave the
+// craft a depth:
+//
+//   the Dive   Game.update() short-circuits the whole gameplay pass while
+//              state.dive.active, so this function does not run during one at
+//              all. GDD 5's descent depth lives on state.dive and never on the
+//              craft (02-state.js, 11-dive.js), and GDD 4.5 item 5 is a strike
+//              test in that module rather than a killDepth here.
+//   the Jump   airborne is a PHASE on state.jump (05-skimmer.js), and this
+//              function SKIPS ITS WHOLE PASS while it holds — see the skip in
+//              collideSkimmer() below. Immunity is a return, not an arithmetic
+//              comparison, so there is still exactly one two-depth comparison
+//              in the build and it is the dive strike's.
+//
+// ⛔ So `killDepth = 0` on a resting enemy stays as wrong as it was, and no
+// future session should "finish" it: the one honest zero is the Surger's
+// discharge window, below.
 //
 // ⚠ WHICH IS WHY THE SURGER'S ZERO IS RIGHT AND THE DRIFTER'S WOULD NOT BE, and
 // it is the same number both times. The Surger's lasts C.SURGE_DISCHARGE and is
@@ -5033,9 +5253,21 @@ function collideShots(state, well) {
 // leaves C13 at 0/24, because collideShots()' load-bearing `break` resolves one
 // enemy per shot per step. The sweep is 24/24 on all thirteen shootable shapes
 // and holds all three lethal ones (test-cs008-p1b.js).
+//
+// ⛔ AND SINCE CS012 P5, ONE SKIP ABOVE ALL OF IT: AIRBORNE (GDD 14.2; O6, R3).
+// The whole pass is skipped while state.jump.phase is "air" — contact death
+// AND the rim sweep together, because "immune to rim contact and Surger
+// discharge" is not a fire-gated privilege and a craft that is off the rim is
+// not touching what it flies over. It is ONE return rather than a term per
+// death condition, so every contact killer in the roster inherits it at once:
+// a Vaulter, a Carrier, a Weaver bolt, a riding or crossing Drifter, a Reaver
+// and a Surger's discharge are each staged and mutation-checked in
+// test-cs012-p5.js. ⛔ RECOVERY IS NOT COVERED — those C.JUMP_RECOVERY seconds
+// are on the rim and lethal, and that is the whole cost of the jump.
 function collideSkimmer(state, well) {
   const sk = state.skimmer;
   if (!sk || sk.dead) return;
+  if (jumpAirborne(state)) return;
 
   for (let i = 0; i < state.enemies.length; i++) {
     const e = state.enemies[i];
@@ -5104,6 +5336,15 @@ function killSkimmer(state) {
   // `held` every step rather than only clearing it on release, which is what
   // lets this forced value behave correctly on the way out.
   state.purgeLatched = true;
+
+  // ⛔ AND THE JUMP BUTTON WITH IT (CS012 P5; O6), for the identical reason and
+  // by the identical mechanism: updateJump() writes `latched` as `held` every
+  // step, so forcing it true here makes the first live step after the freeze
+  // read as "still held" and the button needs a genuine release before it can
+  // take off again. ⛔ Unconditional — in Classic updateJump() never runs, so
+  // the field is written and never read, which costs nothing and keeps this
+  // function free of a mode branch.
+  state.jump.latched = true;
 
   // ⛔ THE STOP (GDD 4.4). Its menu is CS008 P5's (23-main.js). ⛔ The run's
   // record is NOT taken here but in frame(), after the steps (CS011 P3): a clear
@@ -5331,6 +5572,13 @@ function startDive(state) {
   state.dive.active = true;
   state.shots = [];
   state.enemies = state.enemies.filter(e => e.anchored && !e.dead);
+  // ⛔ A JUMP IN FLIGHT LANDS ON THE CLEAR STEP (GDD 14.2; CS012 P5, R4). The
+  // dive short-circuits the gameplay pass, so an airborne craft carried into
+  // one would hold its immunity, its lift and its music high-pass for the whole
+  // descent with no way to come down. Beside the shot clear for the same
+  // reason: what belongs to the well being left does not cross the throat.
+  // ⛔ THE DIVE THEREFORE ALWAYS STARTS GROUNDED, in either mode.
+  resetJump(state);
   // GDD 5's rising sweep. HERE, so a repeated dive plays it again (plan §7).
   sfx("dive");
 }
@@ -6605,8 +6853,9 @@ function fragmentT(left, total) {
 // touch buttons, mirrored and not (H3). A text rectangle is sized by
 // C.TEXT_CHAR_W, never measureText(), so that assertion is arithmetic.
 //
-// ⛔ Text goes through drawText() and nothing else; icons and the Purge glyph
-// go through drawPoly + glowStroke (GDD 10.2). No fills, no rectangles drawn.
+// ⛔ Text goes through drawText() and nothing else; icons, the Purge glyph and
+// CS012 P5's jump glyph go through drawPoly + glowStroke (GDD 10.2). No fills,
+// no rectangles drawn — the readiness ring is a POLYLINE, never ctx.arc.
 
 // The Purge glyph (GDD 4.3): an eight-point burst, closed, unit radius. Shape
 // DATA; the scale is C.HUD_PURGE_SIZE. ⚠ Provisional art, like the palette.
@@ -6617,6 +6866,23 @@ const PURGE_GLYPH_POLY = [
   { x: -1.00, y:  0.00 }, { x: -0.30, y: -0.30 },
 ];
 
+// ⛔ THE JUMP GLYPH, OVERDRIVE ONLY (GDD 10.4, 14.2; O8): a craft RAISED off a
+// short rim line, which is the same picture the well shows when the player is
+// airborne. Shape DATA in the glyph box's own [-1, 1] space, y DOWN; the scale
+// is C.HUD_JUMP_SIZE * C.HUD_JUMP_CRAFT. ⚠ Provisional art, like the Purge
+// glyph's. The craft is the reserve icon's silhouette read the same way round
+// — prongs out, nose up — so the two HUD craft cannot drift apart.
+const JUMP_GLYPH_POLY = [
+  { x: -1.00, y:  0.10 },   // left prong
+  { x: -0.42, y: -0.16 },
+  { x:  0.00, y: -0.02 },   // the notch
+  { x:  0.42, y: -0.16 },
+  { x:  1.00, y:  0.10 },   // right prong
+  { x:  0.00, y: -0.70 },   // the nose, raised
+];
+// The rim it has left: an OPEN two-point line under the craft.
+const JUMP_RIM_POLY = [{ x: -1.00, y: 0.72 }, { x: 1.00, y: 0.72 }];
+
 // ⛔ NO PER-FRAME ALLOCATION beyond the strings themselves: the layout, its
 // rectangles and both point scratches are module-level and rewritten per call.
 // Like entityPoints(), that makes hudLayout() non-reentrant — copy what you keep.
@@ -6625,10 +6891,17 @@ const _hud = {
   lives: { x: 0, y: 0, w: 0, h: 0 },
   level: { x: 0, y: 0, w: 0, h: 0 },
   purge: { x: 0, y: 0, w: 0, h: 0 },
+  jump: { x: 0, y: 0, w: 0, h: 0 },
   lifeIcons: 0,      // reserve craft drawn: lives − 1, never below 0 (H1)
   purgeAlpha: 0,     // 1 bright, C.HUD_PURGE_DIM_ALPHA dim, 0 absent
+  jumpAlpha: 0,      // 1 ready, C.HUD_PURGE_DIM_ALPHA cooling, 0 airborne or Classic
+  jumpRing: 0,       // 0..1 of the readiness ring drawn — 0 when ready, 0 when absent
 };
+
 const _purgePts = PURGE_GLYPH_POLY.map(function () { return { x: 0, y: 0 }; });
+const _jumpPts = JUMP_GLYPH_POLY.map(function () { return { x: 0, y: 0 }; });
+const _jumpRimPts = JUMP_RIM_POLY.map(function () { return { x: 0, y: 0 }; });
+const _ringPts = [];
 const _iconPts = [];
 
 function hudScoreText(view) { return String(view.score); }
@@ -6640,6 +6913,22 @@ function hudPurgeAlpha(uses) {
   if (uses <= 0) return 1;
   if (uses === 1) return C.HUD_PURGE_DIM_ALPHA;
   return 0;
+}
+
+// O8's three readings of `view.jump`, which is null in Classic and whenever no
+// run has a jump: bright when ready, dim with a filling ring while cooling,
+// ⛔ ABSENT while airborne — the well is already showing the player that, on
+// two channels, and a fourth mark on a moment that lasts C.JUMP_TIME is noise.
+// ⛔ A ring only while cooling: a full ring beside a bright glyph says nothing
+// the glyph does not.
+function hudJumpAlpha(jump) {
+  if (!jump || jump.airborne) return 0;
+  return jump.ready ? 1 : C.HUD_PURGE_DIM_ALPHA;
+}
+function hudJumpRing(jump) {
+  if (!jump || jump.airborne || jump.ready) return 0;
+  const r = jump.ring;
+  return typeof r === "number" && r > 0 ? (r > 1 ? 1 : r) : 0;
 }
 
 // The deepest a reserve icon reaches, in SKIMMER_POLY `d` units (all ≤ 0).
@@ -6679,6 +6968,20 @@ function hudLayout(view) {
   p.x = right - P; p.y = H - M - P;
   _hud.purgeAlpha = hudPurgeAlpha(view.purgeUses);
 
+  // ⛔ THE JUMP GLYPH GOES BESIDE THE PURGE GLYPH AND MOVES NOTHING (O8;
+  // CS012 P5). It is placed OFF the Purge rectangle, on the same baseline, so
+  // the four rectangles above are bit-identical whether or not `view.jump` is
+  // there — which is the Classic HUD's guarantee, asserted in
+  // test-cs012-p5.js. ⛔ The rectangle is the RING's extent, not the craft's:
+  // it is what the throat-zone and touch-button assertions are made against,
+  // so it has to be the whole footprint.
+  const J = C.HUD_JUMP_SIZE;
+  const j = _hud.jump;
+  j.w = J; j.h = J;
+  j.x = p.x - C.HUD_JUMP_GAP - J; j.y = H - M - J;
+  _hud.jumpAlpha = hudJumpAlpha(view.jump);
+  _hud.jumpRing = hudJumpRing(view.jump);
+
   return _hud;
 }
 
@@ -6686,6 +6989,7 @@ function hudLayout(view) {
 //   score, lives, level, levelColor, purgeUses — the numbers shown
 //   mirror  the touch buttons' side (H3), the input module's live flag since P7
 //   icon    the reserve craft's local-space poly ({ l, d }, d ≤ 0 inward)
+//   jump    null in Classic; otherwise { airborne, ready, ring } (O8, CS012 P5)
 function drawHud(ctx, view) {
   const L = hudLayout(view);
   const size = C.HUD_TEXT_SIZE;
@@ -6718,6 +7022,48 @@ function drawHud(ctx, view) {
     }
     drawPoly(ctx, _purgePts, true);
     glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.purgeAlpha);
+  }
+
+  // ⛔ THE JUMP GLYPH (O8), and ⛔ the same three rules as everything else here:
+  // drawPoly + glowStroke, no fill, no rectangle. Absent at alpha 0, which is
+  // Classic and airborne both — so the Classic HUD draws exactly what it drew
+  // before CS012 P5.
+  if (L.jumpAlpha > 0) {
+    const R = C.HUD_JUMP_SIZE / 2;
+    const cx = L.jump.x + R, cy = L.jump.y + R;
+    const g = R * C.HUD_JUMP_CRAFT;
+    for (let i = 0; i < JUMP_GLYPH_POLY.length; i++) {
+      _jumpPts[i].x = cx + JUMP_GLYPH_POLY[i].x * g;
+      _jumpPts[i].y = cy + JUMP_GLYPH_POLY[i].y * g;
+    }
+    drawPoly(ctx, _jumpPts, true);
+    glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.jumpAlpha);
+
+    for (let i = 0; i < JUMP_RIM_POLY.length; i++) {
+      _jumpRimPts[i].x = cx + JUMP_RIM_POLY[i].x * g;
+      _jumpRimPts[i].y = cy + JUMP_RIM_POLY[i].y * g;
+    }
+    drawPoly(ctx, _jumpRimPts, false);
+    glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.jumpAlpha);
+
+    // ⛔ THE RING IS A POLYLINE, NOT AN ARC (GDD 10.2 — drawPoly + glowStroke
+    // is the one path, and ctx.arc would be a second). It FILLS clockwise from
+    // twelve o'clock as the cooldown runs, so the moment it closes is the
+    // moment the glyph goes bright. Its radius is R, which is why the layout
+    // rectangle is the ring's diameter and not the craft's.
+    if (L.jumpRing > 0) {
+      const segs = Math.max(1, Math.round(C.HUD_JUMP_RING_SEG * L.jumpRing));
+      const span = 2 * Math.PI * L.jumpRing;
+      while (_ringPts.length < segs + 1) _ringPts.push({ x: 0, y: 0 });
+      _ringPts.length = segs + 1;
+      for (let i = 0; i <= segs; i++) {
+        const a = -Math.PI / 2 + span * (i / segs);
+        _ringPts[i].x = cx + Math.cos(a) * R;
+        _ringPts[i].y = cy + Math.sin(a) * R;
+      }
+      drawPoly(ctx, _ringPts, false);
+      glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.jumpAlpha);
+    }
   }
 }
 
@@ -6911,19 +7257,34 @@ function drawMenu(ctx, view) {
 //      on the scheduler's own grid; the source ramped at currentTime;
 //   6. (0.3.0) the sweep and the limiter, built once, between the track gain
 //      and the duck;
-//   7. (0.3.0) the dip node after the duck, and the onBeat report.
+//   7. (0.3.0) the dip node after the duck, and the onBeat report;
+//   8. (0.4.0) the optional high-pass between the sweep and the limiter, and
+//      setHighpass().
 // Ported in 0.3.0: the intensity setter's gate loop and setDuck(). Each new
-// group (gating, sweep, limiter, duck) is OPTIONAL: an absent group builds no
-// node, and the music behaves as 0.2.0 did.
+// group (gating, sweep, limiter, duck, highpass) is OPTIONAL: an absent group
+// builds no node, and the music behaves as 0.2.0 did.
 //
 // createSfxPlayer() (0.2.0) is new here, not a port: one-shot and held voices
 // built from recipe DATA, into the sfx bus. Its noise is injected too.
 
-const AUDIO_VERSION = "0.3.0";
+const AUDIO_VERSION = "0.4.0";
 
 // The four buses, in build order. master goes to the output; the other three
 // go to master. A bus nothing feeds yet is still built, so its volume row works.
 const AUDIO_BUSES = ["master", "music", "sfx", "voice"];
+
+// ⛔ A SECOND-ORDER BUTTERWORTH'S Q, IN dB — the units this audio API reads Q in
+// for a low-pass or a high-pass. It is the flattest response with no peak at
+// the cutoff, so a filter built with it is at or under unity at every
+// frequency and cannot raise a host's headroom budget. The optional high-pass
+// below is built at it, and is not a tunable: a peaking high-pass would be a
+// different effect, not a louder one.
+const AUDIO_BUTTERWORTH_Q = -3.0103;
+
+// The high-pass's resting cutoff: 0 Hz is a pass-through, so "off" is a
+// frequency and not a bypass switch — which is what lets it move by a time
+// constant in both directions instead of clicking in and out of the path.
+const AUDIO_HP_OFF_HZ = 0;
 
 // ⛔ Numeric tunables are REQUIRED, never defaulted (kit-input's rule): a
 // default here would be a second tuning surface competing with the host's.
@@ -7099,17 +7460,22 @@ function audioClamp01(f) {
 //   fadeOut    s — the fade when setState() names a silence
 //   noise      () => number in [0, 1) — fills the noise buffer
 //   layerSink  optional ({ ctx, track, index, layer, out }) => node | null
-// The optional groups (0.3.0). Absent, a group builds no node and changes nothing:
+// The optional groups (0.3.0, 0.4.0). Absent, a group builds no node and
+// changes nothing:
 //   gating     { thresholds: { 2, 3, 4 }, ramp } — tier gates and setIntensity(f)
 //   sweep      { minHz, maxHz, q, tc } — a low-pass and setSweep(f)
+//   highpass   { hz, tc } — a Butterworth high-pass and setHighpass(on)
 //   limiter    { threshold, knee, ratio, attack, release } — a compressor node
 //   duck       { gain, ramp, dipGain, dipHold } — setDuck(on) and dip()
 //   onBeat     optional (t) => void — each note of a `beat: true` layer, at its start
 //
 // Signal path: note envelopes -> layer gate -> [track gain, crossfaded]
-//   -> [sweep] -> [limiter] -> duck -> [dip] -> engine.music
+//   -> [sweep] -> [highpass] -> [limiter] -> duck -> [dip] -> engine.music
 // ⛔ The duck and the dip sit AFTER the limiter: in front of it, a 6 dB duck
 // comes out as about 2 dB.
+// ⛔ The high-pass sits BEFORE it, with the sweep: it is a tone change on the
+// programme and belongs on the same side of the limiter as the other one, so
+// what the limiter sees is the sound the host asked for.
 function createMusic(engine, options) {
   if (!engine || typeof engine.unlock !== "function") {
     throw new Error("createMusic: engine must come from createAudioEngine()");
@@ -7134,6 +7500,7 @@ function createMusic(engine, options) {
     for (const tier of [2, 3, 4]) audioRequireNum(gating.thresholds, "createMusic: options.gating.thresholds", tier);
   }
   const sweepOpts = audioGroup(opts, "sweep", ["minHz", "maxHz", "q", "tc"]);
+  const hpOpts    = audioGroup(opts, "highpass", ["hz", "tc"]);
   const limitOpts = audioGroup(opts, "limiter", ["threshold", "knee", "ratio", "attack", "release"]);
   const duckOpts  = audioGroup(opts, "duck", ["gain", "ramp", "dipGain", "dipHold"]);
   if (opts.onBeat !== undefined && typeof opts.onBeat !== "function") {
@@ -7148,8 +7515,9 @@ function createMusic(engine, options) {
     duck: null,          // GainNode: the menu duck, after the limiter. Unity without the duck group
     dipNode: null,       // GainNode after the duck (duck group only): the event dips
     limiter: null,       // compressor node (limiter group only)
+    highpass: null,      // high-pass BiquadFilterNode (highpass group only)
     sweep: null,         // low-pass BiquadFilterNode (sweep group only)
-    inlet: null,         // the node a track gain feeds: the first of sweep, limiter, duck
+    inlet: null,         // the node a track gain feeds: the first of sweep, highpass, limiter, duck
     trackGain: null,     // GainNode for the currently-scheduled track; replaced (crossfaded) on setState
     state: "off",        // current track name, or a name with no track (silence)
     track: null,         // the active step table, or null for a silence
@@ -7160,6 +7528,7 @@ function createMusic(engine, options) {
     intensity: 0,        // 0..1, held by setIntensity(); read only by the gates
     sweepLevel: 1,       // 0..1, held by setSweep(); 1 is fully open
     sweepTarget: null,   // Hz last targeted, so a per-frame setSweep() is idempotent
+    highpassed: false,   // last high-pass target, so a per-frame setHighpass() is idempotent
     ducked: false,       // last duck target, so a per-frame setDuck() is idempotent
     duckLevels: [],      // breakpoints scheduled on the duck (audioLevelAt)
     dipLevels: [],       // breakpoints scheduled on the dip
@@ -7191,6 +7560,19 @@ function createMusic(engine, options) {
         l.connect(out);
         this.limiter = l;
         out = l;
+      }
+      // ⛔ AFTER THE LIMITER IN BUILD ORDER IS BEFORE IT IN SIGNAL ORDER: this
+      // chain is wired downstream first, so the node built here feeds the
+      // limiter and the sweep below feeds this one. Built at the level held so
+      // far, never at a change, exactly like the duck.
+      if (hpOpts) {
+        const h = ctx.createBiquadFilter();
+        h.type = "highpass";
+        h.Q.value = AUDIO_BUTTERWORTH_Q;
+        h.frequency.value = this.highpassed ? hpOpts.hz : AUDIO_HP_OFF_HZ;
+        h.connect(out);
+        this.highpass = h;
+        out = h;
       }
       if (sweepOpts) {
         const s = ctx.createBiquadFilter();
@@ -7263,6 +7645,25 @@ function createMusic(engine, options) {
       if (hz === this.sweepTarget) return;
       this.sweepTarget = hz;
       this.sweep.frequency.setTargetAtTime(hz, engine.ctx.currentTime, sweepOpts.tc);
+    },
+
+    // ⛔ THE HIGH-PASS, ON OR OFF (0.4.0). Idempotent under per-frame calls —
+    // the host is expected to call it every frame with a boolean — so it
+    // automates on the flip and on nothing else. ⛔ It MOVES BY setTargetAtTime
+    // over highpass.tc and ⛔ NEVER by a bare .value after the graph is built:
+    // a .value during a ramp is a step, and this one's whole job is to arrive
+    // and leave without a click. "Off" is AUDIO_HP_OFF_HZ, a pass-through, so
+    // the node stays in the path and the transition is a frequency move.
+    setHighpass(on) {
+      if (!hpOpts) return;
+      on = !!on;
+      if (on === this.highpassed) return;
+      if (!engine.ctx) { this.highpassed = on; return; }   // no graph yet: ensureGraph honours it
+      this.ensureGraph();                                  // build at the CURRENT level first
+      this.highpassed = on;
+      if (!this.highpass) return;
+      this.highpass.frequency.setTargetAtTime(on ? hpOpts.hz : AUDIO_HP_OFF_HZ,
+                                              engine.ctx.currentTime, hpOpts.tc);
     },
 
     // The menu duck, OO's setDuck: idempotent under per-frame calls, and ⛔ a
@@ -8102,6 +8503,10 @@ const MusicSys = createMusic(AudioSys, {
   // gate is open, the sweep is fully open, and the duck and dip sit at unity.
   gating:    { thresholds: C.LAYER_THRESHOLD, ramp: C.LAYER_CROSSFADE },
   sweep:     { minHz: C.FILTER_MIN_HZ, maxHz: C.FILTER_MAX_HZ, q: C.FILTER_Q, tc: C.FILTER_TC },
+  // kit-audio 0.4.0's high-pass (CS012 P5; GDD 14.2's third airborne channel,
+  // O7). ⛔ It is driven by 23-main.js's audioFrame(), which is where the board
+  // is read — this file names no `state`, and the engine names no game term.
+  highpass:  { hz: C.JUMP_HP_HZ, tc: C.JUMP_HP_TC },
   limiter:   C.MUSIC_LIMIT,
   duck:      { gain: C.MUSIC_DUCK_GAIN, ramp: C.MUSIC_DUCK_RAMP, dipGain: C.MUSIC_DIP_GAIN, dipHold: C.MUSIC_DIP_HOLD },
   onBeat:    noteBeat,
@@ -10671,6 +11076,14 @@ function enterWell() {
   // without knowing a Dive exists.
   resetDive(state);
 
+  // ⛔ AND THE JUMP, READY AND GROUNDED (GDD 14.2; CS012 P5, R4). Beside the
+  // Purge charge and for the same reason — a well is armed with everything the
+  // player is owed — and with the same exception: state.jump.latched is NOT
+  // cleared here. It is "the button was held last step", not well state, and
+  // clearing it would let a player still holding the button from the previous
+  // well take off on the entry step without ever releasing (05-skimmer.js).
+  resetJump(state);
+
   // A craft for this well. ⛔ Minted rather than carried over: lane counts
   // differ between wells, so the outgoing craft's lane may not exist here.
   // ⛔ state.lives is NOT touched — the reserve belongs to the run, not to the
@@ -10736,6 +11149,15 @@ function respawnSkimmer(state, well, lane) {
   // cleared — killSkimmer() set it so a button held across the freeze needs a
   // real release before it spends another charge (09-collision.js).
   state.invulnTime = 0;
+
+  // ⛔ AND THE JUMP COMES BACK READY AND GROUNDED (GDD 14.2; CS012 P5, R4). A
+  // craft that died recovering would otherwise respawn mid-recovery, and one
+  // that died on the ground with a spent cooldown would respawn still cooling —
+  // a punishment the rule does not describe. ⛔ state.jump.latched is
+  // deliberately NOT cleared, exactly as state.purgeLatched is not:
+  // killSkimmer() forced it true so a button held across the freeze needs a
+  // real release before it spends a takeoff (09-collision.js).
+  resetJump(state);
   sfx("respawn");
 }
 
@@ -12121,6 +12543,14 @@ const Game = (function () {
     if (state.skimmer.dead) respawnSkimmer(state, well);
     else if (state.invulnTime < C.RESPAWN_INVULN) state.invulnTime += dt;
 
+    // ⛔ THE JUMP, ABOVE EVERYTHING THAT READS IT (GDD 14.2; CS012 P5, O6;
+    // 05-skimmer.js). Its phase decides whether updateShots() may fire and
+    // whether collideSkimmer() runs at all, so it is resolved for THIS step
+    // before either. ⛔ It is a total no-op outside a jump mode — it writes
+    // nothing, `latched` included — which is what makes a Classic run with the
+    // button held bit-identical to one without.
+    updateJump(state, dt);
+
     state.skimmer.update(dt, well, state.input);
     updateShots(state, well, dt);
 
@@ -12211,7 +12641,12 @@ const Game = (function () {
       drawFragments(ctx, skimmerPoints(well, sk.lane, 0), true,
                     fragmentT(hitStopLeft, C.HIT_STOP_DEATH), C.SKIMMER_COLOR);
     } else if (sk && skimmerBlinkVisible(state.invulnTime)) {
-      sk.draw(ctx, well);
+      // ⛔ THE LIFT AND THE SHADOW ARE DRAW-TIME AND NOTHING ELSE (GDD 14.2's
+      // first two airborne channels; O7). jumpLift() takes the bag and returns
+      // 0..C.JUMP_LIFT — 0 grounded, 0 recovering, 0 in Classic — so with
+      // C.JUMP_LIFT at 0 the whole build is bit-identical. The craft's `lane`
+      // and the depth model never hear about it (05-skimmer.js).
+      sk.draw(ctx, well, jumpLift(state.jump));
     }
     // ⛔ THE HUD IS LAST and reads only this view (15-render-hud.js). The view
     // object is filled in place, never allocated per frame.
@@ -12226,6 +12661,18 @@ const Game = (function () {
       _hudView.levelColor = wellBandColor(state.level, state.bandRoll);
       _hudView.purgeUses = state.purgeUses;
       _hudView.mirror = input.setting("inputMirror");   // ⛔ the live flag (CS008 P7)
+      // ⛔ THE JUMP GLYPH IS OVERDRIVE'S AND NULL EVERYWHERE ELSE (O8), so the
+      // Classic HUD is exactly what CS008 P4 shipped. The sub-view is filled in
+      // place — no per-frame allocation — and carries readings, never the bag:
+      // 15-render-hud.js reads no game state.
+      if (modeHas("jump")) {
+        _jumpView.airborne = jumpAirborne(state);
+        _jumpView.ready = state.jump.phase === "ground" && state.jump.cool >= C.JUMP_COOLDOWN;
+        _jumpView.ring = C.JUMP_COOLDOWN > 0 ? state.jump.cool / C.JUMP_COOLDOWN : 1;
+        _hudView.jump = _jumpView;
+      } else {
+        _hudView.jump = null;
+      }
       drawHud(ctx, _hudView);
     }
     // The menu over everything, on every screen but play.
@@ -12249,8 +12696,11 @@ const Game = (function () {
 
   const _hudView = {
     score: 0, lives: 0, level: 1, levelColor: "", purgeUses: 0,
-    mirror: false, icon: SKIMMER_POLY,
+    mirror: false, icon: SKIMMER_POLY, jump: null,
   };
+  // The jump glyph's reading (CS012 P5, O8). Its own object so `_hudView.jump`
+  // can be null in Classic without allocating one in Overdrive.
+  const _jumpView = { airborne: false, ready: true, ring: 1 };
 
   // ---- the frame -----------------------------------------------------------
 
@@ -12359,6 +12809,11 @@ const Game = (function () {
     }
     audioRunLive = screen === "play" || pauseSide;
     MusicSys.setDuck(pauseSide);
+    // GDD 14.2's third airborne channel (O7; kit-audio 0.4.0): the music
+    // high-passes for the whole time the craft is off the rim. Idempotent, so
+    // the node automates on the takeoff and landing frames and no other. ⛔ The
+    // board is read HERE — 19-sfx.js names no `state`.
+    MusicSys.setHighpass(jumpAirborne(state));
     MusicSys.setState(musicStateFor(state.screen, optionsFrom, state.mode,
                                     C.MUSIC_TRACK_CHOICES[sound.track]));
     MusicSys.update();

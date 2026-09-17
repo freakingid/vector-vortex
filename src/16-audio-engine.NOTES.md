@@ -279,3 +279,38 @@ host's, and so is what counts as danger. The host's suite scans the slice for
 `C.`, the word `state`, and its game globals.
 
 **Backport status.** `not yet`.
+
+### 2026-09-17 — an optional high-pass on the music path (`VERSION` 0.3.0 → 0.4.0, MINOR)
+
+**What changed.** Additive, one more optional group beside `gating`, `sweep`,
+`limiter` and `duck`:
+
+- `highpass: { hz, tc }` builds one `BiquadFilterNode` of type `highpass`
+  **between the sweep and the limiter** — after the programme's other tone
+  control and before the thing that holds its peaks, so the limiter still sees
+  the sound the host asked for. Absent, no node is built and the path is
+  0.3.0's exactly.
+- `setHighpass(on)` moves it between `hz` and a resting 0 Hz (a pass-through)
+  by `setTargetAtTime` over `tc`. It is **idempotent**, so a host may call it
+  every frame with a boolean and the parameter automates only on a flip.
+  ⛔ It never takes a bare `.value` after the graph is built, matching
+  `setDuck`, `setSweep` and the gates.
+- Its `Q` is a fixed second-order Butterworth (`-3.0103` dB, the units this
+  audio API reads `Q` in for a high-pass) and **not** a tunable. That is
+  deliberate: a peaking high-pass is a different effect rather than a louder
+  one, and a flat response keeps the node at or under unity, so a host's
+  headroom model needs no term for it.
+
+**Why.** Vector Vortex CS012 P5 (GDD §14.2, §11.1): its Overdrive Jump has to
+be unmistakable on three independent channels, and the third one is the music
+thinning for the whole time the craft is off the rim. A held tone change over a
+game-length event is a general want — a submerged section, a radio filter, a
+phase where the mix steps back — so it belongs here rather than in the game's
+wrapper.
+
+**Game-agnostic?** Yes. The module names no game concept: the cutoff, the time
+constant and the decision of when the filter is on all belong to the host, and
+the host's suite scans this slice for `C.`, the word `state` and its game
+globals. The game's own reason for flipping it lives in `23-main.js`.
+
+**Backport status.** `not yet`.

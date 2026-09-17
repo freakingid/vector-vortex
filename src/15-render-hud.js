@@ -14,8 +14,9 @@
 // touch buttons, mirrored and not (H3). A text rectangle is sized by
 // C.TEXT_CHAR_W, never measureText(), so that assertion is arithmetic.
 //
-// ⛔ Text goes through drawText() and nothing else; icons and the Purge glyph
-// go through drawPoly + glowStroke (GDD 10.2). No fills, no rectangles drawn.
+// ⛔ Text goes through drawText() and nothing else; icons, the Purge glyph and
+// CS012 P5's jump glyph go through drawPoly + glowStroke (GDD 10.2). No fills,
+// no rectangles drawn — the readiness ring is a POLYLINE, never ctx.arc.
 
 // The Purge glyph (GDD 4.3): an eight-point burst, closed, unit radius. Shape
 // DATA; the scale is C.HUD_PURGE_SIZE. ⚠ Provisional art, like the palette.
@@ -26,6 +27,23 @@ const PURGE_GLYPH_POLY = [
   { x: -1.00, y:  0.00 }, { x: -0.30, y: -0.30 },
 ];
 
+// ⛔ THE JUMP GLYPH, OVERDRIVE ONLY (GDD 10.4, 14.2; O8): a craft RAISED off a
+// short rim line, which is the same picture the well shows when the player is
+// airborne. Shape DATA in the glyph box's own [-1, 1] space, y DOWN; the scale
+// is C.HUD_JUMP_SIZE * C.HUD_JUMP_CRAFT. ⚠ Provisional art, like the Purge
+// glyph's. The craft is the reserve icon's silhouette read the same way round
+// — prongs out, nose up — so the two HUD craft cannot drift apart.
+const JUMP_GLYPH_POLY = [
+  { x: -1.00, y:  0.10 },   // left prong
+  { x: -0.42, y: -0.16 },
+  { x:  0.00, y: -0.02 },   // the notch
+  { x:  0.42, y: -0.16 },
+  { x:  1.00, y:  0.10 },   // right prong
+  { x:  0.00, y: -0.70 },   // the nose, raised
+];
+// The rim it has left: an OPEN two-point line under the craft.
+const JUMP_RIM_POLY = [{ x: -1.00, y: 0.72 }, { x: 1.00, y: 0.72 }];
+
 // ⛔ NO PER-FRAME ALLOCATION beyond the strings themselves: the layout, its
 // rectangles and both point scratches are module-level and rewritten per call.
 // Like entityPoints(), that makes hudLayout() non-reentrant — copy what you keep.
@@ -34,10 +52,17 @@ const _hud = {
   lives: { x: 0, y: 0, w: 0, h: 0 },
   level: { x: 0, y: 0, w: 0, h: 0 },
   purge: { x: 0, y: 0, w: 0, h: 0 },
+  jump: { x: 0, y: 0, w: 0, h: 0 },
   lifeIcons: 0,      // reserve craft drawn: lives − 1, never below 0 (H1)
   purgeAlpha: 0,     // 1 bright, C.HUD_PURGE_DIM_ALPHA dim, 0 absent
+  jumpAlpha: 0,      // 1 ready, C.HUD_PURGE_DIM_ALPHA cooling, 0 airborne or Classic
+  jumpRing: 0,       // 0..1 of the readiness ring drawn — 0 when ready, 0 when absent
 };
+
 const _purgePts = PURGE_GLYPH_POLY.map(function () { return { x: 0, y: 0 }; });
+const _jumpPts = JUMP_GLYPH_POLY.map(function () { return { x: 0, y: 0 }; });
+const _jumpRimPts = JUMP_RIM_POLY.map(function () { return { x: 0, y: 0 }; });
+const _ringPts = [];
 const _iconPts = [];
 
 function hudScoreText(view) { return String(view.score); }
@@ -49,6 +74,22 @@ function hudPurgeAlpha(uses) {
   if (uses <= 0) return 1;
   if (uses === 1) return C.HUD_PURGE_DIM_ALPHA;
   return 0;
+}
+
+// O8's three readings of `view.jump`, which is null in Classic and whenever no
+// run has a jump: bright when ready, dim with a filling ring while cooling,
+// ⛔ ABSENT while airborne — the well is already showing the player that, on
+// two channels, and a fourth mark on a moment that lasts C.JUMP_TIME is noise.
+// ⛔ A ring only while cooling: a full ring beside a bright glyph says nothing
+// the glyph does not.
+function hudJumpAlpha(jump) {
+  if (!jump || jump.airborne) return 0;
+  return jump.ready ? 1 : C.HUD_PURGE_DIM_ALPHA;
+}
+function hudJumpRing(jump) {
+  if (!jump || jump.airborne || jump.ready) return 0;
+  const r = jump.ring;
+  return typeof r === "number" && r > 0 ? (r > 1 ? 1 : r) : 0;
 }
 
 // The deepest a reserve icon reaches, in SKIMMER_POLY `d` units (all ≤ 0).
@@ -88,6 +129,20 @@ function hudLayout(view) {
   p.x = right - P; p.y = H - M - P;
   _hud.purgeAlpha = hudPurgeAlpha(view.purgeUses);
 
+  // ⛔ THE JUMP GLYPH GOES BESIDE THE PURGE GLYPH AND MOVES NOTHING (O8;
+  // CS012 P5). It is placed OFF the Purge rectangle, on the same baseline, so
+  // the four rectangles above are bit-identical whether or not `view.jump` is
+  // there — which is the Classic HUD's guarantee, asserted in
+  // test-cs012-p5.js. ⛔ The rectangle is the RING's extent, not the craft's:
+  // it is what the throat-zone and touch-button assertions are made against,
+  // so it has to be the whole footprint.
+  const J = C.HUD_JUMP_SIZE;
+  const j = _hud.jump;
+  j.w = J; j.h = J;
+  j.x = p.x - C.HUD_JUMP_GAP - J; j.y = H - M - J;
+  _hud.jumpAlpha = hudJumpAlpha(view.jump);
+  _hud.jumpRing = hudJumpRing(view.jump);
+
   return _hud;
 }
 
@@ -95,6 +150,7 @@ function hudLayout(view) {
 //   score, lives, level, levelColor, purgeUses — the numbers shown
 //   mirror  the touch buttons' side (H3), the input module's live flag since P7
 //   icon    the reserve craft's local-space poly ({ l, d }, d ≤ 0 inward)
+//   jump    null in Classic; otherwise { airborne, ready, ring } (O8, CS012 P5)
 function drawHud(ctx, view) {
   const L = hudLayout(view);
   const size = C.HUD_TEXT_SIZE;
@@ -127,6 +183,48 @@ function drawHud(ctx, view) {
     }
     drawPoly(ctx, _purgePts, true);
     glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.purgeAlpha);
+  }
+
+  // ⛔ THE JUMP GLYPH (O8), and ⛔ the same three rules as everything else here:
+  // drawPoly + glowStroke, no fill, no rectangle. Absent at alpha 0, which is
+  // Classic and airborne both — so the Classic HUD draws exactly what it drew
+  // before CS012 P5.
+  if (L.jumpAlpha > 0) {
+    const R = C.HUD_JUMP_SIZE / 2;
+    const cx = L.jump.x + R, cy = L.jump.y + R;
+    const g = R * C.HUD_JUMP_CRAFT;
+    for (let i = 0; i < JUMP_GLYPH_POLY.length; i++) {
+      _jumpPts[i].x = cx + JUMP_GLYPH_POLY[i].x * g;
+      _jumpPts[i].y = cy + JUMP_GLYPH_POLY[i].y * g;
+    }
+    drawPoly(ctx, _jumpPts, true);
+    glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.jumpAlpha);
+
+    for (let i = 0; i < JUMP_RIM_POLY.length; i++) {
+      _jumpRimPts[i].x = cx + JUMP_RIM_POLY[i].x * g;
+      _jumpRimPts[i].y = cy + JUMP_RIM_POLY[i].y * g;
+    }
+    drawPoly(ctx, _jumpRimPts, false);
+    glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.jumpAlpha);
+
+    // ⛔ THE RING IS A POLYLINE, NOT AN ARC (GDD 10.2 — drawPoly + glowStroke
+    // is the one path, and ctx.arc would be a second). It FILLS clockwise from
+    // twelve o'clock as the cooldown runs, so the moment it closes is the
+    // moment the glyph goes bright. Its radius is R, which is why the layout
+    // rectangle is the ring's diameter and not the craft's.
+    if (L.jumpRing > 0) {
+      const segs = Math.max(1, Math.round(C.HUD_JUMP_RING_SEG * L.jumpRing));
+      const span = 2 * Math.PI * L.jumpRing;
+      while (_ringPts.length < segs + 1) _ringPts.push({ x: 0, y: 0 });
+      _ringPts.length = segs + 1;
+      for (let i = 0; i <= segs; i++) {
+        const a = -Math.PI / 2 + span * (i / segs);
+        _ringPts[i].x = cx + Math.cos(a) * R;
+        _ringPts[i].y = cy + Math.sin(a) * R;
+      }
+      drawPoly(ctx, _ringPts, false);
+      glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.jumpAlpha);
+    }
   }
 }
 

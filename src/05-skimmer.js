@@ -19,6 +19,14 @@
 // wrap at the seam; open wells CLAMP at two walls, and hitting one triggers a
 // WALL_SQUASH_MS squash that is ⛔ VISUAL ONLY and never writes `lane`.
 //
+// ⛔ THE JUMP IS A PHASE ON state.jump AND NEVER A Skimmer DEPTH (GDD 14.2;
+// CS012 P5, R3). updateJump() below is the whole rule, and it is a NO-OP
+// outside a mode whose C.MODE_FLAGS carry `jump`. The lift and the drop-shadow
+// are DRAW-TIME geometry — skimmerPoints() takes a lift and draw() strokes the
+// unlifted outline underneath — so `lane`, `depth` and the collision pass are
+// untouched by a jump. What airborne actually buys is one skip in
+// collideSkimmer() and one refusal in updateShots().
+//
 // ⛔ Entity contract (GDD 6.5): class, update, draw, dead. `dead` is set by
 // killSkimmer() (09-collision.js) and by nothing else — that is the ONE death
 // route, and CS003 P4 built the sequence hanging off it: a life spent, a
@@ -58,26 +66,141 @@ const SKIMMER_POLY = [
 // call; do not give it a callback.
 const _skimPts = SKIMMER_POLY.map(function () { return { x: 0, y: 0 }; });
 
-// Project the silhouette into screen space for a given lane and squash.
+// Project the silhouette into screen space for a given lane, squash and lift.
 //
 //   squash  0..1, the VISUAL wall-squash amount. It compresses the craft
 //           along the rim and stretches it down the well by the same factor —
 //           it is applied HERE, at projection time, and never anywhere near
 //           `lane`. GDD 3.5's "40 ms visual squash".
+//   lift    ⛔ OPTIONAL, and omitted it is 0, which is every caller that
+//           predates CS012 P5. In rim radii OUT from the well's centroid
+//           (GDD 14.2, O7): the airborne craft is pushed away from the centre
+//           along each projected point's own outward direction.
+//
+// ⛔ THE LIFT IS APPLIED AFTER THE PROJECTION AND NOT AS A DEPTH. perspective()
+// caps depth at 1, so a point "outside the rim" would silently collapse back
+// onto it; and a depth above 1 is not a thing the depth model has (GDD 3.2).
+// Leaving it here, in screen space, is also what keeps the lift draw-only —
+// with C.JUMP_LIFT at 0 the build is bit-identical (test-cs012-p5.js).
 //
 // Returns the shared scratch array. Copy out of it if you need to keep it.
-function skimmerPoints(well, lane, squash) {
+function skimmerPoints(well, lane, squash, lift) {
   const s = squash > 0 ? (squash > 1 ? 1 : squash) : 0;
   const half = C.SKIMMER_WIDTH / 2 * (1 - C.SKIMMER_SQUASH * s);
   const reach = 1 + C.SKIMMER_SQUASH * s;
+  const rise = lift > 0 ? lift * C.WELL_RADIUS : 0;
+  // The centroid in SCREEN space, on the same mapping screenPos() uses.
+  const c = rise > 0 ? wellCentroid(well) : null;
+  const ccx = c ? C.WELL_CX + c.x * C.WELL_RADIUS : 0;
+  const ccy = c ? C.WELL_CY + c.y * C.WELL_RADIUS : 0;
 
   for (let i = 0; i < SKIMMER_POLY.length; i++) {
     const p = SKIMMER_POLY[i];
     // Depth 1 IS the rim (GDD 3.2) — a definition, not a tunable. Every
     // silhouette offset is measured inward from it.
-    screenPos(well, lane + p.l * half, 1 + p.d * reach, _skimPts[i]);
+    const out = screenPos(well, lane + p.l * half, 1 + p.d * reach, _skimPts[i]);
+    if (rise > 0) {
+      const dx = out.x - ccx, dy = out.y - ccy;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > 0) { out.x += dx / d * rise; out.y += dy / d * rise; }
+    }
   }
   return _skimPts;
+}
+
+// ---------------------------------------------------------------------------
+// THE JUMP (GDD 14.2; O6, R2-R4) — Overdrive's, and a no-op everywhere else
+// ---------------------------------------------------------------------------
+//
+// ⛔ ONE BAG, state.jump (02-state.js), and ⛔ EVERY TIMER COUNTS UP (GDD 16.3).
+// The three phases and the one cooldown:
+//
+//   ground   `cool` counting up toward C.JUMP_COOLDOWN. Ready is
+//            `cool >= C.JUMP_COOLDOWN`, and a ready craft takes off on the
+//            RISING EDGE of input.jump.
+//   air      C.JUMP_TIME long. ⛔ Immune to every contact killer
+//            (09-collision.js skips its whole pass), cannot fire
+//            (06-shots.js), rotates at full speed, and MAY Purge — the Purge
+//            is a panic button and O6 leaves it alone.
+//   recover  C.JUMP_RECOVERY long, on the rim, ⛔ CONTACT-LETHAL, and it can
+//            neither fire nor jump. It is the cooldown's first beat, not a
+//            fourth timer: `cool` is reset at LANDING and recovery ends when
+//            it passes C.JUMP_RECOVERY.
+//
+// ⛔ THE NO-OP IS TOTAL. Outside a jump mode this function writes NOTHING —
+// not `latched`, not `cool` — so a Classic session with the jump button held
+// hashes step for step against one that never presses it (test-cs012-p5.js).
+// That is why the mode test is the first line and not a branch inside.
+//
+// ⛔ `mode` IS READ OFF THE STATE THAT WAS PASSED IN. This module reads no game
+// global but C, so modeHas() gets the mode explicitly rather than defaulting to
+// the `state` global (00-config.js).
+function updateJump(state, dt) {
+  if (!modeHas("jump", state.mode)) return;
+  const j = state.jump;
+
+  // ⛔ THE EDGE IS DETECTED HERE, exactly as updatePurge() detects the Purge's
+  // (09-collision.js): the input struct carries LEVELS on every device (GDD
+  // 9.5), and `latched` is written as `held` EVERY step rather than only
+  // cleared on release — which is what lets killSkimmer()'s forced `true`
+  // behave correctly on the way out of a death freeze.
+  const held = !!state.input.jump;
+  const rising = held && !j.latched;
+  j.latched = held;
+
+  if (j.cool < C.JUMP_COOLDOWN) j.cool += dt;
+
+  if (j.phase === "air") {
+    j.t += dt;
+    if (j.t >= C.JUMP_TIME) {
+      // ⛔ LANDING STARTS THE COOLDOWN (O6), so the longest cycle is
+      // C.JUMP_TIME + C.JUMP_COOLDOWN and the airborne share is fixed.
+      j.phase = "recover";
+      j.t = 0;
+      j.cool = 0;
+    }
+    return;
+  }
+
+  if (j.phase === "recover") {
+    j.t += dt;
+    if (j.t >= C.JUMP_RECOVERY) { j.phase = "ground"; j.t = 0; }
+    return;
+  }
+
+  // Grounded. ⛔ The rising edge AND a spent cooldown; a held button never
+  // re-jumps, because `latched` was already true on the step that took off.
+  if (rising && j.cool >= C.JUMP_COOLDOWN) { j.phase = "air"; j.t = 0; }
+}
+
+// ⛔ READY, GROUNDED, AND `latched` UNTOUCHED — the Purge charge's rule, for
+// the Purge charge's reason (09-collision.js, enterWell()). Called by
+// enterWell(), by the respawn, and by startDive() so a jump in flight when the
+// well clears LANDS on the clear step (R4) and the Dive is never airborne.
+function resetJump(state) {
+  const j = state.jump;
+  j.phase = "ground";
+  j.t = 0;
+  j.cool = C.JUMP_COOLDOWN;
+}
+
+// Is the craft off the rim this step? ⛔ The one predicate the collision pass,
+// the shot pass and the audio frame all read, so "airborne" has one definition.
+function jumpAirborne(state) { return state.jump.phase === "air"; }
+
+// May the craft fire? ⛔ No while airborne AND no while recovering (O6): the
+// rim sweep needs fire, so it cannot save a landing on a parked rim enemy.
+function jumpCanFire(state) { return state.jump.phase === "ground"; }
+
+// 0..C.JUMP_LIFT, a parabola over C.JUMP_TIME: nothing at takeoff, the apex at
+// half time, nothing at landing. ⛔ DRAW-TIME ONLY, and it takes the BAG rather
+// than `state` — a value crossing the boundary, like skimmerBlinkVisible()'s
+// timer. Recovering and grounded read 0: the craft is on the rim.
+function jumpLift(jump) {
+  if (!jump || jump.phase !== "air" || !(C.JUMP_TIME > 0)) return 0;
+  const u = jump.t / C.JUMP_TIME;
+  const k = u < 0 ? 0 : (u > 1 ? 1 : u);
+  return C.JUMP_LIFT * 4 * k * (1 - k);
 }
 
 // Is the craft drawn on this frame? ⛔ VISUAL ONLY, and read by draw code
@@ -204,8 +327,24 @@ class Skimmer {
   // sprite, no texture, nothing solid. The craft draws at full alpha even in
   // the dim band (GDD 3.7) — the band dims the WELL, and a player who cannot
   // see their own craft is the failure that rule is protecting against.
-  draw(ctx, well) {
-    drawPoly(ctx, skimmerPoints(well, this.lane, this.squashAmount()), true);
+  //
+  // ⛔ `lift` IS OPTIONAL AND IS TWO OF GDD 14.2's THREE AIRBORNE CHANNELS
+  // (O7). Above 0 the craft is drawn raised off the rim line, and its own
+  // outline is stroked FLAT ON THE RIM underneath at C.JUMP_SHADOW_ALPHA —
+  // the drop-shadow, and ⛔ a stroke, never a fill. The shadow goes down first
+  // so the craft reads over it. Game.draw() is where the value comes from
+  // (jumpLift(state.jump)); nothing here reads `state`.
+  //
+  // ⛔ skimmerPoints() returns the ONE shared scratch array, so the shadow's
+  // path must be built and stroked before the lifted points overwrite it —
+  // which is exactly what drawPoly + glowStroke do, in that order.
+  draw(ctx, well, lift) {
+    const squash = this.squashAmount();
+    if (lift > 0) {
+      drawPoly(ctx, skimmerPoints(well, this.lane, squash), true);
+      glowStroke(ctx, C.SKIMMER_COLOR, C.LINE_W_RIM, C.JUMP_SHADOW_ALPHA);
+    }
+    drawPoly(ctx, skimmerPoints(well, this.lane, squash, lift), true);
     glowStroke(ctx, C.SKIMMER_COLOR, C.LINE_W_RIM, 1);
   }
 }

@@ -81,6 +81,14 @@ function enterWell() {
   // without knowing a Dive exists.
   resetDive(state);
 
+  // ⛔ AND THE JUMP, READY AND GROUNDED (GDD 14.2; CS012 P5, R4). Beside the
+  // Purge charge and for the same reason — a well is armed with everything the
+  // player is owed — and with the same exception: state.jump.latched is NOT
+  // cleared here. It is "the button was held last step", not well state, and
+  // clearing it would let a player still holding the button from the previous
+  // well take off on the entry step without ever releasing (05-skimmer.js).
+  resetJump(state);
+
   // A craft for this well. ⛔ Minted rather than carried over: lane counts
   // differ between wells, so the outgoing craft's lane may not exist here.
   // ⛔ state.lives is NOT touched — the reserve belongs to the run, not to the
@@ -146,6 +154,15 @@ function respawnSkimmer(state, well, lane) {
   // cleared — killSkimmer() set it so a button held across the freeze needs a
   // real release before it spends another charge (09-collision.js).
   state.invulnTime = 0;
+
+  // ⛔ AND THE JUMP COMES BACK READY AND GROUNDED (GDD 14.2; CS012 P5, R4). A
+  // craft that died recovering would otherwise respawn mid-recovery, and one
+  // that died on the ground with a spent cooldown would respawn still cooling —
+  // a punishment the rule does not describe. ⛔ state.jump.latched is
+  // deliberately NOT cleared, exactly as state.purgeLatched is not:
+  // killSkimmer() forced it true so a button held across the freeze needs a
+  // real release before it spends a takeoff (09-collision.js).
+  resetJump(state);
   sfx("respawn");
 }
 
@@ -1531,6 +1548,14 @@ const Game = (function () {
     if (state.skimmer.dead) respawnSkimmer(state, well);
     else if (state.invulnTime < C.RESPAWN_INVULN) state.invulnTime += dt;
 
+    // ⛔ THE JUMP, ABOVE EVERYTHING THAT READS IT (GDD 14.2; CS012 P5, O6;
+    // 05-skimmer.js). Its phase decides whether updateShots() may fire and
+    // whether collideSkimmer() runs at all, so it is resolved for THIS step
+    // before either. ⛔ It is a total no-op outside a jump mode — it writes
+    // nothing, `latched` included — which is what makes a Classic run with the
+    // button held bit-identical to one without.
+    updateJump(state, dt);
+
     state.skimmer.update(dt, well, state.input);
     updateShots(state, well, dt);
 
@@ -1621,7 +1646,12 @@ const Game = (function () {
       drawFragments(ctx, skimmerPoints(well, sk.lane, 0), true,
                     fragmentT(hitStopLeft, C.HIT_STOP_DEATH), C.SKIMMER_COLOR);
     } else if (sk && skimmerBlinkVisible(state.invulnTime)) {
-      sk.draw(ctx, well);
+      // ⛔ THE LIFT AND THE SHADOW ARE DRAW-TIME AND NOTHING ELSE (GDD 14.2's
+      // first two airborne channels; O7). jumpLift() takes the bag and returns
+      // 0..C.JUMP_LIFT — 0 grounded, 0 recovering, 0 in Classic — so with
+      // C.JUMP_LIFT at 0 the whole build is bit-identical. The craft's `lane`
+      // and the depth model never hear about it (05-skimmer.js).
+      sk.draw(ctx, well, jumpLift(state.jump));
     }
     // ⛔ THE HUD IS LAST and reads only this view (15-render-hud.js). The view
     // object is filled in place, never allocated per frame.
@@ -1636,6 +1666,18 @@ const Game = (function () {
       _hudView.levelColor = wellBandColor(state.level, state.bandRoll);
       _hudView.purgeUses = state.purgeUses;
       _hudView.mirror = input.setting("inputMirror");   // ⛔ the live flag (CS008 P7)
+      // ⛔ THE JUMP GLYPH IS OVERDRIVE'S AND NULL EVERYWHERE ELSE (O8), so the
+      // Classic HUD is exactly what CS008 P4 shipped. The sub-view is filled in
+      // place — no per-frame allocation — and carries readings, never the bag:
+      // 15-render-hud.js reads no game state.
+      if (modeHas("jump")) {
+        _jumpView.airborne = jumpAirborne(state);
+        _jumpView.ready = state.jump.phase === "ground" && state.jump.cool >= C.JUMP_COOLDOWN;
+        _jumpView.ring = C.JUMP_COOLDOWN > 0 ? state.jump.cool / C.JUMP_COOLDOWN : 1;
+        _hudView.jump = _jumpView;
+      } else {
+        _hudView.jump = null;
+      }
       drawHud(ctx, _hudView);
     }
     // The menu over everything, on every screen but play.
@@ -1659,8 +1701,11 @@ const Game = (function () {
 
   const _hudView = {
     score: 0, lives: 0, level: 1, levelColor: "", purgeUses: 0,
-    mirror: false, icon: SKIMMER_POLY,
+    mirror: false, icon: SKIMMER_POLY, jump: null,
   };
+  // The jump glyph's reading (CS012 P5, O8). Its own object so `_hudView.jump`
+  // can be null in Classic without allocating one in Overdrive.
+  const _jumpView = { airborne: false, ready: true, ring: 1 };
 
   // ---- the frame -----------------------------------------------------------
 
@@ -1769,6 +1814,11 @@ const Game = (function () {
     }
     audioRunLive = screen === "play" || pauseSide;
     MusicSys.setDuck(pauseSide);
+    // GDD 14.2's third airborne channel (O7; kit-audio 0.4.0): the music
+    // high-passes for the whole time the craft is off the rim. Idempotent, so
+    // the node automates on the takeoff and landing frames and no other. ⛔ The
+    // board is read HERE — 19-sfx.js names no `state`.
+    MusicSys.setHighpass(jumpAirborne(state));
     MusicSys.setState(musicStateFor(state.screen, optionsFrom, state.mode,
                                     C.MUSIC_TRACK_CHOICES[sound.track]));
     MusicSys.update();

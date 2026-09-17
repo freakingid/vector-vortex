@@ -200,7 +200,11 @@ function newState() {
     // while `active` is one that cannot. It is also what keeps
     // 09-collision.js's "there is no term here for where the Skimmer is"
     // LITERALLY true — collideSkimmer() does not run during a dive at all.
-    // GDD 14.2's Jump is the thing that reopens that, and it is not this.
+    // ⛔ AND CS012 P5's JUMP DID NOT REOPEN IT EITHER (R3). This comment used
+    // to say the Jump was the thing that would: it is not. Airborne is a PHASE
+    // on state.jump (below), and collideSkimmer() skips its whole pass while
+    // it holds rather than comparing a craft depth against a killDepth. The
+    // build still has exactly one two-depth comparison, 11-dive.js's strike.
     //
     //   active  the whole gameplay pass is short-circuited while true
     //   phase   "grace" | "descent" — GDD 5's two beats
@@ -210,6 +214,30 @@ function newState() {
     //           LENGTH — comparing the two is the strike test and it is the
     //           only two-depth comparison in the build (11-dive.js).
     dive: { active: false, phase: "grace", timer: 0, depth: 1 },
+
+    // ⛔ THE JUMP (GDD 14.2; O6, R2, R3; 05-skimmer.js). Overdrive's, and
+    // updateJump() is a NO-OP in Classic — it writes nothing at all, not even
+    // `latched`, which is what makes a Classic run with the jump button held
+    // bit-identical to one without (test-cs012-p5.js).
+    //
+    // ⛔ AIRBORNE IS A PHASE, NOT A DEPTH. There is no `skimmer.depth` and
+    // 09-collision.js still has no term for where the craft is: it SKIPS the
+    // whole pass while `phase` is "air". The comments in this build that
+    // predicted the Jump would give that pass a second depth to compare were
+    // corrected at CS012 P5 to what shipped.
+    //
+    //   phase    "ground" | "air" | "recover"
+    //   t        counts UP inside the phase (GDD 16.3): toward C.JUMP_TIME
+    //            airborne, C.JUMP_RECOVERY recovering, unused on the ground
+    //   cool     counts UP toward C.JUMP_COOLDOWN FROM LANDING (O6), and is
+    //            born AT the threshold — already expired, so the first jump of
+    //            a well never waits. Recovery is its first C.JUMP_RECOVERY.
+    //   latched  "the jump button was held last step", exactly purgeLatched's
+    //            job: takeoff is the RISING edge, so a held button never
+    //            re-jumps. ⛔ killSkimmer() forces it true, and neither
+    //            enterWell() nor the respawn clears it — a button held across
+    //            a freeze or a well change needs a real release first.
+    jump: { phase: "ground", t: 0, cool: C.JUMP_COOLDOWN, latched: false },
 
     // ⛔ THE RUN'S CUMULATIVE COUNTERS (GDD 15.6; 21-telemetry.js). CS007 P4.
     //

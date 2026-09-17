@@ -324,6 +324,20 @@ P5, GDD §6.5 — **decide explicitly its `sfxVoice`**, the eighth contract fiel
 and reaches the board only through `C.SPAWN_SCHEDULE_OVERDRIVE`. Its kill pitch
 comes from `tools/sfx-lab.html`'s KILL PITCH table.
 
+⛔ **AIRBORNE IS A PHASE, NOT A DEPTH, AND THE SKIMMER HAS NO `depth` FIELD**
+(CS012 P5, GDD §14.2, §4.5). The Jump lives in one bag, `state.jump`, and one
+top-level `updateJump(state, dt)` (`05-skimmer.js`); `collideSkimmer()` SKIPS ITS
+WHOLE PASS while `phase` is `"air"` — contact and the rim sweep together — rather
+than comparing a craft depth against a `killDepth`. ⛔ **The build still has
+exactly ONE two-depth comparison, the dive strike.** Four shipped comments
+predicted the Jump would end that and were corrected when it shipped; ⛔ **do not
+give the Skimmer a `depth` to make a resting `killDepth = 0` "honest"** — there
+is nothing left that would. ⛔ **`updateJump()` is a TOTAL no-op outside
+`modeHas("jump")`** — it writes nothing, `latched` included — which is what keeps
+a Classic run bit-identical with the button held. ⛔ **The lift and the shadow are
+DRAW-TIME ONLY**: `skimmerPoints()` takes a lift, `lane` and the depth model are
+untouched, and with `C.JUMP_LIFT` at 0 the state hash does not move.
+
 ⛔ **`anchored` says what `depth` MEANS on an entity, not whether it moves.**
 `false` is a position; `true` is a length — the tip of an extent rooted at the
 throat, which is the Thorn and nothing else. A stationary enemy whose `depth` is
@@ -397,6 +411,16 @@ silent.
 
 ⛔ **Every audio entry point is `if (!AudioSys.ctx) return;`-guarded**, so
 nothing starts before the first user gesture and the headless suite is safe.
+
+⛔ **KIT-AUDIO IS 0.4.0, AND ITS GROUPS ARE ALL OPTIONAL.** The signal path is
+track gain → sweep → **high-pass** → limiter → duck → dip → `music`. ⛔ **The
+high-pass (`highpass: { hz, tc }`, CS012 P5) sits BEFORE the limiter, with the
+sweep** — both are tone controls on the programme, so the limiter sees the sound
+the game asked for. `setHighpass(on)` is idempotent, called every frame from
+`audioFrame()`, and ⛔ **moves by `setTargetAtTime`, never a bare `.value`**; its
+"off" is a resting 0 Hz pass-through, not a bypass. ⛔ **Its `Q` is a fixed
+Butterworth and not a tunable** — a flat response is at or under unity, which is
+what keeps `test-cs009-p5.js`'s headroom model (D16) standing unedited.
 
 ⚠ **SETTLED — the Surger charge tone is a gameplay cue, not decoration.** It
 must stay audible over music at every intensity tier. It is the one sound whose
@@ -613,7 +637,9 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     02-state.js        the one mutable game object
     03-wells.js        the 16 well definitions (DATA) + the depth model
     04-input.js        four devices -> one input struct
-    05-skimmer.js      movement, snap assist, the wall squash, the blink
+    05-skimmer.js      movement, snap assist, the wall squash, the blink, and
+                       the Jump: state.jump, updateJump() (a no-op outside
+                       modeHas("jump")), resetJump(), and the draw-only lift
     06-shots.js        firing, lane-locked travel
     07-enemies.js      the entity contract + the Classic roster
     07-enemies-overdrive.js  Overdrive's roster: the Reaver (CS013: Warden,
@@ -625,8 +651,10 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     11-dive.js         the Dive: the beat, the Thorn strike, the loop guard
     12-scoring.js
     13-render-well.js  14-render-entities.js  15-render-hud.js
-    16-audio-engine.js kit-audio: the context and four buses, the lookahead
-                       scheduler, the SFX player. Reads no game global
+    16-audio-engine.js kit-audio 0.4.0: the context and four buses, the
+                       lookahead scheduler, the SFX player, and five optional
+                       groups (gating, sweep, highpass, limiter, duck). Reads
+                       no game global and names no game term
     17-audio-tracks.js track tables (DATA, ported from music-lab)
     18-audio-director.js kit-audio's createDirector: five weighted inputs,
                        one-pole ASYMMETRIC smoothing on the audio clock,
