@@ -343,11 +343,14 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   `statsFields` cannot be read remotely; the repo's registry has all seven.
 - ⛔ **CS012 — Overdrive's online board** (its own game id, registered), SCORES'
   OVERDRIVE view, and `max_combo`'s real source (above, Meta).
-  ⛔ **Before CS012 P3, Paul's:** the `vector-vortex-overdrive` entry in
-  coinless-kit's `registry.js`, deployed, and its commit named here (plan O11).
-  MEASURED 2026-09-16: an unregistered id answers `INVALID_GAME`, which
-  kit-leaderboard drops rather than queues. ⚠ **Plan F1:** a sharp-bot Classic
-  Start Depth 81 run peaked at 100,078 /s against the deployed 100,000.
+  ✅ **Paul's O11 registry edit is done: coinless-kit `e2efed5`** (2026-09-16).
+  `vector-vortex-overdrive` and `vector-vortex` both at `maxMetricPerSecond`
+  150,000 (F1's raise), the same seven `statsFields`, `maxMetric` and durations.
+  MEASURED 2026-09-16: `GET /v1/health` lists `orbital-overhaul`, `vector-vortex`,
+  `vector-vortex-overdrive`, and both boards answer (empty). ⛔ **P3's test pins
+  `e2efed5`, never `f8d34f3`**: that commit replaced `vector-vortex` rather than
+  adding beside it, and was live for a few minutes (Classic submits answered
+  `INVALID_GAME`, which kit-leaderboard drops); `e2efed5` restored it.
 - ⛔ **CS012 — the director's combo input and the Overdrive intensity
   re-measure** (Paul's D6): `INT_W_COMBO` is fed 0 in Classic.
 - ✅ **CS012 P1 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`,
@@ -373,6 +376,4 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 ## Next up — CS012 P2 (the mode flags, the Reaver, Overdrive's schedule)
 
 Run `IMPLEMENTATION-PHASES-CS012.md` P2 in a new session.
-⛔ **Remind Paul at the end of P2** (reminded at the end of P1): P3 needs the `vector-vortex-overdrive`
-entry in coinless-kit's `registry.js`, deployed, with its commit named in this
-file (plan O11). F1 (Classic's rate bound) can ride in the same edit.
+✅ P3's registry precondition is met (coinless-kit `e2efed5`, Carried tasks).
