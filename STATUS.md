@@ -1,12 +1,22 @@
 # Vector Vortex — STATUS
-Version: 0.0.7 · Changeset: CS011 (not yet planned) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.7 · Changeset: CS011 (planned 2026-09-16 — P1 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS011
 
-Not planned. ⛔ **The next session is CS011's planning session**
-(`CLAUDE.md`, Session rules: it writes `PLANNED-FEATURES-CS011.md` and
-`IMPLEMENTATION-PHASES-CS011.md`, and no code). CS010's ledger is in
-`log/CS010.md`.
+**Planned at `52ba439`** (`PLANNED-FEATURES-CS011.md`,
+`IMPLEMENTATION-PHASES-CS011.md`): six phases, every call answered by Paul in
+the planning session (M1–M9), twenty-two readings flagged (R1–R22). Nothing
+built yet. One line per phase here; ⛔ **reasoning goes to `log/CS011.md` as the
+phase goes.** CS010's ledger is in `log/CS010.md`.
+
+| Phase | Builds | State |
+|---|---|---|
+| P1 | kit-names / kit-storage / kit-profile inlined at build; the store; the silent ANONYMOUS profile; harness storage options; the CS015 renumber; the Save-data rule rewording | next |
+| P2 | Settings, the Start Depth record (`progress`) and telemetry rows saved per profile; reset-before-load on a switch | — |
+| P3 | The local top 10 per mode; the run's three seats; the bench flag; SCORES; game over's placing line | — |
+| P4 | kit-input 0.8.0's text mode; PROFILE, a profile's page, DELETE, the NAME wheel | — |
+| P5 | kit-leaderboard 0.2.1; `Leaderboard`; the submits; SCORES' ONLINE view; the queued line | — |
+| P6 | The ninth soak (working vs blocked storage, one hash; a reload); the close | — |
 
 ## Working / verified
 
@@ -310,19 +320,23 @@ Not planned. ⛔ **The next session is CS011's planning session**
 
 ## Carried tasks
 
-- ⛔ **CS011 — persistence of the Start Depth record, the Controls settings, the
-  bindings, the four volumes and the MUSIC TRACK setting.** All are
-  session-only. `levelRecord()` is the one
-  function re-pointed at the profile store.
-- ⛔ **CS011 — the `'quit'` and `'died'` leaderboard submits at `quitToTitle()`'s
-  seat**, in the order its comment gives (read whether a run was playing BEFORE
-  the overwrite; game over's QUIT is not a second submit).
-- ⛔ **CS011 owns telemetry persistence**: the `telemetry` key's profile scope,
-  `Profiles.keyFor(base)`, and GDD §15.6's `read()` rejecting a mismatched
-  envelope `v`.
-- ⛔ **`vector-vortex` IS REGISTERED** in coinless-kit's registry with all seven
-  `statsFields` (measured at `79206f3`); confirming the deployed Worker is
-  CS011's.
+- ⛔ **CS011 is planned** (see the ledger). Its scope absorbed the three
+  CS011 tasks that were carried here: persistence of every setting and the Start
+  Depth record (P2), the `'quit'` and `'died'` seats (P3, plan R7), and
+  telemetry persistence (P2, plan R17).
+- ✅ **The deployed Worker lists `vector-vortex`** (`GET /v1/health`,
+  2026-09-16). ⚠ Its deployed `statsFields` cannot be read remotely; the repo's
+  registry at coinless-kit `f0b0eb2` has all seven.
+- ⛔ **PAUL, OUTSIDE THIS REPO (M7): raise `vector-vortex`'s
+  `maxMetricPerSecond` from 1,200 to about 100,000 in coinless-kit's
+  `registry.js` and redeploy.** At 1,200 every Start Depth 49 and 81 run is
+  flagged at game over, and a quit soon after the first clear is flagged from
+  Start Depth 17 (plan §1.5; the worst measured 86,616/s).
+- ⛔ **CS012 — Overdrive's online board.** The Worker has no per-mode boards and
+  keeps each player's best row per game id, so one shared id would hide a
+  player's second mode (plan §1.4). CS011 submits Classic as `vector-vortex`.
+- ⛔ **CS015 — achievements** (Paul's M4): moved out of CS011 to follow
+  Overdrive. P1 renumbers onboarding to CS016 and ship to CS017.
 - ✅ **`C.TELEMETRY_PLACEHOLDER` is one key, `maxCombo`**, which goes with GDD
   §14.4's combo. ⛔ The telemetry column list is frozen until a changeset
   deliberately moves it; `TELEMETRY_FIELDS`, `TELEMETRY_KINDS` and
@@ -348,8 +362,24 @@ Not planned. ⛔ **The next session is CS011's planning session**
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS011 planning
+## Next up — ⛔ CS011 P1
 
-⛔ **CS011 is planned in its own session** (`ROADMAP.md`: meta — kit profiles,
-local top-10 per mode, leaderboard wiring, achievements; GDD §15.1–15.5). It
-also owns the persistence carried above. Nothing from CS010 blocks it.
+Paste P1's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards the phases
+must act on, all measured in planning (plan §1):
+- ⛔ **The boot block runs inside the harness**, so a boot-time write lands in
+  every test build. It turns exactly `test-cs008-p6.js:375` and
+  `test-cs008-p7.js:436` red (both rewritten in place in P1).
+- ⛔ **`legacyRosterKey: null`, never `''`**: an empty string imports
+  `afd_profiles_v1`. ⛔ **`createAnonymous()` does not select.** ⛔ **Profile
+  `p0`'s scope is the ROOT store**, beside `scores` and `profiles`.
+- ⛔ **The inline block never sits between `21-telemetry.js` and `22-meta.js`**
+  (`test-cs007-p4.js:467`'s slice bans `localStorage`).
+- ⛔ **kit-leaderboard cannot be inlined**: `test-cs009-p1.js:508` bans its
+  `setTimeout` and `test-cs002-p1.js` its `addEventListener`.
+- ⛔ **A clear on the step that spends the last life scores after
+  `killSkimmer()`**, so the `'died'` record is taken in `frame()` after the steps.
+- ⛔ **Typed letters and digits are bound today** (`a d z x c`, space, `1`–`6`,
+  `0`, `w`, `t`, `e`, `p`): name entry needs P4's text mode.
+- ⚠ **A full telemetry ring is 2.41 M characters as row objects** (46 % of
+  Chromium's ~5.24 M quota) and 0.89 M as arrays. It is stored as arrays and never
+  written mid-play.
