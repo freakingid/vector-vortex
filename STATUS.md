@@ -308,15 +308,11 @@ CS011's ledger is in `log/CS011.md`.
 
 ## Carried tasks
 
-- ⛔ **PAUL, OUTSIDE THIS REPO (M7): raise `vector-vortex`'s
-  `maxMetricPerSecond` from 1,200 to about 100,000 in coinless-kit's
-  `registry.js` and redeploy.** At 1,200 every Start Depth 49 and 81 run is
-  flagged at game over, and a quit soon after the first clear is flagged from
-  Start Depth 17 (CS011 plan §1.5; the worst measured 86,616/s). ⛔ **NOT DONE as
-  of the CS011 close.** Only Paul saying the redeploy happened removes this line.
 - ✅ **The deployed Worker lists `vector-vortex`** (`GET /v1/health`,
-  2026-09-16). ⚠ Its deployed `statsFields` cannot be read remotely; the repo's
-  registry at coinless-kit `f0b0eb2` has all seven.
+  2026-09-16), and **Paul's M7 redeploy is done** (2026-09-16): `maxMetricPerSecond`
+  100,000 at coinless-kit `e9a4c2c`, over the worst measured 86,616/s. Rows posted
+  before it keep their flag (the Worker flags at insert). ⚠ The deployed
+  `statsFields` cannot be read remotely; the repo's registry has all seven.
 - ⛔ **CS012 — Overdrive's online board** (its own game id, registered), SCORES'
   OVERDRIVE view, and `max_combo`'s real source (above, Meta).
 - ⛔ **CS012 — the director's combo input and the Overdrive intensity

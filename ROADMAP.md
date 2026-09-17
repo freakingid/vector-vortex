@@ -269,9 +269,9 @@ record and the table back. No baseline moved.
 ⚠ **What CS011 deliberately left.** **Achievements are CS015's** (M4): no key,
 no evaluator, no screen. **Overdrive's boards are CS012's**: SCORES lists CLASSIC
 only, and the Worker keeps one best row per player per game id, so Overdrive
-needs its own id before it posts. **The registry's rate bound is Paul's** (M7):
-until `maxMetricPerSecond` goes from 1,200 to about 100,000, deep Start Depth
-runs are stored flagged. No time-window switch on ONLINE, no profile filter on
+needs its own id before it posts. **The registry's rate bound was Paul's** (M7),
+outside this repo: raised from 1,200 to 100,000 and redeployed after the close
+(coinless-kit `e9a4c2c`), so deep Start Depth runs are no longer flagged. No time-window switch on ONLINE, no profile filter on
 LOCAL, no score erase, no save-and-resume. On NAME a keyboard player's Space, Z
 and X type. Every browser and device check is a skipped playtest: storage over
 `file://` and itch.io in Firefox and Safari, NAME on a pad, and a real run posted

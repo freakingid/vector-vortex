@@ -1392,7 +1392,7 @@ Known kit gap: rate limiting is not enforced in production on the Workers Free p
 - **The payload** (plan R9): `metric` is `state.score`; `durationS` is `Math.round(state.time)`, simulation seconds with pause excluded; `outcome`; and `stats` with exactly the registry's seven keys: `level_reached` (`state.level`), `mode`, `start_depth`, `wells_cleared`, `purges_spent`, `deaths` (off `state.tally`) and `max_combo` from `C.TELEMETRY_PLACEHOLDER.maxCombo`, so CS012 changes one source. `test-cs011-p5.js` reads the keys from coinless-kit's `registry.js` at `f0b0eb2`.
 - **M9:** a run on an unnamed profile submits as ANONYMOUS, with no prompt and no block. The ONLINE view's hint says how to post under a name (§10.5).
 - **The ONLINE view** loads `fetchBoard({ window: "all", limit: C.LEADERBOARD_BOARD_LIMIT })`, and a token drops every answer but the newest load's. There is no time-window switch.
-- ⚠ **The registry's `maxMetricPerSecond` is 1,200, and Paul raises it outside this repo (M7).** Until then a deep Start Depth run is stored flagged (CS011 plan §1.5).
+- ✅ **The registry's `maxMetricPerSecond` is 100,000** (Paul's M7, raised from 1,200 and redeployed after the CS011 close; coinless-kit `e9a4c2c`). The worst measured rate is 86,616/s (CS011 plan §1.5). Rows posted before the redeploy keep their flag.
 
 ### 15.5 Achievements
 
@@ -1652,7 +1652,7 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 - ✅ **Met — `playerId` minted once with the secure-context fallback.** A v4 id at first boot, kept by a reload and a rename, and still v4 with `crypto.randomUUID` hidden (`test-cs011-p1.js`, `-p4.js`). kit-leaderboard 0.2.1's run id has the same fallback (`test-cs011-p5.js`).
 - ◐ **Half met — local top 10 per mode.** The table keeps `classic` and `overdrive` apart, 10 each, with the tie rule and both outcomes, and nothing from a bench run (`test-cs011-p3.js`; played, `test-cs011-p6.js`). SCORES shows CLASSIC only, because OVERDRIVE cannot be played until CS012.
 - ✗ **CS012's — separate online boards.** The Worker has no per-mode boards and keeps one best row per player per game id, so CS011 posts Classic as `vector-vortex` (plan §1.4).
-- ✅ **Met — `vector-vortex` registered, stats keys read from the real registry.** The payload's stats keys equal coinless-kit's `registry.js` at `f0b0eb2` (`test-cs011-p5.js`), and the deployed Worker lists the game. ⚠ Its `maxMetricPerSecond` is still 1,200 until Paul's redeploy (M7), so deep Start Depth runs are stored flagged.
+- ✅ **Met — `vector-vortex` registered, stats keys read from the real registry.** The payload's stats keys equal coinless-kit's `registry.js` at `f0b0eb2` (`test-cs011-p5.js`), and the deployed Worker lists the game. Its `maxMetricPerSecond` is 100,000 since Paul's redeploy (M7), so deep Start Depth runs are not flagged.
 - ✗ **CS015's — achievements** (Paul's M4).
 - ✅ **Met — telemetry opt-in, off at launch, `TELEMETRY_FIELDS` and `push()` in agreement.** CS007's (`test-cs007-p4.js`); the switch is never stored and the rows persist per profile as arrays, rejected on a version or length mismatch (`test-cs011-p2.js`).
 
