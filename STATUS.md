@@ -14,7 +14,7 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 | P1 | kit-names / kit-storage / kit-profile inlined at build; the store; the silent ANONYMOUS profile; harness storage options; the CS015 renumber; the Save-data rule rewording | ✅ built: `KIT_INLINE` + `wrapKitModule()`, `Store` / `Profiles` / `Meta.boot()`, harness `store` / `storage` / `crypto` / `mutate` / `storageReads`, `test-cs011-p1.js` (62); three closed files in place; the `lastUsed` finding accepted by Paul |
 | P2 | Settings, the Start Depth record (`progress`) and telemetry rows saved per profile; reset-before-load on a switch | ✅ built: `settings` / `progress` / `telemetry` per profile, `Meta.boot(Game.settingsHooks)`, `Profiles.select()`, `Telemetry.snapshot()` / `restore()`, `Meta.runEnded` stub, `test-cs011-p2.js` (135); `test-cs008-p7.js:436` in place |
 | P3 | The local top 10 per mode; the run's three seats; the bench flag; SCORES; game over's placing line | ✅ built: `createScores` + `src/22-meta.NOTES.md`, `Meta.runStarted` / `benchUsed` / `eligible` / `runOpen` / `runEnded` / `scores` / `lastPlace`, SCORES, game over's third line, `test-cs011-p3.js` (83); no closed file edited |
-| P4 | kit-input 0.8.0's text mode; PROFILE, a profile's page, DELETE, the NAME wheel | ✅ built: `captureText(cb)`, `Profiles.create` / `rename` / `remove`, `C.NAME_WHEEL` / `NOTICE_WRAP`, `SCREENS.profile` / `profilePage` / `profileDelete` / `profileName`, `stepName()`, `test-cs011-p4.js` (103); `test-cs011-p3.js:380` in place; ⚠ delete runs the kit first (a reading against R12's wording, below) |
+| P4 | kit-input 0.8.0's text mode; PROFILE, a profile's page, DELETE, the NAME wheel | ✅ built: `captureText(cb)`, `Profiles.create` / `rename` / `remove`, `C.NAME_WHEEL` / `NOTICE_WRAP`, `SCREENS.profile` / `profilePage` / `profileDelete` / `profileName`, `stepName()`, `test-cs011-p4.js` (103); `test-cs011-p3.js:380` in place; ⚠ delete runs the kit first, against R12's wording (Paul went ahead with it) |
 | P5 | kit-leaderboard 0.2.1; `Leaderboard`; the submits; SCORES' ONLINE view; the queued line | next |
 | P6 | The ninth soak (working vs blocked storage, one hash; a reload); the close | — |
 
@@ -154,10 +154,10 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 - ⚠ **ON NAME, THE KEYBOARD'S DEFAULT FIRE AND PURGE KEYS TYPE** (Space, Z, X;
   Shift is swallowed; MEASURED, CS011 P4, as R13 names). A keyboard player
   types; `test-cs011-p4.js`'s keyboard wheel rebinds Fire to ArrowDown.
-- ⚠ **PAUL: DELETE RUNS kit-profile's `remove(id)` BEFORE THE `remove(key)`
-  CALLS, the reverse of R12's wording** (CS011 P4). MEASURED: keys first wipes
-  the data of a delete the kit refuses, and loses to the switch's telemetry
-  write. `log/CS011.md`, P4. Say so if the written order was meant.
+- ⚠ **SETTLED — DELETE RUNS kit-profile's `remove(id)` BEFORE THE `remove(key)`
+  CALLS, the reverse of R12's wording** (CS011 P4; Paul went ahead with it,
+  2026-09-16). MEASURED: keys first wipes the data of a delete the kit refuses,
+  and loses to the switch's telemetry write. Do not "restore" R12's order.
 - ⛔ **CS009 TRAPS IN AUDIO CODE** (`archive/PLANNED-FEATURES-CS009.md` §1.4, §1.5, §1.13). (1) Never write the
   vocabulary scan's banned word, even as "… Audio" in a comment:
   `test-cs008-p6.js` scans the whole built file. (2) Never write `.key` after
@@ -341,7 +341,9 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
   `maxMetricPerSecond` from 1,200 to about 100,000 in coinless-kit's
   `registry.js` and redeploy.** At 1,200 every Start Depth 49 and 81 run is
   flagged at game over, and a quit soon after the first clear is flagged from
-  Start Depth 17 (plan §1.5; the worst measured 86,616/s).
+  Start Depth 17 (plan §1.5; the worst measured 86,616/s). ⛔ **NOT DONE as of
+  CS011 P4. CS011's close carries this line into the next STATUS unchanged**;
+  only Paul saying the redeploy happened removes it.
 - ⛔ **CS012 — Overdrive's online board.** The Worker has no per-mode boards and
   keeps each player's best row per game id, so one shared id would hide a
   player's second mode (plan §1.4). CS011 submits Classic as `vector-vortex`.
