@@ -10,7 +10,9 @@ OUT_DIR="$GAME_DIR/dist"
 OUT_ZIP="$OUT_DIR/vector-vortex-itch.zip"
 
 HTML_FILE="dist/vector-vortex.html"
-LIB_FILES=(lib/kit-names/kit-names.js lib/kit-storage/kit-storage.js lib/kit-leaderboard/kit-leaderboard.js lib/kit-profile/kit-profile.js)
+# kit-storage and kit-profile are inlined into the HTML by build.js (EXTERNAL-FILES.md);
+# kit-names ships beside the page too, because the bridged kit-leaderboard imports it.
+LIB_FILES=(lib/kit-names/kit-names.js lib/kit-leaderboard/kit-leaderboard.js)
 
 cd "$GAME_DIR"
 

@@ -207,6 +207,13 @@ load so failure is caught — **absence is the normal fallback path.** No
 leaderboard module means the game plays with no leaderboard. **Log every one in
 `EXTERNAL-FILES.md` before it ships.**
 
+⛔ **The vendored kit the game saves through is INLINED at build, not loaded.**
+`build.js`'s `KIT_INLINE` wraps `lib/`'s kit-names, kit-storage and kit-profile,
+**unedited**, into `KitNames` / `KitStorage` / `KitProfile` namespaces after
+`20-achievements.js`. ⛔ Never between `21-telemetry.js` and `22-meta.js`
+(`test-cs007-p4.js`). ⛔ An import or export form the wrapper does not rewrite
+fails the build. kit-leaderboard stays the module-bridge exception above.
+
 ⛔ **Outbound links go through `openExternal(url)`** — always
 `window.open(url, "_blank", "noopener")`. Without `noopener` the opened page
 gets a live handle back into the game.
@@ -396,15 +403,17 @@ rejected. GDD §11.3.
 ### Save data
 
 ⛔ **`kit-storage` owns the keyspace.** The game never chooses a raw
-`localStorage` key name and never enumerates storage — no `key(i)`, no `.length`,
-no `Object.keys` over storage, anywhere in the build. All keys are
-`coinless.<gameId>.<key>`, declared up front; `get`/`set` on an undeclared key
-throws.
+`localStorage` key name. All keys are `coinless.<gameId>.<key>`, declared up
+front in `22-meta.js`'s one `Store`; `get`/`set` on an undeclared key throws.
+⛔ **The game never enumerates storage: no call to a store's `keys()`,
+`scopes()`, `clear()` or `usage()`, and no `key(i)`, `.length` or `Object.keys`
+over storage in game code.** `22-meta.js` is the only file that calls storage.
 
 | Declared key | Scope |
 |---|---|
 | `settings` | Per-profile |
-| `achievements` | Per-profile |
+| `progress` | Per-profile (the Start Depth record) |
+| `achievements` | Per-profile — ⛔ **not declared until CS015** |
 | `scores` | Root, shared across profiles |
 | `telemetry` | Per-profile, lazy |
 
@@ -414,15 +423,16 @@ throws.
 ⛔ **New state is additive, under known-value-else-default loading.** Removing a
 field needs no migration — a saved value for a deleted field orphans harmlessly.
 
-⛔ **Vector Vortex has no legacy stores.** `kit-profile` is wired with empty
-`legacyRosterKey`/`legacyProbeKeys` so its `afd_*` import path never runs.
+⛔ **Vector Vortex has no legacy stores.** `kit-profile` is wired with
+`legacyRosterKey: null` and `legacyProbeKeys: []` so its `afd_*` import path
+never runs. ⛔ **`null`, never `''`** — an empty string imports `afd_profiles_v1`.
 
 ⛔ **Achievement `id` values are save data and are never renamed**, however
 dated the spelling looks. Renaming one drops that unlock for every player.
 
-⛔ **`Profiles.keyFor(base)` is the one route from a store's base name to the key
-it reads.** `localStorage` is never enumerated — no `key(i)`, no `.length`, no
-`Object.keys` over storage, anywhere in the build.
+⛔ **`Profiles.scope()` is the active profile's store, and the game never builds
+a key string.** ⛔ Profile `p0`'s scope is the ROOT store, beside `scores` and
+`profiles`, so a per-profile `remove(key)` on `p0` must never name a root key.
 
 ⛔ **`Profiles.activate(id)` resets the runtime to shipped defaults BEFORE
 loading the incoming profile.** The load path is written for a cold boot; loading
@@ -480,7 +490,8 @@ Kit modules are vendored into `lib/` at a pinned version and used directly.
 
 ⛔ **Fix a kit module HERE, in `lib/`, not in the coinless-kit repo.** That is
 deliberate — the change gets exercised by a real game before it lands in the
-shared repo.
+shared repo. The three inlined modules are no different: the edit is made in
+`lib/`, and `build.js` picks it up.
 
 ⛔ **The edit must stay game-agnostic.** If a change can only work for Vector
 Vortex, it does not belong in a kit module; put it in the game's own wrapper.
@@ -596,9 +607,12 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     19-sfx.js          AudioSys / MusicSys / Sfx built from C; sfx(), the ONE
                        seat call; the Surger tone; musicStateFor()
     20-achievements.js
+  lib/kit-names, kit-storage, kit-profile — INLINED here by build.js, unedited,
+                       as KitNames / KitStorage / KitProfile (KIT_INLINE)
     21-telemetry.js    TELEMETRY_FIELDS + the ring. Capture is a SESSION switch,
                        OFF at every launch; sampled from update(), never draw()
-    22-meta.js         profiles, scores, leaderboard wiring
+    22-meta.js         THE ONE ROUTE TO STORAGE: Store, Profiles (scope()),
+                       Meta.boot(); scores, leaderboard wiring
     23-main.js         loop, state machine, well lifecycle, respawn
 ```
 

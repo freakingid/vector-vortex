@@ -1,18 +1,18 @@
 # Vector Vortex — STATUS
-Version: 0.0.7 · Changeset: CS011 (planned 2026-09-16 — P1 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.7 · Changeset: CS011 (P1 built 2026-09-16 — P2 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS011
 
 **Planned at `52ba439`** (`PLANNED-FEATURES-CS011.md`,
 `IMPLEMENTATION-PHASES-CS011.md`): six phases, every call answered by Paul in
-the planning session (M1–M9), twenty-two readings flagged (R1–R22). Nothing
-built yet. One line per phase here; ⛔ **reasoning goes to `log/CS011.md` as the
+the planning session (M1–M9), twenty-two readings flagged (R1–R22). One line
+per phase here; ⛔ **reasoning goes to `log/CS011.md` as the
 phase goes.** CS010's ledger is in `log/CS010.md`.
 
 | Phase | Builds | State |
 |---|---|---|
-| P1 | kit-names / kit-storage / kit-profile inlined at build; the store; the silent ANONYMOUS profile; harness storage options; the CS015 renumber; the Save-data rule rewording | next |
-| P2 | Settings, the Start Depth record (`progress`) and telemetry rows saved per profile; reset-before-load on a switch | — |
+| P1 | kit-names / kit-storage / kit-profile inlined at build; the store; the silent ANONYMOUS profile; harness storage options; the CS015 renumber; the Save-data rule rewording | ✅ built: `KIT_INLINE` + `wrapKitModule()`, `Store` / `Profiles` / `Meta.boot()`, harness `store` / `storage` / `crypto` / `mutate` / `storageReads`, `test-cs011-p1.js` (62); three closed files in place; ⚠ one plan finding (the `lastUsed` byte, below) |
+| P2 | Settings, the Start Depth record (`progress`) and telemetry rows saved per profile; reset-before-load on a switch | next |
 | P3 | The local top 10 per mode; the run's three seats; the bench flag; SCORES; game over's placing line | — |
 | P4 | kit-input 0.8.0's text mode; PROFILE, a profile's page, DELETE, the NAME wheel | — |
 | P5 | kit-leaderboard 0.2.1; `Leaderboard`; the submits; SCORES' ONLINE view; the queued line | — |
@@ -20,9 +20,10 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules, 490.2 KB); the
-  manifest is checked both directions against `src/`.
-- `node scratchpad/run-all.js`: **54 test files, all green, zero skips.**
+- `node build.js` produces `dist/vector-vortex.html` (24 modules + 3 inlined kit,
+  547.5 KB); the manifest is checked both directions against `src/`, and a
+  missing `KIT_INLINE` file fails the build.
+- `node scratchpad/run-all.js`: **55 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -306,7 +307,7 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 - **The whole enemy palette, the menu palette and the HUD sizes are ⚠
   provisional**, and `tools/glow-lab.html` does not exist and has no owner.
 - ⛔ **`src/07-enemies.js` wants splitting at CS012** (`ROADMAP.md`, "Still open").
-- **GDD §12's four-second promise is not delivered** — CS015's (spawn lanes
+- **GDD §12's four-second promise is not delivered** — CS016's (spawn lanes
   weighted toward the player).
 - **A rim Vaulter hunts the Skimmer's continuous lane**, so a player parked
   between two centres has it hopping back and forth. Unowned.
@@ -320,10 +321,8 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 
 ## Carried tasks
 
-- ⛔ **CS011 is planned** (see the ledger). Its scope absorbed the three
-  CS011 tasks that were carried here: persistence of every setting and the Start
-  Depth record (P2), the `'quit'` and `'died'` seats (P3, plan R7), and
-  telemetry persistence (P2, plan R17).
+- ⛔ **CS011 is in flight** (the ledger). It absorbed the carried settings and
+  Start Depth persistence (P2), the `'quit'`/`'died'` seats (P3) and telemetry (P2).
 - ✅ **The deployed Worker lists `vector-vortex`** (`GET /v1/health`,
   2026-09-16). ⚠ Its deployed `statsFields` cannot be read remotely; the repo's
   registry at coinless-kit `f0b0eb2` has all seven.
@@ -336,7 +335,8 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
   keeps each player's best row per game id, so one shared id would hide a
   player's second mode (plan §1.4). CS011 submits Classic as `vector-vortex`.
 - ⛔ **CS015 — achievements** (Paul's M4): moved out of CS011 to follow
-  Overdrive. P1 renumbers onboarding to CS016 and ship to CS017.
+  Overdrive. ✅ P1 renumbered onboarding to CS016 and ship to CS017 (ROADMAP,
+  GDD §17 item 10 and §19, DECISIONS).
 - ✅ **`C.TELEMETRY_PLACEHOLDER` is one key, `maxCombo`**, which goes with GDD
   §14.4's combo. ⛔ The telemetry column list is frozen until a changeset
   deliberately moves it; `TELEMETRY_FIELDS`, `TELEMETRY_KINDS` and
@@ -358,22 +358,36 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
   (**0.3.0**) to coinless-kit — each a separate manual step, verified against
   that repo's own suite.
 - The Overdrive `PTS_REAVER`, `PTS_MIMIC`, `PTS_WARDEN` are unread — CS012's.
-- ⛔ **The seven debug spawn actions ship until CS016** (Paul's H5 call).
+- ⛔ **The seven debug spawn actions ship until CS017** (Paul's H5 call).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS011 P1
+## Next up — ⛔ CS011 P2
 
-Paste P1's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards the phases
-must act on, all measured in planning (plan §1):
-- ⛔ **The boot block runs inside the harness**, so a boot-time write lands in
-  every test build. It turns exactly `test-cs008-p6.js:375` and
-  `test-cs008-p7.js:436` red (both rewritten in place in P1).
-- ⛔ **`legacyRosterKey: null`, never `''`**: an empty string imports
-  `afd_profiles_v1`. ⛔ **`createAnonymous()` does not select.** ⛔ **Profile
-  `p0`'s scope is the ROOT store**, beside `scores` and `profiles`.
-- ⛔ **The inline block never sits between `21-telemetry.js` and `22-meta.js`**
-  (`test-cs007-p4.js:467`'s slice bans `localStorage`).
+Paste P2's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards P1 leaves
+(reasoning in `log/CS011.md`, P1):
+- ⚠ **PLAN FINDING — the stored `lastUsed` stays `""` after a first boot.**
+  On an empty install `createAnonymous()` makes `p0`, which is already the kit's
+  `activeId`, so the prompt's `select()` is kit-profile's no-op (`:550`).
+  `Meta.boot()` calls `current()` so the `playerId` is minted. A reload selects
+  `roster[0]`, the same profile (asserted). ⛔ **Do not "fix" this by renaming
+  `legacyProfileId`**: that moves `p0` off the root store. For Paul: it is
+  behaviour-neutral, but it differs from the prompt's wording.
+- ⛔ **`onProfileEvent` is empty.** `beforeChange` and `change` must be wired
+  (reset, THEN load) before anything can select a second profile.
+- ⛔ **`src/21-telemetry.js:22` and `00-config.js`'s Telemetry comment still say
+  `Profiles.keyFor` / "no Profiles in the build".** P2 rewrites them (comments
+  only; `test-cs007-p4.js` strips comments before it scans).
+- ⛔ **`test-cs008-p7.js:436` now reads `Profiles.scope().has("settings")`**;
+  P2 rewrites it again, to its persisted form.
+- ⛔ **The inline banner is a DASH rule** (`// ---…`), never `// ===…`: seven
+  closed banner scans would read an equals banner as a module missing from
+  `src/`. The three bodies sit inside `20-achievements.js`'s slice.
+- ⛔ **The boot block runs inside the harness**: `Meta.boot()` (before
+  `Game.start()`; `Store` is null until it runs) writes the `profiles` key in
+  every build, so a "no write" test compares snapshots, never `store.size === 0`.
+- ⛔ **`legacyRosterKey: null`, never `''`.** ⛔ **Profile `p0`'s scope is the
+  ROOT store.**
 - ⛔ **kit-leaderboard cannot be inlined**: `test-cs009-p1.js:508` bans its
   `setTimeout` and `test-cs002-p1.js` its `addEventListener`.
 - ⛔ **A clear on the step that spends the last life scores after

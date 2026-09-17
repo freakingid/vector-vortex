@@ -459,7 +459,7 @@ const Game = (function () {
   //
   // ⛔ The six enemy colours are still ⚠ provisional (GDD 6.1), SKIPPED-PLAYTESTS.md
   // names these keys, and `0` is the only way to see the palette
-  // together. They ship until CS016 decides whether debug keys ship at all.
+  // together. They ship until CS017 decides whether debug keys ship at all.
   //
   // ⛔ A kind that is not in ENEMY_KINDS yet is a NO-OP, not a throw:
   // spawnEnemy() returns null for an unknown kind, so a later phase lit one up
@@ -1426,5 +1426,8 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
   // "play": every closed test starts a run through reset() and startGame(), and
   // this line is the only place the title is the default.
   state.screen = "title";
+  // ⛔ THE STORE AND THE PROFILE BEFORE THE LOOP (CS011 P1, GDD 15.1). This runs
+  // in the headless harness too, so a boot-time write lands in every test build.
+  Meta.boot();
   Game.start();
 }

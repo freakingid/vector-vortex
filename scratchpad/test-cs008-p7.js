@@ -433,7 +433,7 @@ H.eq(state.screen, "controls", "fixture: back on CONTROLS, cursor on its first r
   H.eq(G.input.setting("inputMirror"), C.INPUT_MIRROR, "⛔ RESET restores C.INPUT_MIRROR");
   H.eq(detail("TOUCH AUTO-FIRE"), C.TOUCH_AUTOFIRE ? "ON" : "OFF", "⛔ RESET restores C.TOUCH_AUTOFIRE");
   H.eq(detail("TOUCH SENSITIVITY"), "×1.0", "and the rows show it");
-  H.eq(X._env.store.size, 0, "⛔ session-only: no storage write");
+  H.eq(X.Profiles.scope().has("settings"), false, "⛔ session-only: RESET TO DEFAULTS stores no settings key");
 }
 
 // The HUD draws over the new pages when OPTIONS was opened from pause (H4).

@@ -1276,18 +1276,26 @@ Specced against Orbital Overhaul's shipped, working implementations rather than 
 front via `create({gameId, keys})` with a version and optional `migrate` per key;
 `get`/`set` on an undeclared key throws.
 
+⛔ **`kit-storage` and `kit-profile` are inlined into the build from `lib/`,
+unedited** (CS011 P1, Paul's M1): `build.js` wraps each into one namespace
+(`KitStorage`, `KitProfile`, with `KitNames` beneath them), so a double-clicked
+build saves. One `Store` is created in `22-meta.js`, and it is the only route to
+storage.
+
 ⛔ **Vector Vortex is a new game with no legacy stores.** `kit-profile` is wired
-with empty `legacyRosterKey` / `legacyProbeKeys` so its `afd_*` import path —
-Orbital Overhaul's — never runs here.
+with `legacyRosterKey: null` and `legacyProbeKeys: []` so its `afd_*` import
+path — Orbital Overhaul's — never runs here. ⛔ **`null`, never `''`**: the kit
+reads an empty string as "use the default" and imports `afd_profiles_v1`.
 
 | Declared key | Scope | Notes |
 |---|---|---|
-| `settings` | Per-profile, via `scope(profileId)` | Options, bindings, track choice |
-| `achievements` | Per-profile | Lifetime + weekly + tiers |
+| `settings` | Per-profile, via `Profiles.scope()` | Options, bindings, track choice |
+| `progress` | Per-profile | `{ highestCleared }`, the Start Depth record (§4.6; Paul's M8) |
+| `achievements` | Per-profile | Lifetime + weekly + tiers. ⛔ **Not declared until CS015** |
 | `scores` | Root store, shared across profiles | Records stamped `profileId`/`profileName` |
 | `telemetry` | Per-profile | ⛔ Lazy — untouched unless capture is on |
 
-The profile roster itself is `kit-profile`'s, not ours.
+The profile roster itself (the root `profiles` key) is `kit-profile`'s, not ours.
 
 ⛔ **A row-shape change bumps that key's declared version and supplies a
 `migrate`, never a new key name.**
@@ -1297,7 +1305,7 @@ field needs no migration — a saved value for a deleted field orphans harmlessl
 
 ### 15.2 Profiles
 
-⛔ **`Profiles.keyFor(base)` is the one route from a store's base name to the key it reads.** Non-legacy profiles get a suffix (`vv_settings_v1:p3`); the legacy profile `p0` resolves to the bare name. ⛔ **`localStorage` is never enumerated** anywhere in the build — no `key(i)`, no `.length`, no `Object.keys` over storage.
+⛔ **`Profiles.scope()` is the active profile's store, and the game never builds a key string.** kit-storage owns the names; kit-profile's `scope()` returns `store.scope(id)` for a profile, and ⛔ **profile `p0`'s scope is the ROOT store**, beside `scores` and `profiles` (CS011 P1). ⛔ **The game never enumerates storage**: no call to a store's `keys()`, `scopes()`, `clear()` or `usage()`, and no `key(i)`, `.length` or `Object.keys` over storage in game code (`test-cs011-p1.js` counts the reads). ⚠ The first launch creates one ANONYMOUS profile silently and lands on the title (Paul's M2).
 
 ⛔ **`activate(id)` resets the runtime to shipped defaults *before* loading the incoming profile.** Loading alone bleeds the outgoing profile's settings onto the incoming one, because the load path is written for a cold boot.
 
@@ -1380,7 +1388,7 @@ This is a tuning and debugging instrument. Because the simulation is determinist
 
 ⚠ The column names map one-to-one onto the seven `statsFields` the Worker registers for `vector-vortex` (§15.4), snake_case to camelCase, and the mapping is total.
 
-**The ring and the surface.** `C.TELEMETRY_CAP` rows, sampled every `C.TELEMETRY_INTERVAL` seconds of **simulation** time from `update()` — never from `draw()`, which runs on a frame clock. ⛔ **The ring latches `wrapped` on the first row it drops and the export reports it in the header block**; a total read off a silently wrapped buffer is wrong and nothing else would say so. **The surface is the Options screen's TELEMETRY and EXPORT rows plus the `t` / `e` bench keys** (CS008 P6, §10.5). Both call the same toggle and the same export. The bench keys stay until CS016's debug-key decision. ⛔ **Export writes the CSV to `console.log`** — the only path that works on `file://` — with a `navigator.clipboard` attempt beside it inside a try/catch. Never an `<a download>`, never a `fetch`.
+**The ring and the surface.** `C.TELEMETRY_CAP` rows, sampled every `C.TELEMETRY_INTERVAL` seconds of **simulation** time from `update()` — never from `draw()`, which runs on a frame clock. ⛔ **The ring latches `wrapped` on the first row it drops and the export reports it in the header block**; a total read off a silently wrapped buffer is wrong and nothing else would say so. **The surface is the Options screen's TELEMETRY and EXPORT rows plus the `t` / `e` bench keys** (CS008 P6, §10.5). Both call the same toggle and the same export. The bench keys stay until CS017's debug-key decision. ⛔ **Export writes the CSV to `console.log`** — the only path that works on `file://` — with a `navigator.clipboard` attempt beside it inside a try/catch. Never an `<a download>`, never a `fetch`.
 
 ⛔ **Nothing is persisted before CS011.** `kit-storage` owns the keyspace and `Profiles.keyFor(base)` is the one route to a key; `22-meta.js` has no keyspace and no `Profiles` yet (CS008 P3 put only the in-memory Start Depth record there), so writing rows today would mean the game choosing a raw `localStorage` key name. CS011 owns persistence, the profile scope and `read()`'s envelope-version rejection above.
 
@@ -1442,7 +1450,7 @@ Multi-file `src/` with a Node concat build script, per Paul's direction on 2026-
 
 ⛔ **The concatenated single-file build is the behaviour oracle.** Any refactor of `src/` must match it exactly. The shipped file must open and play from `file://` by double-click.
 
-⛔ **External runtime files are optional enhancements, never required.** Load as classic `<script src>`, never `fetch()` or `import` — both fail on `file://`. The one exception is a third-party ES module (the leaderboard bridge) loaded by a `<script type="module">` tag whose only job is handing exports to a `window.*` global; it carries no game logic and fails on `file://` by design. Wrap every load so failure is caught; **absence is the normal fallback path.** No leaderboard module means the game plays without a leaderboard.
+⛔ **External runtime files are optional enhancements, never required.** Load as classic `<script src>`, never `fetch()` or `import` — both fail on `file://`. ⛔ **The vendored kit that the game needs to save — kit-names, kit-storage and kit-profile — is not an external file: `build.js` inlines it from `lib/`, unedited** (§15.1, CS011 P1). The one exception is a third-party ES module (the leaderboard bridge) loaded by a `<script type="module">` tag whose only job is handing exports to a `window.*` global; it carries no game logic and fails on `file://` by design. Wrap every load so failure is caught; **absence is the normal fallback path.** No leaderboard module means the game plays without a leaderboard.
 
 ⛔ **Outbound links go through one `openExternal(url)` helper**, always `window.open(url, "_blank", "noopener")`. Without `noopener` the opened page gets a live handle back into the game.
 
@@ -1466,8 +1474,9 @@ vector-vortex/
 ├── EXTERNAL-FILES.md            # runtime files the build loads
 ├── PLANNED-FEATURES-CS0##.md    # spec for what's being built now
 ├── IMPLEMENTATION-PHASES-CS0##.md
-├── build.js                     # Node concat src/ → dist/
+├── build.js                     # Node concat src/ → dist/; inlines lib/'s kit-names, kit-storage, kit-profile
 ├── src/                         # numbered modules, concat order
+├── lib/                         # vendored coinless-kit modules + .NOTES.md; kit-leaderboard stays bridged
 ├── tools/                       # design instruments — music-lab, sfx-lab, well-lab, feel-lab
 ├── scratchpad/                  # tests: _harness.js, run-all.js, test-registry.js
 ├── log/CS0##.md                 # per-changeset narrative + version history
@@ -1519,7 +1528,7 @@ Required coverage:
 7. **Heat monotonicity** — `heat(n+1) > heat(n)` for n in 1..200; every derived value inside its clamp.
 8. **Scoring** — total equals the sum of logged events. ⛔ **Shipped, CS008 P2, with no event log**: on eight played boards (levels 1–23, 120,000 steps), every step's score delta equals that step's events observed off the board. Those events are each kill priced from §7's table, each Thorn chip decoded from its length, and each clear's bonuses. `test-cs008-p2.js`, mutation-checked.
 9. **Audio** — intensity stays in `[0,1]`; tier changes land only on bar boundaries; ⛔ worst-case node creation for a single scheduled step asserted under a ceiling, as Orbital Overhaul does. ⛔ **The node ceiling shipped in CS009**: `C.MUSIC_STEP_NODE_MAX` 16 (⚠ provisional), asserted on a synthetic table (`test-cs009-p1.js`), on every step of both tracks (`test-cs009-p2.js`: worst 9 `title`, 14 `pulse`, and +1 node on three layers is red), and on a played session (`test-cs009-p6.js`: worst 14 over 4,600 steps, and +1 node per note is red). ⛔ **The intensity range shipped in CS010**: `[0, 1]` on the director (`test-cs010-p2.js`) and, on a played session, for the director's level, the music's intensity and sweep level, and every setter argument on all 106,769 frames (`test-cs010-p5.js`; a setter handed 1.6 × the level is red). ⛔ **Bar-line latching shipped in CS010**: on the fake over 40 s of off-grid setter calls (`test-cs010-p1.js`) and on a played session, all 510 gate automations on the bar grid (`test-cs010-p5.js`); a setter scheduling at `currentTime` is red in both. The played node ceiling holds there too: worst 14 over 7,075 steps.
-10. **Achievements** — every predicate reachable; none throws on empty state; tiers monotonic.
+10. **Achievements** (CS015's; moved out of CS011 by Paul's M4) — every predicate reachable; none throws on empty state; tiers monotonic.
 11. **Telemetry** — `TELEMETRY_FIELDS` and `push()` agree in length and order.
 12. **Soak** — 100 seeded runs to game over, no exception, no NaN, no unbounded array.
 13. ⛔ **Rim arrival** (CS008 P1) — an enemy arriving at the rim in a firing Skimmer's lane is killed on **every** cooldown phase: a hunting Vaulter hopping in, a Vaulter climbing the lane, a rim Drifter homing in, 24/24 each over 0..23 ticks of pre-fire, on a closed and an open well. A run that ends in neither outcome fails. `test-cs008-p1.js`, mutation-checked against removing `C.HIT_DEPTH_EPS`, reverting the shot ordering, and leaving `atRim()` at 1.
@@ -1569,7 +1578,7 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 - ◐ **Proxy met — the Surger tone over music at every tier.** D16's limiter-curve gate holds on `pulse` (0.3512) and `title` (0.3408) against the tone's 0.450, with every tier open, and every gate, the sweep, the duck and the dip at or under unity cover the rest (`test-cs009-p5.js`, `test-cs010-p1.js`). The render peaks over the model by up to 2.2 dB and stays under the tone. ⚠ **"Verified by ear on hardware" is a skipped playtest** (`SKIPPED-PLAYTESTS.md`, CS009 P5 and CS010 P3/P5); Paul does no playtests.
 - ◐ **Still half met — flagship length and volume sliders.** `drive` is CS012's; persistence is CS011's.
 
-**Meta** — profiles with `keyFor` routing and no storage enumeration; `playerId` minted once with the secure-context fallback; local top-10 per mode; separate online boards; `vector-vortex` registered with stats keys read from the real registry; achievements with monotonic tiers and UTC ISO weeks; telemetry opt-in and off at launch, `TELEMETRY_FIELDS` and `push()` in agreement.
+**Meta** — profiles with `scope()` routing and no storage enumeration; `playerId` minted once with the secure-context fallback; local top-10 per mode; separate online boards; `vector-vortex` registered with stats keys read from the real registry; achievements with monotonic tiers and UTC ISO weeks (CS015's, Paul's M4); telemetry opt-in and off at launch, `TELEMETRY_FIELDS` and `push()` in agreement.
 
 **Quality** — all 12 test groups pass; 60 fps under budget on both targets; nothing obscures `depth < 0.25`; concat build behaviourally identical to `src/`; plays from `file://`; no Atari terminology anywhere including identifiers.
 
@@ -1631,7 +1640,7 @@ None. All seven resolved as of 2026-08-30; see `DECISIONS.md`.
 5. ~~**Aggregate telemetry (§15.6)**~~ — **RESOLVED 2026-08-30.** Strictly local
    CSV export; nothing is posted anywhere.
 6. ~~**Mimic**~~ — **RESOLVED 2026-08-30.** Build it. ⚠ Stays on probation —
-   cut in CS016 without ceremony if reflected shots read as cheap.
+   cut in CS017 without ceremony if reflected shots read as cheap.
 7. ~~**Track count for v1**~~ — **RESOLVED 2026-08-30.** Three at launch:
    `title`, `pulse`, `drive`. `deep` and `rush` are post-ship data-table
    additions.

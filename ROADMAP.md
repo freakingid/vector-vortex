@@ -23,12 +23,13 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS008** | ✅ **Shipped 2026-09-13.** The rim fix (P1: every arrival killable) and the rim sweep (P1b: a fire-holding crossing kills), then front of house: scoring and extra lives, mode and Start Depth, one text path, the HUD and death fragmentation, title → mode → Start Depth → play → game over → restart, pause from five sources, Options, Credits, a Controls page with rebinding, and the sixth soak through the front door. ⚠ Nine phases — Paul's scope call, 2026-09-13, plus P1b | §4.2, §4.4, §4.6, §6.1, §7, §9, §10.4–10.5, §13, §17 items 8, 13, 14 |
 | **CS009** | ✅ **Shipped 2026-09-16.** The audio engine: kit-audio (`AudioSys`, `MusicSys` with a stall-resyncing per-frame lookahead scheduler, the SFX player), the gesture unlock, `tools/music-lab.html` with SOLO, MUTE and PASS / FAIL per layer, the untiered `title` and `pulse` tracks, music by screen, OPTIONS' four volumes and MUSIC TRACK, `tools/sfx-lab.html`, the Classic SFX at their seats with the held Surger tone and the over-cap life sound, and the seventh soak (audio on and off, one hash). ⚠ Six phases plus a port commit; `drive` moved to CS012 | §4.4, §6.5, §10.5, §11.1–11.3, §11.7–11.8, §17 item 9 |
 | **CS010** | ✅ **Shipped 2026-09-16.** The intensity director: kit-audio 0.3.0 (bar-latched tier gates, the filter sweep, a limiter on the music, the menu duck and the event dips), a live-danger signal read through one `dangerInputs()` that writes no state, two earned layers on `pulse` (`cycle` tier 2, `tick` tier 3, both PASS), Paul's lab gains behind the limiter, music-lab's INTENSITY and TIER, the rim pulse on `heart`'s onsets, and the eighth soak. Five phases, as planned | §5, §11.1, §11.3–11.8, §17 item 9, §19 |
-| **CS011** | Meta: kit profiles, local top-10 per mode, leaderboard wiring, achievements | §15.1–15.5 |
+| **CS011** | Meta: kit-storage and kit-profile inlined at build, a silent ANONYMOUS first profile, settings / the Start Depth record / telemetry saved per profile, local top-10 per mode, leaderboard wiring, PROFILE with name entry, the ninth soak. ⚠ Achievements moved to CS015 (Paul's M4, 2026-09-16) | §4.6, §10.5, §15.1–15.4, §15.6 |
 | **CS012** | Overdrive core: mode flags, Jump, combo multiplier, the Reaver, and the `drive` track (Overdrive's AUTO default, from CS009); the combo input to the intensity director and the Overdrive intensity re-measure (from CS010) | §11.4, §11.7, §13, §14.2, §14.4, §14.6 |
 | **CS013** | Overdrive tokens and the remaining enemies: five powerups, the Warden, the Mimic on probation | §14.1, §14.6 |
 | **CS014** | The ring-flight Dive, hard-capped at 4 s / 6 rings | §14.5 |
-| **CS015** | Onboarding: first-run prompts, attract mode, the teach-in-four-seconds pass on level 1 | §12 |
-| **CS016** | Ship: performance budget on both targets, device matrix, 100-run soak, legal sweep, acceptance-criteria sweep | §17, §18, §19 |
+| **CS015** | Achievements: the id table (save data, never renamed) written once against the whole game, local-only, monotonic tiers and UTC ISO weeks. Planned once Overdrive exists (Paul's M4) | §15.5, §17 item 10 |
+| **CS016** | Onboarding: first-run prompts, attract mode, the teach-in-four-seconds pass on level 1 | §12 |
+| **CS017** | Ship: performance budget on both targets, device matrix, 100-run soak, legal sweep, acceptance-criteria sweep | §17, §18, §19 |
 
 ⛔ **The sequence above has been renumbered +1 twice, and the second time is the
 current one.** The first landed with CS004's split (2026-08-30):
@@ -46,6 +47,11 @@ plus forty-seven renumbered labels in this file. ⛔ `log/` (34 hits) and
 closed session believed, and correcting it is falsifying it. If you find another
 live pointer, it means the same thing both times: read it, decide what it
 *meant*, and correct it.
+
+⛔ **A third shift landed with CS011 P1** (2026-09-16, Paul's M4): achievements
+left CS011 for a new **CS015**, so onboarding became CS016 and ship CS017. The
+sweep read every live `CS015` / `CS016` pointer and every "achievements are
+CS011's" pointer. `log/` and `archive/` were not swept, for the same reason.
 
 **CS001 through CS009 are closed.** Their narratives are in `log/CS00#.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
@@ -125,7 +131,7 @@ in `SKIPPED-PLAYTESTS.md`, and it is the one thing the suite cannot check. ⛔ *
 persistence** for the telemetry buffer: `kit-storage` owns the keyspace and
 `22-meta.js` is still a placeholder, so CS011 owns it. **No scoring, no HUD, no
 Start Depth** (CS008's), **no Dive visual**, **no spawn-lane weighting toward the
-player's lane** (GDD §12's four-second promise is onboarding and is CS015's), and
+player's lane** (GDD §12's four-second promise is onboarding and is CS016's), and
 **`src/07-enemies.js` is not split** — still CS012's. ⛔ **And the four-key
 `C.TELEMETRY_PLACEHOLDER` shrinks rather than staying**: CS008 deletes two keys,
 Start Depth a third and the combo the fourth, and a key left there after its
@@ -330,9 +336,9 @@ cuts touches another changeset's code.
 | GDD §21 | Resolution | Lands in |
 |---|---|---|
 | #1 Dim band (§3.7) | Keep as specced: levels 65–80 at `DIM_BAND_ALPHA` 0.18, lanes lighting on occupancy, shot travel and Surger charge. Spend no tuning time on it — the renderer handles lane occupancy anyway, so the band is a few lines on top of work already required. Re-audition only if telemetry ever shows a player past level 65. | CS001 P3 — **shipped** |
-| #4 Achievements | Local-only. The evaluator returns a payload-shaped object from day one, so server-backing later is wiring rather than a rewrite. | CS011 |
+| #4 Achievements | Local-only. The evaluator returns a payload-shaped object from day one, so server-backing later is wiring rather than a rewrite. | CS015 (moved from CS011, Paul's M4) |
 | #5 Aggregate telemetry | Strictly local CSV export. Nothing is posted anywhere. It is a tuning instrument and explicitly not anti-cheat; a destination adds a privacy surface for no tuning benefit. | CS007 P4 — **shipped**; ⛔ persistence is CS011's |
-| #6 Mimic | Build it. ~100 lines against an existing shot path, and the probation verdict needs a playtest rather than an argument. Cut it in CS016, without ceremony, if it reads cheap. | CS013, verdict in CS016 |
+| #6 Mimic | Build it. ~100 lines against an existing shot path, and the probation verdict needs a playtest rather than an argument. Cut it in CS017, without ceremony, if it reads cheap. | CS013, verdict in CS017 |
 | #7 Track count | Three at launch: `title`, `pulse`, `drive`. `deep` and `rush` are new table entries with no code change, so they are post-ship content, not a scope cut. | `title`, `pulse`: CS009 — **shipped**. `drive`: **CS012** (Paul's A5, 2026-09-16) |
 
 ---
@@ -404,7 +410,7 @@ module seam, named against CS012 for the same reason.
 | 3 | Telemetry ships with the heat clock, not with the other meta systems. ⚠ Since CS006's split that is the **new CS007**, not CS006 — the same pairing it always had, one row further down | It is a tuning instrument, and the tuning it serves is difficulty. An instrument built one changeset *before* the thing it measures ships with a column list that has to be edited the moment heat lands, and `TELEMETRY_FIELDS` and `push()` must be edited together (GDD §15.6). If difficulty tuning turns out to need nothing beyond `feel-lab`, move it back to CS011 with the other meta systems |
 | 4 | Meta (CS011) sits after audio, not before | Meta's only external dependency is the Worker registry entry, which Paul can make in parallel today. If that registration proves slow, move CS011 earlier |
 | 5 | Front of house (CS008) comes before audio | The audio director reads score, combo, lives and level; specifying it against a real HUD and a real game-over path is cheaper than against placeholders |
-| 6 | ⚠ **GDD §12's four-second promise is onboarding, and it is CS015's.** Settled 2026-08-30 | CS003 P5 flagged that this file and `STATUS.md` disagreed — this file read it as a spawner-tuning question for the level-flow changeset, `STATUS.md` read it as onboarding. `STATUS.md` wins: it needs spawn lanes weighted toward the player's lane, which is a *teaching* decision made against a first-run experience, not a difficulty curve. If CS007's heat pass finds it falls out of the spawner for free, take it there and note the move. ⚠ **It did not** — CS007 touched no spawn-lane selection at all, and `pickSpawnLane()` is unchanged since CS003 |
+| 6 | ⚠ **GDD §12's four-second promise is onboarding, and it is CS016's.** Settled 2026-08-30 | CS003 P5 flagged that this file and `STATUS.md` disagreed — this file read it as a spawner-tuning question for the level-flow changeset, `STATUS.md` read it as onboarding. `STATUS.md` wins: it needs spawn lanes weighted toward the player's lane, which is a *teaching* decision made against a first-run experience, not a difficulty curve. If CS007's heat pass finds it falls out of the spawner for free, take it there and note the move. ⚠ **It did not** — CS007 touched no spawn-lane selection at all, and `pickSpawnLane()` is unchanged since CS003 |
 | 7 | No changeset is reserved for refactoring | If the CS008 HUD and the CS011 meta screens end up duplicating layout code, propose a refactor changeset then — don't reserve time for a problem that may not appear |
 | 8 | `ROADMAP.md` is its own file, not a section of `DECISIONS.md`. Paul's call, 2026-08-30 | It needs editing every time a changeset is renumbered, and `DECISIONS.md` is append-only. Adding it means one row in `CLAUDE.md`'s document map and one in GDD §16.4, both on the "on demand only" read contract |
 | 9 | The enemy palette is chosen as a set in CS004 P1, all six Classic colours at once, all ⚠ provisional | Picking four now and two in CS005 guarantees a clash, and `C` already carries forward-looking constants. `tools/glow-lab.html` remains unbuilt and unowned; whichever changeset takes the art pass owns it |

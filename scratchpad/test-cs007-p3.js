@@ -379,6 +379,6 @@ const benched = state.enemies.filter(e => e instanceof X.Drifter);
 H.eq(benched.length, 1,
      "⛔ and pressing `5` still puts exactly one Drifter on it — the bench keys are NOT " +
      "TEMPORARY, they are how the ⚠ provisional palette is judged on hardware, and they " +
-     "ship until CS016 decides whether debug keys ship at all");
+     "ship until CS017 decides whether debug keys ship at all");
 
 H.report("test-cs007-p3.js");

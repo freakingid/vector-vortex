@@ -78,7 +78,7 @@ a destination adds a privacy surface and buys no tuning benefit.
 
 **GDD §21 #6 — the Mimic gets built.** ~100 lines against a shot path that
 already exists. The probation verdict in §14.6 needs a playtest, not an
-argument. ⚠ It stays flagged: cut it in CS016 without ceremony if reflected
+argument. ⚠ It stays flagged: cut it in CS017 without ceremony if reflected
 shots read as cheap.
 
 **GDD §21 #7 — three tracks at launch:** `title`, `pulse`, `drive`. `deep` and
@@ -722,3 +722,4 @@ more bars of music at 120 BPM, or deciding the mix call in CS010.
 
 - CS010's audio calls (D1–D16) and readings (R1–R11), Paul, 2026-09-16: `PLANNED-FEATURES-CS010.md` §0, answered in the planning session.
 - A resume skips the paused time in the intensity director (`Director.hold()` on pause-side frames), Paul, 2026-09-16: `log/CS010.md`, P2.
+- CS011's meta calls (M1–M9), Paul, 2026-09-16: `PLANNED-FEATURES-CS011.md` §0, answered in the planning session. Three a future session could mistake for oversights: ⚠ kit-storage and kit-profile are **inlined at build** rather than bridged like kit-leaderboard (an `import` fails on `file://`); ⚠ **achievements moved to CS015**, after Overdrive, so the id table is written once; ⚠ a run in which **any debug bench action fired is ineligible** for both boards.

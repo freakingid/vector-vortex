@@ -360,6 +360,7 @@ function captureLog(fn) { logs.length = 0; console.log = s => logs.push(String(s
 
 const detailOf = () => { const t = drawnTexts(); const i = t.findIndex(x => x.str === "TELEMETRY"); return t.slice(i + 1).find(x => x.align === "right").str; };
 H.eq(detailOf(), "OFF", "the TELEMETRY row reads OFF at launch");
+const storedBefore = JSON.stringify([...X._env.store].sort());   // CS011 P1: boot stores the profile
 const viaKey = captureLog(() => press(key("t")));
 const onByKey = X.Telemetry.enabled();
 H.eq(onByKey, true, "`t` turns capture on");
@@ -372,7 +373,8 @@ H.eq(viaRow.join("\n"), viaKey.join("\n"), "⛔ and says exactly what `t` says")
 H.eq(detailOf(), "ON", "the row reads ON");
 captureLog(() => press(FIRE));
 H.eq(X.Telemetry.enabled(), false, "and flips it back");
-H.eq(X._env.store.size, 0, "⛔ never persisted: no storage write");
+H.eq(JSON.stringify([...X._env.store].sort()), storedBefore,
+     "⛔ never persisted: the telemetry toggles write nothing (stored keys and values unchanged)");
 
 const realExport = X.Telemetry.exportCsv;
 let exportCalls = 0;

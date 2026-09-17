@@ -746,6 +746,10 @@ const C = {
   // `startDepth` in CS008 P3 (state.mode, state.startDepth).
   TELEMETRY_PLACEHOLDER: { maxCombo: 0 },
 
+  // ---- Meta: profiles, saves, scores (GDD 15) — CS011 ----------------------
+  // The phases that read the rest of the group add them (plan §2).
+  PROFILE_MAX:          8,      // kit-profile's roster ceiling (its create() refuses past it)
+
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.7",   // ⚠ 0.0.2 was never written here — see log/CS006.md
   GAME_ID:              "vector-vortex",   // must match the Worker registry

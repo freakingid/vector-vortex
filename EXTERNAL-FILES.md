@@ -28,16 +28,28 @@ Vendored from coinless-kit, mirroring its `modules/` layout so relative imports
 between them stay byte-identical to upstream. Each carries a `.NOTES.md`
 backport packet.
 
+### Runtime files
+
 | File | Version | Load style | Absent behaviour |
 |---|---|---|---|
-| `lib/kit-names/kit-names.js` | 0.1.0 | imported by the others | — |
-| `lib/kit-storage/kit-storage.js` | 0.1.0 | imported by kit-profile | No persistence; in-memory shim |
-| `lib/kit-profile/kit-profile.js` | 0.1.1 | module bridge | Single anonymous session |
 | `lib/kit-leaderboard/kit-leaderboard.js` | 0.2.0 | module bridge → `window.KitLeaderboard` | No online board; local scores unaffected |
+| `lib/kit-names/kit-names.js` | 0.1.0 | imported by kit-leaderboard, beside it | The bridge's import fails; as above |
+
+### Inlined at build — not runtime files (CS011 P1, Paul's M1)
+
+`build.js`'s `KIT_INLINE` wraps these into the single HTML, **unedited in `lib/`**,
+so a double-clicked build saves (an `import` fails on `file://`). They are
+listed here because they are vendored, not because the page loads them.
+
+| File | Version | Namespace in the build |
+|---|---|---|
+| `lib/kit-names/kit-names.js` | 0.1.0 | `KitNames` (also shipped beside the page, above) |
+| `lib/kit-storage/kit-storage.js` | 0.1.0 | `KitStorage`. Blocked storage falls back to its in-memory shim |
+| `lib/kit-profile/kit-profile.js` | 0.1.1 | `KitProfile` |
 
 ⛔ **Vendored copies are pinned by the `VERSION` string inside each file**, not
 by a git tag on this repo. Update the table whenever a copy is refreshed or
 edited, and record the edit in that module's `.NOTES.md`.
 
-⛔ The whole `lib/` tree fails on `file://` by design (rule 2) — the game plays
-without it.
+⛔ The runtime `lib/` files fail on `file://` by design (rule 2) — the game plays
+without them. The inlined three are inside the page and do not.

@@ -16,6 +16,17 @@
 // build path: a line comment containing "/*" plus a block-comment regex run
 // first will silently delete live code and still parse. Comment stripping is a
 // text-analysis job and belongs in a character scanner, not here.
+//
+// STORAGE (CS011 P1). The boot block runs here too, so every build boots the
+// store and the profile. `buildGame({ store: map })` evaluates over the caller's
+// Map, so a second build over it is a RELOAD. `buildGame({ storage: "blocked" })`
+// makes reading `window.localStorage` throw, as a sandboxed embed does.
+// `_env.storageReads` counts reads of `localStorage.length` and calls of
+// `key(i)`: the enumeration proof, with no text scan. `buildGame({ crypto })`
+// replaces the `crypto` global (default: Node's), e.g. without `randomUUID`.
+// `buildGame({ mutate: [[from, to], …] })` rewrites the built script's text
+// before evaluation, each `from` found EXACTLY once or it throws: a mutation
+// proof over the real code, never a copy of it (test-cs011-p1.js).
 
 "use strict";
 
@@ -34,7 +45,9 @@ const SKIP_TAG = "SKIPPED (no git history)";
 function distIsStale() {
   if (!fs.existsSync(DIST)) return true;
   const built = fs.statSync(DIST).mtimeMs;
-  return fs.readdirSync(SRC).some(f => fs.statSync(path.join(SRC, f)).mtimeMs > built);
+  const { KIT_INLINE } = require(path.join(ROOT, "build.js"));   // requiring builds nothing
+  return fs.readdirSync(SRC).some(f => fs.statSync(path.join(SRC, f)).mtimeMs > built) ||
+         KIT_INLINE.some(f => fs.statSync(path.join(ROOT, f)).mtimeMs > built);
 }
 
 function extractScript(html) {
@@ -47,8 +60,8 @@ function extractScript(html) {
   return last;
 }
 
-function stubEnv() {
-  const store = new Map();
+function stubEnv(opts = {}) {
+  const store = opts.store || new Map();
   const noop = () => {};
   const ctx2d = new Proxy({}, {
     get: (t, k) => (k in t ? t[k] : (t[k] = k === "measureText" ? (() => ({ width: 0 })) : noop)),
@@ -68,26 +81,31 @@ function stubEnv() {
     documentElement: { style: {} },
     body: { style: {}, appendChild: noop },
   };
+  const env = { win: null, doc, canvas, store, storageReads: 0 };
+  const localStorage = {
+    getItem: k => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: k => store.delete(k),
+    clear: () => store.clear(),
+    get length() { env.storageReads++; return store.size; },
+    key: i => { env.storageReads++; return [...store.keys()][i] ?? null; },
+  };
   const win = {
     innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1,
     addEventListener: noop, removeEventListener: noop,
     matchMedia: () => ({ matches: false, addEventListener: noop }),
     requestAnimationFrame: noop, cancelAnimationFrame: noop,
     performance: { now: () => 0 },
-    localStorage: {
-      getItem: k => (store.has(k) ? store.get(k) : null),
-      setItem: (k, v) => store.set(k, String(v)),
-      removeItem: k => store.delete(k),
-      clear: () => store.clear(),
-      get length() { return store.size; },
-      key: i => [...store.keys()][i] ?? null,
-    },
     navigator: { userAgent: "node", maxTouchPoints: 0 },
     AudioContext: undefined,   // headless: every audio entry point must guard
     open: noop,
   };
+  Object.defineProperty(win, "localStorage", opts.storage === "blocked"
+    ? { get() { throw new Error("SecurityError: storage is blocked (harness)"); }, enumerable: true }
+    : { value: localStorage, enumerable: true });
   win.window = win;
-  return { win, doc, canvas, store };
+  env.win = win;
+  return env;
 }
 
 // A RECORDING FAKE AUDIO CONTEXT (CS009 P1), installed only by
@@ -173,8 +191,13 @@ function buildGame(opts = {}) {
   if (opts.rebuild !== false && distIsStale()) {
     execFileSync(process.execPath, [path.join(ROOT, "build.js")], { stdio: "pipe" });
   }
-  const script = extractScript(fs.readFileSync(DIST, "utf8"));
-  const env = stubEnv();
+  let script = extractScript(fs.readFileSync(DIST, "utf8"));
+  for (const [from, to] of opts.mutate || []) {
+    const at = script.indexOf(from);
+    if (at < 0 || script.indexOf(from, at + 1) >= 0) throw new Error(`mutate: ${JSON.stringify(from)} is not in the build exactly once`);
+    script = script.slice(0, at) + to + script.slice(at + from.length);
+  }
+  const env = stubEnv({ store: opts.store, storage: opts.storage });
   const audio = opts.audio ? fakeAudio() : null;
   if (audio) env.win.AudioContext = audio.AudioContext;
 
@@ -269,6 +292,8 @@ function buildGame(opts = {}) {
     "createDirector", "Director", "dangerInputs", "duckFor",
     // the rim pulse's onset ring and its reading (19-sfx.js, CS010 P4)
     "noteBeat", "beatGlow",
+    // the inlined kit, the store, the profile and Meta (build.js, 22-meta.js, CS011 P1)
+    "KitNames", "KitStorage", "KitProfile", "Store", "Profiles", "Meta",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of
@@ -294,12 +319,15 @@ function buildGame(opts = {}) {
     EXPORTS.map(n => `${n}: (typeof ${n} !== "undefined" ? ${n} : null)`).join(", ") +
     "};";
   const fn = new Function("window", "document", "navigator", "performance",
-                          "localStorage", "requestAnimationFrame", "AudioContext",
+                          "localStorage", "requestAnimationFrame", "AudioContext", "crypto",
                           script + tail);
 
+  // ⛔ A blocked store's bare name is undefined here; the game names it nowhere.
   const g = fn(env.win, env.doc, env.win.navigator, env.win.performance,
-               env.win.localStorage, env.win.requestAnimationFrame,
-               audio ? audio.AudioContext : undefined);
+               opts.storage === "blocked" ? undefined : env.win.localStorage,
+               env.win.requestAnimationFrame,
+               audio ? audio.AudioContext : undefined,
+               opts.crypto || globalThis.crypto);
   return Object.assign({}, g, { _env: env, _audio: audio });
 }
 

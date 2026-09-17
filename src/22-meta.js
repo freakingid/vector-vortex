@@ -1,10 +1,84 @@
-// 22-meta.js — profiles, scores, leaderboard wiring (GDD 15). CS008 P3 lands
-// the first piece: the record Start Depth's list is built from (GDD 4.6).
+// 22-meta.js — profiles, scores, leaderboard wiring (GDD 15). CS008 P3 landed
+// the record Start Depth's list is built from (GDD 4.6); CS011 P1 lands the
+// store and the profile.
 //
-// ⛔ NOTHING HERE TOUCHES STORAGE YET. kit-storage owns the keyspace and
-// Profiles.keyFor(base) is the one route to a key (CLAUDE.md, Save data); CS011
-// builds both. Until then the record is an in-memory SESSION record (Paul, S1):
-// it lives as long as the page does, and a reload starts the list over at 1–9.
+// ⛔ THIS FILE IS THE GAME'S ONLY ROUTE TO STORAGE. kit-storage (inlined at
+// build from lib/) owns the keyspace, and the game never builds a key string:
+// `Store` declares every key, and `Profiles.scope()` is the active profile's
+// store (CLAUDE.md, Save data). ⛔ The game never enumerates storage — no call to
+// a store's keys(), scopes(), clear() or usage().
+//
+// ⚠ NO SETTING OR RECORD IS SAVED YET. levelRecord() below is still the
+// in-memory SESSION record (Paul, S1) until CS011 P2 re-points it at `progress`.
+
+// ---------------------------------------------------------------------------
+// THE STORE AND THE PROFILE (GDD 15.1, 15.2). CS011 P1.
+// ---------------------------------------------------------------------------
+//
+// ⛔ BOTH ARE MADE IN Meta.boot(), never at evaluation, so evaluating the script
+// touches no storage. Before boot `Store` is null.
+//
+// ⛔ `achievements` IS NOT DECLARED until CS015 (plan R5). kit-profile declares
+// its own root `profiles` key.
+let Store = null;
+
+// The game's wrapper over kit-profile. P1 needs the active profile and its store;
+// the roster operations arrive with the PROFILE screen (CS011 P4).
+const Profiles = (function () {
+  let kit = null;
+  return {
+    attach(instance) { kit = instance; },
+    // The active profile's store. ⛔ Profile `p0`'s is the ROOT store, beside
+    // `scores` and `profiles` (kit-profile's scope rule).
+    scope() { return kit.scope(); },
+    // { id, name, playerId } — mints the playerId if it is absent (kit-profile).
+    current() { return kit.current(); },
+    list() { return kit.list(); },
+  };
+})();
+
+const Meta = (function () {
+  let booted = false;
+
+  // kit-profile's events. ⚠ `beforeChange` and `change` must be handled before a
+  // second profile can be selected; CS011 P2 wires them (reset, THEN load).
+  function onProfileEvent(name, detail) {}
+
+  function boot() {
+    if (booted) return;
+    booted = true;
+    Store = KitStorage.create({
+      gameId: C.GAME_ID,
+      keys: {
+        settings:  { version: 1 },
+        progress:  { version: 1 },
+        telemetry: { version: 1 },
+        scores:    { version: 1 },
+      },
+    });
+    // ⛔ legacyRosterKey is `null`, NEVER '': kit-profile reads an empty string
+    // as "use the default" and imports Orbital Overhaul's roster (plan R4).
+    const kit = KitProfile.create({
+      storage: Store,
+      maxProfiles: C.PROFILE_MAX,
+      legacyRosterKey: null,
+      legacyProbeKeys: [],
+      onEvent: onProfileEvent,
+    });
+    Profiles.attach(kit);
+    // THE SILENT FIRST LAUNCH (Paul's M2): one ANONYMOUS profile, and the title as
+    // before. ⛔ createAnonymous() does not select, so select() follows it.
+    // ⚠ select() of the id boot already points at is kit-profile's no-op, so the
+    // playerId is minted by current() (log/CS011.md, P1).
+    if (kit.firstBoot) {
+      const made = kit.createAnonymous();
+      if (made.ok) kit.select(made.profile.id);
+      kit.current();
+    }
+  }
+
+  return { boot };
+})();
 
 // ---------------------------------------------------------------------------
 // THE HIGHEST LEVEL CLEARED (GDD 4.6). CS008 P3.
