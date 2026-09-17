@@ -3,8 +3,8 @@ Version: 0.0.8 · Changeset: CS012 (planned; §0 open) · Wells: 16/16 · Enemie
 
 ## Phase ledger — CS012
 
-**Planned at `de53c0d`; ⛔ not runnable until Paul answers O1–O16**
-(`PLANNED-FEATURES-CS012.md` §0). Six phases (`IMPLEMENTATION-PHASES-CS012.md`):
+**Planned at `de53c0d`; ✅ Paul took every recommendation in
+`PLANNED-FEATURES-CS012.md` §0 (O1–O16), 2026-09-16.** Six phases (`IMPLEMENTATION-PHASES-CS012.md`):
 P1 `drive`; P2 mode flags, the Reaver, Overdrive's schedule; P3 OVERDRIVE on MODE,
 its own board, SCORES' OVERDRIVE view, the record per mode; P4 the combo; P5 Jump;
 P6 the tenth soak and the close. This ledger gets one line per phase. CS011's
@@ -304,13 +304,7 @@ ledger is in `log/CS011.md`.
 
 ## Open questions (blocking)
 
-- ⛔ **O1–O16, `PLANNED-FEATURES-CS012.md` §0.** Each carries its measurement and a
-  recommendation; answers go in §0's ✅ Answer column before P1 runs. The four
-  with the widest reach: **O1** (a Reaver climbing at 1.6× breaches GDD §4.4's
-  respawn guarantee at every level, MEASURED), **O3** (+0.5 per kill sustains
-  ~×7 on played boards, twice §14.4's ×3–4, MEASURED with bots), **O9**
-  (OVERDRIVE as MODE's default highlight reds 9 closed files, MEASURED) and
-  **O11** (Overdrive's board id and Paul's registry entry).
+- None. O1–O16 are answered (every recommendation).
 
 ## Carried tasks
 
@@ -348,9 +342,9 @@ ledger is in `log/CS011.md`.
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ Paul answers CS012 §0, then P1
+## Next up — CS012 P1 (`drive`)
 
-`PLANNED-FEATURES-CS012.md` §0 (O1–O16) is open. Once each answer is written into
-its ✅ column, run `IMPLEMENTATION-PHASES-CS012.md` P1 (`drive`). An answer that
-changes a phase's shape rather than a value is re-planned first (that file's
-header).
+Run `IMPLEMENTATION-PHASES-CS012.md` P1 in a new session.
+⛔ **Remind Paul at the end of P1 and P2:** P3 needs the `vector-vortex-overdrive`
+entry in coinless-kit's `registry.js`, deployed, with its commit named in this
+file (plan O11). F1 (Classic's rate bound) can ride in the same edit.

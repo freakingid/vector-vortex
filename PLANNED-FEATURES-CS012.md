@@ -9,9 +9,8 @@ soak closes it (GDD §11.4, §11.7, §13, §14.2, §14.4, §14.6, §15.3, §15.4
 ⛔ **EVERY CLAIM IN THIS DOCUMENT IS MARKED MEASURED OR PREDICTED.** A MEASURED
 claim names what was run (§1 lists the probes). A PREDICTED one says so.
 
-⛔ **§0 IS OPEN. No build phase starts until Paul has answered O1–O16 and the
-answers are written into §0's last column.** A phase prompt that names an answer
-reads it from there.
+✅ **§0 IS ANSWERED: Paul took every recommendation (2026-09-16).** A phase prompt
+that names an answer builds the recommendation written beside it.
 
 **Baseline for every measurement: commit `de53c0d`.** `node build.js` → 24
 modules + 3 inlined, `dist/vector-vortex.html` **600,628 bytes**.
@@ -52,30 +51,31 @@ the phase prompts). **From `log/`**, only the two "Carried forward" sections.
 
 ---
 
-## ⛔ 0. PAUL'S CALLS — OPEN
+## ⛔ 0. PAUL'S CALLS — ✅ ALL ANSWERED 2026-09-16: EVERY RECOMMENDATION
 
 Each is a design call the GDD does not settle, with its measurement and a
-recommendation. ⛔ **None is answered here.** A build phase builds the answer
-written in the last column and does not re-open it.
+recommendation. ✅ **Paul took every recommendation**, including every "reading
+this plan takes" inside O1–O16 and R1–R16. A build phase builds the recommended
+answer and does not re-open it.
 
 | # | The call | Recommendation | ✅ Answer |
 |---|---|---|---|
-| O1 | What the Reaver's "1.6×" scales | The hop only: hop time and both hop intervals ÷ 1.6. The climb stays the Vaulter's | ⏳ |
-| O2 | How Overdrive's introduction schedule is expressed | A second table of Overdrive-only rows, merged by level | ⏳ |
-| O3 | How the combo builds, lapses and resets, and what `max_combo` reports | +0.5 per 4 kills; −0.5 per window without a kill; ×1 on death; the run's peak; Classic posts 0 | ⏳ |
-| O4 | What the multiplier multiplies, and which kills build it | Kill points at all three kill sites; every kill builds it; chips and bonuses unmultiplied | ⏳ |
-| O5 | Does the combo window run during the Dive? | No: its clock holds while the dive is active | ⏳ |
-| O6 | Jump's timing rules | Cooldown counts from landing; recovery is lethal and cannot fire; Purge allowed airborne; takeoff on the rising edge | ⏳ |
-| O7 | Jump's three airborne channels | A drawn lift, a stroked shadow, and a high-pass on the music for the whole jump (kit-audio 0.4.0); no jump SFX | ⏳ |
-| O8 | The Overdrive HUD: combo and Jump readiness | ×N centre-top, absent at ×1, with a depletion ring; `comboLost` on every fall; a jump glyph beside the Purge glyph | ⏳ |
-| O9 | MODE's default highlight (GDD §13) | OVERDRIVE first and highlighted; repair 8 front-door fixtures | ⏳ |
-| O10 | How SCORES reaches OVERDRIVE | A MODE row first; opens on the last run's mode, else MODE's first row | ⏳ |
-| O11 | Overdrive's board id, its registry entry, and when | `vector-vortex-overdrive`; Paul registers and deploys before P3 | ⏳ |
-| O12 | The Start Depth record: shared or per mode | Per mode (`progress` v2, migrated) | ⏳ |
-| O13 | `drive`: tempo, length, tiers | 138 BPM, ≥ 36 bars A→B→C, untiered until Paul marks PASS | ⏳ |
-| O14 | If the sweep still does not open end to end | Accept, record the number and GDD §19's ✗; no rescale | ⏳ |
-| O15 | Does `src/07-enemies.js` split now, and how | Yes: a new `src/07-enemies-overdrive.js`; nothing moves out | ⏳ |
-| O16 | The provisional values: the Reaver's look and sound, the HUD sizes, the Jump numbers, the bench | Vaulter-red with barbs, pitch 1.15, no bench key; the §0 table below | ⏳ |
+| O1 | What the Reaver's "1.6×" scales | The hop only: hop time and both hop intervals ÷ 1.6. The climb stays the Vaulter's | ✅ As recommended |
+| O2 | How Overdrive's introduction schedule is expressed | A second table of Overdrive-only rows, merged by level | ✅ As recommended |
+| O3 | How the combo builds, lapses and resets, and what `max_combo` reports | +0.5 per 4 kills; −0.5 per window without a kill; ×1 on death; the run's peak; Classic posts 0 | ✅ As recommended |
+| O4 | What the multiplier multiplies, and which kills build it | Kill points at all three kill sites; every kill builds it; chips and bonuses unmultiplied | ✅ As recommended |
+| O5 | Does the combo window run during the Dive? | No: its clock holds while the dive is active | ✅ As recommended |
+| O6 | Jump's timing rules | Cooldown counts from landing; recovery is lethal and cannot fire; Purge allowed airborne; takeoff on the rising edge | ✅ As recommended |
+| O7 | Jump's three airborne channels | A drawn lift, a stroked shadow, and a high-pass on the music for the whole jump (kit-audio 0.4.0); no jump SFX | ✅ As recommended |
+| O8 | The Overdrive HUD: combo and Jump readiness | ×N centre-top, absent at ×1, with a depletion ring; `comboLost` on every fall; a jump glyph beside the Purge glyph | ✅ As recommended |
+| O9 | MODE's default highlight (GDD §13) | OVERDRIVE first and highlighted; repair 8 front-door fixtures | ✅ As recommended |
+| O10 | How SCORES reaches OVERDRIVE | A MODE row first; opens on the last run's mode, else MODE's first row | ✅ As recommended |
+| O11 | Overdrive's board id, its registry entry, and when | `vector-vortex-overdrive`; Paul registers and deploys before P3 | ✅ As recommended |
+| O12 | The Start Depth record: shared or per mode | Per mode (`progress` v2, migrated) | ✅ As recommended |
+| O13 | `drive`: tempo, length, tiers | 138 BPM, ≥ 36 bars A→B→C, untiered until Paul marks PASS | ✅ As recommended |
+| O14 | If the sweep still does not open end to end | Accept, record the number and GDD §19's ✗; no rescale | ✅ As recommended |
+| O15 | Does `src/07-enemies.js` split now, and how | Yes: a new `src/07-enemies-overdrive.js`; nothing moves out | ✅ As recommended |
+| O16 | The provisional values: the Reaver's look and sound, the HUD sizes, the Jump numbers, the bench | Vaulter-red with barbs, pitch 1.15, no bench key; the §0 table below | ✅ As recommended |
 
 ### O1 — what the Reaver's "1.6×" scales
 

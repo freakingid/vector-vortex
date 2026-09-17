@@ -9,13 +9,9 @@ and `STATUS.md` automatically, and nothing else unless the prompt names it.
 ⛔ **`ultrathink` appears inside the prompt text where it is wanted.** It is a
 per-turn lever, so it has to be in the pasted message.
 
-⛔ **NOT RUNNABLE YET.** `PLANNED-FEATURES-CS012.md` §0 holds sixteen open calls
-(O1–O16). **No phase starts until Paul has answered them and each answer is
-written into §0's ✅ Answer column.** A prompt below that says "O3's answer" means
-that column, not the recommendation beside it. If an answer changes a phase's
-shape rather than a value (for example O4 multiplying everything, O9 keeping
-CLASSIC first, O12 staying shared, or O15 not splitting), the prompt that builds
-it is re-planned before it runs.
+✅ **Every call is answered: Paul took every recommendation in
+`PLANNED-FEATURES-CS012.md` §0 (O1–O16), 2026-09-16.** A prompt below that says
+"O3's answer" means O3's recommendation. No phase's shape changed.
 
 **Baseline:** CS011 closed at `7dd90c8`, and CS012 was planned at `de53c0d`.
 - `node build.js` → 24 modules + 3 inlined, 600,628 bytes.
@@ -56,7 +52,7 @@ Plan §2 has the argument. In short:
 
 | Before | What | Whose |
 |---|---|---|
-| P1 | §0's answers written into the plan | Paul |
+| P1 | §0's answers written into the plan | ✅ Done 2026-09-16 |
 | P3 | O11's registry entry for `vector-vortex-overdrive` committed in coinless-kit and deployed, and **its commit named in `STATUS.md`** | Paul |
 
 ⛔ **If P3's precondition is not met, P3 still builds.** Its registry
@@ -160,10 +156,16 @@ closed test was always making.
 >   Paul's lab work, not a playtest; its port is a later commit.
 > - `log/CS012.md`: the composition's reasoning and the measured numbers.
 > - `STATUS.md`: the ledger line, and any hazard for P2.
+> - `DECISIONS.md`: one line pointing at plan §0 (O1–O16, every recommendation
+>   taken, 2026-09-16).
 >
 > ⛔ `P1_DETERMINISM_HASH` and `GOLDEN_LANES` do not move. `node
 > scratchpad/run-all.js` green, zero skips. Commit "CS012 P1: drive — …". Do not
 > push.
+>
+> ⛔ **End the session by reminding Paul** that P3 needs the
+> `vector-vortex-overdrive` registry entry in coinless-kit, deployed, with its
+> commit named in `STATUS.md` (plan O11; F1 can ride in the same edit).
 
 ---
 
@@ -272,6 +274,9 @@ closed test was always making.
 >
 > ⛔ The hash and the golden do not move. Suite green, zero skips. Commit "CS012
 > P2: …". Do not push.
+>
+> ⛔ **End the session by checking `STATUS.md` for Paul's registry commit.** If it
+> is not there, remind Paul that P3 needs it (plan O11).
 
 ---
 
