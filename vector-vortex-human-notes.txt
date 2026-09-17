@@ -106,7 +106,9 @@ Phase 6
 
 =====
 Changeset 12 is being built
-
+Phase 1
+Phase 2
+Stopping Sunday night 9/16/2026 and Start with Phase 3 next time.
 
 
 

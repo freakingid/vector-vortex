@@ -158,6 +158,28 @@ const C = {
   VAULT_RIM_INTERVAL_MIN: 0.35, // ⛔ its floor at HEAT_FULL_LEVEL
   VAULT_FIRST_LEVEL:    2,      // ⛔ GDD 6.3 — no mid-climb vaulting at level 1
 
+  // ---- Reaver (GDD 6.4, 14.6; CS012 P2) — Overdrive only ------------------
+  // A Vaulter at 1.6x that vaults toward the Skimmer (07-enemies-overdrive.js).
+  // ⛔ THE RATE SCALES THE HOP AND NOTHING ELSE (Paul's O1): the hop duration
+  // and both hop intervals are divided by it, and the climb stays the Vaulter's
+  // `C.VAULT_CLIMB * climbMult()`. MEASURED (PLANNED-FEATURES-CS012.md §1.1): a
+  // CLIMB at 1.6x breaches GDD 4.4's respawn guarantee at level 1, so
+  // CLIMB_MAX_BASE and CLIMB_MULT_MAX do not move. The hop is 0.175 s, and the
+  // rim interval's floor 0.35 / 1.6 = 0.219 s stays above it, so the knob stays
+  // live at every level. ⛔ Heat never scales the hop (H2): the rate is a
+  // constant, and GDD 17 item 3's soak bound is 2 * DT / (VAULT_HOP_TIME / rate).
+  REAVER_HOP_RATE:      1.6,
+  // ⚠ PROVISIONAL, like the palette (O16). The family read is the Vaulter's X at
+  // the Vaulter's size; the difference is two swept barbs on the rim-side arms
+  // (REAVER_POLY, 14-render-entities.js). Each barb's tip sits BARB_SWEEP lane
+  // half-widths in from its arm tip and BARB_REACH depth units rimward of it; its
+  // root sits BARB_ROOT of the way along the arm's inner edge.
+  REAVER_SIZE:          0.70,   // lane widths spanned, = VAULTER_SIZE
+  REAVER_BARB_SWEEP:    0.30,
+  REAVER_BARB_REACH:    0.35,
+  REAVER_BARB_ROOT:     0.35,
+  REAVER_COLOR:         "#FF4A4A",  // ⚠ = VAULTER_COLOR, shared (O16); the silhouette carries the difference
+
   // ---- Carrier (GDD 6.1, 6.2) ---------------------------------------------
   // ⛔ CARRIER_SIZE and CARRIER_GLYPH_SIZE are LANE widths and nothing else.
   // entityPoints() (14-render-entities.js) scales a poly's `l` by size/2 and
@@ -419,6 +441,17 @@ const C = {
     { level: 18, kind: "carrierDrifter" },
     { level: 23, kind: "carrierSurger" },
   ],
+  // ⛔ OVERDRIVE'S ROWS (GDD 13, 14.6; Paul's O2, CS012 P2). A SECOND TABLE, not a
+  // `mode` field on the rows above: test-cs007-p3.js holds C.SPAWN_SCHEDULE at
+  // seven rows of `level` and `kind` and nothing else, and that absence is the
+  // no-weight-table decision. eligibleKinds(level, mode) merges these into the
+  // Classic rows in level order, a Classic row first at an equal level, for an
+  // Overdrive run only. The same rules hold: cumulative, sorted, uniform pick, no
+  // weights, and a one-entry set spends no draw in either mode. CS013 adds the
+  // Warden (11) and the Mimic (16) here.
+  SPAWN_SCHEDULE_OVERDRIVE: [
+    { level:  6, kind: "reaver" },
+  ],
 
   // ---- Collision (GDD 4.5) ------------------------------------------------
   // The band below the rim in which an enemy's contact kills (GDD 4.5 item 1).
@@ -581,12 +614,20 @@ const C = {
     menuBack:       { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
-  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6 },
+  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
 
   // ---- Overdrive (GDD 14) -------------------------------------------------
   MAX_TOKENS:           2,      // ⛔ readability cap on powerups on screen
   TOKEN_LIFE:           9.0,    // s. ⛔ counts UP toward this. GDD 16.3.
   TOKEN_HOVER_DEPTH:    0.80,
+  // ⛔ WHAT A MODE HAS, AS DATA (GDD 1, 20 #28: "flags in the config, not a
+  // fork"; CS012 R1). One reader, modeHas() at the foot of this file. The
+  // Reaver, the track and the board are not flags: they go through
+  // SPAWN_SCHEDULE_OVERDRIVE, MODE_TRACK and the board's game id.
+  MODE_FLAGS: {
+    classic:   { jump: false, combo: false },
+    overdrive: { jump: true,  combo: true },
+  },
   JUMP_TIME:            0.90,
   JUMP_RECOVERY:        0.20,
   JUMP_COOLDOWN:        1.40,
@@ -768,8 +809,8 @@ const C = {
 // THE HEAT CLOCK (GDD 8) — ⛔ ONE CLOCK: state.level
 // ---------------------------------------------------------------------------
 //
-// ⛔ THE ONLY FUNCTIONS IN THIS FILE, AND THEY ARE HERE BECAUSE THEY ARE THE
-// TUNING SURFACE'S OTHER HALF. C above says what a value is at level 1 and what
+// ⛔ THE ONLY FUNCTIONS IN THIS FILE BUT ONE (modeHas(), below them), AND THEY
+// ARE HERE BECAUSE THEY ARE THE TUNING SURFACE'S OTHER HALF. C above says what a value is at level 1 and what
 // it is at the top; the seven accessors below say how the game walks between
 // the two. Splitting them would put half of one decision in each of two files.
 //
@@ -874,4 +915,17 @@ function surgeInterval(level) {
 // number, four consequences; see WEAVER_APEX_MAX above.
 function weaverApex(level) {
   return heatLerp(C.WEAVER_APEX, C.WEAVER_APEX_MAX, level);
+}
+
+// ---------------------------------------------------------------------------
+// THE MODE FLAGS' ONE READER (GDD 13; CS012 R1)
+// ---------------------------------------------------------------------------
+//
+// Whether a mode has a feature, off C.MODE_FLAGS. ⛔ THE MODE ARGUMENT IS
+// OPTIONAL in the heat accessors' pattern: omitted, it reads state.mode, the
+// run's; a test passes one. True only for a flag the table declares true, so an
+// unknown mode or name reads as absent rather than throwing mid-step.
+function modeHas(name, mode) {
+  const flags = C.MODE_FLAGS[mode === undefined ? state.mode : mode];
+  return !!flags && flags[name] === true;
 }

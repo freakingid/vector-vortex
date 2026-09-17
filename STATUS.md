@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.8 · Changeset: CS012 (P1 of 6 done) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 3/5
+Version: 0.0.8 · Changeset: CS012 (P2 of 6 done) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5
 
 ## Phase ledger — CS012
 
@@ -14,13 +14,14 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 | Phase | Commit | One line |
 |---|---|---|
 | P1 | this commit | `drive` (138 BPM, 36 bars A→B→C, six layers, untiered, unmarked; kick `beat: true`) in `17-audio-tracks.js` and both labs; `C.MODE_TRACK.overdrive`, DRIVE on MUSIC TRACK; `tracks` 3. `test-cs012-p1.js` (55). Headroom 1.0345 → 0.3505; worst 13 nodes. Four closed files in place (three outside plan §11). 9 of 9 red |
+| P2 | this commit | `C.MODE_FLAGS` + `modeHas()`; `C.SPAWN_SCHEDULE_OVERDRIVE` merged by `eligibleKinds(level, mode)`; `07-enemies-overdrive.js`, `Reaver extends Vaulter` (hop ÷ 1.6, hunts mid-climb); `REAVER_POLY`; kill pitch 1.15 via sfx-lab's new KILL PITCH table. `COUNTS` 7 / 10. `test-cs012-p2.js` (158). One closed edit (`test-cs009-p4.js` voices). 12 of 12 mutations red |
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (24 modules + 3 inlined kit,
-  594.7 KB); the manifest is checked both directions against `src/`, and a
+- `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
+  620.9 KB); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **61 test files, all green, zero skips** (101 s).
+- `node scratchpad/run-all.js`: **62 test files, all green, zero skips**.
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -322,7 +323,23 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   roll.** Unreachable while `C.START_DEPTH_CAP` is 81.
 - **The enemy palette, the menu palette and the HUD sizes are ⚠ provisional**, and
   `tools/glow-lab.html` does not exist and has no owner.
-- ⛔ **`src/07-enemies.js` wants splitting at CS012** (`ROADMAP.md`, "Still open").
+- ✅ **The enemy split is done (CS012 P2, O15).** ⛔ An Overdrive enemy goes in
+  `07-enemies-overdrive.js` and enters through `C.SPAWN_SCHEDULE_OVERDRIVE`; there
+  is no bench key for one (O16), and `DEBUG_ROW_KINDS` stays Classic's six.
+- ⛔ **THE REAVER (CS012 P2) IS A `Vaulter` SUBCLASS.** The Vaulter's hop duration
+  and mid-climb heading are overridable readers (`hopDuration()`,
+  `midClimbDir()`) and both intervals are `÷ this.hopRate` (1). ⛔ Keep
+  `C.VAULT_CLIMB * climbMult()` textually as is (five call sites,
+  `test-cs007-p2.js`). ⛔ `bandRun`-style `instanceof X.Vaulter` checks in closed
+  files also match a Reaver; they run Classic, so none sees one today.
+- ⚠ **FINDING (CS012 P2, MEASURED): CS008 P1's ε and `atRim()` mutations no longer
+  redden a rim-arrival table alone.** P1b's sweep masks them under held fire. A
+  CS013 item-13 test for the Warden or Mimic mutates the sweep AND ε together
+  (`test-cs012-p2.js` §9: 18/24). `atRim()` cannot redden a Reaver case at all (it
+  hunts mid-climb).
+- ⚠ **A wall-pinned, fire-holding driver parks an Overdrive L7 board with no
+  Reaver released** (Weavers and Carriers fill the budget). `test-cs012-p2.js`'s
+  `pinWall()` alternates the sweeping replay with a fire-released wall pin.
 - **GDD §12's four-second promise is not delivered** — CS016's.
 - **A rim Vaulter hunts the Skimmer's continuous lane**, so a player parked
   between two centres has it hopping back and forth. Unowned.
@@ -356,7 +373,7 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 - ✅ **CS012 P1 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`,
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`, `tracks` 3. ⛔ Its lab session
   (PASS marks, tiers, balance) is Paul's and ports as its own commit.
-- The Overdrive `PTS_REAVER`, `PTS_MIMIC`, `PTS_WARDEN` are unread — CS012's.
+- `PTS_REAVER` is read (CS012 P2). `PTS_MIMIC` and `PTS_WARDEN` are unread — CS013's.
 - ⛔ **CS015 — achievements** (Paul's M4), planned once Overdrive exists.
 - ✅ **`C.TELEMETRY_PLACEHOLDER` is one key, `maxCombo`**, which goes with GDD
   §14.4's combo. ⛔ The telemetry column list is frozen until a changeset
@@ -370,10 +387,12 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   step, verified against that repo's own suite. `createScores`
   (`src/22-meta.NOTES.md`) is kit-scores' draft.
 - ⛔ **The seven debug spawn actions ship until CS017** (Paul's H5 call).
-- ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
-  mover of either is an Overdrive enemy.
+- ⛔ `scratchpad/test-registry.js`: `enemies` 7 and `enemyKinds` 10 (CS012 P2, the
+  Reaver). The next movers are CS013's Warden and Mimic.
+- ⛔ **`C.MODE_FLAGS` / `modeHas()` have no game reader yet**; P4 (combo) and P5
+  (Jump) are the first. `modeHas(name)` defaults to `state.mode`.
 
-## Next up — CS012 P2 (the mode flags, the Reaver, Overdrive's schedule)
+## Next up — CS012 P3 (Overdrive at the front door, and its own board)
 
-Run `IMPLEMENTATION-PHASES-CS012.md` P2 in a new session.
+Run `IMPLEMENTATION-PHASES-CS012.md` P3 in a new session.
 ✅ P3's registry precondition is met (coinless-kit `e2efed5`, Carried tasks).

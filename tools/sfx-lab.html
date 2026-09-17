@@ -13,6 +13,10 @@
                Surger charge tone's audition against the music)
     BLOCK SFX  src/00-config.js's SFX group: every candidate A
   Candidates B and C live in the CANDIDATES block, and none of it ships.
+  A new voice's KILL PITCH gets the same treatment (CS012 P2, the Reaver): 2–3
+  pitch candidates in PITCH_ALTS, A being BLOCK SFX's value, in the KILL PITCH
+  table under the events. COPY OUT rewrites that voice's number on the
+  SFX_KILL_PITCH line when its pick is not A.
 
   THE ROUTE BACK INTO THE REPO. Mark a candidate "picked" in a row, press COPY
   OUT, and paste the text over src/00-config.js's SFX group. COPY OUT rewrites
@@ -86,6 +90,11 @@
   <table id="grid">
     <thead><tr><th>Event</th><th>Brief</th><th>Candidate A</th><th>Candidate B</th><th>Candidate C</th><th>In context</th></tr></thead>
     <tbody id="rows"></tbody>
+  </table>
+
+  <table id="pitchGrid">
+    <thead><tr><th>Kill pitch</th><th>Brief</th><th>Candidate A</th><th>Candidate B</th><th>Candidate C</th><th>In context</th></tr></thead>
+    <tbody id="pitchRows"></tbody>
   </table>
 
   <div class="row">
@@ -1241,7 +1250,7 @@ const MUSIC_TRACKS = {
     menuBack:       { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
-  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6 },
+  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
 // ===== BLOCK SFX END =====
 </script>
 
@@ -1370,6 +1379,21 @@ const SFX_ALTS = {
     { label: "square down", recipe: { osc: [{ type: "square", f: 880, to: 440 }], glide: 0.06, atk: 0.002, hold: 0.02, rel: 0.07, gain: 0.08 } },
   ],
 };
+
+// ⛔ KILL-PITCH CANDIDATES (CS012 P2, R12). A voice added after CS009 picks its
+// pitch here: candidate A is BLOCK SFX's SFX_KILL_PITCH value, B and C below.
+const PITCH_BRIEFS = {
+  reaver: "The Reaver's kill: a faster Vaulter (GDD 14.6). Related to the Vaulter's 1, brighter, and clear of the Weaver's 1.25.",
+};
+const PITCH_A_LABELS = {
+  reaver: "bright",
+};
+const PITCH_ALTS = {
+  reaver: [
+    { label: "a semitone up", pitch: 1.06 },
+    { label: "a fourth up", pitch: 1.33 },
+  ],
+};
 // ===== CANDIDATES END =====
 </script>
 
@@ -1448,6 +1472,21 @@ function candidates(name) {
   $("err").textContent = problems.join("\n");
 }
 
+function pitchCandidates(voice) {
+  return [{ label: PITCH_A_LABELS[voice], pitch: SHIPPED.SFX_KILL_PITCH[voice] }].concat(PITCH_ALTS[voice] || []);
+}
+const PITCH_VOICES = Object.keys(PITCH_ALTS);
+
+// COPY OUT's pitch rewrite: one voice's number on the SFX_KILL_PITCH line.
+function rewritePitch(src, voice, pitch) {
+  const lines = src.split("\n");
+  const at = lines.findIndex(l => l.startsWith("  SFX_KILL_PITCH:"));
+  const re = new RegExp("\\b" + voice + ": [0-9.]+");
+  if (at < 0 || !re.test(lines[at])) throw new Error("COPY OUT: no pitch for " + voice);
+  lines[at] = lines[at].replace(re, voice + ": " + pitch);
+  return lines.join("\n");
+}
+
 // ---- picks -----------------------------------------------------------------
 const PICK_KEY = "vv_sfx_lab_picks_v2";   // v2: Paul's 2026-09-16 picks became candidate A
 const picks = {};
@@ -1458,6 +1497,22 @@ try {
     if (Number.isInteger(saved[name]) && saved[name] >= 0 && saved[name] < candidates(name).length) picks[name] = saved[name];
   }
 } catch (err) { /* no storage: picks live for this page only */ }
+
+const PITCH_PICK_KEY = "vv_sfx_lab_pitch_picks_v1";
+const pitchPicks = {};
+for (const v of PITCH_VOICES) pitchPicks[v] = 0;
+try {
+  const saved = JSON.parse(localStorage.getItem(PITCH_PICK_KEY) || "{}");
+  for (const v of PITCH_VOICES) {
+    if (Number.isInteger(saved[v]) && saved[v] >= 0 && saved[v] < pitchCandidates(v).length) pitchPicks[v] = saved[v];
+  }
+} catch (err) { /* no storage: picks live for this page only */ }
+
+function setPitchPick(voice, k) {
+  pitchPicks[voice] = k;
+  try { localStorage.setItem(PITCH_PICK_KEY, JSON.stringify(pitchPicks)); } catch (err) { /* ignore */ }
+  refreshPicks();
+}
 
 function setPick(name, k) {
   picks[name] = k;
@@ -1526,7 +1581,7 @@ function setMusic(on) {
 // Each: what "in context" plays, as the hint says. Neighbours are PICKED.
 const CONTEXT = {
   fire:           ["fire ×4, then a kill (voice below)", k => { for (let i = 0; i < 4; i++) at(i * 0.11, "fire", k); at(0.36, "kill", undefined, killPitch()); at(0.55, "fire", k); }],
-  kill:           ["fire → kill, through all seven voices", k => { VOICES.forEach((v, i) => { at(i * 0.5, "fire"); at(i * 0.5 + 0.08, "kill", k, SHIPPED.SFX_KILL_PITCH[v]); }); }],
+  kill:           ["fire → kill, through every voice", k => { VOICES.forEach((v, i) => { at(i * 0.5, "fire"); at(i * 0.5 + 0.08, "kill", k, SHIPPED.SFX_KILL_PITCH[v]); }); }],
   split:          ["fire → split → fire → kill", k => { at(0, "fire"); at(0.08, "split", k); at(0.4, "fire"); at(0.48, "kill", undefined, killPitch()); }],
   chip:           ["fire → chip, three times", k => { for (let i = 0; i < 3; i++) { at(i * 0.18, "fire"); at(i * 0.18 + 0.06, "chip", k); } }],
   bolt:           ["bolt → fire → kill (the bolt's voice)", k => { at(0, "bolt", k); at(0.3, "fire"); at(0.38, "kill", undefined, SHIPPED.SFX_KILL_PITCH.weaverBolt); }],
@@ -1601,6 +1656,44 @@ function buildGrid() {
   });
 }
 
+// The kill-pitch table: ▶ per candidate plays the PICKED kill recipe at that
+// pitch; ▶ in context alternates the Vaulter's kill with this voice's, twice.
+function buildPitchGrid() {
+  const tb = $("pitchRows");
+  for (const voice of PITCH_VOICES) {
+    const tr = document.createElement("tr");
+    const list = pitchCandidates(voice);
+    let html = `<td class="nm">${voice}</td><td class="brief">${PITCH_BRIEFS[voice]}</td>`;
+    for (let k = 0; k < 3; k++) {
+      const c = list[k];
+      if (!c) { html += "<td></td>"; continue; }
+      html += `<td class="cand"><button id="pbtn-${voice}-${k}" data-pplay="${voice}" data-k="${k}">▶ ${LETTERS[k]} · ${c.label} (×${c.pitch})</button>` +
+        `<label id="plab-${voice}-${k}"><input type="radio" name="ppick-${voice}" data-ppick="${voice}" data-k="${k}">picked</label></td>`;
+    }
+    html += `<td><button class="ctx" data-pctx="${voice}">▶ in context</button><div class="hint">vaulter kill → ${voice} kill, twice</div></td>`;
+    tr.innerHTML = html;
+    tb.appendChild(tr);
+  }
+  tb.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b || !ensure()) return;
+    if (b.dataset.pplay) {
+      at(0, "kill", undefined, pitchCandidates(b.dataset.pplay)[Number(b.dataset.k)].pitch);
+      flash("pbtn-" + b.dataset.pplay + "-" + b.dataset.k);
+    } else if (b.dataset.pctx) {
+      const p = pitchCandidates(b.dataset.pctx)[pitchPicks[b.dataset.pctx]].pitch;
+      for (let i = 0; i < 2; i++) {
+        at(i * 1.0, "fire"); at(i * 1.0 + 0.08, "kill", undefined, SHIPPED.SFX_KILL_PITCH.vaulter);
+        at(i * 1.0 + 0.5, "fire"); at(i * 1.0 + 0.58, "kill", undefined, p);
+      }
+    }
+  });
+  tb.addEventListener("change", e => {
+    const r = e.target;
+    if (r.dataset && r.dataset.ppick) setPitchPick(r.dataset.ppick, Number(r.dataset.k));
+  });
+}
+
 // ---- copy out ---------------------------------------------------------------
 function pickedEdits() {
   const out = {};
@@ -1615,13 +1708,30 @@ function refreshPicks() {
       lab.classList.toggle("on", picks[name] === k);
     }
   }
-  $("picks").textContent = "picked: " + EVENTS.map(n => n + " " + LETTERS[picks[n]]).join(" · ");
-  $("out").value = rewriteSfxBlock(blockSfxText(), pickedEdits());
+  for (const v of PITCH_VOICES) {
+    for (let k = 0; k < pitchCandidates(v).length; k++) {
+      const lab = $("plab-" + v + "-" + k);
+      lab.querySelector("input").checked = pitchPicks[v] === k;
+      lab.classList.toggle("on", pitchPicks[v] === k);
+    }
+  }
+  $("picks").textContent = "picked: " + EVENTS.map(n => n + " " + LETTERS[picks[n]]).join(" · ") +
+    " · kill pitch: " + PITCH_VOICES.map(v => v + " " + LETTERS[pitchPicks[v]]).join(" · ");
+  $("out").value = copyOutText();
+}
+
+// COPY OUT's whole text: the event picks, then every pitch pick that is not A.
+function copyOutText() {
+  let text = rewriteSfxBlock(blockSfxText(), pickedEdits());
+  for (const v of PITCH_VOICES) {
+    if (pitchPicks[v] !== 0) text = rewritePitch(text, v, pitchCandidates(v)[pitchPicks[v]].pitch);
+  }
+  return text;
 }
 
 $("copy").onclick = () => {
-  const edits = Object.keys(pickedEdits()).length;
-  const text = rewriteSfxBlock(blockSfxText(), pickedEdits());
+  const edits = Object.keys(pickedEdits()).length + PITCH_VOICES.filter(v => pitchPicks[v] !== 0).length;
+  const text = copyOutText();
   $("out").value = text;
   $("out").select();
   const say = copied => {
@@ -1650,6 +1760,7 @@ for (const [id, bus] of [["volMaster", "master"], ["volSfx", "sfx"], ["volMusic"
 }
 
 buildGrid();
+buildPitchGrid();
 refreshPicks();
 requestAnimationFrame(tick);
 </script>

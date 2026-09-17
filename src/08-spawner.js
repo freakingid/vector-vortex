@@ -73,6 +73,11 @@ const ENEMY_KINDS = {
   // the throat, and GDD 17.1's replay guarantee is exactly that dependency not
   // existing. The Weaver, the bolt and the Thorn are the same case.
   surger: (lane, depth) => new Surger(lane, depth),
+  // ⛔ OVERDRIVE'S FIRST ROW (CS012 P2; 07-enemies-overdrive.js). It USES `dir`
+  // exactly as the Vaulter does: the heading it would keep if it ever held one.
+  // A Classic run never asks for it, because only C.SPAWN_SCHEDULE_OVERDRIVE
+  // names it.
+  reaver: (lane, depth, dir) => new Reaver(lane, depth, dir),
 };
 
 // The RELEASE BUDGET — how many THREATS may be alive at once. ⛔ The MIN of the
@@ -165,9 +170,16 @@ function spawnEnemy(kind, lane, depth) {
 }
 
 // GDD 8.1's INTRODUCTION SCHEDULE, read (CS007 P3). Which kinds the well may
-// release at `level` — ⛔ A FUNCTION OF THE LEVEL AND NOTHING ELSE. No board
-// state, no heat, no draw: GDD 1.1 P3 is "escalation you can name", and a set
-// that depended on what happened to be on screen is not nameable.
+// release at `level` — ⛔ A FUNCTION OF THE LEVEL AND THE RUN'S MODE, AND
+// NOTHING ELSE. No board state, no heat, no draw: GDD 1.1 P3 is "escalation you
+// can name", and a set that depended on what happened to be on screen is not
+// nameable.
+//
+// ⛔ THE MODE (CS012 P2, Paul's O2). `mode` defaults to "classic", and only
+// "overdrive" reads C.SPAWN_SCHEDULE_OVERDRIVE: its rows are merged into the
+// Classic rows in ascending level, a Classic row first at an equal level, so an
+// Overdrive set is still in level order and still only grows. A Classic set is
+// the rows below and nothing else, element for element the pre-CS012 answer.
 //
 // ⛔ THE SCHEDULE ITSELF IS DATA IN C (C.SPAWN_SCHEDULE, 00-config.js), where
 // the reasoning lives — the cumulative rule, why `thorn` and `weaverBolt` are
@@ -184,11 +196,20 @@ function spawnEnemy(kind, lane, depth) {
 // second, and never in the draw path, which is where GDD 17's no-allocation
 // budget applies. Returning a shared array would hand a mutable schedule to
 // whatever asked for it.
-function eligibleKinds(level) {
+function eligibleKinds(level, mode) {
+  const extra = mode === "overdrive" ? C.SPAWN_SCHEDULE_OVERDRIVE : [];
   const out = [];
+  let j = 0;
   for (let i = 0; i < C.SPAWN_SCHEDULE.length; i++) {
     const row = C.SPAWN_SCHEDULE[i];
+    // An Overdrive row strictly below this Classic row's level goes first.
+    for (; j < extra.length && extra[j].level < row.level; j++) {
+      if (level >= extra[j].level) out.push(extra[j].kind);
+    }
     if (level >= row.level) out.push(row.kind);
+  }
+  for (; j < extra.length; j++) {
+    if (level >= extra[j].level) out.push(extra[j].kind);
   }
   return out;
 }
@@ -212,9 +233,10 @@ function eligibleKinds(level) {
 // spend exactly what the old `spawnEnemy("vaulter", ...)` literal did — which
 // is nothing. There is no genuine choice to make, so no randomness is spent
 // making it. ⛔ Levels 1-2 are that case, and they are the levels every golden
-// recording in the suite lives in.
+// recording in the suite lives in. ⛔ In BOTH modes (CS012 P2): Overdrive's
+// first row is level 6, so its levels 1-2 are one entry too.
 function pickSpawnKind(state) {
-  const kinds = eligibleKinds(state.level);
+  const kinds = eligibleKinds(state.level, state.mode);
   if (kinds.length < 2) return kinds[0];
   return rngPick(state.rng, kinds);
 }

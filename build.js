@@ -53,6 +53,7 @@ const MANIFEST = [
   "05-skimmer.js",
   "06-shots.js",
   "07-enemies.js",
+  "07-enemies-overdrive.js",
   "08-spawner.js",
   "09-collision.js",
   "10-powerups.js",

@@ -253,17 +253,22 @@ derived push. ⛔ **Raising `CLIMB_MULT_MAX` means re-deriving the guarantee**, 
 assertion reads so a future faster entity cannot escape it silently.
 
 ⛔ **The OTHER thing `game.level` decides is WHICH KINDS a well may release, and
-it is `C.SPAWN_SCHEDULE`** — seven `{ level, kind }` rows, cumulative and sorted.
-`eligibleKinds(level)` (`08-spawner.js`) is the whole mechanism: the rows at or
-below the level, in schedule order. ⛔ **It is a function of the level and
-nothing else** — no board state, no heat, no draw. ⛔ **`thorn` and `weaverBolt`
-are NEVER rows**; they enter through `Weaver.layThorn()` and `Weaver.fire()`, and
-a row for either puts a parentless entity in the throat.
+it is `C.SPAWN_SCHEDULE`** — seven `{ level, kind }` rows, cumulative and sorted —
+**plus, on an Overdrive run, `C.SPAWN_SCHEDULE_OVERDRIVE`** (CS012 P2, O2).
+`eligibleKinds(level, mode)` (`08-spawner.js`) is the whole mechanism: the rows at
+or below the level, merged in level order, a Classic row first at an equal level;
+`mode` defaults to `"classic"`. ⛔ **It is a function of the level and the run's
+mode, and nothing else** — no board state, no heat, no draw. ⛔ Overdrive's rows
+are a second table, never a `mode` field on `C.SPAWN_SCHEDULE`'s rows
+(`test-cs007-p3.js` holds those at `level` + `kind`). ⛔ **`thorn` and
+`weaverBolt` are NEVER rows**; they enter through `Weaver.layThorn()` and
+`Weaver.fire()`, and a row for either puts a parentless entity in the throat.
 
 ⛔ **A one-entry eligible set spends NO draw; two or more spend exactly ONE.**
 `rngPick()` on a single-element array still advances the run's one stream, and
 that stream is shared with every spawn lane — so a draw spent at levels 1–2 moves
-`test-cs004-p1.js`'s `GOLDEN_LANES`, whose whole window lives there. ⛔ **Never
+`test-cs004-p1.js`'s `GOLDEN_LANES`, whose whole window lives there. The rule is
+the same in both modes. ⛔ **Never
 rename `pickSpawnKind(state)`:** `_harness.js`'s `EXPORTS` and four closed test
 files call it by name.
 
@@ -314,6 +319,10 @@ Purge destroys it**, and — seventh point, GDD §6.5 — an entity that is
 survives a dive. `startDive()` filters the board down to `anchored` survivors,
 so today the answer for the one entity in that position is *no*. And — CS009
 P5, GDD §6.5 — **decide explicitly its `sfxVoice`**, the eighth contract field.
+⛔ **A Classic enemy lives in `07-enemies.js`; an Overdrive enemy lives in
+`07-enemies-overdrive.js`** (CS012 P2, O15), against the contract in the first,
+and reaches the board only through `C.SPAWN_SCHEDULE_OVERDRIVE`. Its kill pitch
+comes from `tools/sfx-lab.html`'s KILL PITCH table.
 
 ⛔ **`anchored` says what `depth` MEANS on an entity, not whether it moves.**
 `false` is a position; `true` is a length — the tip of an extent rooted at the
@@ -582,15 +591,18 @@ Read-order skeleton. GDD §16 is authoritative for what actually exists.
 
 ```
 src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
+                       + modeHas(), C.MODE_FLAGS' one reader
     01-rng.js          mulberry32 — the run's ONE seeded stream
     02-state.js        the one mutable game object
     03-wells.js        the 16 well definitions (DATA) + the depth model
     04-input.js        four devices -> one input struct
     05-skimmer.js      movement, snap assist, the wall squash, the blink
     06-shots.js        firing, lane-locked travel
-    07-enemies.js      the entity contract + the Vaulter
+    07-enemies.js      the entity contract + the Classic roster
+    07-enemies-overdrive.js  Overdrive's roster: the Reaver (CS013: Warden,
+                       Mimic). Extends 07-enemies.js's classes
     08-spawner.js      spawnEnemy() — the ONE way in — cadence, quota, clear,
-                       and GDD 8.1's introduction schedule (eligibleKinds)
+                       and GDD 8.1's introduction schedule per mode (eligibleKinds)
     09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge
     10-powerups.js     Overdrive tokens
     11-dive.js         the Dive: the beat, the Thorn strike, the loop guard

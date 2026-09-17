@@ -207,6 +207,28 @@ const C = {
   VAULT_RIM_INTERVAL_MIN: 0.35, // ⛔ its floor at HEAT_FULL_LEVEL
   VAULT_FIRST_LEVEL:    2,      // ⛔ GDD 6.3 — no mid-climb vaulting at level 1
 
+  // ---- Reaver (GDD 6.4, 14.6; CS012 P2) — Overdrive only ------------------
+  // A Vaulter at 1.6x that vaults toward the Skimmer (07-enemies-overdrive.js).
+  // ⛔ THE RATE SCALES THE HOP AND NOTHING ELSE (Paul's O1): the hop duration
+  // and both hop intervals are divided by it, and the climb stays the Vaulter's
+  // `C.VAULT_CLIMB * climbMult()`. MEASURED (PLANNED-FEATURES-CS012.md §1.1): a
+  // CLIMB at 1.6x breaches GDD 4.4's respawn guarantee at level 1, so
+  // CLIMB_MAX_BASE and CLIMB_MULT_MAX do not move. The hop is 0.175 s, and the
+  // rim interval's floor 0.35 / 1.6 = 0.219 s stays above it, so the knob stays
+  // live at every level. ⛔ Heat never scales the hop (H2): the rate is a
+  // constant, and GDD 17 item 3's soak bound is 2 * DT / (VAULT_HOP_TIME / rate).
+  REAVER_HOP_RATE:      1.6,
+  // ⚠ PROVISIONAL, like the palette (O16). The family read is the Vaulter's X at
+  // the Vaulter's size; the difference is two swept barbs on the rim-side arms
+  // (REAVER_POLY, 14-render-entities.js). Each barb's tip sits BARB_SWEEP lane
+  // half-widths in from its arm tip and BARB_REACH depth units rimward of it; its
+  // root sits BARB_ROOT of the way along the arm's inner edge.
+  REAVER_SIZE:          0.70,   // lane widths spanned, = VAULTER_SIZE
+  REAVER_BARB_SWEEP:    0.30,
+  REAVER_BARB_REACH:    0.35,
+  REAVER_BARB_ROOT:     0.35,
+  REAVER_COLOR:         "#FF4A4A",  // ⚠ = VAULTER_COLOR, shared (O16); the silhouette carries the difference
+
   // ---- Carrier (GDD 6.1, 6.2) ---------------------------------------------
   // ⛔ CARRIER_SIZE and CARRIER_GLYPH_SIZE are LANE widths and nothing else.
   // entityPoints() (14-render-entities.js) scales a poly's `l` by size/2 and
@@ -468,6 +490,17 @@ const C = {
     { level: 18, kind: "carrierDrifter" },
     { level: 23, kind: "carrierSurger" },
   ],
+  // ⛔ OVERDRIVE'S ROWS (GDD 13, 14.6; Paul's O2, CS012 P2). A SECOND TABLE, not a
+  // `mode` field on the rows above: test-cs007-p3.js holds C.SPAWN_SCHEDULE at
+  // seven rows of `level` and `kind` and nothing else, and that absence is the
+  // no-weight-table decision. eligibleKinds(level, mode) merges these into the
+  // Classic rows in level order, a Classic row first at an equal level, for an
+  // Overdrive run only. The same rules hold: cumulative, sorted, uniform pick, no
+  // weights, and a one-entry set spends no draw in either mode. CS013 adds the
+  // Warden (11) and the Mimic (16) here.
+  SPAWN_SCHEDULE_OVERDRIVE: [
+    { level:  6, kind: "reaver" },
+  ],
 
   // ---- Collision (GDD 4.5) ------------------------------------------------
   // The band below the rim in which an enemy's contact kills (GDD 4.5 item 1).
@@ -630,12 +663,20 @@ const C = {
     menuBack:       { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
-  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6 },
+  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
 
   // ---- Overdrive (GDD 14) -------------------------------------------------
   MAX_TOKENS:           2,      // ⛔ readability cap on powerups on screen
   TOKEN_LIFE:           9.0,    // s. ⛔ counts UP toward this. GDD 16.3.
   TOKEN_HOVER_DEPTH:    0.80,
+  // ⛔ WHAT A MODE HAS, AS DATA (GDD 1, 20 #28: "flags in the config, not a
+  // fork"; CS012 R1). One reader, modeHas() at the foot of this file. The
+  // Reaver, the track and the board are not flags: they go through
+  // SPAWN_SCHEDULE_OVERDRIVE, MODE_TRACK and the board's game id.
+  MODE_FLAGS: {
+    classic:   { jump: false, combo: false },
+    overdrive: { jump: true,  combo: true },
+  },
   JUMP_TIME:            0.90,
   JUMP_RECOVERY:        0.20,
   JUMP_COOLDOWN:        1.40,
@@ -817,8 +858,8 @@ const C = {
 // THE HEAT CLOCK (GDD 8) — ⛔ ONE CLOCK: state.level
 // ---------------------------------------------------------------------------
 //
-// ⛔ THE ONLY FUNCTIONS IN THIS FILE, AND THEY ARE HERE BECAUSE THEY ARE THE
-// TUNING SURFACE'S OTHER HALF. C above says what a value is at level 1 and what
+// ⛔ THE ONLY FUNCTIONS IN THIS FILE BUT ONE (modeHas(), below them), AND THEY
+// ARE HERE BECAUSE THEY ARE THE TUNING SURFACE'S OTHER HALF. C above says what a value is at level 1 and what
 // it is at the top; the seven accessors below say how the game walks between
 // the two. Splitting them would put half of one decision in each of two files.
 //
@@ -923,6 +964,19 @@ function surgeInterval(level) {
 // number, four consequences; see WEAVER_APEX_MAX above.
 function weaverApex(level) {
   return heatLerp(C.WEAVER_APEX, C.WEAVER_APEX_MAX, level);
+}
+
+// ---------------------------------------------------------------------------
+// THE MODE FLAGS' ONE READER (GDD 13; CS012 R1)
+// ---------------------------------------------------------------------------
+//
+// Whether a mode has a feature, off C.MODE_FLAGS. ⛔ THE MODE ARGUMENT IS
+// OPTIONAL in the heat accessors' pattern: omitted, it reads state.mode, the
+// run's; a test passes one. True only for a flag the table declares true, so an
+// unknown mode or name reads as absent rather than throwing mid-step.
+function modeHas(name, mode) {
+  const flags = C.MODE_FLAGS[mode === undefined ? state.mode : mode];
+  return !!flags && flags[name] === true;
 }
 
 // ==========================================================================
@@ -2922,6 +2976,11 @@ function updateShots(state, well, dt) {
 // draw(ctx, well) / dead. Kill by setting `dead = true`; removal is an
 // end-of-frame .filter() in the caller. Never spliced mid-loop.
 //
+// ⛔ THE CLASSIC ROSTER LIVES HERE, AND OVERDRIVE'S IN 07-enemies-overdrive.js
+// (CS012 P2, Paul's O15). That module is concatenated directly after this one
+// and extends the classes below; nothing moved out of this file. A new Overdrive
+// enemy goes there, against the contract written here.
+//
 // ⛔ ONE ARRAY, state.enemies (CS003 P2). Thorns, Carriers and Drifters all
 // live in it; the contract FLAGS below decide behaviour, not a second array. A
 // second array doubles all six wiring points CLAUDE.md lists.
@@ -3098,9 +3157,16 @@ class Vaulter extends Enemy {
     // hittable in both lanes it is near), so these exist to interpolate it
     // rather than to teleport at the end.
     this.hopping = false;
-    this.hopTime = 0;    // counts up toward C.VAULT_HOP_TIME
+    this.hopTime = 0;    // counts up toward hopDuration()
     this.hopFrom = this.lane;
     this.hopDelta = 0;   // signed lane distance of this hop, already short-way
+
+    // ⛔ HOPS PER VAULTER HOP (CS012 P2, R9). Both hop intervals are divided by
+    // it. 1 here, and `x / 1 === x` in IEEE-754, so a Vaulter's arithmetic is
+    // bit-identical to the build before it existed. The Reaver
+    // (07-enemies-overdrive.js) sets C.REAVER_HOP_RATE. DATA, not behaviour, on
+    // THIS class and never on `Enemy`, which stays fields only.
+    this.hopRate = 1;
   }
 
   // ⛔ At the PARK depth, `1 - C.RIM_CONTACT_DEPTH` — the same expression the
@@ -3138,7 +3204,10 @@ class Vaulter extends Enemy {
     // Both fall with heat; VAULT_HOP_TIME, which advanceHop() below spends, does
     // not — H2, and it is what keeps three closed soaks' per-tick lane bounds
     // (2 * DT / VAULT_HOP_TIME) valid at every level without being re-derived.
-    const interval = atRim ? vaultRimInterval() : vaultInterval();
+    //
+    // ⛔ ÷ this.hopRate (CS012 P2): exactly 1 on a Vaulter. The accessor is still
+    // what is read, so heat's clamp cannot be escaped by a subclass.
+    const interval = (atRim ? vaultRimInterval() : vaultInterval()) / this.hopRate;
     // Advances DURING a hop too, so the period between hop STARTS is the
     // interval itself rather than interval + crossing time.
     if (this.hopTimer < interval) this.hopTimer += dt;
@@ -3154,14 +3223,30 @@ class Vaulter extends Enemy {
     // is NOT gated — GDD 6.1 attaches "from L2" to vaulting, and GDD 12
     // promises a passive player dies on level 1, which a Vaulter parked
     // politely at the rim cannot deliver.
+    //
+    // ⛔ The mid-climb half is an OVERRIDABLE READER, midClimbDir() below
+    // (CS012 P2, R9): the Reaver hunts there too. The rim half is not.
     let dir = 0;
     if (atRim) dir = this.huntDir(well, state);
-    else if (state.level >= C.VAULT_FIRST_LEVEL) dir = this.dir;
+    else dir = this.midClimbDir(well, state);
 
     if (dir !== 0) {
       this.hopTimer = 0;
       this.startHop(well, dir);
     }
+  }
+
+  // ⛔ THE MID-CLIMB HEADING, AN OVERRIDABLE READER (CS012 P2, R9). A Vaulter
+  // keeps its own heading from level C.VAULT_FIRST_LEVEL and holds before it
+  // (GDD 6.3); 0 means no hop this beat. The Reaver returns huntDir() instead.
+  midClimbDir(well, state) {
+    return state.level >= C.VAULT_FIRST_LEVEL ? this.dir : 0;
+  }
+
+  // ⛔ THE HOP DURATION, AN OVERRIDABLE READER (CS012 P2, R9). ⛔ Heat never
+  // scales it (H2): three closed soaks derive a per-tick lane bound from it.
+  hopDuration() {
+    return C.VAULT_HOP_TIME;
   }
 
   // Which way the Skimmer is, as -1 / 0 / +1. ⛔ laneDelta, never (a - b): on a
@@ -3207,7 +3292,7 @@ class Vaulter extends Enemy {
   // hittable in both lanes it is near for the whole C.VAULT_HOP_TIME, which is
   // the window GDD 6.1's "vaults lanes" is really describing.
   advanceHop(dt, well) {
-    const dur = C.VAULT_HOP_TIME;
+    const dur = this.hopDuration();
     this.hopTime += dt;
 
     if (!(dur > 0) || this.hopTime >= dur) {
@@ -4294,6 +4379,84 @@ class Surger extends Enemy {
 }
 
 // ==========================================================================
+// 07-enemies-overdrive.js
+// ==========================================================================
+// 07-enemies-overdrive.js — OVERDRIVE'S ROSTER (GDD 6.4, 13, 14.6). CS012 P2
+// ships the Reaver; CS013 adds the Warden and the Mimic.
+//
+// ⛔ THE CONTRACT IS 07-enemies.js's, AND IT IS READ THERE FIRST. The eight
+// fields, the four methods, the one array, the one spawn entry point and the
+// wiring points (GDD 6.5) are written down in that file's base class and are not
+// repeated here. Every class below states its eight answers as plan §9 did.
+//
+// ⛔ WHY A SECOND FILE (Paul's O15). 07-enemies.js was 71 KB, 65 % comment, at
+// CS012's plan, and the seam falls where the roster does: Classic there,
+// Overdrive here. Nothing moved out of it. build.js's MANIFEST concatenates this
+// module directly after that one, because the classes here extend classes
+// there, and before 08-spawner.js, whose ENEMY_KINDS names them.
+//
+// ⛔ AN OVERDRIVE ENEMY REACHES THE BOARD ONLY THROUGH C.SPAWN_SCHEDULE_OVERDRIVE
+// (08-spawner.js's eligibleKinds), so a Classic run never releases one. There
+// is no bench key for any of them (O16).
+
+// ---------------------------------------------------------------------------
+// The Reaver (GDD 14.6) — "Vaulter at 1.6x that vaults toward the Skimmer".
+// Overdrive L6+, 300 points. Killed by any shot or the Purge; kills by contact
+// at the rim.
+// ---------------------------------------------------------------------------
+//
+// ⛔ A PARAMETER VARIANT OF THE VAULTER, AND THAT IS WHY IT SUBCLASSES ONE (R9).
+// It overrides two readers and a rate and inherits everything else: the climb,
+// the park depth, the rim hunt, laneHop()'s fold at an open well's wall, onShot
+// and the eight fields. ⛔ This is not the slope 07-enemies.js's base warns
+// about: `Enemy` still carries no behaviour; a variant inheriting its parent's
+// is what GDD 14.6 describes.
+//
+// ⛔ WHAT 1.6x SCALES (Paul's O1): THE HOP, NEVER THE CLIMB. The hop duration and
+// both hop intervals are divided by C.REAVER_HOP_RATE. The climb is the
+// Vaulter's own `C.VAULT_CLIMB * climbMult()`, because a Reaver that CLIMBED at
+// 1.6x would breach GDD 4.4's respawn guarantee from level 1 (MEASURED,
+// PLANNED-FEATURES-CS012.md §1.1). Heat scales the intervals through the
+// Vaulter's accessors and never the hop duration (H2).
+//
+// ⛔ "VAULTS TOWARD THE SKIMMER" (O1's reading): every MID-CLIMB hop takes
+// huntDir(), the rim hunt's direction, from its first update and with no level
+// gate. It holds its lane while it is in the Skimmer's. At the rim it hunts
+// exactly as a Vaulter does, at its own interval.
+//
+// The eight fields: (lane, depth) a position; `purgeable` true (GDD 4.3 exempts
+// only the Thorn); `blocksClear` true, so it is never on the board at a clear
+// and never a Dive survivor; `killDepth` the rim band `1 - C.RIM_CONTACT_DEPTH`;
+// `anchored` false, so respawnSkimmer() pushes it to 0.55 and the guarantee
+// holds because its climb is a Vaulter's; `sfxVoice` "reaver". It is not cargo
+// (R16).
+class Reaver extends Vaulter {
+  constructor(lane, depth, dir) {
+    super(lane, depth, dir);
+    this.sfxVoice = "reaver";   // C.SFX_KILL_PITCH.reaver, from tools/sfx-lab.html
+    this.hopRate = C.REAVER_HOP_RATE;
+  }
+
+  // ⛔ Toward the Skimmer at every mid-climb beat, and 0 (hold) in its lane.
+  midClimbDir(well, state) {
+    return this.huntDir(well, state);
+  }
+
+  // ⛔ The rate, and never heat.
+  hopDuration() {
+    return C.VAULT_HOP_TIME / this.hopRate;
+  }
+
+  // ⛔ drawPoly + glowStroke only (GDD 10.2), in 14-render-entities.js.
+  draw(ctx, well) {
+    drawReaver(ctx, well, this.lane, this.depth);
+  }
+
+  // GDD 7. The kill site pays it; the entity never scores itself.
+  points() { return C.PTS_REAVER; }
+}
+
+// ==========================================================================
 // 08-spawner.js
 // ==========================================================================
 // 08-spawner.js — what releases enemies into a well, and what decides the well
@@ -4371,6 +4534,11 @@ const ENEMY_KINDS = {
   // the throat, and GDD 17.1's replay guarantee is exactly that dependency not
   // existing. The Weaver, the bolt and the Thorn are the same case.
   surger: (lane, depth) => new Surger(lane, depth),
+  // ⛔ OVERDRIVE'S FIRST ROW (CS012 P2; 07-enemies-overdrive.js). It USES `dir`
+  // exactly as the Vaulter does: the heading it would keep if it ever held one.
+  // A Classic run never asks for it, because only C.SPAWN_SCHEDULE_OVERDRIVE
+  // names it.
+  reaver: (lane, depth, dir) => new Reaver(lane, depth, dir),
 };
 
 // The RELEASE BUDGET — how many THREATS may be alive at once. ⛔ The MIN of the
@@ -4463,9 +4631,16 @@ function spawnEnemy(kind, lane, depth) {
 }
 
 // GDD 8.1's INTRODUCTION SCHEDULE, read (CS007 P3). Which kinds the well may
-// release at `level` — ⛔ A FUNCTION OF THE LEVEL AND NOTHING ELSE. No board
-// state, no heat, no draw: GDD 1.1 P3 is "escalation you can name", and a set
-// that depended on what happened to be on screen is not nameable.
+// release at `level` — ⛔ A FUNCTION OF THE LEVEL AND THE RUN'S MODE, AND
+// NOTHING ELSE. No board state, no heat, no draw: GDD 1.1 P3 is "escalation you
+// can name", and a set that depended on what happened to be on screen is not
+// nameable.
+//
+// ⛔ THE MODE (CS012 P2, Paul's O2). `mode` defaults to "classic", and only
+// "overdrive" reads C.SPAWN_SCHEDULE_OVERDRIVE: its rows are merged into the
+// Classic rows in ascending level, a Classic row first at an equal level, so an
+// Overdrive set is still in level order and still only grows. A Classic set is
+// the rows below and nothing else, element for element the pre-CS012 answer.
 //
 // ⛔ THE SCHEDULE ITSELF IS DATA IN C (C.SPAWN_SCHEDULE, 00-config.js), where
 // the reasoning lives — the cumulative rule, why `thorn` and `weaverBolt` are
@@ -4482,11 +4657,20 @@ function spawnEnemy(kind, lane, depth) {
 // second, and never in the draw path, which is where GDD 17's no-allocation
 // budget applies. Returning a shared array would hand a mutable schedule to
 // whatever asked for it.
-function eligibleKinds(level) {
+function eligibleKinds(level, mode) {
+  const extra = mode === "overdrive" ? C.SPAWN_SCHEDULE_OVERDRIVE : [];
   const out = [];
+  let j = 0;
   for (let i = 0; i < C.SPAWN_SCHEDULE.length; i++) {
     const row = C.SPAWN_SCHEDULE[i];
+    // An Overdrive row strictly below this Classic row's level goes first.
+    for (; j < extra.length && extra[j].level < row.level; j++) {
+      if (level >= extra[j].level) out.push(extra[j].kind);
+    }
     if (level >= row.level) out.push(row.kind);
+  }
+  for (; j < extra.length; j++) {
+    if (level >= extra[j].level) out.push(extra[j].kind);
   }
   return out;
 }
@@ -4510,9 +4694,10 @@ function eligibleKinds(level) {
 // spend exactly what the old `spawnEnemy("vaulter", ...)` literal did — which
 // is nothing. There is no genuine choice to make, so no randomness is spent
 // making it. ⛔ Levels 1-2 are that case, and they are the levels every golden
-// recording in the suite lives in.
+// recording in the suite lives in. ⛔ In BOTH modes (CS012 P2): Overdrive's
+// first row is level 6, so its levels 1-2 are one entry too.
 function pickSpawnKind(state) {
-  const kinds = eligibleKinds(state.level);
+  const kinds = eligibleKinds(state.level, state.mode);
   if (kinds.length < 2) return kinds[0];
   return rngPick(state.rng, kinds);
 }
@@ -5809,6 +5994,42 @@ const VAULTER_POLY = [
 function drawVaulter(ctx, well, lane, depth) {
   drawPoly(ctx, entityPoints(well, lane, depth, VAULTER_POLY, C.VAULTER_SIZE), true);
   glowStroke(ctx, C.VAULTER_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
+// The Reaver's silhouette (GDD 14.6, 18; CS012 P2, O16) — the Vaulter's X with
+// two swept barbs on its rim-side arms.
+// ---------------------------------------------------------------------------
+//
+// ⛔ DERIVED FROM VAULTER_POLY, NOT COPIED. The family read ("a faster Vaulter")
+// is the Vaulter's own eight points, so a retune of the X moves both. Each
+// rim-side arm (the two with d > 0, which entityPoints() draws nearer the rim)
+// gains a barb between its tip and the near notch: a tip swept C.REAVER_BARB_SWEEP
+// inward and C.REAVER_BARB_REACH rimward of the arm tip, then a root
+// C.REAVER_BARB_ROOT of the way along the arm's inner edge. Twelve points, one
+// closed outline, and a different outline from the Vaulter's at a glance, which
+// is the difference O16 gives the silhouette to carry: the colour is shared.
+// ⚠ Provisional, like the palette.
+//
+// Built once at evaluation and never at draw time, so entityPoints() memoizes
+// its scratch on it like every other poly.
+const REAVER_POLY = (function () {
+  const v = VAULTER_POLY;
+  const tipL = v[2], notch = v[3], tipR = v[4];
+  const barb = (tip, side) => [
+    { l: tip.l - side * C.REAVER_BARB_SWEEP, d: tip.d + C.REAVER_BARB_REACH },
+    { l: tip.l + (notch.l - tip.l) * C.REAVER_BARB_ROOT, d: tip.d + (notch.d - tip.d) * C.REAVER_BARB_ROOT },
+  ];
+  const left = barb(tipL, -1);
+  const right = barb(tipR, 1);
+  return [v[0], v[1], tipL, left[0], left[1], notch, right[1], right[0], tipR, v[5], v[6], v[7]];
+})();
+
+// ⛔ drawPoly + glowStroke, one closed path, no fill (GDD 10.2), at full alpha
+// at every depth, exactly as drawVaulter() above.
+function drawReaver(ctx, well, lane, depth) {
+  drawPoly(ctx, entityPoints(well, lane, depth, REAVER_POLY, C.REAVER_SIZE), true);
+  glowStroke(ctx, C.REAVER_COLOR, laneLineWidth(depth), 1);
 }
 
 // ---------------------------------------------------------------------------

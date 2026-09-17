@@ -606,6 +606,26 @@ The discharge is `SURGE_DISCHARGE` (0.30 s), and the fuse reaching the rim and t
 
 **Reaver** (L6+), **Warden** (L11+), **Mimic** (L16+). Detailed with concerns in §14.6.
 
+⛔ **Shipped, CS012 P2 — the Reaver.** `class Reaver extends Vaulter` in `src/07-enemies-overdrive.js`, Overdrive's own module (§6.5). It arrives at Overdrive L6 through `C.SPAWN_SCHEDULE_OVERDRIVE` (§8.1), and a Classic run never releases one. §14.6 has what it does; the table below is its contract (plan §9).
+
+| Field / method | Reaver |
+|---|---|
+| `lane`, `depth` | a position, as the Vaulter's |
+| `purgeable` / `blocksClear` | `true` / `true` — the Purge's first use kills it, and it is never a Dive survivor |
+| `killDepth` | `1 - C.RIM_CONTACT_DEPTH`, the shared rim band |
+| `anchored` | `false` — the respawn push reaches it |
+| `sfxVoice` | `"reaver"`, `C.SFX_KILL_PITCH.reaver` 1.15 (sfx-lab candidate A) |
+| `points()` / `onShot()` | `C.PTS_REAVER` (300) / dies and consumes, inherited |
+
+| Property | Constant | Value |
+|---|---|---|
+| Hop rate | `REAVER_HOP_RATE` | 1.6 — hop 0.175 s; both intervals ÷ 1.6 |
+| Silhouette width | `REAVER_SIZE` | 0.70 lane widths |
+| Barbs | `REAVER_BARB_SWEEP`, `_REACH`, `_ROOT` | 0.30, 0.35, 0.35 ⚠ provisional |
+| Colour | `REAVER_COLOR` | `#FF4A4A`, = `VAULTER_COLOR` ⚠ provisional (O16: shared) |
+
+There is no bench key for it (O16): the six digit keys stay Classic's. Overdrive's START DEPTH 7 shows one.
+
 ### 6.5 Entity contract
 
 ⛔ Matching Orbital Overhaul: every entity is a **class** with `constructor` / `update(dt)` / `draw()` / `dead`. Kill by setting `dead = true`; remove with an end-of-frame `.filter()`. **Never splice mid-loop.**
@@ -613,6 +633,8 @@ The discharge is `SURGE_DISCHARGE` (0.30 s), and the fuse reaching the rim and t
 ⛔ **New enemies wire into seven places:** `startGame` reset, `update()` entity pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order, the well-clear condition, and — CS006 P3 — **the Dive**. **Decide explicitly whether the new hazard can be destroyed by the Purge**, and — CS009 P5 — **decide explicitly its `sfxVoice`**.
 
 ⛔ **The seventh point, in full: an entity that is `blocksClear: false` and NOT `anchored` must decide explicitly whether it survives a dive.** Those two flags together are what let an entity be on the board at the moment a well counts as clear, and `startDive()` (§5) filters the board down to `anchored` survivors — so today the answer for the one entity in that position, the `WeaverBolt`, is *no*. A new one that wants a different answer is changing §5's hazard set, not adding a flag.
+
+⛔ **Shipped, CS012 P2 — two enemy modules (Paul's O15).** `07-enemies.js` holds the base and the Classic roster; `07-enemies-overdrive.js`, concatenated directly after it and before `08-spawner.js`, holds Overdrive's (the Reaver; CS013's Warden and Mimic). Nothing moved out of the first. A new Overdrive enemy goes in the second, against the contract below, and enters through `C.SPAWN_SCHEDULE_OVERDRIVE`. ⛔ **A parameter variant may subclass its parent** — the Reaver extends the Vaulter, which gained two overridable readers (`hopDuration()`, `midClimbDir()`) and a `hopRate` of 1 — and that is not the base-class slope below: `Enemy` itself still carries no behaviour.
 
 **Shipped, CS003 P1–P3 — read this before adding an enemy.** `07-enemies.js` holds the base class `Enemy`, and ⛔ **it is fields and signatures only: no movement, no AI, no draw code.** It exists so the ninth enemy cannot silently forget a field; the value is the field list, not the inheritance. ⚠ **That is a slope.** The first time a climb rate or a hop timer lands in the base, five enemies that do not climb inherit one and the bug is invisible until one of them is given a reason to read it. If the base ever acquires behaviour, that is the signal to flatten it back to independent classes — not to add a second field to switch the behaviour off.
 
@@ -626,7 +648,7 @@ The discharge is `SURGE_DISCHARGE` (0.30 s), and the fuse reaching the rim and t
 | `blocksClear` | Whether it must be gone before the well counts as clear. The Thorn is `false`, and that is *why* a Thorn is still standing during the Dive (§5) rather than an oversight in the clear check. |
 | `killDepth` | §4.5's contact rule as a number: contact kills when `depth >= killDepth` and the lanes match. `null` means contact never kills — the Weaver's body. ⛔ **Every enemy that has a number uses the same one, `1 - C.RIM_CONTACT_DEPTH`, the Drifter included** — there is no term here for where the Skimmer is, so a `killDepth` of `0` would be lethal from the throat rather than "lethal on contact" (§4.5, CS005 P2). One comparison covers three of the five death conditions, which is why it is a field. ⛔ **The PARK depth is the same expression** (CS008 P1, §6.1): every climb stops at `1 - C.RIM_CONTACT_DEPTH`, so an enemy parks exactly on the band where it becomes lethal and where a fire-tick shot can reach it — written as the expression and never as `this.killDepth`, because of the mutation below. ⛔ **CS005 P3's Surger is the first entity in the roster that MUTATES this field** — `0` for its `SURGE_DISCHARGE` window and the rim band either side of it — which is how §4.5 item 3 is expressed with no extra field and no branch in the collision pass. That is a *cycle phase written into an existing field*, not a new kind of value, and the restore is as load-bearing as the mutation. |
 | `anchored` | ⛔ **What `depth` MEANS on this entity, not whether it moves.** `false` — the default, and every enemy but one — means `depth` is a **position**. `true` means `depth` is a **length**: the tip of an extent rooted at the throat. A stationary enemy whose `depth` is still a position is `false`; anything that ever reads `depth` as a length sets it true. The Thorn is the roster's only `true`. ⛔ **Its one reader is `respawnSkimmer()`**, which skips anchored entities: §4.4's rim push clamps `depth` down to 0.55, and on a length that is not a push but a free chip nobody earned, applied silently on every player death in the one place nobody would look. ⚠ **This is NOT a narrowing of §4.4's SETTLED clamp.** The band is untouched — everything above `RESPAWN_PUSH_DEPTH` still comes down to it, in every lane. The field says *which entities the clamp means anything for*, not *how far down it reaches*. See `RATIONALE.md#thorn-depth`. |
-| `sfxVoice` | ⛔ **Which kill sound it makes** (CS009 P5, Paul's A9): a string key into `C.SFX_KILL_PITCH`, read by the three kill sites on the false → true `dead` edge and handed to `sfx("kill", voice)`. The kill site reads the field, never a class name. The base is `null`, and each of the seven roster classes sets its own (`vaulter`, `carrier`, `weaver`, `weaverBolt`, `thorn`, `drifter`, `surger`). DATA, not behaviour, so it does not tip the base down the slope above. |
+| `sfxVoice` | ⛔ **Which kill sound it makes** (CS009 P5, Paul's A9): a string key into `C.SFX_KILL_PITCH`, read by the three kill sites on the false → true `dead` edge and handed to `sfx("kill", voice)`. The kill site reads the field, never a class name. The base is `null`, and each of the seven Classic roster classes sets its own (`vaulter`, `carrier`, `weaver`, `weaverBolt`, `thorn`, `drifter`, `surger`); CS012 P2's Reaver is the eighth voice, `reaver`, its pitch picked in `tools/sfx-lab.html`'s KILL PITCH table. DATA, not behaviour, so it does not tip the base down the slope above. |
 
 **The four methods:** `update(dt, well, state)`, `draw(ctx, well)`, `onShot(shot)`, and — CS008 P2 — `points()`. ⛔ **`onShot` returns whether the shot is CONSUMED**, and the *enemy* decides what a hit does — the collision pass only asks. `true` retires the shot; `false` lets it fly on to whatever is behind. That is what keeps the Thorn (chip, consume) and an armoured entity (no damage, do not consume) out of the collision pass as special cases. The base returns `false` deliberately, so a subclass that forgets to override it lets shots through — visible — rather than eating them silently. ⛔ **Since CS008 P1b `onShot` is asked by §4.5's rim sweep as well as by shots** — `collideSkimmer()` calls `onShot(null)` on a rim enemy a firing Skimmer touches, and reads `dead` afterwards — which is how armour refuses the sweep and a Carrier splits under it with no branch in the pass. ⚠ The argument is `null` on that path and the return value is ignored: no `onShot` in the build reads its argument (measured), and one that did would throw there. ⛔ **`points()` is what destroying the entity is worth (§7)**, read by the **kill site** on the false → true `dead` transition and handed to `addScore()`. The entity never scores itself on death. The base returns `0`, the same default-safe shape as `onShot`'s `false`. The Thorn's is `0` too, because it pays per chip from inside its own `onShot()`: a hit is what the enemy decides.
 
@@ -774,6 +796,21 @@ Heat modulates spawn interval (floored), concurrent enemy cap, climb speed, vaul
 - **8 — "First open well"** is `nextWell()`'s modulo mapping, **measured**: level 8 → `WELLS[7]` = Vee, `closed: false`, 13 lanes. ⛔ CS007 touched no well selection.
 
 ⛔ **And "Carrier cargo weights" (§8) has no entry here because it needs none** — three variants, three rows, and the mix shifts by arithmetic. §6.2 has the numbers, and that absence is a decision.
+
+⛔ **Shipped, CS012 P2 — Overdrive's rows (Paul's O2).** Overdrive adds its enemies through a **second table**, `C.SPAWN_SCHEDULE_OVERDRIVE`, never a `mode` field on the rows above. `eligibleKinds(level, mode)` merges it into the Classic rows in level order, a Classic row first at an equal level; `mode` defaults to `"classic"`, and `pickSpawnKind(state)` passes `state.mode`. **The eligible set is a function of the level and the run's mode, and nothing else.** A Classic set is element for element the table above.
+
+| Levels | Overdrive's eligible set | Size | Draws |
+|---|---|---|---|
+| 1–2 | `vaulter` | 1 | **0** |
+| 3–4 | + `carrierVaulter` | 2 | 1 |
+| 5 | + `weaver` | 3 | 1 |
+| 6–8 | + `reaver` | 4 | 1 |
+| 9–12 | + `drifter` | 5 | 1 |
+| 13–17 | + `surger` | 6 | 1 |
+| 18–22 | + `carrierDrifter` | 7 | 1 |
+| 23+ | + `carrierSurger` | 8 | 1 |
+
+⛔ The no-draw rule holds in both modes: Overdrive's L1–2 is one entry too (`test-cs012-p2.js`, counted). The uniform pick gives the Reaver 1/4 of releases at L6–8, falling to 1/8 from L23. CS013 adds the Warden (11) and the Mimic (16) as rows in the same table.
 
 Compressed relative to the original (Pulsars at 17, Pulsar Tankers at 41) because our tuned ceiling is ~35–40, not ~99. A threat introduced past the window most players reach does not exist.
 
@@ -1269,6 +1306,8 @@ The Overdrive Dive becomes a short ring corridor.
 
 **Reaver** (L6+) — Vaulter at 1.6× that vaults toward the Skimmer. A parameter variation on an existing entity, the cheapest possible threat. **Include.**
 
+⛔ **Shipped, CS012 P2** (§6.4 has the contract). **1.6× scales the hop, never the climb** (Paul's O1): `hopDuration()` is `VAULT_HOP_TIME / REAVER_HOP_RATE` = 0.175 s at every level, and both intervals are `vaultInterval()` / `vaultRimInterval()` ÷ 1.6 (1.206 s and 0.316 s at L6; the rim floor 0.219 s stays above the hop). The climb is the Vaulter's `VAULT_CLIMB × climbMult()`, because a Reaver that climbed at 1.6× breaches §4.4's respawn guarantee from level 1 (MEASURED, plan §1.1); the guarantee is re-proved with a live Reaver at L6, L23 and L99. **"Vaults toward the Skimmer"** means every mid-climb hop takes `huntDir()`, from its first update and with no level gate, holding its lane while it is in the Skimmer's; at the rim it hunts as a Vaulter does, at its own interval. On an open well it folds at the wall through the inherited `laneHop()`; §17 item 3's soak bound for it is `2 × DT / 0.175` = 0.1905 lanes per step. §17 item 13 holds for it: 24/24 hopping in, climbing in and hunting in mid-climb, on the Ring and the Vee. The silhouette is the Vaulter's X with two swept barbs on its rim-side arms, in the Vaulter's colour ⚠ (O16).
+
 **Warden** (L11+) — flies above the well, fires down, killable only by Jump. Slightly circular (it exists to justify Jump) but it makes Jump offensive as well as defensive. ⛔ **Must be visible in peripheral vision** — an off-well enemy killing you from where you weren't looking is the definition of unfair. **Include.**
 
 **Mimic** (L16+) — reflects shots; vulnerable only while firing. **Probation.** Reflected shots that kill you are a hard sell: players read their own bullets as safe and reversing that betrays a deep expectation. Reflected shots are colour-shifted, larger, and 60% speed. Build it, playtest it, **cut it without ceremony if it reads as cheap.**
@@ -1543,7 +1582,7 @@ vector-vortex/
 ├── PLANNED-FEATURES-CS0##.md    # spec for what's being built now
 ├── IMPLEMENTATION-PHASES-CS0##.md
 ├── build.js                     # Node concat src/ → dist/; inlines lib/'s kit-names, kit-storage, kit-profile
-├── src/                         # numbered modules, concat order
+├── src/                         # numbered modules, concat order (07-enemies-overdrive.js follows 07-enemies.js)
 ├── lib/                         # vendored coinless-kit modules + .NOTES.md; kit-leaderboard stays bridged
 ├── tools/                       # design instruments — music-lab, sfx-lab, well-lab, feel-lab
 ├── scratchpad/                  # tests: _harness.js, run-all.js, test-registry.js

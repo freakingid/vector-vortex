@@ -8,6 +8,11 @@
 // draw(ctx, well) / dead. Kill by setting `dead = true`; removal is an
 // end-of-frame .filter() in the caller. Never spliced mid-loop.
 //
+// ⛔ THE CLASSIC ROSTER LIVES HERE, AND OVERDRIVE'S IN 07-enemies-overdrive.js
+// (CS012 P2, Paul's O15). That module is concatenated directly after this one
+// and extends the classes below; nothing moved out of this file. A new Overdrive
+// enemy goes there, against the contract written here.
+//
 // ⛔ ONE ARRAY, state.enemies (CS003 P2). Thorns, Carriers and Drifters all
 // live in it; the contract FLAGS below decide behaviour, not a second array. A
 // second array doubles all six wiring points CLAUDE.md lists.
@@ -184,9 +189,16 @@ class Vaulter extends Enemy {
     // hittable in both lanes it is near), so these exist to interpolate it
     // rather than to teleport at the end.
     this.hopping = false;
-    this.hopTime = 0;    // counts up toward C.VAULT_HOP_TIME
+    this.hopTime = 0;    // counts up toward hopDuration()
     this.hopFrom = this.lane;
     this.hopDelta = 0;   // signed lane distance of this hop, already short-way
+
+    // ⛔ HOPS PER VAULTER HOP (CS012 P2, R9). Both hop intervals are divided by
+    // it. 1 here, and `x / 1 === x` in IEEE-754, so a Vaulter's arithmetic is
+    // bit-identical to the build before it existed. The Reaver
+    // (07-enemies-overdrive.js) sets C.REAVER_HOP_RATE. DATA, not behaviour, on
+    // THIS class and never on `Enemy`, which stays fields only.
+    this.hopRate = 1;
   }
 
   // ⛔ At the PARK depth, `1 - C.RIM_CONTACT_DEPTH` — the same expression the
@@ -224,7 +236,10 @@ class Vaulter extends Enemy {
     // Both fall with heat; VAULT_HOP_TIME, which advanceHop() below spends, does
     // not — H2, and it is what keeps three closed soaks' per-tick lane bounds
     // (2 * DT / VAULT_HOP_TIME) valid at every level without being re-derived.
-    const interval = atRim ? vaultRimInterval() : vaultInterval();
+    //
+    // ⛔ ÷ this.hopRate (CS012 P2): exactly 1 on a Vaulter. The accessor is still
+    // what is read, so heat's clamp cannot be escaped by a subclass.
+    const interval = (atRim ? vaultRimInterval() : vaultInterval()) / this.hopRate;
     // Advances DURING a hop too, so the period between hop STARTS is the
     // interval itself rather than interval + crossing time.
     if (this.hopTimer < interval) this.hopTimer += dt;
@@ -240,14 +255,30 @@ class Vaulter extends Enemy {
     // is NOT gated — GDD 6.1 attaches "from L2" to vaulting, and GDD 12
     // promises a passive player dies on level 1, which a Vaulter parked
     // politely at the rim cannot deliver.
+    //
+    // ⛔ The mid-climb half is an OVERRIDABLE READER, midClimbDir() below
+    // (CS012 P2, R9): the Reaver hunts there too. The rim half is not.
     let dir = 0;
     if (atRim) dir = this.huntDir(well, state);
-    else if (state.level >= C.VAULT_FIRST_LEVEL) dir = this.dir;
+    else dir = this.midClimbDir(well, state);
 
     if (dir !== 0) {
       this.hopTimer = 0;
       this.startHop(well, dir);
     }
+  }
+
+  // ⛔ THE MID-CLIMB HEADING, AN OVERRIDABLE READER (CS012 P2, R9). A Vaulter
+  // keeps its own heading from level C.VAULT_FIRST_LEVEL and holds before it
+  // (GDD 6.3); 0 means no hop this beat. The Reaver returns huntDir() instead.
+  midClimbDir(well, state) {
+    return state.level >= C.VAULT_FIRST_LEVEL ? this.dir : 0;
+  }
+
+  // ⛔ THE HOP DURATION, AN OVERRIDABLE READER (CS012 P2, R9). ⛔ Heat never
+  // scales it (H2): three closed soaks derive a per-tick lane bound from it.
+  hopDuration() {
+    return C.VAULT_HOP_TIME;
   }
 
   // Which way the Skimmer is, as -1 / 0 / +1. ⛔ laneDelta, never (a - b): on a
@@ -293,7 +324,7 @@ class Vaulter extends Enemy {
   // hittable in both lanes it is near for the whole C.VAULT_HOP_TIME, which is
   // the window GDD 6.1's "vaults lanes" is really describing.
   advanceHop(dt, well) {
-    const dur = C.VAULT_HOP_TIME;
+    const dur = this.hopDuration();
     this.hopTime += dt;
 
     if (!(dur > 0) || this.hopTime >= dur) {

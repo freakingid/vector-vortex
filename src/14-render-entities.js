@@ -158,6 +158,42 @@ function drawVaulter(ctx, well, lane, depth) {
 }
 
 // ---------------------------------------------------------------------------
+// The Reaver's silhouette (GDD 14.6, 18; CS012 P2, O16) — the Vaulter's X with
+// two swept barbs on its rim-side arms.
+// ---------------------------------------------------------------------------
+//
+// ⛔ DERIVED FROM VAULTER_POLY, NOT COPIED. The family read ("a faster Vaulter")
+// is the Vaulter's own eight points, so a retune of the X moves both. Each
+// rim-side arm (the two with d > 0, which entityPoints() draws nearer the rim)
+// gains a barb between its tip and the near notch: a tip swept C.REAVER_BARB_SWEEP
+// inward and C.REAVER_BARB_REACH rimward of the arm tip, then a root
+// C.REAVER_BARB_ROOT of the way along the arm's inner edge. Twelve points, one
+// closed outline, and a different outline from the Vaulter's at a glance, which
+// is the difference O16 gives the silhouette to carry: the colour is shared.
+// ⚠ Provisional, like the palette.
+//
+// Built once at evaluation and never at draw time, so entityPoints() memoizes
+// its scratch on it like every other poly.
+const REAVER_POLY = (function () {
+  const v = VAULTER_POLY;
+  const tipL = v[2], notch = v[3], tipR = v[4];
+  const barb = (tip, side) => [
+    { l: tip.l - side * C.REAVER_BARB_SWEEP, d: tip.d + C.REAVER_BARB_REACH },
+    { l: tip.l + (notch.l - tip.l) * C.REAVER_BARB_ROOT, d: tip.d + (notch.d - tip.d) * C.REAVER_BARB_ROOT },
+  ];
+  const left = barb(tipL, -1);
+  const right = barb(tipR, 1);
+  return [v[0], v[1], tipL, left[0], left[1], notch, right[1], right[0], tipR, v[5], v[6], v[7]];
+})();
+
+// ⛔ drawPoly + glowStroke, one closed path, no fill (GDD 10.2), at full alpha
+// at every depth, exactly as drawVaulter() above.
+function drawReaver(ctx, well, lane, depth) {
+  drawPoly(ctx, entityPoints(well, lane, depth, REAVER_POLY, C.REAVER_SIZE), true);
+  glowStroke(ctx, C.REAVER_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
 // The Carrier's silhouette (GDD 6.1, 6.2, 18) — a hollow diamond hull with a
 // cargo glyph inside it.
 // ---------------------------------------------------------------------------

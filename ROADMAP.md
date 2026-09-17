@@ -420,7 +420,11 @@ module seam, named against CS012 for the same reason.
   79.6 px, both past `C.MIN_LANE_SPOKE_PX` 60. ⚠ **The numbers are settled and
   the picture is not** — nobody has looked at either shape, and the skipped ask is in
   `SKIPPED-PLAYTESTS.md`.
-- ⛔ **`src/07-enemies.js` wants splitting, and the moment is CS012.** Measured
+- ✅ **DONE by CS012 P2 — the split, by Paul's O15.** `src/07-enemies-overdrive.js`
+  sits in `MANIFEST` directly after `07-enemies.js` and holds Overdrive's roster
+  (the Reaver; CS013's Warden and Mimic). Nothing moved out of `07-enemies.js`,
+  which gained a header pointer. The note below is kept as the record.
+- **`src/07-enemies.js` wants splitting, and the moment is CS012.** Measured
   at the CS005 close, not felt: it went from **39.1 KB / 782 lines** at CS004
   close (`74fb50c`) to **65.2 KB / 1,277 lines** — **+67% by size for two
   entities** — and it is **65% comment by line** (833 of 1,277), which is

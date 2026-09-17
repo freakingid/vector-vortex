@@ -32,7 +32,7 @@ const trimEnd = s => s.replace(/\s+$/, "");
 const EVENTS = ["fire", "kill", "split", "chip", "bolt", "cross", "surgeCharge", "surgeDischarge",
   "death", "gameOver", "respawn", "purge", "purgeWeak", "extraLife", "lifeLost", "wellClear",
   "dive", "diveStrike", "menuMove", "menuConfirm", "menuBack"];
-const VOICES = ["vaulter", "carrier", "weaver", "weaverBolt", "thorn", "drifter", "surger"];
+const VOICES = ["vaulter", "carrier", "weaver", "weaverBolt", "thorn", "drifter", "surger", "reaver"];   // CS012 P2: + reaver, in place
 
 function sliceModules(src) {
   const re = /\/\/ ={74}\n\/\/ ([^\n]+)\n\/\/ ={74}\n/g;
@@ -112,7 +112,7 @@ for (const name of EVENTS) {
   try { sfxCheckRecipe(C.SFX[name]); } catch (e) { err = e.message; }
   H.assert(err === null, `C.SFX.${name} is a valid recipe${err ? ": " + err : ""}`);
 }
-H.eq(JSON.stringify(Object.keys(C.SFX_KILL_PITCH)), JSON.stringify(VOICES), "⛔ C.SFX_KILL_PITCH is keyed by the seven sfxVoice values");
+H.eq(JSON.stringify(Object.keys(C.SFX_KILL_PITCH)), JSON.stringify(VOICES), "⛔ C.SFX_KILL_PITCH is keyed by the eight sfxVoice values");
 H.assert(VOICES.every(v => typeof C.SFX_KILL_PITCH[v] === "number" && C.SFX_KILL_PITCH[v] > 0), "every kill pitch is > 0");
 
 // ⛔ GDD 4.3: the second use is distinctly feeble.

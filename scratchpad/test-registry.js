@@ -13,8 +13,10 @@ const COUNTS = {
   openWells: 6,     // of those, open topology
   tracks: 3,        // GDD 11.7 — raise as tracks land. CS009 P2: title, pulse.
                     // CS012 P1: drive
-  enemies: 6,       // GDD 6.1 — raise as enemies land. CS005 P3: the Surger,
-                    // which completes the Classic roster
+  enemies: 7,       // GDD 6.1, 6.4 — raise as enemies land. CS005 P3: the
+                    // Surger, which completes the Classic roster. CS012 P2: the
+                    // Reaver, Overdrive's first. ⛔ The next movers are CS013's
+                    // Warden and Mimic
   // ⛔ NOT THE SAME NUMBER AS `enemies`, AND FROM CS004 P3 ON IT IS LARGER.
   // `enemies` counts GDD 6.1's ROSTER ROWS; this counts ENEMY_KINDS rows
   // (08-spawner.js), and the two stopped coinciding twice over:
@@ -23,10 +25,11 @@ const COUNTS = {
   //     carrierSurger, and moved this number alone);
   //   - the Weaver's BOLT is a kind and is not an enemy on the roster.
   // Keeping them as two numbers is what lets a phase say which one it moved.
-  enemyKinds: 9,    // vaulter, carrierVaulter, carrierDrifter, carrierSurger,
-                    // weaver, weaverBolt, thorn, drifter, surger. ⛔ GDD 6.2's
-                    // variant table is complete, so the next mover is an
-                    // Overdrive enemy (GDD 6.4) and not a cargo.
+  enemyKinds: 10,   // vaulter, carrierVaulter, carrierDrifter, carrierSurger,
+                    // weaver, weaverBolt, thorn, drifter, surger; CS012 P2's
+                    // reaver. ⛔ GDD 6.2's variant table is complete (a Reaver
+                    // is not cargo, R16), so the next movers are CS013's
+                    // Overdrive enemies (GDD 6.4) and not a cargo.
 };
 
 // ⛔ THE state FIELD INVENTORY (02-state.js). An exhaustive list is a global

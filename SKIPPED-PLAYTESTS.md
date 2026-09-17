@@ -341,3 +341,18 @@ for.
   are found at the wheel's end, left of A.
 - **Knobs:** `C.MENU_ROTATE_STEP` (shared with every menu), `C.NAME_WHEEL`'s
   order and where DEL and END sit, `C.GAMEPAD_SENS`.
+
+### CS012 P2 — the Reaver read against the Vaulter
+- **Would have done:** started Overdrive at START DEPTH 7 on a laptop and a phone,
+  played until Reavers and Vaulters were on the board together, at the throat,
+  mid-well and at the rim; then Classic at the same depth for comparison, and
+  listened to a Reaver kill beside a Vaulter kill with music on.
+- **Trying to learn:** whether the two swept barbs tell a Reaver from a Vaulter at
+  a glance in the same colour (O16), especially small at the throat; whether a
+  hop of 0.175 s reads as a lane change or as a flicker; whether a Reaver hunting
+  toward the craft from its first update reads as fair on arrival; whether the
+  1.15 kill pitch is recognisably "a faster Vaulter".
+- **Knobs:** `C.REAVER_BARB_SWEEP`, `C.REAVER_BARB_REACH`, `C.REAVER_BARB_ROOT`,
+  `C.REAVER_SIZE`, `C.REAVER_COLOR` (split it from `VAULTER_COLOR`),
+  `C.REAVER_HOP_RATE` (⛔ the hop only, O1); the kill pitch through sfx-lab's KILL
+  PITCH table (B 1.06, C 1.33).

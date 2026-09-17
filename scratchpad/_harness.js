@@ -240,6 +240,8 @@ function buildGame(opts = {}) {
     "Drifter", "DRIFTER_POLY_RIDE", "DRIFTER_POLY_CROSS", "drawDrifter",
     // the Surger, its bar and its lane fuse (07/14, CS005 P3)
     "Surger", "SURGER_POLY", "drawSurger", "drawSurgeLane",
+    // the mode flags, the Reaver and its silhouette (00/07-enemies-overdrive/14, CS012 P2)
+    "modeHas", "Reaver", "REAVER_POLY", "drawReaver",
     // the spawner and the well lifecycle (08/23, CS003 P2)
     "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit", "ENEMY_KINDS",
     // the release budget's count — THREATS, not entities (08, CS007 P1)
