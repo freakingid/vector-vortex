@@ -1044,20 +1044,69 @@ const Game = (function () {
     }
   }
 
+  // SCORES' view (CS011 P5, plan R15): "local" or "online". Every entry from the
+  // title opens LOCAL, and the VIEW row switches. ⛔ The row exists only while
+  // the leaderboard module is present (Paul's M5); without it SCORES is P3's.
+  let scoresView = "local";
+  const SCORES_VIEW = { label: "VIEW", detail: "LOCAL", enabled: true, action: "toggleScoresView" };
+  // The ONLINE view's answer: "loading", "failed" or "loaded", and the board's
+  // entries once loaded.
+  let onlineStatus = "loading";
+  let onlineEntries = [];
+
   // SCORES' rows (CS011 P3, plan R15): `n NAME` and the score in plain digits,
-  // then BACK. CLASSIC only until CS012 makes OVERDRIVE choosable.
+  // then BACK. CLASSIC only until CS012 makes OVERDRIVE choosable. ⛔ Rebuilt on
+  // entry, on VIEW and when the board answers, never in draw().
   function buildScoreRows() {
-    const list = Meta.scores("classic");
+    const online = scoresView === "online";
     const scr = SCREENS.scores;
     scr.lines.length = 0;
-    scr.lines.push("CLASSIC \u00B7 LOCAL");
-    if (list.length === 0) scr.lines.push("NO SCORES YET");
+    scr.lines.push(online ? "CLASSIC \u00B7 ONLINE" : "CLASSIC \u00B7 LOCAL");
     scr.items.length = 0;
-    for (let i = 0; i < list.length; i++) {
-      const name = typeof list[i].profileName === "string" ? list[i].profileName : "";
-      scr.items.push({ label: (i + 1) + " " + name, detail: String(list[i].score), enabled: true, action: null });
+    if (Leaderboard.present()) {
+      SCORES_VIEW.detail = online ? "ONLINE" : "LOCAL";
+      scr.items.push(SCORES_VIEW);
+    }
+    if (online) {
+      // A flagged row (the Worker's bounds) ends in `*`.
+      if (onlineStatus === "loading") scr.lines.push("LOADING\u2026");
+      else if (onlineStatus === "failed") scr.lines.push("COULD NOT REACH THE BOARD");
+      else if (onlineEntries.length === 0) scr.lines.push("NO SCORES YET");
+      for (let i = 0; onlineStatus === "loaded" && i < onlineEntries.length; i++) {
+        const e = onlineEntries[i];
+        scr.items.push({ label: e.rank + " " + e.displayName, detail: String(e.metric) + (e.flagged ? "*" : ""),
+                         enabled: true, action: null });
+      }
+      // ⛔ M9: an unnamed profile submits as ANONYMOUS, and this line says so.
+      const p = Profiles.current();
+      if (p && p.name === C.PROFILE_ANONYMOUS_NAME) scr.lines.push("NAME YOUR PROFILE TO POST UNDER YOUR NAME");
+    } else {
+      const list = Meta.scores("classic");
+      if (list.length === 0) scr.lines.push("NO SCORES YET");
+      for (let i = 0; i < list.length; i++) {
+        const name = typeof list[i].profileName === "string" ? list[i].profileName : "";
+        scr.items.push({ label: (i + 1) + " " + name, detail: String(list[i].score), enabled: true, action: null });
+      }
     }
     scr.items.push({ label: "BACK", detail: "", enabled: true, action: "toTitle" });
+  }
+
+  // The board's answer (Leaderboard.load(), which drops a stale one). It is
+  // ignored once the player has left the ONLINE view.
+  function onBoard(board) {
+    if (state.screen !== "scores" || scoresView !== "online") return;
+    onlineStatus = board === null ? "failed" : "loaded";
+    onlineEntries = board === null ? [] : board.entries.slice(0, C.LEADERBOARD_BOARD_LIMIT);
+    buildScoreRows();
+  }
+
+  // The title's one info line (plan R16, Paul's M5): the kit's offline queue,
+  // present only while it is not empty. ⛔ Written in update(), never in draw().
+  function refreshTitleLine() {
+    const n = Leaderboard.queueLength();
+    const lines = SCREENS.title.lines;
+    lines.length = 0;
+    if (n > 0) lines.push(n + (n === 1 ? " SCORE QUEUED" : " SCORES QUEUED"));
   }
 
   // ---- PROFILE, a profile's page, DELETE and NAME (GDD 10.5, 15.2; CS011 P4) --
@@ -1252,7 +1301,16 @@ const Game = (function () {
     if (name === "exportTelemetry") exportTelemetry();
     if (name === "resume") resumeRun();
     if (name === "toMode")    state.screen = "mode";
-    if (name === "toScores")  { buildScoreRows(); state.screen = "scores"; }
+    if (name === "toScores")  { scoresView = "local"; buildScoreRows(); state.screen = "scores"; }
+    if (name === "toggleScoresView") {
+      scoresView = scoresView === "local" ? "online" : "local";
+      if (scoresView === "online") {
+        onlineStatus = "loading";
+        onlineEntries = [];
+        buildScoreRows();
+        Leaderboard.load(onBoard);
+      } else buildScoreRows();
+    }
     // CS011 P4. SELECT goes back to PROFILE, where ACTIVE has moved; a delete
     // does too, and a refused one stays on DELETE with the kit's reason (R12).
     if (name === "toProfiles") openProfiles();
@@ -1365,6 +1423,7 @@ const Game = (function () {
       }
       if (state.screen === "controls" || state.screen === "keyboard" || state.screen === "gamepad") refreshControlRows();
       if (state.screen === "title") { const p = Profiles.current(); TITLE_PROFILE.detail = p ? p.name : ""; }
+      if (state.screen === "title") refreshTitleLine();
       if (state.screen === "profileName") refreshNameLines();
       return;
     }

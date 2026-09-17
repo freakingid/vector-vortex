@@ -14,6 +14,9 @@
 //
 // THE RUN AND THE LOCAL TOP 10 (CS011 P3): `scores` (root), written through
 // createScores() below, the future kit-scores (src/22-meta.NOTES.md).
+//
+// THE ONLINE BOARD (CS011 P5): `Leaderboard`, the one surface over the bridged
+// kit-leaderboard. Its offline queue is the kit's own storage, not the game's.
 
 // ---------------------------------------------------------------------------
 // THE STORE AND THE PROFILE (GDD 15.1, 15.2). CS011 P1.
@@ -53,6 +56,8 @@ const Profiles = (function () {
     select(id) { return kit.select(id); },
     // { id, name, playerId } — mints the playerId if it is absent (kit-profile).
     current() { return kit.current(); },
+    // { playerId, displayName } for kit-leaderboard's getPlayer (CS011 P5).
+    player() { return kit.player(); },
     list() { return kit.list(); },
     // { ok, profile, reason } and { ok, reason }. Validation is kit-names', through
     // kit-profile, and nothing else (R13). Neither selects.
@@ -73,6 +78,115 @@ const Profiles = (function () {
         for (const key of OWN_KEYS) scope.remove(key);
       }
       return r;
+    },
+  };
+})();
+
+// ---------------------------------------------------------------------------
+// THE ONLINE BOARD — Leaderboard (GDD 15.4; plan R19). CS011 P5.
+// ---------------------------------------------------------------------------
+//
+// ⛔ THE ONLY READER OF window.KitLeaderboard, and EVERY METHOD IS A NO-OP
+// WITHOUT IT (CLAUDE.md, Leaderboard). The module arrives through the shell's
+// ES-module bridge, which is async and fails on file:// by design, so the kit
+// client is made LAZILY, on the first call that finds the global, and a call
+// before that finds nothing and does nothing. A create() that throws is not
+// retried. ⛔ Nothing here throws into the game: the kit's submit() never
+// rejects, and its promise is still caught.
+//
+// ⛔ The submit reads `state` at the run's end and writes none. Its stats are
+// exactly the Worker registry's seven keys for `vector-vortex`
+// (coinless-kit `services/leaderboard/src/registry.js`): an unknown key flags the
+// row (test-cs011-p5.js reads that file, never a copied list).
+const Leaderboard = (function () {
+  let client = null;
+  let broken = false;
+  // ⛔ THE STALE-RESPONSE TOKEN: a board that answers after a newer load() began
+  // is dropped.
+  let token = 0;
+
+  function instance() {
+    if (client !== null || broken) return client;
+    const kit = window.KitLeaderboard;
+    if (!kit || typeof kit.create !== "function") return null;
+    try {
+      client = kit.create({
+        endpoint: C.LEADERBOARD_ENDPOINT,
+        gameId: C.GAME_ID,
+        gameVersion: C.GAME_VERSION,
+        // A callback, never a value: a switch or a rename is read at submit time.
+        getPlayer: () => Profiles.player(),
+      });
+    } catch (e) {
+      broken = true;
+      client = null;
+    }
+    return client;
+  }
+
+  // Plan R9's payload. `durationS` is simulation seconds, pause excluded, and an
+  // integer as the Worker demands. `max_combo` is C.TELEMETRY_PLACEHOLDER's until
+  // CS012 gives the combo a source.
+  function payload(outcome) {
+    return {
+      metric: state.score,
+      durationS: Math.round(state.time),
+      outcome,
+      stats: {
+        level_reached: state.level,
+        mode: state.mode,
+        start_depth: state.startDepth,
+        wells_cleared: state.tally.wellsCleared,
+        purges_spent: state.tally.purgesSpent,
+        max_combo: C.TELEMETRY_PLACEHOLDER.maxCombo,
+        deaths: state.tally.deaths,
+      },
+    };
+  }
+
+  return {
+    // Whether the module loaded: SCORES' VIEW row exists only then.
+    present() { return instance() !== null; },
+    // Meta.runStarted(): the run id is minted at the START (the kit's
+    // idempotency key).
+    beginRun() {
+      const lb = instance();
+      if (lb === null) return;
+      try { lb.beginRun(); } catch (e) { /* no run id: the Worker refuses this run's submit */ }
+    },
+    // Meta.runEnded(), when the run was eligible.
+    submit(outcome) {
+      const lb = instance();
+      if (lb === null) return;
+      try {
+        const p = lb.submit(payload(outcome));
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch (e) { /* absence of a board is the normal path */ }
+    },
+    // The kit's offline queue, for the title's line. 0 without the module.
+    queueLength() {
+      const lb = instance();
+      if (lb === null) return 0;
+      try {
+        const n = lb.queueLength();
+        return Number.isInteger(n) && n > 0 ? n : 0;
+      } catch (e) { return 0; }
+    },
+    // The ONLINE view: done(board) with { entries: [...] }, or done(null) when
+    // the board could not be reached. ⛔ Only the NEWEST load answers. Without
+    // the module, done is never called.
+    load(done) {
+      const lb = instance();
+      const t = ++token;
+      if (lb === null) return;
+      const answer = b => { if (t === token) done(b); };
+      let p;
+      try {
+        p = lb.fetchBoard({ window: "all", limit: C.LEADERBOARD_BOARD_LIMIT });
+      } catch (e) { answer(null); return; }
+      Promise.resolve(p).then(
+        b => answer(b !== null && typeof b === "object" && Array.isArray(b.entries) ? b : null),
+        () => answer(null));
     },
   };
 })();
@@ -138,6 +252,7 @@ const Meta = (function () {
   function runStarted() {
     run = { bench: false };
     placed = 0;
+    Leaderboard.beginRun();
   }
 
   // runAction(), for a bench digit, `spawnRow` or `cycleWell` in play (R8).
@@ -170,8 +285,8 @@ const Meta = (function () {
   // steps. ⛔ NEVER FROM killSkimmer(): a clear on the step that spends the last
   // life pays after it returns (GDD 7), and a Dive death returns from update()
   // early, so only the frame knows the final score. It closes the run first, so
-  // a second call records nothing; then the row, if eligible and placed; then
-  // the telemetry write (P2's).
+  // a second call records nothing; then the row, if eligible and placed; the
+  // submit, if eligible (P5); then the telemetry write (P2's).
   function runEnded(outcome) {
     if (run === null) return;
     const ok = eligible();
@@ -179,6 +294,9 @@ const Meta = (function () {
     if (booted && ok && Scores.qualifies(state.mode, state.score)) {
       placed = Scores.add(state.mode, scoreRow(outcome));
     }
+    // ⛔ THE SAME GATE, READ ONCE (CLAUDE.md, Leaderboard): every eligible run end
+    // submits, 'died' and 'quit' (Paul's M6), placed locally or not.
+    if (ok) Leaderboard.submit(outcome);
     saveTelemetry();
   }
 
@@ -225,6 +343,7 @@ const Meta = (function () {
       maxProfiles: C.PROFILE_MAX,
       legacyRosterKey: null,
       legacyProbeKeys: [],
+      anonymousName: C.PROFILE_ANONYMOUS_NAME,
       onEvent: onProfileEvent,
     });
     Profiles.attach(kit);

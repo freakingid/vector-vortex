@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.7 · Changeset: CS011 (P4 built 2026-09-16 — P5 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
+Version: 0.0.7 · Changeset: CS011 (P5 built 2026-09-16 — P6 next) · Wells: 16/16 · Enemies: 6/6 Classic · Tracks: 2/5
 
 ## Phase ledger — CS011
 
@@ -15,15 +15,15 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 | P2 | Settings, the Start Depth record (`progress`) and telemetry rows saved per profile; reset-before-load on a switch | ✅ built: `settings` / `progress` / `telemetry` per profile, `Meta.boot(Game.settingsHooks)`, `Profiles.select()`, `Telemetry.snapshot()` / `restore()`, `Meta.runEnded` stub, `test-cs011-p2.js` (135); `test-cs008-p7.js:436` in place |
 | P3 | The local top 10 per mode; the run's three seats; the bench flag; SCORES; game over's placing line | ✅ built: `createScores` + `src/22-meta.NOTES.md`, `Meta.runStarted` / `benchUsed` / `eligible` / `runOpen` / `runEnded` / `scores` / `lastPlace`, SCORES, game over's third line, `test-cs011-p3.js` (83); no closed file edited |
 | P4 | kit-input 0.8.0's text mode; PROFILE, a profile's page, DELETE, the NAME wheel | ✅ built: `captureText(cb)`, `Profiles.create` / `rename` / `remove`, `C.NAME_WHEEL` / `NOTICE_WRAP`, `SCREENS.profile` / `profilePage` / `profileDelete` / `profileName`, `stepName()`, `test-cs011-p4.js` (103); `test-cs011-p3.js:380` in place; ⚠ delete runs the kit first, against R12's wording (Paul went ahead with it) |
-| P5 | kit-leaderboard 0.2.1; `Leaderboard`; the submits; SCORES' ONLINE view; the queued line | next |
-| P6 | The ninth soak (working vs blocked storage, one hash; a reload); the close | — |
+| P5 | kit-leaderboard 0.2.1; `Leaderboard`; the submits; SCORES' ONLINE view; the queued line | ✅ built: `mintRunId()` in kit-leaderboard **0.2.1**, `Leaderboard` (lazy; `present` / `beginRun` / `submit` / `queueLength` / `load`), `Profiles.player()`, `C.LEADERBOARD_ENDPOINT` / `LEADERBOARD_BOARD_LIMIT` / `PROFILE_ANONYMOUS_NAME`, SCORES' VIEW row and ONLINE, the title's queued line, `test-cs011-p5.js` (89); no closed file edited |
+| P6 | The ninth soak (working vs blocked storage, one hash; a reload); the close | next |
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (24 modules + 3 inlined kit,
-  578.7 KB); the manifest is checked both directions against `src/`, and a
+  586.6 KB); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **58 test files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **59 test files, all green, zero skips.**
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -342,11 +342,13 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
   `registry.js` and redeploy.** At 1,200 every Start Depth 49 and 81 run is
   flagged at game over, and a quit soon after the first clear is flagged from
   Start Depth 17 (plan §1.5; the worst measured 86,616/s). ⛔ **NOT DONE as of
-  CS011 P4. CS011's close carries this line into the next STATUS unchanged**;
+  CS011 P5. CS011's close carries this line into the next STATUS unchanged**;
   only Paul saying the redeploy happened removes it.
 - ⛔ **CS012 — Overdrive's online board.** The Worker has no per-mode boards and
   keeps each player's best row per game id, so one shared id would hide a
-  player's second mode (plan §1.4). CS011 submits Classic as `vector-vortex`.
+  player's second mode (plan §1.4). CS011 submits Classic as `vector-vortex`;
+  ⚠ `Leaderboard.submit()` sends `mode` in stats but one `C.GAME_ID`, so an
+  Overdrive run would post to Classic's board until CS012 splits it.
 - ⛔ **CS015 — achievements** (Paul's M4): moved out of CS011 to follow
   Overdrive. ✅ P1 renumbered onboarding to CS016 and ship to CS017 (ROADMAP,
   GDD §17 item 10 and §19, DECISIONS).
@@ -367,23 +369,40 @@ phase goes.** CS010's ledger is in `log/CS010.md`.
 - ⛔ **CS012 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`, and
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`. The registry's `tracks` goes
   2 → 3.
-- Backport kit-input (**0.8.0**), kit-menu (0.1.0), kit-fx and kit-audio
-  (**0.3.0**) to coinless-kit — each a separate manual step, verified against
+- Backport kit-input (**0.8.0**), kit-menu (0.1.0), kit-fx, kit-audio
+  (**0.3.0**) and kit-leaderboard (**0.2.1**, `lib/`) to coinless-kit — each a separate manual step, verified against
   that repo's own suite.
 - The Overdrive `PTS_REAVER`, `PTS_MIMIC`, `PTS_WARDEN` are unread — CS012's.
 - ⛔ **The seven debug spawn actions ship until CS017** (Paul's H5 call).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 6 and `enemyKinds` 9. The next
   mover of either is an Overdrive enemy.
 
-## Next up — ⛔ CS011 P5
+## Next up — ⛔ CS011 P6
 
-Paste P5's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards P1–P4
+Paste P6's prompt from `IMPLEMENTATION-PHASES-CS011.md`. ⛔ Hazards P1–P5
 leave (reasoning in `log/CS011.md`):
-- ⛔ **THE RUN'S END IS `Meta.runEnded(outcome)`, AND P5's SUBMIT HANGS OFF IT**,
-  gated by `Meta.eligible()` read BEFORE the run closes. Its seats: `startGame()`'s
-  last line, `quitToTitle()`'s first (on pause), `frame()` after the steps. ⚠ It
-  does nothing, telemetry included, when no run is open, so a `Game.reset()`
-  board with no `startGame()` records nothing. `Game.reset()` does not drop a run.
+- ⛔ **`Leaderboard` IS THE ONE READER OF `window.KitLeaderboard` AND IS LAZY ON
+  EVERY CALL** until it finds the global (the bridge is async). The harness never
+  runs the bridge, so every closed build has no module and every method is a
+  no-op; a soak that wants a board sets a fake on `X._env.win`. ⛔ The submit
+  hangs off `Meta.runEnded()`'s `ok` (read before the close), after the local
+  row and before the telemetry write.
+- ⚠ **`CLAUDE.md` (Leaderboard) and GDD §15.4 name `Leaderboard.eligible()`, and
+  no such method exists: the one gate is `Meta.eligible()`** (P3), which
+  `runEnded` reads for both the row and the submit. The close reconciles the
+  wording; do not add a second gate to match the name.
+- ⛔ **Texts pinned by `test-cs011-p5.js`, each exactly once:**
+  `const answer = b => { if (t === token) done(b); };` (in the build) and
+  `currentRunId = mintRunId();` (in `lib/kit-leaderboard/kit-leaderboard.js`).
+- ⛔ **The title's `lines` are rewritten on every title step** (`refreshTitleLine()`,
+  `[]` with no module or an empty queue). ⛔ **SCORES' VIEW row exists only with
+  the module**, first, and every entry opens LOCAL; without it SCORES is P3's.
+- ⚠ **`test-cs011-p5.js` reads coinless-kit's `registry.js` with `git show
+  f0b0eb2:`** from `../coinless-kit`; without that repo it SKIPS loudly, which
+  the close's zero-skip gate would catch.
+- ⛔ **THE RUN'S END IS `Meta.runEnded(outcome)`.** Seats: `startGame()`'s last
+  line, `quitToTitle()`'s first (on pause), `frame()` after the steps. It does
+  nothing when no run is open; `Game.reset()` does not drop a run.
 - ⛔ **Texts pinned by a closed `mutate`, each exactly once in the build.**
   `test-cs011-p2.js`: `hooks.resetSettings();` and
   `if (!on && state.screen !== "play") Meta.saveTelemetry();`.
@@ -404,8 +423,7 @@ leave (reasoning in `log/CS011.md`):
   `update()`'s screen branch beside `stepControlMode()`). A new screen with its
   own step joins that chain; one that is plain rows needs nothing.
 - ⛔ **The text mode is armed and ended in `syncScreen()` only**, and kit-input
-  0.8.0 never arms it beside a capture. M9's hint ("NAME YOUR PROFILE…") can
-  point at PROFILE, which exists now.
+  0.8.0 never arms it beside a capture.
 - ⛔ **`Profiles.remove()`'s `OWN_KEYS` is the declared per-profile list**
   (`settings`, `progress`, `telemetry`); CS015 adds `achievements` there.
   ⛔ Never `scores` or `profiles`, never `clear()`.

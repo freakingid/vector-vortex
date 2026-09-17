@@ -296,6 +296,8 @@ function buildGame(opts = {}) {
     "KitNames", "KitStorage", "KitProfile", "Store", "Profiles", "Meta",
     // the local top 10 (22-meta.js, CS011 P3)
     "Scores", "createScores",
+    // the online board's one surface (22-meta.js, CS011 P5)
+    "Leaderboard",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of

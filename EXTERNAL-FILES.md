@@ -32,7 +32,7 @@ backport packet.
 
 | File | Version | Load style | Absent behaviour |
 |---|---|---|---|
-| `lib/kit-leaderboard/kit-leaderboard.js` | 0.2.0 | module bridge → `window.KitLeaderboard` | No online board; local scores unaffected |
+| `lib/kit-leaderboard/kit-leaderboard.js` | 0.2.1 | module bridge → `window.KitLeaderboard` | No online board; local scores unaffected |
 | `lib/kit-names/kit-names.js` | 0.1.0 | imported by kit-leaderboard, beside it | The bridge's import fails; as above |
 
 ### Inlined at build — not runtime files (CS011 P1, Paul's M1)

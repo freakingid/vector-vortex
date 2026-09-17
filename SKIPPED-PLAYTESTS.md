@@ -288,3 +288,16 @@ for.
 - **Knobs:** `C.MENU_ROTATE_STEP` (shared with every menu), `C.NAME_WHEEL`'s
   order, `C.NOTICE_WRAP`; the cursor mark and the SPACE label in
   `refreshNameLines()`.
+
+### CS011 P5 — a real run posted and read back online
+- **Would have done:** served the build over `http://` with `lib/` beside it,
+  played a Classic run to game over and one quit from pause, opened SCORES →
+  VIEW → ONLINE, then played again offline and watched the title's queued line
+  empty when the network came back.
+- **Trying to learn:** whether the live Worker accepts the payload from a real
+  origin (CORS, the registry's deployed `statsFields`); whether LOADING… reads
+  as waiting rather than broken; whether the `*` and the M9 hint are
+  understood; whether VIEW as the first row, opening LOCAL on every entry,
+  feels right.
+- **Knobs:** `C.LEADERBOARD_BOARD_LIMIT`; the VIEW row's place and the entry
+  view in `buildScoreRows()` / `toScores`; the state and hint strings there.

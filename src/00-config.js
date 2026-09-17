@@ -751,6 +751,13 @@ const C = {
   // are the marks 23-main.js reads by name.
   NAME_WHEEL:           "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-".split("").concat(["DEL", "END"]),
   NOTICE_WRAP:          60,     // chars per line of RENAME's notice (R14: 60 × 18.6 px = 1,116 px of 1,280)
+  // The online board (plan R18, R19; CS011 P5). kit-leaderboard's `endpoint` has
+  // no default. The board is the top LEADERBOARD_BOARD_LIMIT players, all time.
+  LEADERBOARD_ENDPOINT: "https://scores.coinlessgames.com",
+  LEADERBOARD_BOARD_LIMIT: 10,
+  // kit-profile's name for the silent first profile (Paul's M2), passed to it at
+  // boot so the ONLINE view's hint (M9) reads the same name the kit wrote.
+  PROFILE_ANONYMOUS_NAME: "ANONYMOUS",
 
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.7",   // ⚠ 0.0.2 was never written here — see log/CS006.md

@@ -902,7 +902,7 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 
 | Screen | Rows | Back |
 |---|---|---|
-| Title | PLAY, OPTIONS, SCORES (CS011 P3), PROFILE (CS011 P4), whose detail is the active profile's name, written on every title step. ⛔ CS011's rows go after OPTIONS: the closed tests navigate the title by index | — |
+| Title | PLAY, OPTIONS, SCORES (CS011 P3), PROFILE (CS011 P4), whose detail is the active profile's name, written on every title step. ⛔ CS011's rows go after OPTIONS: the closed tests navigate the title by index. One info line, `n SCORES QUEUED` (`1 SCORE QUEUED`), only while kit-leaderboard's offline queue is not empty, written on every title step (CS011 P5), never in `draw()` | — |
 | Mode | CLASSIC; OVERDRIVE shown locked (M1) | Title |
 | Start Depth | `startDepthOptions()` (§4.6), each row with its `startBonus()`. ⛔ No countdown | Mode |
 | Pause | RESUME, OPTIONS, QUIT TO TITLE (U4), over the frozen board | RESUME |
@@ -910,7 +910,7 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 | Controls | MOUSE SENSITIVITY, TOUCH SENSITIVITY, LEFT-HANDED TOUCH, TOUCH AUTO-FIRE, KEYBOARD ›, GAMEPAD ›, RESET TO DEFAULTS, BACK (U7) | Options |
 | Keyboard, Gamepad | LEFT, RIGHT, FIRE, PURGE and JUMP, two slots each, then BACK. One line above the rows shows a refusal's reason | Controls |
 | Credits | `C.CREDITS_LINES`, then `VERSION` + `C.GAME_VERSION` (U6). ⚠ Placeholder copy; Paul replaces it before ship. ⛔ §18: no mention of the original game or its publisher | Options |
-| Scores | CS011 P3 (plan R15). The info line `CLASSIC · LOCAL`, plus `NO SCORES YET` as a second line when the table is empty. Then one enabled row per entry: the label is `n NAME`, the detail is the score in plain digits, and the row has no action, so rotate only scrolls. BACK is last. ⛔ The rows are rebuilt on entry (`buildScoreRows()`), never in `draw()`. CLASSIC only until CS012 | Title |
+| Scores | CS011 P3 (plan R15). The info line `CLASSIC · LOCAL`, plus `NO SCORES YET` as a second line when the table is empty. Then one enabled row per entry: the label is `n NAME`, the detail is the score in plain digits, and the row has no action, so rotate only scrolls. BACK is last. ⛔ The rows are rebuilt on entry (`buildScoreRows()`), never in `draw()`. CLASSIC only until CS012. **ONLINE (CS011 P5, Paul's M5):** only while kit-leaderboard is present, a first row VIEW switches LOCAL / ONLINE, and every entry opens LOCAL. ONLINE's info line is `CLASSIC · ONLINE`, then `LOADING…`, `COULD NOT REACH THE BOARD` or `NO SCORES YET`; its rows are `rank NAME` / the score, and a flagged row's score ends in `*`. While the active profile is named ANONYMOUS a last line reads `NAME YOUR PROFILE TO POST UNDER YOUR NAME` (M9). The rows are rebuilt when the board answers, and only the newest load's answer counts | Title |
 | Profile | CS011 P4 (plan R16). One row per profile, labelled with its name, with detail ACTIVE on the active one; NEW PROFILE, disabled at `C.PROFILE_MAX`; BACK. ⛔ Rebuilt on entry (`openProfiles()`), never in `draw()`. A profile's row opens its page | Title |
 | A profile's page | Titled with the profile's name. SELECT activates it through `Profiles.select()` (§15.2) and returns to PROFILE; RENAME opens NAME; DELETE; BACK | Profile |
 | Delete | Titled DELETE. Its lines are the profile's name and a refusal's reason. ⛔ NO first, then YES. YES deletes (§15.2) and returns to PROFILE; a refusal stays here, and kit-profile's `last_profile` reads LAST PROFILE | The page |
@@ -1204,7 +1204,7 @@ Attract mode after `ATTRACT_IDLE` (20 s).
 | Dive | Thorn-dodge | Ring-flight |
 | Extra enemies | No | Reaver, Warden, Mimic |
 | Music | `pulse` | `drive` |
-| Leaderboard | Own board | Own board |
+| Leaderboard | Own board: game id `vector-vortex` (CS011) | Own board: CS012's. The Worker keeps each player's best row per game id and has no per-mode boards, so Overdrive cannot share `vector-vortex` (CS011 plan §1.4) |
 
 Both available from first launch. Overdrive is the default highlight; Classic is presented as the purist option, not a tutorial.
 
@@ -1369,7 +1369,7 @@ Top 10 per mode. `vv_scores_v1` stays one shared machine-wide table with records
 
 ### 15.4 Online leaderboard
 
-⛔ **One `Leaderboard` object is the only call surface for `window.KitLeaderboard`.** Nothing else reads that global except the rename flow's notice lookup and the ES-module bridge tag. Every entry point is safe to call with the module absent.
+⛔ **One `Leaderboard` object is the only call surface for `window.KitLeaderboard`.** Nothing else reads that global except the ES-module bridge tag, which writes it (the rename flow's notice comes from kit-profile since CS011 P4). Every entry point is safe to call with the module absent.
 
 ⛔ **`Leaderboard.eligible()` gates every `submit()`**, and it is the same gate the local top-10 check uses. Extend both together or neither.
 
@@ -1382,6 +1382,15 @@ Top 10 per mode. `vv_scores_v1` stays one shared machine-wide table with records
 Proposed `statsFields`: `level_reached`, `mode`, `start_depth`, `wells_cleared`, `purges_spent`, `max_combo`, `deaths`. A mismatch only flags, never rejects, so extending later is a one-line change — but still a deliberate one, not filler.
 
 Known kit gap: rate limiting is not enforced in production on the Workers Free plan, and the Worker's bounds check is deliberately the entire anti-cheat story. ⛔ **No per-game score validators.**
+
+⛔ **Shipped, CS011 P5.**
+- **kit-leaderboard 0.2.1** (PATCH, plan R18): `beginRun()` falls back to a `crypto.getRandomValues` UUID v4 when `crypto.randomUUID` is absent, as kit-profile's `mintPlayerId` does. 0.2.0 threw in a sandboxed embed, which is never a secure context. The module still arrives only through the shell's ES-module bridge (§16.2); `EXTERNAL-FILES.md` and its `.NOTES.md` carry the version.
+- **`Leaderboard`** (`22-meta.js`, plan R19) is made lazily by the first call that finds `window.KitLeaderboard`, so a bridge that lands after boot is picked up; a `create()` that throws is not retried. `create({ endpoint: C.LEADERBOARD_ENDPOINT, gameId: C.GAME_ID, gameVersion: C.GAME_VERSION, getPlayer: () => Profiles.player() })`. Its methods are `present()`, `beginRun()`, `submit(outcome)`, `queueLength()` and `load(done)`, every one a no-op without the module, and none throws into the game.
+- **The seats** are §15.3's. `Meta.runStarted()` calls `beginRun()` for every run, bench runs included. `Meta.runEnded(outcome)` calls `submit(outcome)` when the run was eligible, read before it closes, so **every eligible run end submits once**, `'died'` and `'quit'` (M6), whether or not it placed locally. Game over's QUIT TO TITLE and RESTART never submit, because the run is already closed.
+- **The payload** (plan R9): `metric` is `state.score`; `durationS` is `Math.round(state.time)`, simulation seconds with pause excluded; `outcome`; and `stats` with exactly the registry's seven keys: `level_reached` (`state.level`), `mode`, `start_depth`, `wells_cleared`, `purges_spent`, `deaths` (off `state.tally`) and `max_combo` from `C.TELEMETRY_PLACEHOLDER.maxCombo`, so CS012 changes one source. `test-cs011-p5.js` reads the keys from coinless-kit's `registry.js` at `f0b0eb2`.
+- **M9:** a run on an unnamed profile submits as ANONYMOUS, with no prompt and no block. The ONLINE view's hint says how to post under a name (§10.5).
+- **The ONLINE view** loads `fetchBoard({ window: "all", limit: C.LEADERBOARD_BOARD_LIMIT })`, and a token drops every answer but the newest load's. There is no time-window switch.
+- ⚠ **The registry's `maxMetricPerSecond` is 1,200, and Paul raises it outside this repo (M7).** Until then a deep Start Depth run is stored flagged (CS011 plan §1.5).
 
 ### 15.5 Achievements
 
