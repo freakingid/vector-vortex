@@ -49,13 +49,16 @@
 //                  working, and a check that did not know which ones they were
 //                  would flag the two most useful stall columns in the file.
 //
-// ⛔ ONE COLUMN SHIPS WITH A KNOWN-CONSTANT VALUE rather than being added when
-// its source lands: `maxCombo` (0), out of C.TELEMETRY_PLACEHOLDER. A column
-// added later invalidates every log recorded before it, which is the whole
-// reason GDD 15.6 makes the column list a thing you edit deliberately. ⛔ There
-// were four: CS008 P2 moved `score`'s SOURCE to state.score and P3 moved `mode`
-// and `startDepth` to state.mode and state.startDepth, none of them moving
-// place in the order.
+// ⛔ NO COLUMN SHIPS WITH A KNOWN-CONSTANT VALUE ANY MORE, AND THAT IS THE
+// PLACEHOLDER'S WHOLE LIFE (CS012 P4, R7). Four columns took their PLACE in the
+// order before their SOURCE existed, out of C.TELEMETRY_PLACEHOLDER, because a
+// column added later invalidates every log recorded before it — which is the
+// whole reason GDD 15.6 makes the column list a thing you edit deliberately.
+// Each key was deleted by the changeset that gave that column a real source:
+// CS008 P2 moved `score` to state.score, CS008 P3 moved `mode` and
+// `startDepth`, and CS012 P4 moved `maxCombo` to state.combo.peak. ⛔ None of
+// the four ever moved PLACE in the order, and the object itself is gone
+// (00-config.js): with its last key sourced an empty bag is dead code.
 //
 // ⚠ CROSS-CHECKED AGAINST THE WORKER, which already registers seven statsFields
 // for `vector-vortex` in coinless-kit's services/leaderboard/src/registry.js
@@ -110,7 +113,8 @@ const TELEMETRY_FIELDS = [
   "purgeUses",          // ⛔ SAWTOOTH — one charge per well, re-armed by enterWell()
   // ---- the run's totals ----------------------------------------------------
   "score",              // cumulative — state.score, addScore()'s (CS008 P2)
-  "maxCombo",           // cumulative — ⚠ 0 until GDD 14.4's combo (Overdrive)
+  "maxCombo",           // cumulative — state.combo.peak: the run's PEAK MULTIPLIER
+                        // (GDD 14.4; CS012 P4). ⛔ 0 on a Classic run
   "deaths",             // cumulative
   "wellsCleared",       // cumulative
   "purgesSpent",        // cumulative
@@ -171,7 +175,6 @@ const TELEMETRY_KINDS = {
 // could disagree with the spawner's the first time `blocksClear` moved.
 function telemetryRow(state) {
   const lvl = state.level;
-  const P = C.TELEMETRY_PLACEHOLDER;
   const T = state.tally;
 
   // One pass for both board counts. ⛔ `anchored` is read off the entity, never
@@ -207,7 +210,7 @@ function telemetryRow(state) {
     spawnRemaining:    state.spawn.remaining,
     purgeUses:         state.purgeUses,
     score:             state.score,
-    maxCombo:          P.maxCombo,
+    maxCombo:          state.combo.peak,
     deaths:            T.deaths,
     wellsCleared:      T.wellsCleared,
     purgesSpent:       T.purgesSpent,

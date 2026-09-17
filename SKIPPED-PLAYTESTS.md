@@ -424,3 +424,44 @@ for.
 - ⚠ The glyph's **art** is provisional on the same footing as the Purge glyph's
   and the palette: the suite asserts where its rectangle is, never what it
   looks like.
+
+## CS012 P4 — the combo's feel, its readout, and `comboLost`
+
+- **Would have done:** four sittings, all Overdrive. (1) Started at depth 1 and
+  played four or five wells, watching the ×N at the top of the screen and asking
+  whether the run *feels* like ×3–4 most of the time, and whether losing it
+  reads as something he did rather than something that happened. (2) Parked on
+  a busy level 13 board, deliberately stopped firing, and watched the depletion
+  ring empty and the multiplier tick down a half step at a time. (3) Played with
+  the eyes on the rim, not the readout, and asked whether he could tell the
+  multiplier's state from the ring alone — and whether 56 px centre-top is a
+  help or a distraction over the throat. (4) Listened to `comboLost` on its own
+  and over `drive` at several intensities, and beside `death` and `lifeLost`.
+- **What we were trying to learn:** ⛔ **`C.COMBO_KILLS_PER_STEP` is the only
+  number in this phase that changes how the game plays**, and O3 MEASURED it on
+  bots, not on a person. The plan's table says 4 gives a mean of 4.76 (sharp) /
+  3.85 (dull) against GDD §14.4's ×3–4 target, where the literal +0.5 per kill
+  gives about ×7 — but a bot has no sense of momentum, and the question §14.4
+  actually raises is whether the board turns into a combo-maintenance contest.
+  A person would answer that in one sitting; the suite cannot pose it. The
+  lapse rule is the other half: O3 keeps the kill count across a lapse, so a
+  player who stops for a second loses a half step but not their progress toward
+  the next — whether that reads as generous or as mush is a judgment.
+  Sitting (3) is GDD §10.3's question in the one place the readout genuinely
+  crowds it: MEASURED, the combo rectangle clears the Fan well's throat zone by
+  **6.29 px**, which is a pass on the contract and a coin-flip on the eye.
+  Sitting (4) is §11.8's: `comboLost` fires far more often than `death` or
+  `lifeLost` — several times a well on a mediocre run — so a sound that is a
+  shade too loud or too long becomes the thing the player hears most.
+- **Knobs:** `C.COMBO_KILLS_PER_STEP` (4) first, then `C.COMBO_WINDOW` (2.5) and
+  `C.COMBO_STEP` (0.5); `C.COMBO_MAX` (8) is GDD §14.4's and should not move.
+  `C.HUD_COMBO_SIZE` (56), `C.HUD_COMBO_Y` (6), `C.HUD_COMBO_PAD` (4) and
+  `C.HUD_COMBO_RING_SEG` (32) for the readout — ⛔ **raising the size re-derives
+  the 76.29 px Fan clearance** (GDD §10.4). `C.SFX.comboLost` for the sound,
+  through `tools/sfx-lab.html`, which offers candidates B ("triangle slip") and
+  C ("noise exhale") beside the shipped A ("saw pair sag").
+- ⚠ **What no sitting can settle here:** O14's sweep. MEASURED on played
+  Overdrive boards, the director peaks at **0.6519** against the 1.0 the sweep
+  needs to open end to end (GDD §19). That is a weights question (`C.INT_W_*`)
+  and Paul's D6 ruled out rescaling them, so it is not a playtest — it is a
+  number recorded and left alone.

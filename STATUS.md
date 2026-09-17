@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.8 · Changeset: CS012 (P1-P3 + P5 done; ⚠ P4 still open) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5
+Version: 0.0.8 · Changeset: CS012 (P1-P5 done; P6 next) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5
 
 ## Phase ledger — CS012
 
@@ -16,14 +16,15 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 | P1 | `79a4840` | `drive` (138 BPM, 36 bars A→B→C, six layers, untiered, unmarked; kick `beat: true`) in `17-audio-tracks.js` and both labs; `C.MODE_TRACK.overdrive`, DRIVE on MUSIC TRACK; `tracks` 3. `test-cs012-p1.js` (55). Headroom 1.0345 → 0.3505; worst 13 nodes. Four closed files in place (three outside plan §11). 9 of 9 red |
 | P2 | `7fdbf43` | `C.MODE_FLAGS` + `modeHas()`; `C.SPAWN_SCHEDULE_OVERDRIVE` merged by `eligibleKinds(level, mode)`; `07-enemies-overdrive.js`, `Reaver extends Vaulter` (hop ÷ 1.6, hunts mid-climb); `REAVER_POLY`; kill pitch 1.15 via sfx-lab's new KILL PITCH table. `COUNTS` 7 / 10. `test-cs012-p2.js` (158). One closed edit (`test-cs009-p4.js` voices). 12 of 12 mutations red |
 | P3 | `4a4a81c` | MODE: OVERDRIVE enabled and FIRST (the row order IS GDD §13's highlight), carried as `pendingMode`; `C.LEADERBOARD_GAME_IDS` and one kit client per mode, routed by `state.mode`, `load(mode, done)`, `queueLength()` summing both; SCORES' MODE row, per-mode LOCAL and ONLINE, entry on the last run's mode; `progress` **v2** `{ classic, overdrive }` with a `migrate`, `levelRecord(mode)` / `startDepthOptions(mode)`. `test-cs012-p3.js` (93). 13 closed files repaired in place, every one in plan §11 — no unlisted red. 10 of 10 mutations red |
-| P5 | this commit | THE JUMP: `state.jump` + `updateJump()` (a TOTAL no-op outside `modeHas("jump")`), O6's phases with the cooldown from LANDING; ONE skip in `collideSkimmer()` that takes the rim sweep with it; no fire airborne OR recovering; `resetJump()` at `enterWell()`, the respawn and `startDive()`; the draw-only lift + rim shadow; kit-audio **0.4.0**'s optional `highpass` group, `setHighpass()` from `audioFrame()`, both labs' BLOCK A; the Overdrive-only HUD glyph. `STATE_FIELDS.CS012: ["jump"]`. `test-cs012-p5.js` (172). ⚠ **Six closed assertions in three files repaired that plan §11 did NOT predict** (Audio, below). 15 of 15 mutations red. ⚠ **This file is 484 lines, over its ~400** (424 at P3): P6's close compresses |
+| P5 | `10c11a6` | THE JUMP: `state.jump` + `updateJump()` (a TOTAL no-op outside `modeHas("jump")`), O6's phases with the cooldown from LANDING; ONE skip in `collideSkimmer()` that takes the rim sweep with it; no fire airborne OR recovering; `resetJump()` at `enterWell()`, the respawn and `startDive()`; the draw-only lift + rim shadow; kit-audio **0.4.0**'s optional `highpass` group, `setHighpass()` from `audioFrame()`, both labs' BLOCK A; the Overdrive-only HUD glyph. `STATE_FIELDS.CS012: ["jump"]`. `test-cs012-p5.js` (172). ⚠ **Six closed assertions in three files repaired that plan §11 did NOT predict** (Audio, below). 15 of 15 mutations red. ⚠ **This file is over its ~400 lines** (424 at P3, 484 at P5): P6's close compresses |
+| P4 | this commit | THE COMBO: `state.combo` `{ mult, kills, since, peak }` and five functions in `12-scoring.js`, every one a no-op outside `modeHas("combo")`; O3's build (+0.5 per 4), lapse (one step per window, ⛔ the kill count KEPT) and death (×1 at once); O5's Dive hold, in the function AND at the call site; ⛔ **the multiplier at the four kill lines, never in `addScore()`** (O4); `dangerInputs()`'s real combo input (R5); the centre-top readout and its ELLIPSE ring; `C.SFX.comboLost` at ONE seat, `comboDrop()`; `max_combo` / `maxCombo` off `state.combo.peak`, `C.TELEMETRY_PLACEHOLDER` deleted whole (R7). `STATE_FIELDS.CS012` += `"combo"`. `test-cs012-p4.js` (350). ⚠ **Three closed assertions plan §11 did NOT predict** (below). 5 of 5 mutations red. MEASURED: Overdrive director max **0.6519** |
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
-  638.8 KB); the manifest is checked both directions against `src/`, and a
+  655.0 KB); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **64 test files, all green, zero skips**.
+- `node scratchpad/run-all.js`: **65 test files, all green, zero skips**.
 - CS001 closed — 16 wells, the depth model, the well renderer.
 - CS002 closed — the loop, the Skimmer, shots, and all four input devices
   (mouse/keyboard/touch/gamepad), verified on real hardware.
@@ -137,8 +138,8 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   `create()` is not retried, per client. `beginRun()`/`submit()` route by
   `state.mode`, `load(mode, done)` fetches the board SCORES shows, `queueLength()`
   **sums both**. ⛔ **`C.GAME_ID` is the SAVE keyspace, never a board id.** ⛔ **One
-  stale token covers both** — a MODE step on ONLINE is a newer load. ⚠ `max_combo`
-  still reads `C.TELEMETRY_PLACEHOLDER.maxCombo` — P4's.
+  stale token covers both** — a MODE step on ONLINE is a newer load. ✅ `max_combo`
+  is `state.combo.peak` (CS012 P4), 0 on a Classic run.
 - ⛔ **`Leaderboard` IS THE ONE READER OF `window.KitLeaderboard` AND IS LAZY ON
   EVERY CALL** until it finds the global. The harness never runs the bridge; a
   test that wants a board sets a fake on `X._env.win`, and a fake serving both
@@ -290,7 +291,11 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   `17-audio-tracks.js` names no game global, and its layer lines stay one line
   each.
 - ⚠ **Classic's intensity peaks at 0.668**, so the sweep never fully opens in
-  Classic. CS012 re-measures with the combo.
+  Classic. ✅ **RE-MEASURED on Overdrive (CS012 P4): 0.6519** over 16,000 played
+  frames at levels 1, 6, 13 and 23, with the Reaver, the Jump and the combo live
+  and the multiplier reaching ×8 — plan §1.4's model said 0.521 with neither the
+  Reaver nor the Jump. ⛔ **GDD §19 keeps its ✗ and no weight is rescaled** (O14,
+  D6). P6's soak re-measures on its own boards.
 - ⚠ **The Surger tone alone renders at sample peak 1.106** at unity. Unowned.
 - ⛔ **`MusicSys.setState()` BEFORE THE FIRST GESTURE IS DROPPED**, which is why
   `audioFrame()` calls it every frame. ⛔ Never move it onto a screen change.
@@ -379,6 +384,58 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   to reach 0.20 s where `ceil` says 12. Assert the property (the first step at or
   past the limit is the last in the phase), never the step count.
 
+### The combo (CS012 P4)
+
+- ⛔ **THE MULTIPLIER IS APPLIED AT THE FOUR KILL LINES, NEVER IN `addScore()`**
+  (O4, R6; `CLAUDE.md` Scoring, GDD §7). What is multiplied is exactly what
+  builds it: kill points at the three kill sites. ⛔ **Chips, the three clear
+  bonuses and the Start Depth bonus are not multiplied and build nothing**, and
+  the Dive's termination kill still pays nothing.
+- ⛔ **All five functions are no-ops (or exactly 1) outside `modeHas("combo")`**,
+  and `comboDrop()` is the ONE fall and the ONE `sfx("comboLost")` seat.
+  ⛔ **A lapse does NOT empty the kill count** — O3 empties it on a death alone,
+  and `test-cs012-p4.js` asserts that as its own line. ⛔ `since` WRAPS at
+  `C.COMBO_WINDOW`, which is what makes the HUD ring refill per half step.
+- ⛔ **FINDING (CS012 P4, MEASURED): THE CENTRE-TOP BAND IS 76.29 px TALL.** The
+  Fan well (index 14) is an arc across the top, so its throat zone reaches
+  y 76.29 with an x span (504.6–775.4) that straddles the centre; every other
+  well starts at y 154 or lower. So `C.HUD_COMBO_Y` is **6**, not `HUD_MARGIN`
+  24 — at 24 the 56 px em box alone breaches it — and the ring is an **ellipse**
+  rather than a circle, because a circle around the widest reading would be
+  148 px tall. Shipped sum 6 + 56 + 2 × 4 = 70, clearance **6.29 px**.
+  ⛔ **`C.HUD_COMBO_SIZE` cannot rise past ~62 without moving the Fan or
+  relaxing GDD §10.3**, and the test asserts the clearance is real AND under
+  40 px so a quiet shrink is as visible as a breach. ⚠ The readout DOES overlap
+  the undrawn top-centre pause target — O8 measured and accepted that; the two
+  corner touch buttons are clear.
+- ⚠ **FINDING (CS012 P4, MEASURED): DELETING A CONFIG OBJECT IS A DIFFERENT GREP
+  FROM RE-SOURCING ONE OF ITS KEYS.** Plan §11 predicted the four files that read
+  `C.TELEMETRY_PLACEHOLDER.maxCombo`; it missed `test-cs007-p4.js:153` and
+  `:160`, which test key ABSENCE (`!("score" in …)`) and become a `TypeError`
+  when the object goes. Both were rewritten in place to
+  `!("TELEMETRY_PLACEHOLDER" in C)`. ⛔ **A future plan that deletes a config
+  object owes §11 a grep for `in <OBJECT>` as well as for `<OBJECT>.`.**
+  A third unpredicted edit: `test-cs009-p4.js`'s lab `CONTEXT` table needs a
+  `comboLost` row, because `:155` asserts every `EVENTS` entry has an in-context
+  sequence — the event list drives FOUR assertions there, not three.
+- ⛔ **GDD §17 item 8 WITH A MULTIPLIER IS ASSERTED PER `addScore` CALL, NOT PER
+  STEP** (`test-cs012-p4.js`). A step can span a step up, so "that step's
+  multiplier" is not a number; the soak records `state.combo.mult` live at each
+  call and classifies it by whether `state.tally.kills` has just risen. ⛔ The
+  board's price multiset holds prices > 0 ONLY — a zero-price death is a bolt
+  self-terminating or a Thorn taken by its last chip, and both are 0 either way.
+- ⛔ **`instanceof` IS PER BUILD.** `test-cs012-p4.js` builds seven games; a
+  `gddPoints()` closed over the outer one matched nothing in any of them and
+  every non-vacuity check passed on zero. It takes the build as an argument.
+  ⛔ **And `mutantRed()` asserts the mutation string was found exactly once
+  BEFORE asserting red** — a `buildGame` throw on a stale string reads as a pass
+  otherwise.
+- ⛔ **SIX MUTATION STRINGS TAKE THE COMBO OUT** (`COMBO_OUT`, `test-cs012-p4.js`),
+  one per kill line plus `comboDeath()` and `updateCombo()`. The three kill lines
+  are textually identical, so each string carries the line that follows it
+  (`break;` / `continue;` / the Purge's own `if`). A phase that edits a kill line
+  repairs that list.
+
 ### The board (CS003–CS007)
 
 - ⚠ **THREE ROSTER CLASSES PARK RATHER THAN HUNT** — Carrier, Weaver, Surger. ⛔
@@ -441,19 +498,24 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
   100,000 — a legitimate run would have been flagged. `e2efed5` raised Classic's
   bound to 150,000 too. Nothing is outstanding.
 - ✅ **CS012 P3 — Overdrive's online board and SCORES' OVERDRIVE view shipped**
-  (above, Meta). ⛔ **`max_combo`'s real source is still P4's**: it reads
-  `C.TELEMETRY_PLACEHOLDER.maxCombo`, one source to change.
-- ⛔ **CS012 — the director's combo input and the Overdrive intensity
-  re-measure** (Paul's D6): `INT_W_COMBO` is fed 0 in Classic.
+  (above, Meta). ✅ **P4 gave `max_combo` its real source**, `state.combo.peak`.
+- ✅ **CS012 P4 — the director's combo input and the Overdrive intensity
+  re-measure are done** (Paul's D6): `INT_W_COMBO` is fed
+  `clamp01(mult / C.INT_COMBO_MAX)` in Overdrive and still exactly 0 in Classic,
+  and the Overdrive maximum is 0.6519 (Audio, above).
 - ✅ **CS012 P1 — `drive`** (Paul's A5): the track, `C.MODE_TRACK.overdrive`,
   `"drive"` appended to `C.MUSIC_TRACK_CHOICES`, `tracks` 3. ⛔ Its lab session
   (PASS marks, tiers, balance) is Paul's and ports as its own commit.
 - `PTS_REAVER` is read (CS012 P2). `PTS_MIMIC` and `PTS_WARDEN` are unread — CS013's.
 - ⛔ **CS015 — achievements** (Paul's M4), planned once Overdrive exists.
-- ✅ **`C.TELEMETRY_PLACEHOLDER` is one key, `maxCombo`**, which goes with GDD
-  §14.4's combo. ⛔ The telemetry column list is frozen until a changeset
-  deliberately moves it; `TELEMETRY_FIELDS`, `TELEMETRY_KINDS`, `telemetryRow()`
-  and `22-meta.js`'s declared `telemetry` version move together.
+- ✅ **`C.TELEMETRY_PLACEHOLDER` IS GONE WHOLE** (CS012 P4): its last key,
+  `maxCombo`, reads `state.combo.peak`, and `21-telemetry.js`'s `P` went with it.
+  ⛔ **`TELEMETRY_FIELDS` did not move, so `telemetry` stays v1** — `maxCombo`
+  kept index 20 and only its source changed. ⛔ The column list is frozen until a
+  changeset deliberately moves it; `TELEMETRY_FIELDS`, `TELEMETRY_KINDS`,
+  `telemetryRow()` and `22-meta.js`'s declared `telemetry` version move together.
+  ⛔ A future column with a scheduled source mints its own constant; it does not
+  resurrect this one.
 - ⚠ **`CLAUDE.md` carries no telemetry rule**; whether it earns one is Paul's
   call.
 - ⚠ **Paul replaces `C.CREDITS_LINES` before ship.**
@@ -464,21 +526,21 @@ ledger is in `log/CS011.md`. Reasoning, measurements and mutation records are in
 - ⛔ **The seven debug spawn actions ship until CS017** (Paul's H5 call).
 - ⛔ `scratchpad/test-registry.js`: `enemies` 7 and `enemyKinds` 10 (CS012 P2, the
   Reaver). The next movers are CS013's Warden and Mimic.
-- ✅ **`C.MODE_FLAGS` / `modeHas()` HAVE THEIR FIRST GAME READER** (CS012 P5):
-  `updateJump()` (`05-skimmer.js`) and `Game.draw()`'s HUD view. `modeHas(name)`
-  defaults to `state.mode`. P4's combo is the second.
+- ✅ **`C.MODE_FLAGS` / `modeHas()` HAVE TWO GAME READERS** — P5's `updateJump()`
+  and `Game.draw()`'s HUD view, and P4's five combo functions plus
+  `dangerInputs()`. `modeHas(name)` defaults to `state.mode`; the combo passes
+  `state.mode` explicitly where the function takes it as a parameter.
 
-## Next up — CS012 P4 (the combo)
+## Next up — CS012 P6 (the tenth soak, the re-measure, the close)
 
-Run `IMPLEMENTATION-PHASES-CS012.md` P4 in a new session. ⚠ **P5 ran before it**
-(above), so read its hazards in "The Jump" as well as this list.
-⛔ It owns `max_combo`'s real source (`state.combo.peak`), the deletion of
-`C.TELEMETRY_PLACEHOLDER`, `STATE_FIELDS` — ⛔ **the `CS012` key already exists
-and reads `["jump"]`, so P4 APPENDS `"combo"`** — and plan §11's
-placeholder edits (`test-cs007-p4.js:154`, `:157`; `test-cs008-p3.js:155–156`;
-`test-cs008-p2.js:387–388`; `test-cs011-p5.js:239` — ⚠ P3 rewrote that file, so
-find it by its text, not its line number).
-⛔ **Its HUD rectangle is CENTRE-TOP** (O8), where P5's jump glyph is beside the
-Purge glyph at the bottom-right — the two do not meet, and `test-cs012-p5.js`
-asserts the four CS008 rectangles are bit-identical with a jump glyph present.
-⛔ **`INT_W_COMBO` is still fed 0**, and `19-sfx.js` is unchanged (R5).
+Run `IMPLEMENTATION-PHASES-CS012.md` P6 in a new session. ⚠ **P5 ran before P4**,
+so read "The Jump" and "The combo" hazards together.
+⛔ It owns the tenth soak file (a new one, never a widened closed one), the
+Overdrive re-measure against P4's **0.6519**, and the close: reviewing and
+compressing `log/CS012.md`, moving what is left of this file into it, and
+resetting this file. ⛔ **This file is over its ~400 lines and the close is what
+fixes that.**
+⛔ **Zero skips at the close**, and `test-cs012-p3.js` SKIPS LOUDLY without
+`../coinless-kit` at `e2efed5` — P6 cannot close with a skip.
+⛔ GDD §19's rows CS012 owns: the combo row closes when P6 plays it; the sweep
+row keeps its ✗ with P4's number recorded (O14).

@@ -152,8 +152,11 @@ H.eq(state.wellIndex, 8, "... in the well the level's modulo names");
 const row = X.telemetryRow(state);
 H.eq(row.mode, "overdrive", "⛔ the telemetry mode column reads state.mode");
 H.eq(row.startDepth, 9, "⛔ the telemetry startDepth column reads state.startDepth");
-H.eq(JSON.stringify(Object.keys(C.TELEMETRY_PLACEHOLDER)), '["maxCombo"]',
-     "⛔ the placeholder is one key, maxCombo");
+// ⛔ Rewritten in place by CS012 P4: `maxCombo` got its real source
+// (state.combo.peak), which was the placeholder's last key, so the object went
+// with it. `mode` and `startDepth` are still not placeholder keys.
+H.assert(!("TELEMETRY_PLACEHOLDER" in C),
+     "⛔ the placeholder object is gone whole, its last key sourced (CS012 P4)");
 
 // ---------------------------------------------------------------------------
 // ⛔ the bonus: paid on clearing the starting well, once (Paul, S2)

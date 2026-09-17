@@ -34,6 +34,15 @@
 // ⛔ AND THE KILL SOUND, CS009 P5, beside the points at the same three edges:
 // `sfx("kill", e.sfxVoice)`, the pitch read off the entity's eighth contract
 // field (07-enemies.js). No sound call here writes `state` or draws.
+//
+// ⛔ AND SINCE CS012 P4, OVERDRIVE'S COMBO, AT THOSE SAME EDGES AND NOWHERE
+// ELSE (GDD 14.4; O4, R6; 12-scoring.js). Each of the four lines reads
+// `addScore(e.points() * comboMult()); comboKill(state);` — the kill is scored
+// at the CURRENT multiplier and then raises it. ⛔ addScore() is unchanged and
+// stays the one writer: a multiplier folded into it would also multiply the
+// Thorn's per-chip 5, the clear bonuses and the Start Depth bonus, which is
+// the scope O4 ruled out. ⛔ Both are exactly 1 / a no-op in Classic, so a
+// Classic run is bit-identical to the build before this phase.
 
 // Are two lanes the same lane, to within the contact tolerance? ⛔ laneDelta,
 // never (a - b): on a 16-lane Ring the distance from lane 15.9 to lane 0 is
@@ -110,7 +119,7 @@ function collideShots(state, well) {
       // splits dies. `e.dead` was false above, so this IS the false -> true
       // transition: the telemetry count (02-state.js's `tally`) and the points
       // (12-scoring.js), and nothing here branches on either.
-      if (e.dead) { state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); }
+      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); }
       break;
     }
   }
@@ -235,7 +244,7 @@ function collideSkimmer(state, well) {
     // ⛔ The rim sweep — the header above, and the four decisions in it.
     if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
       e.onShot(null);
-      if (e.dead) { state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); continue; }
+      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); continue; }
     }
     killSkimmer(state);
     return;   // one death per step, whatever else is touching
@@ -283,6 +292,13 @@ function killSkimmer(state) {
   // land. Below the invulnerability guard, so a declined kill is not a death.
   state.tally.deaths++;
   sfx("death");
+
+  // ⛔ THE COMBO IS ×1 AT ONCE (GDD 14.4; O3; 12-scoring.js), and BELOW the
+  // invulnerability guard for the same reason `diedThisWell` and `deaths` are:
+  // a kill the guard declined is not a death, so it is not a combo loss either.
+  // ⛔ Unconditional — comboDeath() is a no-op in Classic, so this function
+  // stays free of a mode branch, exactly as `jump.latched` below does.
+  comboDeath(state);
 
   // ⛔ THE BUTTON IS RE-LATCHED BY DEATH. Devices are still drained during
   // hit-stop (23-main.js — a freeze must not dump a second of banked mouse
@@ -411,7 +427,7 @@ function updatePurge(state) {
     sfx("purge");
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); }
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); }
     }
     return;
   }
@@ -424,7 +440,7 @@ function updatePurge(state) {
     // the weak use by firing it into an empty well.
     // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
     // branches of the panic button count here (02-state.js's `tally`).
-    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points()); sfx("kill", victim.sfxVoice); }
+    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points() * comboMult()); comboKill(state); sfx("kill", victim.sfxVoice); }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.

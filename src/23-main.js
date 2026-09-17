@@ -343,7 +343,13 @@ function buildLaneState(state, well) {
 //   peril      1 on the last life
 //   heat       heatT(level), normalised at C.HEAT_FULL_LEVEL (D7). ⛔ Never the
 //              curve itself: test-cs007-p2.js holds its call sites exact.
-//   combo      0. Classic has no combo, ever (GDD 13; D6); CS012 supplies one.
+//   combo      GDD 11.4's literal formula, clamp01(mult / C.INT_COMBO_MAX)
+//              (CS012 P4, R5), so ×1 reads 0.125 and ×8 reads 1. ⛔ 0 in
+//              Classic, which has no combo ever (GDD 13; D6) — the gate is
+//              modeHas("combo") and NOT state.combo.mult, which sits at its
+//              shipped 1 there and would otherwise read 0.125.
+//              ⛔ A Dive reads 0 too, and that is audioFrame()'s DANGER_NONE
+//              rather than a branch here: the whole board reads zero in one.
 // ⛔ A THORN IS NOT COUNTED: `anchored` means its depth is a LENGTH, not a
 // position (CLAUDE.md). A Weaver bolt is a position, and counts.
 function dangerInputs(state, out) {
@@ -359,7 +365,7 @@ function dangerInputs(state, out) {
   out.proximity = Math.min(near, 1);
   out.peril = state.lives <= 1 ? 1 : 0;
   out.heat = heatT(state.level);
-  out.combo = 0;
+  out.combo = modeHas("combo", state.mode) ? Math.min(state.combo.mult / C.INT_COMBO_MAX, 1) : 0;
   return out;
 }
 
@@ -1548,6 +1554,13 @@ const Game = (function () {
     if (state.skimmer.dead) respawnSkimmer(state, well);
     else if (state.invulnTime < C.RESPAWN_INVULN) state.invulnTime += dt;
 
+    // ⛔ THE COMBO'S LAPSE CLOCK, BESIDE THE INVULNERABILITY CLOCK (GDD 14.4;
+    // O3, O5; 12-scoring.js). Once per play step, and a TOTAL no-op outside
+    // modeHas("combo"). ⛔ It is below the dive branch above AND carries its own
+    // `state.dive.active` guard, so O5's hold is the function's rule rather than
+    // this line's position — a caller that stepped it in a dive would still hold.
+    updateCombo(state, dt);
+
     // ⛔ THE JUMP, ABOVE EVERYTHING THAT READS IT (GDD 14.2; CS012 P5, O6;
     // 05-skimmer.js). Its phase decides whether updateShots() may fire and
     // whether collideSkimmer() runs at all, so it is resolved for THIS step
@@ -1666,6 +1679,16 @@ const Game = (function () {
       _hudView.levelColor = wellBandColor(state.level, state.bandRoll);
       _hudView.purgeUses = state.purgeUses;
       _hudView.mirror = input.setting("inputMirror");   // ⛔ the live flag (CS008 P7)
+      // ⛔ THE COMBO READOUT, AS THREE READINGS (GDD 10.4, 14.4; O8; CS012 P4).
+      // The multiplier, the depletion ring's remaining fraction, and the run's
+      // mode — the renderer's Overdrive gate, so "absent at ×1" and "Overdrive
+      // only" are two separate conditions rather than one that happens to
+      // coincide. ⛔ Filled in place; 15-render-hud.js reads no game state.
+      // ⛔ THE RING HOLDS IN A DIVE for free: updateCombo() does not advance
+      // `since` there, so this fraction does not move (O8, O5).
+      _hudView.combo = state.combo.mult;
+      _hudView.comboFill = C.COMBO_WINDOW > 0 ? 1 - state.combo.since / C.COMBO_WINDOW : 1;
+      _hudView.mode = state.mode;
       // ⛔ THE JUMP GLYPH IS OVERDRIVE'S AND NULL EVERYWHERE ELSE (O8), so the
       // Classic HUD is exactly what CS008 P4 shipped. The sub-view is filled in
       // place — no per-frame allocation — and carries readings, never the bag:
@@ -1702,6 +1725,7 @@ const Game = (function () {
   const _hudView = {
     score: 0, lives: 0, level: 1, levelColor: "", purgeUses: 0,
     mirror: false, icon: SKIMMER_POLY, jump: null,
+    combo: 1, comboFill: 1, mode: "classic",
   };
   // The jump glyph's reading (CS012 P5, O8). Its own object so `_hudView.jump`
   // can be null in Classic without allocating one in Overdrive.

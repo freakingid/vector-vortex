@@ -250,7 +250,7 @@ function checkPayload(sub, label) {
   H.eq(J([q.metric, q.durationS, q.outcome]), J([77, 13, "quit"]), "⛔ 'quit' with the pre-quit score and Math.round(state.time)");
   H.eq(J([q.stats.level_reached, q.stats.mode, q.stats.start_depth, q.stats.wells_cleared, q.stats.purges_spent,
           q.stats.max_combo, q.stats.deaths]),
-       J([1, "classic", 1, 3, 2, C.TELEMETRY_PLACEHOLDER.maxCombo, 1]), "⛔ R9: the stats read state, the tally and the placeholder");
+       J([1, "classic", 1, 3, 2, st.combo.peak, 1]), "⛔ R9: the stats read state and the tally — max_combo is state.combo.peak since CS012 P4");
   checkPayload(rec.submits[3], "quit");
 
   // A bench-touched run: begun, never submitted.

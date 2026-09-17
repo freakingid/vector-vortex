@@ -149,16 +149,19 @@ H.eq(row.enemiesAlive - row.threatsAlive >= row.thornsStanding, true,
 // P2, which gave `score` its source: the column keeps its place and reads
 // state.score, and its key is gone from the placeholder. ⛔ And by CS008 P3,
 // which did the same for `mode` and `startDepth` (state.mode, state.startDepth).
+// ⛔ AND BY CS012 P4, THE LAST OF THE FOUR: `maxCombo` reads state.combo.peak,
+// and with its last key sourced C.TELEMETRY_PLACEHOLDER was deleted WHOLE — so
+// the "no longer a placeholder key" claims are now one claim about the object.
 H.eq(row.score, state.score, "the score column is state.score (CS008 P2)");
-H.assert(!("score" in C.TELEMETRY_PLACEHOLDER), "⛔ and `score` is no longer a placeholder key");
-H.eq(row.maxCombo, 0, "⚠ the maxCombo column is 0 until GDD §14.4's combo");
+H.assert(!("TELEMETRY_PLACEHOLDER" in C), "⛔ and `score` is no longer a placeholder key — the object is gone whole (CS012 P4)");
+H.eq(row.maxCombo, 0, "the maxCombo column is 0 on a Classic run (CS012 P4)");
 H.eq(row.mode, "classic", "the mode column is \"classic\" on a default run");
 H.eq(row.startDepth, 1, "the startDepth column is 1 on a default run");
-H.eq(row.maxCombo, C.TELEMETRY_PLACEHOLDER.maxCombo, "and maxCombo reads C.TELEMETRY_PLACEHOLDER");
+H.eq(row.maxCombo, state.combo.peak, "and maxCombo reads state.combo.peak (CS012 P4)");
 H.eq(row.mode, state.mode, "the mode column is state.mode (CS008 P3)");
 H.eq(row.startDepth, state.startDepth, "the startDepth column is state.startDepth (CS008 P3)");
-H.assert(!("mode" in C.TELEMETRY_PLACEHOLDER) && !("startDepth" in C.TELEMETRY_PLACEHOLDER),
-     "⛔ and neither is a placeholder key any longer");
+H.assert(!("TELEMETRY_PLACEHOLDER" in C),
+     "⛔ and neither `mode` nor `startDepth` is a placeholder key any longer (CS012 P4: nor is anything)");
 
 // ⚠ CROSS-CHECKED AGAINST THE WORKER'S SEVEN REGISTERED statsFields for
 // `vector-vortex` (coinless-kit services/leaderboard/src/registry.js, measured

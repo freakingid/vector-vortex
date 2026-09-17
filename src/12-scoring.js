@@ -23,6 +23,10 @@
 // player destroying a Thorn, and it is not counted in `tally.kills` either. The
 // Thorn itself scores per CHIP from inside its own onShot(), because the enemy
 // decides what a hit does — its points() is 0, so its death pays nothing extra.
+//
+// ⛔ AND SINCE CS012 P4 THIS FILE ALSO OWNS THE COMBO (GDD 14.4), at the foot.
+// ⛔ THE MULTIPLIER IS APPLIED AT THOSE KILL SITES, NOT IN addScore() — see the
+// header there before changing either.
 
 // Add `n` points, and award every extra life the new total has crossed.
 //
@@ -86,4 +90,108 @@ function clearBonuses(state) {
 function startBonus(d) {
   const R = C.START_BONUS_ROUND;
   return Math.round(C.START_BONUS_SCALE * Math.pow(d - 1, C.START_BONUS_EXP) / R) * R;
+}
+
+// ---------------------------------------------------------------------------
+// THE COMBO — OVERDRIVE'S (GDD 14.4; O3, O4, O5, R2, R6; CS012 P4)
+// ---------------------------------------------------------------------------
+//
+// ⛔ THE MULTIPLIER IS APPLIED AT THE KILL SITES AND NEVER INSIDE addScore()
+// (R6). `addScore(e.points() * comboMult())` — four lines in 09-collision.js.
+// addScore() stays the ONE writer of state.score and the one life-awarder, and
+// it is unchanged: a multiplier folded into it would silently multiply the
+// clear bonuses, the Start Depth bonus and the Thorn's per-chip 5, which is
+// exactly the scope O4 ruled out.
+//
+// ⛔ WHAT IT MULTIPLIES, AND WHAT BUILDS IT, ARE ONE RULE (O4): kill points at
+// the three kill sites — a shot, the rim sweep, and both Purge uses — and every
+// kill there builds it. Thorn chips, the clear bonuses and the Start Depth
+// bonus are NOT multiplied and do NOT build it. ⛔ The Dive's termination kill
+// still pays nothing and builds nothing (GDD 5, 7).
+//
+// ⛔ EACH KILL SCORES AT THE CURRENT MULTIPLIER AND THEN RAISES IT. That is the
+// order O3's table was measured on, and it is why the kill sites read
+// `addScore(e.points() * comboMult()); comboKill(state);` in that order.
+//
+// ⛔ ALL FOUR ARE TOP-LEVEL AND ALL FOUR ARE NO-OPS OUTSIDE modeHas("combo"),
+// so a Classic run never touches state.combo at all: `mult` stays exactly 1,
+// comboMult() returns exactly 1, and `n * 1 === n` in IEEE-754 — a Classic
+// session's hash is identical to one built with these calls mutated out of
+// every kill site (test-cs012-p4.js).
+//
+// ⛔ NOTHING HERE SPENDS AN RNG DRAW OR CALLS heat(). The combo is a function
+// of kills and time, not of the level — GDD 8's one clock is untouched by it,
+// and test-cs007-p2.js holds heat()'s call sites exact.
+
+// The factor a kill site multiplies by. ⛔ EXACTLY 1 in Classic, never 1.0
+// computed from something.
+function comboMult() {
+  if (!modeHas("combo")) return 1;
+  return state.combo.mult;
+}
+
+// ⛔ THE ONE comboLost SEAT (O8; GDD 11.8, 14.4: "loss has its own sound"), and
+// the one place `mult` falls. Both fall paths — a lapsed window and a death —
+// come through here, so the sound is once per FALL rather than once per cause,
+// and a fall that would not move the multiplier (a death at ×1) is silent.
+function comboDrop(state, to) {
+  const c = state.combo;
+  if (to >= c.mult) return;
+  c.mult = to;
+  sfx("comboLost");
+}
+
+// A kill at one of O4's three sites. ⛔ Called AFTER the kill has been scored.
+function comboKill(state) {
+  if (!modeHas("combo", state.mode)) return;
+  const c = state.combo;
+  // ⛔ THE WINDOW RESTARTS ON EVERY KILL (O3), which is what makes COMBO_WINDOW
+  // a lapse clock rather than a gap test between two kills.
+  c.since = 0;
+  c.kills++;
+  if (c.kills >= C.COMBO_KILLS_PER_STEP) {
+    c.kills = 0;
+    c.mult = Math.min(c.mult + C.COMBO_STEP, C.COMBO_MAX);
+  }
+  // ⛔ AFTER the raise, so `peak` is the highest multiplier the run REACHED.
+  // The first kill of an Overdrive run puts it at 1, which is what separates
+  // "an Overdrive run that killed nothing" from a Classic run's 0 (R7).
+  if (c.mult > c.peak) c.peak = c.mult;
+}
+
+// ⛔ A DEATH IS ×1 AT ONCE, WITH THE KILL COUNT EMPTIED (O3) — not a decay.
+// Seated in killSkimmer() BELOW the invulnerability guard (09-collision.js), so
+// a kill the guard declined is not a combo loss either.
+function comboDeath(state) {
+  if (!modeHas("combo", state.mode)) return;
+  const c = state.combo;
+  comboDrop(state, 1);
+  c.kills = 0;
+  c.since = 0;
+}
+
+// One simulation step of the lapse clock, from Game.update()'s play step.
+//
+// ⛔ THE CLOCK HOLDS THROUGH A DIVE (O5). MEASURED in the plan (§1.3): the
+// median gap from the last kill before a clear to the first kill after it is
+// 4.58–4.83 s, of which the Dive is 2.6 s and the next well's first release is
+// most of the rest — so a strict window would cost half a step at every well
+// change. The Dive is GDD 1.1 P4's breath and nothing can be killed in one.
+// The guard is HERE as well as in the caller's ordering, so the rule is the
+// function's and not the call site's.
+//
+// ⛔ `since` COUNTS UP (GDD 16.3) and wraps at the window: a window with no
+// kill costs C.COMBO_STEP, and each further window costs another, down to ×1
+// (O3). ⛔ The kill count is NOT emptied by a lapse — O3 empties it on a death
+// alone. The wrap is what makes the HUD's depletion ring refill for each
+// further step, which is the loss the player is being shown.
+function updateCombo(state, dt) {
+  if (!modeHas("combo", state.mode)) return;
+  if (state.dive.active) return;
+  const c = state.combo;
+  c.since += dt;
+  while (c.since >= C.COMBO_WINDOW) {
+    c.since -= C.COMBO_WINDOW;
+    comboDrop(state, Math.max(1, c.mult - C.COMBO_STEP));
+  }
 }

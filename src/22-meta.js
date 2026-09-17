@@ -149,8 +149,10 @@ const Leaderboard = (function () {
   }
 
   // Plan R9's payload, on the run's own board. `durationS` is simulation seconds,
-  // pause excluded, and an integer as the Worker demands. `max_combo` is
-  // C.TELEMETRY_PLACEHOLDER's until CS012 P4 gives the combo a source.
+  // pause excluded, and an integer as the Worker demands. ⛔ `max_combo` is the
+  // run's PEAK MULTIPLIER, state.combo.peak (GDD 14.4; CS012 P4, R7) — 5.5
+  // rather than 11 kills, and 0 on a Classic run, which is what every Classic
+  // row posted before this phase carries.
   function payload(outcome) {
     return {
       metric: state.score,
@@ -162,7 +164,7 @@ const Leaderboard = (function () {
         start_depth: state.startDepth,
         wells_cleared: state.tally.wellsCleared,
         purges_spent: state.tally.purgesSpent,
-        max_combo: C.TELEMETRY_PLACEHOLDER.maxCombo,
+        max_combo: state.combo.peak,
         deaths: state.tally.deaths,
       },
     };

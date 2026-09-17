@@ -5,8 +5,9 @@
 //
 // ⛔ drawHud(ctx, view) READS NO GAME STATE. Everything it shows arrives on the
 // view Game.draw() fills — score, lives, level, the level's colour, purgeUses,
-// the mirror flag and the reserve icon's point array — and the only global it
-// reads is C, for sizes. Nothing here reads `state`, WELLS or the Skimmer.
+// the mirror flag, the reserve icon's point array, CS012 P5's jump reading and
+// P4's combo reading — and the only global it reads is C, for sizes. Nothing
+// here reads `state`, WELLS or the Skimmer.
 //
 // ⛔ hudLayout(view) IS THE ONE PLACE A CORNER IS PLACED, and drawHud draws
 // inside the rectangles it returns. test-cs008-p4.js asserts those rectangles
@@ -44,6 +45,14 @@ const JUMP_GLYPH_POLY = [
 // The rim it has left: an OPEN two-point line under the craft.
 const JUMP_RIM_POLY = [{ x: -1.00, y: 0.72 }, { x: 1.00, y: 0.72 }];
 
+// ⛔ THE COMBO READOUT, OVERDRIVE ONLY (GDD 10.4, 14.4; O8): "×N" centre-top,
+// loud, absent at ×1, inside a depletion RING that empties over
+// C.COMBO_WINDOW. ⛔ The ring is an ELLIPSE rather than a circle, and that is
+// arithmetic: the widest reading is C.HUD_COMBO_CHARS characters at
+// C.HUD_COMBO_SIZE, 138.88 px against a 56 px em box, so a circle around it
+// would be 148 px tall and could not clear the Fan well's throat zone
+// (00-config.js). It is still one polyline through drawPoly + glowStroke.
+
 // ⛔ NO PER-FRAME ALLOCATION beyond the strings themselves: the layout, its
 // rectangles and both point scratches are module-level and rewritten per call.
 // Like entityPoints(), that makes hudLayout() non-reentrant — copy what you keep.
@@ -53,20 +62,48 @@ const _hud = {
   level: { x: 0, y: 0, w: 0, h: 0 },
   purge: { x: 0, y: 0, w: 0, h: 0 },
   jump: { x: 0, y: 0, w: 0, h: 0 },
+  combo: { x: 0, y: 0, w: 0, h: 0 },
   lifeIcons: 0,      // reserve craft drawn: lives − 1, never below 0 (H1)
   purgeAlpha: 0,     // 1 bright, C.HUD_PURGE_DIM_ALPHA dim, 0 absent
   jumpAlpha: 0,      // 1 ready, C.HUD_PURGE_DIM_ALPHA cooling, 0 airborne or Classic
   jumpRing: 0,       // 0..1 of the readiness ring drawn — 0 when ready, 0 when absent
+  comboAlpha: 0,     // 1 shown, 0 absent — Classic, and Overdrive at ×1
+  comboRing: 0,      // 0..1 of the depletion ring still standing (full on a kill)
 };
 
 const _purgePts = PURGE_GLYPH_POLY.map(function () { return { x: 0, y: 0 }; });
 const _jumpPts = JUMP_GLYPH_POLY.map(function () { return { x: 0, y: 0 }; });
 const _jumpRimPts = JUMP_RIM_POLY.map(function () { return { x: 0, y: 0 }; });
 const _ringPts = [];
+const _comboRingPts = [];
 const _iconPts = [];
 
 function hudScoreText(view) { return String(view.score); }
 function hudLevelText(view) { return "LEVEL " + view.level; }
+
+// GDD 14.4's multiplier, on C.COMBO_STEP's half-step lattice: "×4", "×3.5".
+// ⛔ A whole number carries NO decimal, so the widest reading is four
+// characters and C.HUD_COMBO_CHARS is a constant rather than a measurement.
+function hudComboText(view) {
+  const m = view.combo;
+  return "×" + (m % 1 === 0 ? String(m) : m.toFixed(1));
+}
+
+// O8's two conditions, and they are deliberately two: ⛔ OVERDRIVE ONLY, and
+// ⛔ ABSENT AT ×1. Classic's multiplier never leaves 1, so either alone would
+// hide it there — which is exactly why both are written down.
+function hudComboAlpha(view) {
+  if (view.mode !== "overdrive") return 0;
+  return typeof view.combo === "number" && view.combo > 1 ? 1 : 0;
+}
+// The depletion ring: FULL on a kill, empty at the lapse (O8). 0 when the
+// readout is absent, so nothing is drawn around nothing.
+function hudComboRing(view) {
+  if (hudComboAlpha(view) <= 0) return 0;
+  const f = view.comboFill;
+  if (typeof f !== "number" || !(f > 0)) return 0;
+  return f > 1 ? 1 : f;
+}
 
 // GDD 4.3 through the §0 reading: purgeUses 0 bright, 1 dim (the weak second
 // use is still there), 2 or more nothing.
@@ -143,6 +180,23 @@ function hudLayout(view) {
   _hud.jumpAlpha = hudJumpAlpha(view.jump);
   _hud.jumpRing = hudJumpRing(view.jump);
 
+  // ⛔ THE COMBO READOUT IS CENTRE-TOP AND MOVES NOTHING (O8; CS012 P4). Like
+  // the jump glyph it is placed absolutely, off no other rectangle, so the four
+  // CS008 corners are bit-identical whether or not it is shown — the Classic
+  // HUD's guarantee, asserted in test-cs012-p4.js.
+  // ⛔ THE RECTANGLE IS THE RING'S EXTENT AT ITS WIDEST READING, not this
+  // frame's text: it is what the throat-zone and touch-button assertions are
+  // made against, so it has to be the whole footprint, and a constant footprint
+  // is what stops the ring breathing as the multiplier crosses a whole number.
+  const csize = C.HUD_COMBO_SIZE;
+  const crx = C.HUD_COMBO_CHARS * csize * C.TEXT_CHAR_W / 2 + C.HUD_COMBO_PAD;
+  const cry = csize / 2 + C.HUD_COMBO_PAD;
+  const cb = _hud.combo;
+  cb.w = crx * 2; cb.h = cry * 2;
+  cb.x = W / 2 - crx; cb.y = C.HUD_COMBO_Y;
+  _hud.comboAlpha = hudComboAlpha(view);
+  _hud.comboRing = hudComboRing(view);
+
   return _hud;
 }
 
@@ -151,6 +205,9 @@ function hudLayout(view) {
 //   mirror  the touch buttons' side (H3), the input module's live flag since P7
 //   icon    the reserve craft's local-space poly ({ l, d }, d ≤ 0 inward)
 //   jump    null in Classic; otherwise { airborne, ready, ring } (O8, CS012 P5)
+//   combo, comboFill, mode
+//           GDD 14.4's multiplier, its window's remaining fraction, and the
+//           run's mode — the readout's Overdrive gate (O8, CS012 P4)
 function drawHud(ctx, view) {
   const L = hudLayout(view);
   const size = C.HUD_TEXT_SIZE;
@@ -224,6 +281,35 @@ function drawHud(ctx, view) {
       }
       drawPoly(ctx, _ringPts, false);
       glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.jumpAlpha);
+    }
+  }
+
+  // ⛔ THE COMBO READOUT (O8), and the same three rules again: drawText() for
+  // the text, drawPoly + glowStroke for the ring, no fill and no rectangle.
+  // Absent at alpha 0, which is Classic and ×1 both — so the Classic HUD draws
+  // exactly what it drew before CS012 P4.
+  if (L.comboAlpha > 0) {
+    const cx = L.combo.x + L.combo.w / 2, cy = L.combo.y + L.combo.h / 2;
+    drawText(ctx, hudComboText(view), cx, cy - C.HUD_COMBO_SIZE / 2,
+             C.HUD_COMBO_SIZE, C.HUD_COLOR, "center");
+
+    // ⛔ THE RING DEPLETES ANTICLOCKWISE FROM TWELVE O'CLOCK as the window
+    // runs, so the moment it closes on nothing is the moment the multiplier
+    // falls. ⛔ A POLYLINE, never ctx.arc (GDD 10.2), and an ELLIPSE rather
+    // than a circle — the reading is wider than it is tall.
+    if (L.comboRing > 0) {
+      const rx = L.combo.w / 2, ry = L.combo.h / 2;
+      const segs = Math.max(1, Math.round(C.HUD_COMBO_RING_SEG * L.comboRing));
+      const span = 2 * Math.PI * L.comboRing;
+      while (_comboRingPts.length < segs + 1) _comboRingPts.push({ x: 0, y: 0 });
+      _comboRingPts.length = segs + 1;
+      for (let i = 0; i <= segs; i++) {
+        const a = -Math.PI / 2 - span * (i / segs);
+        _comboRingPts[i].x = cx + Math.cos(a) * rx;
+        _comboRingPts[i].y = cy + Math.sin(a) * ry;
+      }
+      drawPoly(ctx, _comboRingPts, false);
+      glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.comboAlpha);
     }
   }
 }

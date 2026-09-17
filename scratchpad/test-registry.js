@@ -59,11 +59,11 @@ const STATE_FIELDS = {
   // per-well flag behind the "no death" clear bonus (12-scoring.js).
   CS008: ["score", "nextLife", "diedThisWell", "mode", "startDepth"],
   // ⛔ TWO BAGS, ONE PER FEATURE (CS012 R2): `jump` is P5's (GDD 14.2) and
-  // `combo` is P4's (GDD 14.4). ⚠ P5 SHIPPED FIRST, so today this reads
-  // ["jump"] alone and P4 adds "combo" beside it — a sequence finding, in
-  // STATUS.md. Both are Overdrive's, both are reset by newState(), and neither
-  // is read at all in Classic.
-  CS012: ["jump"],
+  // `combo` is P4's (GDD 14.4). ⚠ P5 SHIPPED FIRST, which is why the order here
+  // is P5's then P4's rather than R2's — the sum is what the guard reads. Both
+  // are Overdrive's, both are reset by newState(), and neither is read at all
+  // in Classic.
+  CS012: ["jump", "combo"],
 };
 
 function stateFields() {

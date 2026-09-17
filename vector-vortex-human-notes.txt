@@ -111,6 +111,9 @@ Phase 2
 Stopping Wednesday night 9/16/2026 and Start with Phase 3 next time.
 Thursday night resuming 436p
 Phase 3
+Phase 5
+Phase 4
+When done, and oo is done, we want to update VS Code plugins and restart window.
 
 
 

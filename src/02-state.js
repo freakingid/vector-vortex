@@ -239,6 +239,27 @@ function newState() {
     //            a freeze or a well change needs a real release first.
     jump: { phase: "ground", t: 0, cool: C.JUMP_COOLDOWN, latched: false },
 
+    // ⛔ THE COMBO (GDD 14.4; O3, O5, R2; 12-scoring.js). Overdrive's, and the
+    // four functions that touch it are no-ops in Classic — which is what keeps
+    // `mult` at exactly 1 there, and `n * 1 === n` in IEEE-754, so a Classic
+    // run's score is bit-identical to the build before CS012 P4
+    // (test-cs012-p4.js).
+    //
+    // ⛔ `mult` IS THE MULTIPLIER AND `peak` IS WHAT THE RUN REPORTS. GDD
+    // 15.4's `max_combo` and 15.6's `maxCombo` column are both `peak` — the
+    // run's highest MULTIPLIER, 5.5 rather than 11 kills (O3) — and it is 0 on
+    // a Classic run, which is the value every Classic row posted before this
+    // phase carried.
+    //
+    //   mult   1 … C.COMBO_MAX on C.COMBO_STEP's half-step lattice
+    //   kills  kills since the last step up, 0 … C.COMBO_KILLS_PER_STEP − 1
+    //   since  counts UP (GDD 16.3) toward C.COMBO_WINDOW, and wraps at it: a
+    //          kill zeroes it, each whole window costs one step of `mult`, and
+    //          ⛔ it does not advance during a Dive (O5) — the breath is not a
+    //          lapse, and nothing can be killed in one
+    //   peak   the highest `mult` this run reached. ⛔ Never falls
+    combo: { mult: 1, kills: 0, since: 0, peak: 0 },
+
     // ⛔ THE RUN'S CUMULATIVE COUNTERS (GDD 15.6; 21-telemetry.js). CS007 P4.
     //
     // ⛔ WRITE-ONLY AS FAR AS THE SIMULATION IS CONCERNED. Eight numbers, each

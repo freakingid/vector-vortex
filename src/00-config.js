@@ -612,6 +612,7 @@ const C = {
     menuMove:       { osc: [{ type: "square", f: 880 }], atk: 0.001, hold: 0.01, rel: 0.03, gain: 0.06 },
     menuConfirm:    { osc: [{ type: "triangle", f: 660 }, { type: "triangle", f: 990 }], atk: 0.002, hold: 0.05, rel: 0.12, gain: 0.1 },
     menuBack:       { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 },
+    comboLost:      { osc: [{ type: "sawtooth", f: 587, to: 220 }, { type: "sawtooth", f: 392, to: 147 }], glide: 0.22, filter: { type: "lowpass", f: 3200, to: 700 }, sweep: 0.22, atk: 0.003, hold: 0.04, rel: 0.22, gain: 0.13 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
@@ -646,8 +647,18 @@ const C = {
   JUMP_SHADOW_ALPHA:    0.6,    // the rim shadow's glow alpha, under the lifted craft
   JUMP_HP_HZ:           700,    // Hz: a clear thinning with the tune intact
   JUMP_HP_TC:           0.03,   // s: the time constant of a de-click, not a sweep
+  // ⛔ THE COMBO (GDD 14.4; O3, O5; CS012 P4). Four numbers and no fifth: the
+  // multiplier rises by COMBO_STEP every COMBO_KILLS_PER_STEP kills, a window
+  // with no kill costs one step and each further window another, and a death is
+  // ×1 at once. ⚠ COMBO_KILLS_PER_STEP is PROVISIONAL (O16): O3's table
+  // MEASURED 4 as the value that lands GDD 14.4's "ordinary competent play
+  // sustains ×3–4" (mean 4.76 sharp / 3.85 dull), where +0.5 per kill sustains
+  // about ×7. ⛔ COMBO_WINDOW is the LAPSE clock, not a kill-gap test: the
+  // window restarts on every kill and the clock HOLDS through a Dive (O5).
   COMBO_WINDOW:         2.50,   // s
   COMBO_MAX:            8,
+  COMBO_STEP:           0.5,    // ⛔ the half step GDD 14.4 names; the lattice is 1, 1.5 … COMBO_MAX
+  COMBO_KILLS_PER_STEP: 4,      // ⚠ provisional (O16)
 
   // ---- Scoring (GDD 7) ----------------------------------------------------
   PTS_THORN:            5,
@@ -711,6 +722,28 @@ const C = {
   HUD_JUMP_GAP:         16,     // px between that box and the Purge glyph's
   HUD_JUMP_CRAFT:       0.60,   // the craft glyph's width as a fraction of the box
   HUD_JUMP_RING_SEG:    24,     // polyline segments in a FULL ring; a partial one uses its share
+  // ⛔ THE COMBO READOUT, OVERDRIVE ONLY (GDD 10.4, 14.4, 16.3; O8, O16). "×N"
+  // CENTRE-TOP, absent at ×1, inside a depletion ring that empties over
+  // COMBO_WINDOW. ⚠ HUD_COMBO_SIZE is O16's provisional 56, C.MENU_TITLE_SIZE's
+  // "loud".
+  //
+  // ⛔ HUD_COMBO_Y IS 6 AND NOT HUD_MARGIN, AND THAT IS ARITHMETIC RATHER THAN
+  // taste. MEASURED at CS012 P4: the Fan well's throat zone (GDD 10.3) reaches
+  // y 76.29, and its x span 504.6..775.4 straddles the centre — so the whole
+  // readout must clear 76.29. HUD_COMBO_Y + HUD_COMBO_SIZE + 2 × HUD_COMBO_PAD
+  // is 70, which leaves 6.29 px. ⛔ An art pass that raises HUD_COMBO_SIZE
+  // re-derives that sum; at HUD_MARGIN 24 the 56 px em box alone breaches it.
+  // test-cs012-p4.js asserts it on all sixteen wells.
+  //
+  // ⛔ THE RING IS AN ELLIPSE, and it is sized for the WIDEST reading rather
+  // than the current one (HUD_COMBO_CHARS — "×3.5" is four characters, "×8" is
+  // two), so the rectangle is a constant and the ring does not breathe as the
+  // multiplier crosses a whole number.
+  HUD_COMBO_SIZE:       56,     // px, the "×N" text. ⚠ provisional (O16)
+  HUD_COMBO_Y:          6,      // px, the readout rectangle's top edge
+  HUD_COMBO_PAD:        4,      // px between the widest text box and the ring
+  HUD_COMBO_CHARS:      4,      // the widest reading, in characters: "×3.5"
+  HUD_COMBO_RING_SEG:   32,     // polyline segments in a FULL ring; a partial one uses its share
   // ⛔ H3: the touch-button side's items shift inward by this many
   // TOUCH_BUTTON_R — the button's far edge (margin 1.5 R + radius 1 R) and a
   // margin. The side is the mirror flag in the HUD view, never a detected device.
@@ -799,14 +832,15 @@ const C = {
                                 // is wrong, so the export says so in its header.
   TELEMETRY_INTERVAL:   0.50,   // s of SIMULATION time between samples (never
                                 // wall clock). 4096 rows is ~34 min of a run.
-  // ⛔ A COLUMN THAT SHIPS WITH A KNOWN-CONSTANT VALUE, and that is GDD 15.6's
-  // rule rather than laziness: a column added later invalidates every log
-  // recorded before it, so a column whose SOURCE is scheduled gets its place in
-  // the order now and its source later. `maxCombo` lands with GDD 14.4's combo.
-  // ⛔ Each key is DELETED from here by the changeset that gives that column a
-  // real source — `score` went in CS008 P2 (state.score), `mode` and
-  // `startDepth` in CS008 P3 (state.mode, state.startDepth).
-  TELEMETRY_PLACEHOLDER: { maxCombo: 0 },
+  // ⛔ THERE IS NO TELEMETRY_PLACEHOLDER ANY MORE, AND THAT IS THE POINT
+  // (GDD 15.6; CS012 P4, R7). It held the columns whose SOURCE was scheduled
+  // later than their PLACE in the order — a column added later invalidates
+  // every log recorded before it — and each key was deleted by the changeset
+  // that gave that column a real source: `score` in CS008 P2 (state.score),
+  // `mode` and `startDepth` in CS008 P3, and `maxCombo` here
+  // (state.combo.peak). With its last key gone the object is dead code, so it
+  // went with it rather than staying as an empty bag. ⛔ A future column with a
+  // scheduled source mints its own constant; it does not resurrect this one.
 
   // ---- Meta: profiles, saves, scores (GDD 15) — CS011 ----------------------
   // The phases that read the rest of the group add them (plan §2).

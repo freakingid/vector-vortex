@@ -376,6 +376,24 @@ letterboxed by CSS.
 ⛔ **All scoring routes through `addScore()`** — it also owns extra-life
 milestones. Do not add a bypass without recording it here.
 
+⛔ **OVERDRIVE'S COMBO MULTIPLIER IS APPLIED AT THE KILL SITES, NOT IN
+`addScore()`** (CS012 P4, O4, R6; GDD §7, §14.4). The four kill lines in
+`09-collision.js` read `addScore(e.points() * comboMult()); comboKill(state);` —
+scored at the multiplier in force, and then raising it. ⛔ **That is not a
+bypass and it is not a second writer**: `addScore()` is unchanged. ⛔ **What is
+multiplied is exactly what builds it** — kill points at the three kill sites,
+nothing else. The Thorn's per-chip 5, the three clear bonuses and the Start
+Depth bonus are **not** multiplied and build nothing, and the Dive's termination
+kill still pays nothing. ⛔ **Do not "unify" the multiplier into `addScore()`**:
+it would silently take all four.
+
+⛔ **`comboMult()`, `comboKill()`, `comboDeath()` and `updateCombo()` live in
+`12-scoring.js` and are each a no-op — or exactly 1 — outside
+`modeHas("combo")`**, which is what keeps a Classic run bit-identical
+(`test-cs012-p4.js`). ⛔ **`comboDrop()` is the ONE place the multiplier falls
+and the ONE `sfx("comboLost")` seat**, so the sound is once per fall rather than
+once per cause. ⛔ **The combo spends no RNG draw and calls no `heat()`.**
+
 ### Audio
 
 ⛔ **`MusicSys` lives alongside `AudioSys`, never inside it.** `AudioSys` is a
@@ -649,7 +667,10 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge
     10-powerups.js     Overdrive tokens
     11-dive.js         the Dive: the beat, the Thorn strike, the loop guard
-    12-scoring.js
+    12-scoring.js      addScore() — the ONE writer — the clear bonuses, and the
+                       COMBO: state.combo, comboMult()/comboKill()/comboDeath()/
+                       updateCombo() (all no-ops outside modeHas("combo")), and
+                       comboDrop(), the one fall and the one comboLost seat
     13-render-well.js  14-render-entities.js  15-render-hud.js
     16-audio-engine.js kit-audio 0.4.0: the context and four buses, the
                        lookahead scheduler, the SFX player, and five optional

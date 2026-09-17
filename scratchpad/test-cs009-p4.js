@@ -29,9 +29,11 @@ const lab = fs.readFileSync(path.join(ROOT, LAB_PATH), "utf8");
 const trimEnd = s => s.replace(/\s+$/, "");
 
 // plan §7's event list (A8: the core set, no spawn cues), and A9's voices.
+// ⛔ CS012 P4 appended `comboLost` in place (GDD 14.4's "loss has its own
+// sound"; O8): the list is the build's own event set, not CS009's alone.
 const EVENTS = ["fire", "kill", "split", "chip", "bolt", "cross", "surgeCharge", "surgeDischarge",
   "death", "gameOver", "respawn", "purge", "purgeWeak", "extraLife", "lifeLost", "wellClear",
-  "dive", "diveStrike", "menuMove", "menuConfirm", "menuBack"];
+  "dive", "diveStrike", "menuMove", "menuConfirm", "menuBack", "comboLost"];
 const VOICES = ["vaulter", "carrier", "weaver", "weaverBolt", "thorn", "drifter", "surger", "reaver"];   // CS012 P2: + reaver, in place
 
 function sliceModules(src) {
@@ -106,7 +108,7 @@ H.assert(/createSfxPlayer\(AudioSys, \{\s*noise: mulberry32\(C\.AUDIO_NOISE_SEED
     "⛔ the player reads no config, names no game instance, and draws no platform noise");
 }
 
-H.eq(JSON.stringify(Object.keys(C.SFX)), JSON.stringify(EVENTS), "⛔ C.SFX holds exactly plan §7's events, in its order");
+H.eq(JSON.stringify(Object.keys(C.SFX)), JSON.stringify(EVENTS), "⛔ C.SFX holds exactly the event list above, in its order (plan §7's, + CS012 P4's comboLost)");
 for (const name of EVENTS) {
   let err = null;
   try { sfxCheckRecipe(C.SFX[name]); } catch (e) { err = e.message; }
@@ -139,7 +141,7 @@ for (const name of EVENTS) {
       `${name} candidate ${"BC"[i]} is a valid recipe, not A again${err ? ": " + err : ""}`);
   });
 }
-H.eq(Object.keys(cands.SFX_ALTS).length, EVENTS.length, "the lab lists no event outside plan §7");
+H.eq(Object.keys(cands.SFX_ALTS).length, EVENTS.length, "the lab lists no event outside the list above");
 
 {
   const ui = lab.slice(lab.indexOf("// ===== LAB UI"));

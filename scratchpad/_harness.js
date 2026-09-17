@@ -277,12 +277,17 @@ function buildGame(opts = {}) {
     "Telemetry",
     // scoring and extra lives (12-scoring.js, CS008 P2)
     "addScore", "clearBonuses",
+    // the combo — four top-level functions so a test can stub or drive each
+    // (12-scoring.js, CS012 P4, R2)
+    "comboMult", "comboKill", "comboDeath", "updateCombo",
     // the run's parameters and Start Depth (12/22, CS008 P3)
     "startBonus", "levelRecord", "startDepthOptions",
     // text, the HUD and the death fragmentation (13/14/15, CS008 P4)
     "drawText", "drawHud", "hudLayout", "PURGE_GLYPH_POLY", "drawFragments", "fragmentT",
     // the jump glyph's shape data and its two readings (15-render-hud.js, CS012 P5)
     "JUMP_GLYPH_POLY", "JUMP_RIM_POLY", "hudJumpAlpha", "hudJumpRing",
+    // the combo readout's three readings (15-render-hud.js, CS012 P4)
+    "hudComboText", "hudComboAlpha", "hudComboRing",
     // the menu model and the screens (15/23, CS008 P5)
     "createMenu", "drawMenu", "menuWindowStart",
     // kit-audio and the game's instances (16/19, CS009 P1)

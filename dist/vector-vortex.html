@@ -661,6 +661,7 @@ const C = {
     menuMove:       { osc: [{ type: "square", f: 880 }], atk: 0.001, hold: 0.01, rel: 0.03, gain: 0.06 },
     menuConfirm:    { osc: [{ type: "triangle", f: 660 }, { type: "triangle", f: 990 }], atk: 0.002, hold: 0.05, rel: 0.12, gain: 0.1 },
     menuBack:       { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 },
+    comboLost:      { osc: [{ type: "sawtooth", f: 587, to: 220 }, { type: "sawtooth", f: 392, to: 147 }], glide: 0.22, filter: { type: "lowpass", f: 3200, to: 700 }, sweep: 0.22, atk: 0.003, hold: 0.04, rel: 0.22, gain: 0.13 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
@@ -695,8 +696,18 @@ const C = {
   JUMP_SHADOW_ALPHA:    0.6,    // the rim shadow's glow alpha, under the lifted craft
   JUMP_HP_HZ:           700,    // Hz: a clear thinning with the tune intact
   JUMP_HP_TC:           0.03,   // s: the time constant of a de-click, not a sweep
+  // ⛔ THE COMBO (GDD 14.4; O3, O5; CS012 P4). Four numbers and no fifth: the
+  // multiplier rises by COMBO_STEP every COMBO_KILLS_PER_STEP kills, a window
+  // with no kill costs one step and each further window another, and a death is
+  // ×1 at once. ⚠ COMBO_KILLS_PER_STEP is PROVISIONAL (O16): O3's table
+  // MEASURED 4 as the value that lands GDD 14.4's "ordinary competent play
+  // sustains ×3–4" (mean 4.76 sharp / 3.85 dull), where +0.5 per kill sustains
+  // about ×7. ⛔ COMBO_WINDOW is the LAPSE clock, not a kill-gap test: the
+  // window restarts on every kill and the clock HOLDS through a Dive (O5).
   COMBO_WINDOW:         2.50,   // s
   COMBO_MAX:            8,
+  COMBO_STEP:           0.5,    // ⛔ the half step GDD 14.4 names; the lattice is 1, 1.5 … COMBO_MAX
+  COMBO_KILLS_PER_STEP: 4,      // ⚠ provisional (O16)
 
   // ---- Scoring (GDD 7) ----------------------------------------------------
   PTS_THORN:            5,
@@ -760,6 +771,28 @@ const C = {
   HUD_JUMP_GAP:         16,     // px between that box and the Purge glyph's
   HUD_JUMP_CRAFT:       0.60,   // the craft glyph's width as a fraction of the box
   HUD_JUMP_RING_SEG:    24,     // polyline segments in a FULL ring; a partial one uses its share
+  // ⛔ THE COMBO READOUT, OVERDRIVE ONLY (GDD 10.4, 14.4, 16.3; O8, O16). "×N"
+  // CENTRE-TOP, absent at ×1, inside a depletion ring that empties over
+  // COMBO_WINDOW. ⚠ HUD_COMBO_SIZE is O16's provisional 56, C.MENU_TITLE_SIZE's
+  // "loud".
+  //
+  // ⛔ HUD_COMBO_Y IS 6 AND NOT HUD_MARGIN, AND THAT IS ARITHMETIC RATHER THAN
+  // taste. MEASURED at CS012 P4: the Fan well's throat zone (GDD 10.3) reaches
+  // y 76.29, and its x span 504.6..775.4 straddles the centre — so the whole
+  // readout must clear 76.29. HUD_COMBO_Y + HUD_COMBO_SIZE + 2 × HUD_COMBO_PAD
+  // is 70, which leaves 6.29 px. ⛔ An art pass that raises HUD_COMBO_SIZE
+  // re-derives that sum; at HUD_MARGIN 24 the 56 px em box alone breaches it.
+  // test-cs012-p4.js asserts it on all sixteen wells.
+  //
+  // ⛔ THE RING IS AN ELLIPSE, and it is sized for the WIDEST reading rather
+  // than the current one (HUD_COMBO_CHARS — "×3.5" is four characters, "×8" is
+  // two), so the rectangle is a constant and the ring does not breathe as the
+  // multiplier crosses a whole number.
+  HUD_COMBO_SIZE:       56,     // px, the "×N" text. ⚠ provisional (O16)
+  HUD_COMBO_Y:          6,      // px, the readout rectangle's top edge
+  HUD_COMBO_PAD:        4,      // px between the widest text box and the ring
+  HUD_COMBO_CHARS:      4,      // the widest reading, in characters: "×3.5"
+  HUD_COMBO_RING_SEG:   32,     // polyline segments in a FULL ring; a partial one uses its share
   // ⛔ H3: the touch-button side's items shift inward by this many
   // TOUCH_BUTTON_R — the button's far edge (margin 1.5 R + radius 1 R) and a
   // margin. The side is the mirror flag in the HUD view, never a detected device.
@@ -848,14 +881,15 @@ const C = {
                                 // is wrong, so the export says so in its header.
   TELEMETRY_INTERVAL:   0.50,   // s of SIMULATION time between samples (never
                                 // wall clock). 4096 rows is ~34 min of a run.
-  // ⛔ A COLUMN THAT SHIPS WITH A KNOWN-CONSTANT VALUE, and that is GDD 15.6's
-  // rule rather than laziness: a column added later invalidates every log
-  // recorded before it, so a column whose SOURCE is scheduled gets its place in
-  // the order now and its source later. `maxCombo` lands with GDD 14.4's combo.
-  // ⛔ Each key is DELETED from here by the changeset that gives that column a
-  // real source — `score` went in CS008 P2 (state.score), `mode` and
-  // `startDepth` in CS008 P3 (state.mode, state.startDepth).
-  TELEMETRY_PLACEHOLDER: { maxCombo: 0 },
+  // ⛔ THERE IS NO TELEMETRY_PLACEHOLDER ANY MORE, AND THAT IS THE POINT
+  // (GDD 15.6; CS012 P4, R7). It held the columns whose SOURCE was scheduled
+  // later than their PLACE in the order — a column added later invalidates
+  // every log recorded before it — and each key was deleted by the changeset
+  // that gave that column a real source: `score` in CS008 P2 (state.score),
+  // `mode` and `startDepth` in CS008 P3, and `maxCombo` here
+  // (state.combo.peak). With its last key gone the object is dead code, so it
+  // went with it rather than staying as an empty bag. ⛔ A future column with a
+  // scheduled source mints its own constant; it does not resurrect this one.
 
   // ---- Meta: profiles, saves, scores (GDD 15) — CS011 ----------------------
   // The phases that read the rest of the group add them (plan §2).
@@ -1319,6 +1353,27 @@ function newState() {
     //            enterWell() nor the respawn clears it — a button held across
     //            a freeze or a well change needs a real release first.
     jump: { phase: "ground", t: 0, cool: C.JUMP_COOLDOWN, latched: false },
+
+    // ⛔ THE COMBO (GDD 14.4; O3, O5, R2; 12-scoring.js). Overdrive's, and the
+    // four functions that touch it are no-ops in Classic — which is what keeps
+    // `mult` at exactly 1 there, and `n * 1 === n` in IEEE-754, so a Classic
+    // run's score is bit-identical to the build before CS012 P4
+    // (test-cs012-p4.js).
+    //
+    // ⛔ `mult` IS THE MULTIPLIER AND `peak` IS WHAT THE RUN REPORTS. GDD
+    // 15.4's `max_combo` and 15.6's `maxCombo` column are both `peak` — the
+    // run's highest MULTIPLIER, 5.5 rather than 11 kills (O3) — and it is 0 on
+    // a Classic run, which is the value every Classic row posted before this
+    // phase carried.
+    //
+    //   mult   1 … C.COMBO_MAX on C.COMBO_STEP's half-step lattice
+    //   kills  kills since the last step up, 0 … C.COMBO_KILLS_PER_STEP − 1
+    //   since  counts UP (GDD 16.3) toward C.COMBO_WINDOW, and wraps at it: a
+    //          kill zeroes it, each whole window costs one step of `mult`, and
+    //          ⛔ it does not advance during a Dive (O5) — the breath is not a
+    //          lapse, and nothing can be killed in one
+    //   peak   the highest `mult` this run reached. ⛔ Never falls
+    combo: { mult: 1, kills: 0, since: 0, peak: 0 },
 
     // ⛔ THE RUN'S CUMULATIVE COUNTERS (GDD 15.6; 21-telemetry.js). CS007 P4.
     //
@@ -5077,6 +5132,15 @@ function wellCleared(state) {
 // ⛔ AND THE KILL SOUND, CS009 P5, beside the points at the same three edges:
 // `sfx("kill", e.sfxVoice)`, the pitch read off the entity's eighth contract
 // field (07-enemies.js). No sound call here writes `state` or draws.
+//
+// ⛔ AND SINCE CS012 P4, OVERDRIVE'S COMBO, AT THOSE SAME EDGES AND NOWHERE
+// ELSE (GDD 14.4; O4, R6; 12-scoring.js). Each of the four lines reads
+// `addScore(e.points() * comboMult()); comboKill(state);` — the kill is scored
+// at the CURRENT multiplier and then raises it. ⛔ addScore() is unchanged and
+// stays the one writer: a multiplier folded into it would also multiply the
+// Thorn's per-chip 5, the clear bonuses and the Start Depth bonus, which is
+// the scope O4 ruled out. ⛔ Both are exactly 1 / a no-op in Classic, so a
+// Classic run is bit-identical to the build before this phase.
 
 // Are two lanes the same lane, to within the contact tolerance? ⛔ laneDelta,
 // never (a - b): on a 16-lane Ring the distance from lane 15.9 to lane 0 is
@@ -5153,7 +5217,7 @@ function collideShots(state, well) {
       // splits dies. `e.dead` was false above, so this IS the false -> true
       // transition: the telemetry count (02-state.js's `tally`) and the points
       // (12-scoring.js), and nothing here branches on either.
-      if (e.dead) { state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); }
+      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); }
       break;
     }
   }
@@ -5278,7 +5342,7 @@ function collideSkimmer(state, well) {
     // ⛔ The rim sweep — the header above, and the four decisions in it.
     if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
       e.onShot(null);
-      if (e.dead) { state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); continue; }
+      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); continue; }
     }
     killSkimmer(state);
     return;   // one death per step, whatever else is touching
@@ -5326,6 +5390,13 @@ function killSkimmer(state) {
   // land. Below the invulnerability guard, so a declined kill is not a death.
   state.tally.deaths++;
   sfx("death");
+
+  // ⛔ THE COMBO IS ×1 AT ONCE (GDD 14.4; O3; 12-scoring.js), and BELOW the
+  // invulnerability guard for the same reason `diedThisWell` and `deaths` are:
+  // a kill the guard declined is not a death, so it is not a combo loss either.
+  // ⛔ Unconditional — comboDeath() is a no-op in Classic, so this function
+  // stays free of a mode branch, exactly as `jump.latched` below does.
+  comboDeath(state);
 
   // ⛔ THE BUTTON IS RE-LATCHED BY DEATH. Devices are still drained during
   // hit-stop (23-main.js — a freeze must not dump a second of banked mouse
@@ -5454,7 +5525,7 @@ function updatePurge(state) {
     sfx("purge");
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); sfx("kill", e.sfxVoice); }
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); }
     }
     return;
   }
@@ -5467,7 +5538,7 @@ function updatePurge(state) {
     // the weak use by firing it into an empty well.
     // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
     // branches of the panic button count here (02-state.js's `tally`).
-    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points()); sfx("kill", victim.sfxVoice); }
+    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points() * comboMult()); comboKill(state); sfx("kill", victim.sfxVoice); }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.
@@ -5825,6 +5896,10 @@ function updateDive(state, well, dt) {
 // player destroying a Thorn, and it is not counted in `tally.kills` either. The
 // Thorn itself scores per CHIP from inside its own onShot(), because the enemy
 // decides what a hit does — its points() is 0, so its death pays nothing extra.
+//
+// ⛔ AND SINCE CS012 P4 THIS FILE ALSO OWNS THE COMBO (GDD 14.4), at the foot.
+// ⛔ THE MULTIPLIER IS APPLIED AT THOSE KILL SITES, NOT IN addScore() — see the
+// header there before changing either.
 
 // Add `n` points, and award every extra life the new total has crossed.
 //
@@ -5888,6 +5963,110 @@ function clearBonuses(state) {
 function startBonus(d) {
   const R = C.START_BONUS_ROUND;
   return Math.round(C.START_BONUS_SCALE * Math.pow(d - 1, C.START_BONUS_EXP) / R) * R;
+}
+
+// ---------------------------------------------------------------------------
+// THE COMBO — OVERDRIVE'S (GDD 14.4; O3, O4, O5, R2, R6; CS012 P4)
+// ---------------------------------------------------------------------------
+//
+// ⛔ THE MULTIPLIER IS APPLIED AT THE KILL SITES AND NEVER INSIDE addScore()
+// (R6). `addScore(e.points() * comboMult())` — four lines in 09-collision.js.
+// addScore() stays the ONE writer of state.score and the one life-awarder, and
+// it is unchanged: a multiplier folded into it would silently multiply the
+// clear bonuses, the Start Depth bonus and the Thorn's per-chip 5, which is
+// exactly the scope O4 ruled out.
+//
+// ⛔ WHAT IT MULTIPLIES, AND WHAT BUILDS IT, ARE ONE RULE (O4): kill points at
+// the three kill sites — a shot, the rim sweep, and both Purge uses — and every
+// kill there builds it. Thorn chips, the clear bonuses and the Start Depth
+// bonus are NOT multiplied and do NOT build it. ⛔ The Dive's termination kill
+// still pays nothing and builds nothing (GDD 5, 7).
+//
+// ⛔ EACH KILL SCORES AT THE CURRENT MULTIPLIER AND THEN RAISES IT. That is the
+// order O3's table was measured on, and it is why the kill sites read
+// `addScore(e.points() * comboMult()); comboKill(state);` in that order.
+//
+// ⛔ ALL FOUR ARE TOP-LEVEL AND ALL FOUR ARE NO-OPS OUTSIDE modeHas("combo"),
+// so a Classic run never touches state.combo at all: `mult` stays exactly 1,
+// comboMult() returns exactly 1, and `n * 1 === n` in IEEE-754 — a Classic
+// session's hash is identical to one built with these calls mutated out of
+// every kill site (test-cs012-p4.js).
+//
+// ⛔ NOTHING HERE SPENDS AN RNG DRAW OR CALLS heat(). The combo is a function
+// of kills and time, not of the level — GDD 8's one clock is untouched by it,
+// and test-cs007-p2.js holds heat()'s call sites exact.
+
+// The factor a kill site multiplies by. ⛔ EXACTLY 1 in Classic, never 1.0
+// computed from something.
+function comboMult() {
+  if (!modeHas("combo")) return 1;
+  return state.combo.mult;
+}
+
+// ⛔ THE ONE comboLost SEAT (O8; GDD 11.8, 14.4: "loss has its own sound"), and
+// the one place `mult` falls. Both fall paths — a lapsed window and a death —
+// come through here, so the sound is once per FALL rather than once per cause,
+// and a fall that would not move the multiplier (a death at ×1) is silent.
+function comboDrop(state, to) {
+  const c = state.combo;
+  if (to >= c.mult) return;
+  c.mult = to;
+  sfx("comboLost");
+}
+
+// A kill at one of O4's three sites. ⛔ Called AFTER the kill has been scored.
+function comboKill(state) {
+  if (!modeHas("combo", state.mode)) return;
+  const c = state.combo;
+  // ⛔ THE WINDOW RESTARTS ON EVERY KILL (O3), which is what makes COMBO_WINDOW
+  // a lapse clock rather than a gap test between two kills.
+  c.since = 0;
+  c.kills++;
+  if (c.kills >= C.COMBO_KILLS_PER_STEP) {
+    c.kills = 0;
+    c.mult = Math.min(c.mult + C.COMBO_STEP, C.COMBO_MAX);
+  }
+  // ⛔ AFTER the raise, so `peak` is the highest multiplier the run REACHED.
+  // The first kill of an Overdrive run puts it at 1, which is what separates
+  // "an Overdrive run that killed nothing" from a Classic run's 0 (R7).
+  if (c.mult > c.peak) c.peak = c.mult;
+}
+
+// ⛔ A DEATH IS ×1 AT ONCE, WITH THE KILL COUNT EMPTIED (O3) — not a decay.
+// Seated in killSkimmer() BELOW the invulnerability guard (09-collision.js), so
+// a kill the guard declined is not a combo loss either.
+function comboDeath(state) {
+  if (!modeHas("combo", state.mode)) return;
+  const c = state.combo;
+  comboDrop(state, 1);
+  c.kills = 0;
+  c.since = 0;
+}
+
+// One simulation step of the lapse clock, from Game.update()'s play step.
+//
+// ⛔ THE CLOCK HOLDS THROUGH A DIVE (O5). MEASURED in the plan (§1.3): the
+// median gap from the last kill before a clear to the first kill after it is
+// 4.58–4.83 s, of which the Dive is 2.6 s and the next well's first release is
+// most of the rest — so a strict window would cost half a step at every well
+// change. The Dive is GDD 1.1 P4's breath and nothing can be killed in one.
+// The guard is HERE as well as in the caller's ordering, so the rule is the
+// function's and not the call site's.
+//
+// ⛔ `since` COUNTS UP (GDD 16.3) and wraps at the window: a window with no
+// kill costs C.COMBO_STEP, and each further window costs another, down to ×1
+// (O3). ⛔ The kill count is NOT emptied by a lapse — O3 empties it on a death
+// alone. The wrap is what makes the HUD's depletion ring refill for each
+// further step, which is the loss the player is being shown.
+function updateCombo(state, dt) {
+  if (!modeHas("combo", state.mode)) return;
+  if (state.dive.active) return;
+  const c = state.combo;
+  c.since += dt;
+  while (c.since >= C.COMBO_WINDOW) {
+    c.since -= C.COMBO_WINDOW;
+    comboDrop(state, Math.max(1, c.mult - C.COMBO_STEP));
+  }
 }
 
 // ==========================================================================
@@ -6844,8 +7023,9 @@ function fragmentT(left, total) {
 //
 // ⛔ drawHud(ctx, view) READS NO GAME STATE. Everything it shows arrives on the
 // view Game.draw() fills — score, lives, level, the level's colour, purgeUses,
-// the mirror flag and the reserve icon's point array — and the only global it
-// reads is C, for sizes. Nothing here reads `state`, WELLS or the Skimmer.
+// the mirror flag, the reserve icon's point array, CS012 P5's jump reading and
+// P4's combo reading — and the only global it reads is C, for sizes. Nothing
+// here reads `state`, WELLS or the Skimmer.
 //
 // ⛔ hudLayout(view) IS THE ONE PLACE A CORNER IS PLACED, and drawHud draws
 // inside the rectangles it returns. test-cs008-p4.js asserts those rectangles
@@ -6883,6 +7063,14 @@ const JUMP_GLYPH_POLY = [
 // The rim it has left: an OPEN two-point line under the craft.
 const JUMP_RIM_POLY = [{ x: -1.00, y: 0.72 }, { x: 1.00, y: 0.72 }];
 
+// ⛔ THE COMBO READOUT, OVERDRIVE ONLY (GDD 10.4, 14.4; O8): "×N" centre-top,
+// loud, absent at ×1, inside a depletion RING that empties over
+// C.COMBO_WINDOW. ⛔ The ring is an ELLIPSE rather than a circle, and that is
+// arithmetic: the widest reading is C.HUD_COMBO_CHARS characters at
+// C.HUD_COMBO_SIZE, 138.88 px against a 56 px em box, so a circle around it
+// would be 148 px tall and could not clear the Fan well's throat zone
+// (00-config.js). It is still one polyline through drawPoly + glowStroke.
+
 // ⛔ NO PER-FRAME ALLOCATION beyond the strings themselves: the layout, its
 // rectangles and both point scratches are module-level and rewritten per call.
 // Like entityPoints(), that makes hudLayout() non-reentrant — copy what you keep.
@@ -6892,20 +7080,48 @@ const _hud = {
   level: { x: 0, y: 0, w: 0, h: 0 },
   purge: { x: 0, y: 0, w: 0, h: 0 },
   jump: { x: 0, y: 0, w: 0, h: 0 },
+  combo: { x: 0, y: 0, w: 0, h: 0 },
   lifeIcons: 0,      // reserve craft drawn: lives − 1, never below 0 (H1)
   purgeAlpha: 0,     // 1 bright, C.HUD_PURGE_DIM_ALPHA dim, 0 absent
   jumpAlpha: 0,      // 1 ready, C.HUD_PURGE_DIM_ALPHA cooling, 0 airborne or Classic
   jumpRing: 0,       // 0..1 of the readiness ring drawn — 0 when ready, 0 when absent
+  comboAlpha: 0,     // 1 shown, 0 absent — Classic, and Overdrive at ×1
+  comboRing: 0,      // 0..1 of the depletion ring still standing (full on a kill)
 };
 
 const _purgePts = PURGE_GLYPH_POLY.map(function () { return { x: 0, y: 0 }; });
 const _jumpPts = JUMP_GLYPH_POLY.map(function () { return { x: 0, y: 0 }; });
 const _jumpRimPts = JUMP_RIM_POLY.map(function () { return { x: 0, y: 0 }; });
 const _ringPts = [];
+const _comboRingPts = [];
 const _iconPts = [];
 
 function hudScoreText(view) { return String(view.score); }
 function hudLevelText(view) { return "LEVEL " + view.level; }
+
+// GDD 14.4's multiplier, on C.COMBO_STEP's half-step lattice: "×4", "×3.5".
+// ⛔ A whole number carries NO decimal, so the widest reading is four
+// characters and C.HUD_COMBO_CHARS is a constant rather than a measurement.
+function hudComboText(view) {
+  const m = view.combo;
+  return "×" + (m % 1 === 0 ? String(m) : m.toFixed(1));
+}
+
+// O8's two conditions, and they are deliberately two: ⛔ OVERDRIVE ONLY, and
+// ⛔ ABSENT AT ×1. Classic's multiplier never leaves 1, so either alone would
+// hide it there — which is exactly why both are written down.
+function hudComboAlpha(view) {
+  if (view.mode !== "overdrive") return 0;
+  return typeof view.combo === "number" && view.combo > 1 ? 1 : 0;
+}
+// The depletion ring: FULL on a kill, empty at the lapse (O8). 0 when the
+// readout is absent, so nothing is drawn around nothing.
+function hudComboRing(view) {
+  if (hudComboAlpha(view) <= 0) return 0;
+  const f = view.comboFill;
+  if (typeof f !== "number" || !(f > 0)) return 0;
+  return f > 1 ? 1 : f;
+}
 
 // GDD 4.3 through the §0 reading: purgeUses 0 bright, 1 dim (the weak second
 // use is still there), 2 or more nothing.
@@ -6982,6 +7198,23 @@ function hudLayout(view) {
   _hud.jumpAlpha = hudJumpAlpha(view.jump);
   _hud.jumpRing = hudJumpRing(view.jump);
 
+  // ⛔ THE COMBO READOUT IS CENTRE-TOP AND MOVES NOTHING (O8; CS012 P4). Like
+  // the jump glyph it is placed absolutely, off no other rectangle, so the four
+  // CS008 corners are bit-identical whether or not it is shown — the Classic
+  // HUD's guarantee, asserted in test-cs012-p4.js.
+  // ⛔ THE RECTANGLE IS THE RING'S EXTENT AT ITS WIDEST READING, not this
+  // frame's text: it is what the throat-zone and touch-button assertions are
+  // made against, so it has to be the whole footprint, and a constant footprint
+  // is what stops the ring breathing as the multiplier crosses a whole number.
+  const csize = C.HUD_COMBO_SIZE;
+  const crx = C.HUD_COMBO_CHARS * csize * C.TEXT_CHAR_W / 2 + C.HUD_COMBO_PAD;
+  const cry = csize / 2 + C.HUD_COMBO_PAD;
+  const cb = _hud.combo;
+  cb.w = crx * 2; cb.h = cry * 2;
+  cb.x = W / 2 - crx; cb.y = C.HUD_COMBO_Y;
+  _hud.comboAlpha = hudComboAlpha(view);
+  _hud.comboRing = hudComboRing(view);
+
   return _hud;
 }
 
@@ -6990,6 +7223,9 @@ function hudLayout(view) {
 //   mirror  the touch buttons' side (H3), the input module's live flag since P7
 //   icon    the reserve craft's local-space poly ({ l, d }, d ≤ 0 inward)
 //   jump    null in Classic; otherwise { airborne, ready, ring } (O8, CS012 P5)
+//   combo, comboFill, mode
+//           GDD 14.4's multiplier, its window's remaining fraction, and the
+//           run's mode — the readout's Overdrive gate (O8, CS012 P4)
 function drawHud(ctx, view) {
   const L = hudLayout(view);
   const size = C.HUD_TEXT_SIZE;
@@ -7063,6 +7299,35 @@ function drawHud(ctx, view) {
       }
       drawPoly(ctx, _ringPts, false);
       glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.jumpAlpha);
+    }
+  }
+
+  // ⛔ THE COMBO READOUT (O8), and the same three rules again: drawText() for
+  // the text, drawPoly + glowStroke for the ring, no fill and no rectangle.
+  // Absent at alpha 0, which is Classic and ×1 both — so the Classic HUD draws
+  // exactly what it drew before CS012 P4.
+  if (L.comboAlpha > 0) {
+    const cx = L.combo.x + L.combo.w / 2, cy = L.combo.y + L.combo.h / 2;
+    drawText(ctx, hudComboText(view), cx, cy - C.HUD_COMBO_SIZE / 2,
+             C.HUD_COMBO_SIZE, C.HUD_COLOR, "center");
+
+    // ⛔ THE RING DEPLETES ANTICLOCKWISE FROM TWELVE O'CLOCK as the window
+    // runs, so the moment it closes on nothing is the moment the multiplier
+    // falls. ⛔ A POLYLINE, never ctx.arc (GDD 10.2), and an ELLIPSE rather
+    // than a circle — the reading is wider than it is tall.
+    if (L.comboRing > 0) {
+      const rx = L.combo.w / 2, ry = L.combo.h / 2;
+      const segs = Math.max(1, Math.round(C.HUD_COMBO_RING_SEG * L.comboRing));
+      const span = 2 * Math.PI * L.comboRing;
+      while (_comboRingPts.length < segs + 1) _comboRingPts.push({ x: 0, y: 0 });
+      _comboRingPts.length = segs + 1;
+      for (let i = 0; i <= segs; i++) {
+        const a = -Math.PI / 2 - span * (i / segs);
+        _comboRingPts[i].x = cx + Math.cos(a) * rx;
+        _comboRingPts[i].y = cy + Math.sin(a) * ry;
+      }
+      drawPoly(ctx, _comboRingPts, false);
+      glowStroke(ctx, C.HUD_COLOR, C.HUD_LINE_W, L.comboAlpha);
     }
   }
 }
@@ -10038,13 +10303,16 @@ return { VERSION, NAME_CHANGE_NOTICE: KitNames.NAME_CHANGE_NOTICE, create };
 //                  working, and a check that did not know which ones they were
 //                  would flag the two most useful stall columns in the file.
 //
-// ⛔ ONE COLUMN SHIPS WITH A KNOWN-CONSTANT VALUE rather than being added when
-// its source lands: `maxCombo` (0), out of C.TELEMETRY_PLACEHOLDER. A column
-// added later invalidates every log recorded before it, which is the whole
-// reason GDD 15.6 makes the column list a thing you edit deliberately. ⛔ There
-// were four: CS008 P2 moved `score`'s SOURCE to state.score and P3 moved `mode`
-// and `startDepth` to state.mode and state.startDepth, none of them moving
-// place in the order.
+// ⛔ NO COLUMN SHIPS WITH A KNOWN-CONSTANT VALUE ANY MORE, AND THAT IS THE
+// PLACEHOLDER'S WHOLE LIFE (CS012 P4, R7). Four columns took their PLACE in the
+// order before their SOURCE existed, out of C.TELEMETRY_PLACEHOLDER, because a
+// column added later invalidates every log recorded before it — which is the
+// whole reason GDD 15.6 makes the column list a thing you edit deliberately.
+// Each key was deleted by the changeset that gave that column a real source:
+// CS008 P2 moved `score` to state.score, CS008 P3 moved `mode` and
+// `startDepth`, and CS012 P4 moved `maxCombo` to state.combo.peak. ⛔ None of
+// the four ever moved PLACE in the order, and the object itself is gone
+// (00-config.js): with its last key sourced an empty bag is dead code.
 //
 // ⚠ CROSS-CHECKED AGAINST THE WORKER, which already registers seven statsFields
 // for `vector-vortex` in coinless-kit's services/leaderboard/src/registry.js
@@ -10099,7 +10367,8 @@ const TELEMETRY_FIELDS = [
   "purgeUses",          // ⛔ SAWTOOTH — one charge per well, re-armed by enterWell()
   // ---- the run's totals ----------------------------------------------------
   "score",              // cumulative — state.score, addScore()'s (CS008 P2)
-  "maxCombo",           // cumulative — ⚠ 0 until GDD 14.4's combo (Overdrive)
+  "maxCombo",           // cumulative — state.combo.peak: the run's PEAK MULTIPLIER
+                        // (GDD 14.4; CS012 P4). ⛔ 0 on a Classic run
   "deaths",             // cumulative
   "wellsCleared",       // cumulative
   "purgesSpent",        // cumulative
@@ -10160,7 +10429,6 @@ const TELEMETRY_KINDS = {
 // could disagree with the spawner's the first time `blocksClear` moved.
 function telemetryRow(state) {
   const lvl = state.level;
-  const P = C.TELEMETRY_PLACEHOLDER;
   const T = state.tally;
 
   // One pass for both board counts. ⛔ `anchored` is read off the entity, never
@@ -10196,7 +10464,7 @@ function telemetryRow(state) {
     spawnRemaining:    state.spawn.remaining,
     purgeUses:         state.purgeUses,
     score:             state.score,
-    maxCombo:          P.maxCombo,
+    maxCombo:          state.combo.peak,
     deaths:            T.deaths,
     wellsCleared:      T.wellsCleared,
     purgesSpent:       T.purgesSpent,
@@ -10577,8 +10845,10 @@ const Leaderboard = (function () {
   }
 
   // Plan R9's payload, on the run's own board. `durationS` is simulation seconds,
-  // pause excluded, and an integer as the Worker demands. `max_combo` is
-  // C.TELEMETRY_PLACEHOLDER's until CS012 P4 gives the combo a source.
+  // pause excluded, and an integer as the Worker demands. ⛔ `max_combo` is the
+  // run's PEAK MULTIPLIER, state.combo.peak (GDD 14.4; CS012 P4, R7) — 5.5
+  // rather than 11 kills, and 0 on a Classic run, which is what every Classic
+  // row posted before this phase carries.
   function payload(outcome) {
     return {
       metric: state.score,
@@ -10590,7 +10860,7 @@ const Leaderboard = (function () {
         start_depth: state.startDepth,
         wells_cleared: state.tally.wellsCleared,
         purges_spent: state.tally.purgesSpent,
-        max_combo: C.TELEMETRY_PLACEHOLDER.maxCombo,
+        max_combo: state.combo.peak,
         deaths: state.tally.deaths,
       },
     };
@@ -11338,7 +11608,13 @@ function buildLaneState(state, well) {
 //   peril      1 on the last life
 //   heat       heatT(level), normalised at C.HEAT_FULL_LEVEL (D7). ⛔ Never the
 //              curve itself: test-cs007-p2.js holds its call sites exact.
-//   combo      0. Classic has no combo, ever (GDD 13; D6); CS012 supplies one.
+//   combo      GDD 11.4's literal formula, clamp01(mult / C.INT_COMBO_MAX)
+//              (CS012 P4, R5), so ×1 reads 0.125 and ×8 reads 1. ⛔ 0 in
+//              Classic, which has no combo ever (GDD 13; D6) — the gate is
+//              modeHas("combo") and NOT state.combo.mult, which sits at its
+//              shipped 1 there and would otherwise read 0.125.
+//              ⛔ A Dive reads 0 too, and that is audioFrame()'s DANGER_NONE
+//              rather than a branch here: the whole board reads zero in one.
 // ⛔ A THORN IS NOT COUNTED: `anchored` means its depth is a LENGTH, not a
 // position (CLAUDE.md). A Weaver bolt is a position, and counts.
 function dangerInputs(state, out) {
@@ -11354,7 +11630,7 @@ function dangerInputs(state, out) {
   out.proximity = Math.min(near, 1);
   out.peril = state.lives <= 1 ? 1 : 0;
   out.heat = heatT(state.level);
-  out.combo = 0;
+  out.combo = modeHas("combo", state.mode) ? Math.min(state.combo.mult / C.INT_COMBO_MAX, 1) : 0;
   return out;
 }
 
@@ -12543,6 +12819,13 @@ const Game = (function () {
     if (state.skimmer.dead) respawnSkimmer(state, well);
     else if (state.invulnTime < C.RESPAWN_INVULN) state.invulnTime += dt;
 
+    // ⛔ THE COMBO'S LAPSE CLOCK, BESIDE THE INVULNERABILITY CLOCK (GDD 14.4;
+    // O3, O5; 12-scoring.js). Once per play step, and a TOTAL no-op outside
+    // modeHas("combo"). ⛔ It is below the dive branch above AND carries its own
+    // `state.dive.active` guard, so O5's hold is the function's rule rather than
+    // this line's position — a caller that stepped it in a dive would still hold.
+    updateCombo(state, dt);
+
     // ⛔ THE JUMP, ABOVE EVERYTHING THAT READS IT (GDD 14.2; CS012 P5, O6;
     // 05-skimmer.js). Its phase decides whether updateShots() may fire and
     // whether collideSkimmer() runs at all, so it is resolved for THIS step
@@ -12661,6 +12944,16 @@ const Game = (function () {
       _hudView.levelColor = wellBandColor(state.level, state.bandRoll);
       _hudView.purgeUses = state.purgeUses;
       _hudView.mirror = input.setting("inputMirror");   // ⛔ the live flag (CS008 P7)
+      // ⛔ THE COMBO READOUT, AS THREE READINGS (GDD 10.4, 14.4; O8; CS012 P4).
+      // The multiplier, the depletion ring's remaining fraction, and the run's
+      // mode — the renderer's Overdrive gate, so "absent at ×1" and "Overdrive
+      // only" are two separate conditions rather than one that happens to
+      // coincide. ⛔ Filled in place; 15-render-hud.js reads no game state.
+      // ⛔ THE RING HOLDS IN A DIVE for free: updateCombo() does not advance
+      // `since` there, so this fraction does not move (O8, O5).
+      _hudView.combo = state.combo.mult;
+      _hudView.comboFill = C.COMBO_WINDOW > 0 ? 1 - state.combo.since / C.COMBO_WINDOW : 1;
+      _hudView.mode = state.mode;
       // ⛔ THE JUMP GLYPH IS OVERDRIVE'S AND NULL EVERYWHERE ELSE (O8), so the
       // Classic HUD is exactly what CS008 P4 shipped. The sub-view is filled in
       // place — no per-frame allocation — and carries readings, never the bag:
@@ -12697,6 +12990,7 @@ const Game = (function () {
   const _hudView = {
     score: 0, lives: 0, level: 1, levelColor: "", purgeUses: 0,
     mirror: false, icon: SKIMMER_POLY, jump: null,
+    combo: 1, comboFill: 1, mode: "classic",
   };
   // The jump glyph's reading (CS012 P5, O8). Its own object so `_hudView.jump`
   // can be null in Classic without allocating one in Overdrive.
