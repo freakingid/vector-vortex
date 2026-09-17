@@ -1325,6 +1325,8 @@ reads an empty string as "use the default" and imports `afd_profiles_v1`.
 
 The profile roster itself (the root `profiles` key) is `kit-profile`'s, not ours.
 
+⛔ **Blocked storage plays the same game** (CS011 P6). kit-storage's probe fails, every key reads and writes an in-memory map, and nothing is saved past the page. The ninth soak (`test-cs011-p6.js`) plays one front-door session over a working store and over a blocked one, and the whole-board hash matches on every frame, so persistence cannot steer a run. The same session proves no enumeration read, only declared keys in storage (`profiles`, `scores`, and `settings` / `progress` / `telemetry` at the root or under `p1.`), and a reload that brings back the selected profile, its settings, its Start Depth record and the table.
+
 ⛔ **A row-shape change bumps that key's declared version and supplies a
 `migrate`, never a new key name.**
 
@@ -1335,7 +1337,7 @@ field needs no migration — a saved value for a deleted field orphans harmlessl
 
 ⛔ **`Profiles.scope()` is the active profile's store, and the game never builds a key string.** kit-storage owns the names; kit-profile's `scope()` returns `store.scope(id)` for a profile, and ⛔ **profile `p0`'s scope is the ROOT store**, beside `scores` and `profiles` (CS011 P1). ⛔ **The game never enumerates storage**: no call to a store's `keys()`, `scopes()`, `clear()` or `usage()`, and no `key(i)`, `.length` or `Object.keys` over storage in game code (`test-cs011-p1.js` counts the reads). ⚠ The first launch creates one ANONYMOUS profile silently and lands on the title (Paul's M2).
 
-⛔ **`activate(id)` resets the runtime to shipped defaults *before* loading the incoming profile.** Loading alone bleeds the outgoing profile's settings onto the incoming one, because the load path is written for a cold boot.
+⛔ **A switch (`Profiles.select(id)`, Orbital Overhaul's `activate(id)`) resets the runtime to shipped defaults *before* loading the incoming profile.** Loading alone bleeds the outgoing profile's settings onto the incoming one, because the load path is written for a cold boot.
 
 ⛔ **`playerId` is minted once, on first activation, never at creation, never regenerated.** Mint-if-missing is the only writer, and it doubles as the backfill path. It is never rendered; `name` is the only user-facing identity.
 
@@ -1344,7 +1346,7 @@ field needs no migration — a saved value for a deleted field orphans harmlessl
 **RESOLVED 2026-08-30** — `kit-profile` is vendored into `lib/` at a pinned `VERSION` and used directly, not reimplemented locally. See §21 and `DECISIONS.md`.
 
 ⛔ **Shipped, CS011.** The roster screens are §10.5's PROFILE, a profile's page, DELETE and NAME (CS011 P4).
-- **`Profiles` in `22-meta.js` wraps kit-profile:** `scope()`, `current()`, `list()`, `select(id)`, `create(name)`, `rename(id, name)` and `remove(id)`. Only `select()` switches, apart from a `remove()` of the active profile, which switches inside the kit. Both run Meta's reset-then-load (P2).
+- **`Profiles` in `22-meta.js` wraps kit-profile:** `scope()`, `current()`, `list()`, `select(id)`, `create(name)`, `rename(id, name)`, `remove(id)`, and `player()` for the leaderboard (P5). Only `select()` switches, apart from a `remove()` of the active profile, which switches inside the kit. Both run Meta's reset-then-load (P2).
 - **A new profile and SELECT are activations.** RENAME keeps the `id` and the `playerId`, and a score row keeps the name it was stamped with (§15.3).
 - ⛔ **Deleting a profile is kit-profile's `remove(id)`, then that profile's scope's `remove(key)` for each of `settings`, `progress` and `telemetry`.** ⛔ **Never `clear()`:** it enumerates storage, and on `p0`, whose scope is the root store, it would take `scores` and `profiles` too. `achievements` joins the list at CS015.
 - ⚠ **The kit goes first, the reverse of plan R12's wording** (MEASURED, `test-cs011-p4.js`'s mutation). The kit refuses the last profile (`last_profile`), and a refused delete must delete nothing; with the keys removed first, the refusal wiped the profile's settings and progress. Deleting the active profile switches inside the kit, where `beforeChange` writes the outgoing telemetry rows; with the keys first, that write outlived the delete. The kit's `scope(id)` still answers for a removed id.
@@ -1371,13 +1373,13 @@ Top 10 per mode. `vv_scores_v1` stays one shared machine-wide table with records
 
 ⛔ **One `Leaderboard` object is the only call surface for `window.KitLeaderboard`.** Nothing else reads that global except the ES-module bridge tag, which writes it (the rename flow's notice comes from kit-profile since CS011 P4). Every entry point is safe to call with the module absent.
 
-⛔ **`Leaderboard.eligible()` gates every `submit()`**, and it is the same gate the local top-10 check uses. Extend both together or neither.
+⛔ **`Meta.eligible()` gates every `submit()`**, and it is the same gate the local top-10 check uses. Extend both together or neither. (This line named `Leaderboard.eligible()` until the CS011 close; no such method was built, and `Meta.runEnded()` reads the one gate once for both.)
 
 ⛔ **`quitToTitle()` submits `outcome: 'quit'` only when the game was actually playing at the moment it is called, checked *before* that function overwrites the state** — the same function is also game-over's "Quit to Title" row and must never double-submit.
 
 ⚠ **SETTLED — `'completed'` has no call site.** Escalating levels forever, no win condition (§3.6). Only `'died'` and `'quit'` are ever submitted. Do not invent a trigger to fill the enum.
 
-**Registration required outside this repo:** add `vector-vortex` to the Worker's `services/leaderboard/src/registry.js`. ⛔ **The registry is readable** at `github.com/freakingid/coinless-kit` — read it rather than guessing, because an unregistered stats key flags every row it posts. Orbital Overhaul shipped exactly that bug in CS033.
+**Registration required outside this repo** (✅ done: the deployed Worker lists `vector-vortex`, `GET /v1/health`, 2026-09-16): add `vector-vortex` to the Worker's `services/leaderboard/src/registry.js`. ⛔ **The registry is readable** at `github.com/freakingid/coinless-kit` — read it rather than guessing, because an unregistered stats key flags every row it posts. Orbital Overhaul shipped exactly that bug in CS033.
 
 Proposed `statsFields`: `level_reached`, `mode`, `start_depth`, `wells_cleared`, `purges_spent`, `max_combo`, `deaths`. A mismatch only flags, never rejects, so extending later is a one-line change — but still a deliberate one, not filler.
 
@@ -1639,7 +1641,20 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 - ◐ **Proxy met — the Surger tone over music at every tier.** D16's limiter-curve gate holds on `pulse` (0.3512) and `title` (0.3408) against the tone's 0.450, with every tier open, and every gate, the sweep, the duck and the dip at or under unity cover the rest (`test-cs009-p5.js`, `test-cs010-p1.js`). The render peaks over the model by up to 2.2 dB and stays under the tone. ⚠ **"Verified by ear on hardware" is a skipped playtest** (`SKIPPED-PLAYTESTS.md`, CS009 P5 and CS010 P3/P5); Paul does no playtests.
 - ◐ **Still half met — flagship length and volume sliders.** `drive` is CS012's; persistence is CS011's.
 
+⛔ **Audio at the CS011 close (2026-09-16).** Items unchanged since CS010 keep the verdicts above.
+- ✅ **Met, since CS011 — volume sliders persist per profile.** MASTER, MUSIC, SFX and VOICE VOLUME and MUSIC TRACK (by name) are saved in the active profile's `settings` on every change, load known-value-else-default, and a switch resets to the shipped defaults before loading (`test-cs011-p2.js`, mutation-checked). A played session moves MUSIC VOLUME on a new profile and a reload brings it back (`test-cs011-p6.js`).
+- ◐ **Still half met — flagship length.** `drive` is CS012's.
+
 **Meta** — profiles with `scope()` routing and no storage enumeration; `playerId` minted once with the secure-context fallback; local top-10 per mode; separate online boards; `vector-vortex` registered with stats keys read from the real registry; achievements with monotonic tiers and UTC ISO weeks (CS015's, Paul's M4); telemetry opt-in and off at launch, `TELEMETRY_FIELDS` and `push()` in agreement.
+
+⛔ **Meta at the CS011 close (2026-09-16).**
+- ✅ **Met — profiles with `scope()` routing and no storage enumeration.** Every per-profile key goes through `Profiles.scope()`, and `p0`'s scope is the root store (`test-cs011-p1.js`, `-p2.js`). No `localStorage.length` or `key(i)` read at boot, over a delete (with the `clear()` mutation) or across a played session (`test-cs011-p1.js`, `-p4.js`, `-p6.js`).
+- ✅ **Met — `playerId` minted once with the secure-context fallback.** A v4 id at first boot, kept by a reload and a rename, and still v4 with `crypto.randomUUID` hidden (`test-cs011-p1.js`, `-p4.js`). kit-leaderboard 0.2.1's run id has the same fallback (`test-cs011-p5.js`).
+- ◐ **Half met — local top 10 per mode.** The table keeps `classic` and `overdrive` apart, 10 each, with the tie rule and both outcomes, and nothing from a bench run (`test-cs011-p3.js`; played, `test-cs011-p6.js`). SCORES shows CLASSIC only, because OVERDRIVE cannot be played until CS012.
+- ✗ **CS012's — separate online boards.** The Worker has no per-mode boards and keeps one best row per player per game id, so CS011 posts Classic as `vector-vortex` (plan §1.4).
+- ✅ **Met — `vector-vortex` registered, stats keys read from the real registry.** The payload's stats keys equal coinless-kit's `registry.js` at `f0b0eb2` (`test-cs011-p5.js`), and the deployed Worker lists the game. ⚠ Its `maxMetricPerSecond` is still 1,200 until Paul's redeploy (M7), so deep Start Depth runs are stored flagged.
+- ✗ **CS015's — achievements** (Paul's M4).
+- ✅ **Met — telemetry opt-in, off at launch, `TELEMETRY_FIELDS` and `push()` in agreement.** CS007's (`test-cs007-p4.js`); the switch is never stored and the rows persist per profile as arrays, rejected on a version or length mismatch (`test-cs011-p2.js`).
 
 **Quality** — all 12 test groups pass; 60 fps under budget on both targets; nothing obscures `depth < 0.25`; concat build behaviourally identical to `src/`; plays from `file://`; no Atari terminology anywhere including identifiers.
 

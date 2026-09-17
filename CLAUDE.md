@@ -434,7 +434,7 @@ dated the spelling looks. Renaming one drops that unlock for every player.
 a key string.** ⛔ Profile `p0`'s scope is the ROOT store, beside `scores` and
 `profiles`, so a per-profile `remove(key)` on `p0` must never name a root key.
 
-⛔ **`Profiles.activate(id)` resets the runtime to shipped defaults BEFORE
+⛔ **A switch (`Profiles.select(id)`) resets the runtime to shipped defaults BEFORE
 loading the incoming profile.** The load path is written for a cold boot; loading
 alone bleeds the outgoing profile's settings onto the incoming one.
 
@@ -449,7 +449,7 @@ fallback: an opaque origin (sandboxed embed) is never a secure context, and
 `window.KitLeaderboard`.** Every entry point is safe to call with the module
 absent.
 
-⛔ **`Leaderboard.eligible()` gates every `submit()`**, and it is the same gate
+⛔ **`Meta.eligible()` gates every `submit()`**, and it is the same gate
 the local top-10 check uses. Extend both together or neither.
 
 ⚠ **SETTLED — `'completed'` has no call site.** Escalating levels forever, no win
@@ -607,12 +607,20 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     19-sfx.js          AudioSys / MusicSys / Sfx built from C; sfx(), the ONE
                        seat call; the Surger tone; musicStateFor()
     20-achievements.js
-  lib/kit-names, kit-storage, kit-profile — INLINED here by build.js, unedited,
-                       as KitNames / KitStorage / KitProfile (KIT_INLINE)
+  lib/kit-names, kit-storage, kit-profile — INLINED here by build.js, unedited
+                       but for import/export lines, as KitNames / KitStorage /
+                       KitProfile (KIT_INLINE, wrapKitModule()); a dash-rule
+                       banner, never a module banner. kit-leaderboard is NOT
+                       inlined: it stays on the module bridge
     21-telemetry.js    TELEMETRY_FIELDS + the ring. Capture is a SESSION switch,
                        OFF at every launch; sampled from update(), never draw()
-    22-meta.js         THE ONE ROUTE TO STORAGE: Store, Profiles (scope()),
-                       Meta.boot(); scores, leaderboard wiring
+    22-meta.js         THE ONE ROUTE TO STORAGE. Store (declared keys);
+                       Profiles over kit-profile (scope, select, create, rename,
+                       remove, player); Leaderboard, the one reader of
+                       window.KitLeaderboard; Meta (boot, the settings and
+                       telemetry saves, the run's three seats, eligible() — the
+                       ONE gate); createScores (kit-scores draft); levelRecord()
+                       and startDepthOptions() over the profile's `progress`
     23-main.js         loop, state machine, well lifecycle, respawn
 ```
 

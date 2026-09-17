@@ -23,7 +23,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS008** | ✅ **Shipped 2026-09-13.** The rim fix (P1: every arrival killable) and the rim sweep (P1b: a fire-holding crossing kills), then front of house: scoring and extra lives, mode and Start Depth, one text path, the HUD and death fragmentation, title → mode → Start Depth → play → game over → restart, pause from five sources, Options, Credits, a Controls page with rebinding, and the sixth soak through the front door. ⚠ Nine phases — Paul's scope call, 2026-09-13, plus P1b | §4.2, §4.4, §4.6, §6.1, §7, §9, §10.4–10.5, §13, §17 items 8, 13, 14 |
 | **CS009** | ✅ **Shipped 2026-09-16.** The audio engine: kit-audio (`AudioSys`, `MusicSys` with a stall-resyncing per-frame lookahead scheduler, the SFX player), the gesture unlock, `tools/music-lab.html` with SOLO, MUTE and PASS / FAIL per layer, the untiered `title` and `pulse` tracks, music by screen, OPTIONS' four volumes and MUSIC TRACK, `tools/sfx-lab.html`, the Classic SFX at their seats with the held Surger tone and the over-cap life sound, and the seventh soak (audio on and off, one hash). ⚠ Six phases plus a port commit; `drive` moved to CS012 | §4.4, §6.5, §10.5, §11.1–11.3, §11.7–11.8, §17 item 9 |
 | **CS010** | ✅ **Shipped 2026-09-16.** The intensity director: kit-audio 0.3.0 (bar-latched tier gates, the filter sweep, a limiter on the music, the menu duck and the event dips), a live-danger signal read through one `dangerInputs()` that writes no state, two earned layers on `pulse` (`cycle` tier 2, `tick` tier 3, both PASS), Paul's lab gains behind the limiter, music-lab's INTENSITY and TIER, the rim pulse on `heart`'s onsets, and the eighth soak. Five phases, as planned | §5, §11.1, §11.3–11.8, §17 item 9, §19 |
-| **CS011** | Meta: kit-storage and kit-profile inlined at build, a silent ANONYMOUS first profile, settings / the Start Depth record / telemetry saved per profile, local top-10 per mode, leaderboard wiring, PROFILE with name entry, the ninth soak. ⚠ Achievements moved to CS015 (Paul's M4, 2026-09-16) | §4.6, §10.5, §15.1–15.4, §15.6 |
+| **CS011** | ✅ **Shipped 2026-09-16.** Meta: kit-names, kit-storage and kit-profile inlined at build, a silent ANONYMOUS first profile, settings / the Start Depth record / telemetry saved per profile, the local top 10 per mode with the bench flag, kit-leaderboard 0.2.1 and one `Leaderboard` over the bridge, SCORES (LOCAL / ONLINE), PROFILE with NAME entry (kit-input 0.8.0's text mode), and the ninth soak (working store and blocked, one hash). Six phases, as planned. ⚠ Achievements moved to CS015 (Paul's M4) | §4.6, §10.5, §15.1–15.4, §15.6 |
 | **CS012** | Overdrive core: mode flags, Jump, combo multiplier, the Reaver, and the `drive` track (Overdrive's AUTO default, from CS009); the combo input to the intensity director and the Overdrive intensity re-measure (from CS010) | §11.4, §11.7, §13, §14.2, §14.4, §14.6 |
 | **CS013** | Overdrive tokens and the remaining enemies: five powerups, the Warden, the Mimic on probation | §14.1, §14.6 |
 | **CS014** | The ring-flight Dive, hard-capped at 4 s / 6 rings | §14.5 |
@@ -53,7 +53,7 @@ left CS011 for a new **CS015**, so onboarding became CS016 and ship CS017. The
 sweep read every live `CS015` / `CS016` pointer and every "achievements are
 CS011's" pointer. `log/` and `archive/` were not swept, for the same reason.
 
-**CS001 through CS009 are closed.** Their narratives are in `log/CS00#.md`;
+**CS001 through CS011 are closed.** Their narratives are in `log/CS00#.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -237,6 +237,46 @@ untiered** and nothing is tier 4. No ATK / REL / GATE controls in music-lab.
 play, the limiter in three browsers, the duck and dips, the rim pulse, and the
 Surger tone at every tier. Still unowned: the Surger tone's own 1.106 sample
 peak, the pad-only silence, the VOICE bus and the Dive's visual.
+
+**CS011 held as ONE changeset of six phases and shipped its row.** The kit
+inline, the store and the silent profile (P1), what a profile keeps (P2), the
+local top 10 and the run's end (P3), the profile screens and NAME (P4), the
+online board (P5), and the ninth soak plus the close (P6). Paul answered M1–M9
+in the planning session, and took two findings during the build: the stored
+`lastUsed` stays `""` after a first boot (P1), and DELETE runs the kit's
+`remove(id)` before the key removes, the reverse of R12's wording (P4).
+
+**What CS011 shipped against the row.** ⛔ **The game saves from a
+double-clicked file.** kit-names, kit-storage and kit-profile are wrapped into the
+single HTML unedited, and a form the wrapper cannot rewrite fails the build. One
+`Store` declares `settings`, `progress`, `telemetry` and `scores`; the game never
+builds a key string and never enumerates storage. The first launch makes one
+ANONYMOUS profile and lands on the title. Every CONTROLS, KEYBOARD, GAMEPAD and
+sound setting, the Start Depth record and the telemetry rows are saved per
+profile, and a switch resets to shipped defaults before it loads. The run has
+three seats (start, `'quit'` from pause, `'died'` after the frame's steps) and
+one gate, `Meta.eligible()`, which a bench key in play closes. The local top 10
+is kit-shaped (`createScores`, the kit-scores draft). kit-leaderboard 0.2.1
+mints a run id without `randomUUID`, and every eligible run end submits once
+with the registry's seven stats keys. SCORES has LOCAL and, with the module,
+ONLINE; game over names a placing and the title names a queue. PROFILE creates,
+selects, renames and deletes, and NAME takes an arcade wheel on every device or
+typing on a keyboard, where a typed key fires no action. ⛔ **The ninth soak**
+plays one front-door session over a working store and over a blocked one with the
+same hash on every frame, and a reload brings the profile, the settings, the
+record and the table back. No baseline moved.
+
+⚠ **What CS011 deliberately left.** **Achievements are CS015's** (M4): no key,
+no evaluator, no screen. **Overdrive's boards are CS012's**: SCORES lists CLASSIC
+only, and the Worker keeps one best row per player per game id, so Overdrive
+needs its own id before it posts. **The registry's rate bound is Paul's** (M7):
+until `maxMetricPerSecond` goes from 1,200 to about 100,000, deep Start Depth
+runs are stored flagged. No time-window switch on ONLINE, no profile filter on
+LOCAL, no score erase, no save-and-resume. On NAME a keyboard player's Space, Z
+and X type. Every browser and device check is a skipped playtest: storage over
+`file://` and itch.io in Firefox and Safari, NAME on a pad, and a real run posted
+online. Still unowned: the pad-only silence, the VOICE bus, the Dive's visual and
+the Surger tone's 1.106 peak.
 
 ---
 

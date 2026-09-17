@@ -301,3 +301,29 @@ for.
   feels right.
 - **Knobs:** `C.LEADERBOARD_BOARD_LIMIT`; the VIEW row's place and the entry
   view in `buildScoreRows()` / `toScores`; the state and hint strings there.
+
+### CS011 P6 — storage and the meta screens in Firefox and Safari (plan K4)
+- **Would have done:** opened the built file by double-click and the itch.io
+  upload in Firefox and Safari (desktop, and Safari on iOS); created a profile,
+  moved a volume and a sensitivity, played a run to a local score, reloaded,
+  and checked PROFILE, SCORES and game over's line; then repeated in a private
+  window.
+- **Trying to learn:** whether `file://` storage survives a reload in each
+  browser (Chromium was the only one measured, plan §1.1 and §1.6); whether an
+  itch.io embed's sandbox blocks storage there, and whether the in-memory
+  fallback then plays cleanly; whether a private window's quota fails loudly or
+  quietly; whether the screens lay out the same.
+- **Knobs:** none in `C`. A browser that loses saves is a note on the itch.io
+  page, or kit-storage's fallback (`lib/`, a PATCH with its `.NOTES.md`).
+
+### CS011 P6 — the NAME wheel's feel on a pad
+- **Would have done:** (P4's entry above covers three devices; this is the pad
+  alone, in depth) named and renamed profiles on an Xbox-style pad with the
+  D-pad and with the left stick, spelling a 12-character name with DEL and END,
+  and cancelling with Purge.
+- **Trying to learn:** whether one wheel entry per `C.MENU_ROTATE_STEP` of rotate
+  is slow on the D-pad and overshoots on the stick; whether starting on A and
+  staying on the last entry after Fire is the right rhythm; whether DEL and END
+  are found at the wheel's end, left of A.
+- **Knobs:** `C.MENU_ROTATE_STEP` (shared with every menu), `C.NAME_WHEEL`'s
+  order and where DEL and END sit, `C.GAMEPAD_SENS`.
