@@ -10,10 +10,9 @@ eleventh soak closes it (GDD §14.1, §14.6, §6.4, §6.5, §7, §8.1, §10.3, �
 claim names what was run (§1 lists the probes) and was run at commit `4704d2c`.
 A PREDICTED one says so.
 
-⛔ **§0 IS OPEN. Nothing in it is answered.** Every row carries a measurement and
-a recommendation; the answer column is Paul's. ⛔ **No build phase starts until
-that column is filled.** A phase prompt that names a call builds the answer
-written there — the recommendation only where Paul took it.
+✅ **§0 IS ANSWERED: Paul took every recommendation (2026-09-17)**, including
+every reading R1–R11. A phase prompt that names a call builds the recommendation
+written beside it and does not re-open it.
 
 **Baseline for every measurement: commit `4704d2c`** (CS012 P6, the close).
 - `node build.js` → 25 modules + 3 inlined, `dist/vector-vortex.html`
@@ -59,34 +58,34 @@ in screen space, because `perspective()` caps depth at 1).
 
 ---
 
-## ⛔ 0. PAUL'S CALLS — OPEN
+## ⛔ 0. PAUL'S CALLS — ✅ ALL ANSWERED 2026-09-17: EVERY RECOMMENDATION
 
-Each is a design call the GDD does not settle. The recommendation is the plan's;
-the answer is Paul's. ⚠ Every number marked ⚠ is provisional in the sense O16
+Each is a design call the GDD does not settle, with its measurement and a
+recommendation. ✅ **Paul took every recommendation.** ⚠ Every number marked ⚠ is provisional in the sense O16
 used: owned by an art, audio or tuning pass, like the Classic palette.
 
 | # | The call | Recommendation | Answer |
 |---|---|---|---|
-| T1 | Where a token lives, and how it reaches the board | A second array, `state.tokens`, and one entry point, `dropToken()`, in `10-powerups.js`. A token is not an enemy | |
-| T2 | Which kills drop, how often, and whose draw | Every kill at a kill site rolls; ONE draw per Overdrive kill, from the run's one stream; p = `TOKEN_DROP_CHANCE` / (1 + threats) with 0.10 ⚠ — about one token per well | |
-| T3 | The drop-weight table | A weighted pick off the SAME draw; Bounty 3, Lance 2, Spread 2, Ward 2, Recharge 1 ⚠ | |
-| T4 | A token's life on the board | Born at the kill's depth and lane; rises at 0.30 ⚠ to `TOKEN_HOVER_DEPTH`; `age` counts up from the drop to `TOKEN_LIFE`; collected by a live craft in its lane while it hovers; faded below 0.25; a depleting ring | |
-| T5 | What owns a token and an effect | The well: all end at the clear (`startDive()`), a death keeps them, and a duplicate does nothing more | |
-| T6 | Bounty and Recharge | Bounty: `addScore(2000)`, unmultiplied, builds nothing. Recharge: `purgeUses = 0`, so "Purge unspent" pays again | |
-| T7 | Lance | A shot that KILLS is not consumed; a Thorn chip takes 3 × `THORN_CHIP` and pays 5 per chip | |
-| T8 | Spread | Three lanes (walls dedupe) under a cap of 3 × `SHOT_MAX` while it is on | |
-| T9 | Ward | One hit, absorbed in `killSkimmer()` below the invulnerability guard; it starts the respawn's invulnerability window, is not a death, and is drawn as a stroked shell | |
-| T10 | Tokens' look, and the HUD | One warm colour (hue 56°, `#FFF347` ⚠) and five glyphs; no HUD item — each effect shows where it acts | |
-| T11 | Tokens' sounds | Two new events: `collect` and `wardBreak`. No drop cue | |
-| W1 | How an off-well enemy is represented | In `state.enemies`, `(lane, depth)` like everything else. ALOFT IS A PHASE: `depth` 1, a ninth contract field `aloft`, and a draw-time lift | |
-| W2 | How the Warden arrives | From the throat through its schedule row, climbing its lane unshootable, and lifting off at the rim | |
-| W3 | How it "fires down" | It hunts along the rim and strikes its own lane with the Surger's fuse → discharge, as a `killDepth` mutation. No new collision code for its kill | |
-| W4 | "Killable only by Jump" | A jump strike: an airborne craft in an aloft Warden's lane kills it — a FOURTH kill site. Shots and the Purge never | |
-| W5 | Does a Warden hold the well open? | Yes (`blocksClear: true`) | |
-| W6 | Peripheral visibility | Drawn lift 0.06 rim radii ⚠; its own blue (hue 222°, `#477EFF` ⚠); its fuse and strike reuse the Surger's two sounds | |
-| MI1 | The Mimic's cycle, and "vulnerable only while firing" | Reflect-then-open: a shot is sent back once and opens it for 0.5 s ⚠; a shot while open kills it | |
-| MI2 | The reflected shot | An enemy projectile, `MimicShot extends WeaverBolt`, at 60 % of shot speed; the Mimic holds at depth 0.40 ⚠ so every reflection has ≥ 0.45 s of flight | |
-| MI3 | The probation's shape | One schedule row is the whole cut; flagged in GDD §19 and `SKIPPED-PLAYTESTS.md`; violet (hue 286°, `#D447FF` ⚠) | |
+| T1 | Where a token lives, and how it reaches the board | A second array, `state.tokens`, and one entry point, `dropToken()`, in `10-powerups.js`. A token is not an enemy | ✅ As recommended |
+| T2 | Which kills drop, how often, and whose draw | Every kill at a kill site rolls; ONE draw per Overdrive kill, from the run's one stream; p = `TOKEN_DROP_CHANCE` / (1 + threats) with 0.10 ⚠ — about one token per well | ✅ As recommended |
+| T3 | The drop-weight table | A weighted pick off the SAME draw; Bounty 3, Lance 2, Spread 2, Ward 2, Recharge 1 ⚠ | ✅ As recommended |
+| T4 | A token's life on the board | Born at the kill's depth and lane; rises at 0.30 ⚠ to `TOKEN_HOVER_DEPTH`; `age` counts up from the drop to `TOKEN_LIFE`; collected by a live craft in its lane while it hovers; faded below 0.25; a depleting ring | ✅ As recommended |
+| T5 | What owns a token and an effect | The well: all end at the clear (`startDive()`), a death keeps them, and a duplicate does nothing more | ✅ As recommended |
+| T6 | Bounty and Recharge | Bounty: `addScore(2000)`, unmultiplied, builds nothing. Recharge: `purgeUses = 0`, so "Purge unspent" pays again | ✅ As recommended |
+| T7 | Lance | A shot that KILLS is not consumed; a Thorn chip takes 3 × `THORN_CHIP` and pays 5 per chip | ✅ As recommended |
+| T8 | Spread | Three lanes (walls dedupe) under a cap of 3 × `SHOT_MAX` while it is on | ✅ As recommended |
+| T9 | Ward | One hit, absorbed in `killSkimmer()` below the invulnerability guard; it starts the respawn's invulnerability window, is not a death, and is drawn as a stroked shell | ✅ As recommended |
+| T10 | Tokens' look, and the HUD | One warm colour (hue 56°, `#FFF347` ⚠) and five glyphs; no HUD item — each effect shows where it acts | ✅ As recommended |
+| T11 | Tokens' sounds | Two new events: `collect` and `wardBreak`. No drop cue | ✅ As recommended |
+| W1 | How an off-well enemy is represented | In `state.enemies`, `(lane, depth)` like everything else. ALOFT IS A PHASE: `depth` 1, a ninth contract field `aloft`, and a draw-time lift | ✅ As recommended |
+| W2 | How the Warden arrives | From the throat through its schedule row, climbing its lane unshootable, and lifting off at the rim | ✅ As recommended |
+| W3 | How it "fires down" | It hunts along the rim and strikes its own lane with the Surger's fuse → discharge, as a `killDepth` mutation. No new collision code for its kill | ✅ As recommended |
+| W4 | "Killable only by Jump" | A jump strike: an airborne craft in an aloft Warden's lane kills it — a FOURTH kill site. Shots and the Purge never | ✅ As recommended |
+| W5 | Does a Warden hold the well open? | Yes (`blocksClear: true`) | ✅ As recommended |
+| W6 | Peripheral visibility | Drawn lift 0.06 rim radii ⚠; its own blue (hue 222°, `#477EFF` ⚠); its fuse and strike reuse the Surger's two sounds | ✅ As recommended |
+| MI1 | The Mimic's cycle, and "vulnerable only while firing" | Reflect-then-open: a shot is sent back once and opens it for 0.5 s ⚠; a shot while open kills it | ✅ As recommended |
+| MI2 | The reflected shot | An enemy projectile, `MimicShot extends WeaverBolt`, at 60 % of shot speed; the Mimic holds at depth 0.40 ⚠ so every reflection has ≥ 0.45 s of flight | ✅ As recommended |
+| MI3 | The probation's shape | One schedule row is the whole cut; flagged in GDD §19 and `SKIPPED-PLAYTESTS.md`; violet (hue 286°, `#D447FF` ⚠) | ✅ As recommended |
 
 ### T1 — where a token lives, and how it reaches the board
 
@@ -1146,9 +1145,10 @@ correct; Mimic present and flagged for playtest". Its CS012 verdicts leave
 
 ## 15. ASSUMPTIONS
 
-- **A1 — Paul answers §0 before P1** in this document's answer column, as
-  CS012's was.
-- **A2 — `../coinless-kit` is present for the close** (two closed files read its
+- **A1 — ✅ Met: Paul answered §0 on 2026-09-17** (every recommendation), in
+  this document's answer column, as CS012's was.
+- **A2 — ✅ Confirmed by Paul (2026-09-17): `../coinless-kit` is present for
+  the close** (two closed files read its
   registry and SKIP without it).
 - **A3 — Overdrive and Classic share heat, the ladder, the band roll, the Dive
   (until CS014), the Purge and the scoring constants** (GDD §13; CS012 A1).

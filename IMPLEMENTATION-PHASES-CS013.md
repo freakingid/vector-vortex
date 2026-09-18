@@ -9,12 +9,10 @@ and `STATUS.md` automatically, and nothing else unless the prompt names it.
 ⛔ **`ultrathink` appears inside the prompt text where it is wanted.** It is a
 per-turn lever, so it has to be in the pasted message.
 
-⛔ **`PLANNED-FEATURES-CS013.md` §0 IS OPEN.** No phase starts until Paul has
-filled its answer column. A prompt below that says "T3's answer" means the
-answer written in that column — the recommendation only where Paul took it.
-⛔ **If an answer changes a phase's SHAPE rather than a number** (for example,
-W1 answered B or C, MI1 answered (b), or T1 answered B), that phase is re-planned
-in a planning session. A build session does not improvise it.
+✅ **Every call is answered: Paul took every recommendation in
+`PLANNED-FEATURES-CS013.md` §0 (T1–T11, W1–W6, MI1–MI3) and every reading
+(R1–R11), 2026-09-17.** A prompt below that says "T3's answer" means T3's
+recommendation. No phase's shape changed.
 
 **Baseline:** CS012 closed at `4704d2c`, and CS013 was planned on top of it.
 - `node build.js` → 25 modules + 3 inlined, 670,746 bytes.
@@ -54,8 +52,8 @@ Plan §2 has the argument. In short:
 
 | Before | What | Whose |
 |---|---|---|
-| P1 | §0's answer column filled in `PLANNED-FEATURES-CS013.md` | Paul |
-| P5 | `../coinless-kit` present beside this repo (two closed files read its registry and SKIP without it; a close cannot skip) | Paul |
+| P1 | §0's answer column filled in `PLANNED-FEATURES-CS013.md` | ✅ Done 2026-09-17 |
+| P5 | `../coinless-kit` present beside this repo (two closed files read its registry and SKIP without it; a close cannot skip) | ✅ Confirmed by Paul 2026-09-17 |
 
 ### ⛔ The re-records — none
 
@@ -109,8 +107,7 @@ precondition, never relaxed to let a broken one pass.**
 > `test-cs009-p4.js`, `test-cs009-p5.js` (`:400–430`) and `tools/sfx-lab.html`.
 > Create `log/CS013.md`. ultrathink.
 >
-> ⛔ **§0: T1–T6, T10, T11.** Build exactly the answers written there. If one is
-> blank, stop.
+> ⛔ **§0: T1–T6, T10, T11.** Build exactly those answers.
 >
 > **0. `STATUS.md` is at 403 lines** (K1). Compress it before you add to it;
 > reasoning goes to `log/CS013.md`.
@@ -238,7 +235,7 @@ precondition, never relaxed to let a broken one pass.**
 > decoder), the shot-cap assertions in `test-cs002-p3.js`, and `test-cs008-p1b.js`
 > (the sweep). ultrathink.
 >
-> ⛔ **§0: T5, T7, T8, T9.** Build exactly the answers written there.
+> ⛔ **§0: T5, T7, T8, T9.** Build exactly those answers.
 >
 > **1. Spread (T8).** In `updateShots()`: the lanes per T8's answer through
 > `laneNormalize()`, deduplicated at an open well's wall, under the cap in force.
@@ -319,7 +316,7 @@ precondition, never relaxed to let a broken one pass.**
 > `:655–700`), `test-cs012-p6.js` (`:55–70`), and `tools/sfx-lab.html`'s KILL
 > PITCH table. ultrathink.
 >
-> ⛔ **§0: W1–W6.** Build exactly the answers written there. Under W1's
+> ⛔ **§0: W1–W6.** Build exactly those answers. Under W1's
 > recommendation, **aloft is a PHASE, not a depth** — the Jump's rule.
 >
 > **1. The ninth field (W1).** The base `Enemy` gains `aloft = false`, with a
@@ -431,7 +428,7 @@ precondition, never relaxed to let a broken one pass.**
 > (the bolt), `test-cs004-p5.js` (`:375–410`), `test-cs005-p5.js` (`:395–412`),
 > `test-cs007-p2.js` (`:470–520`) and `tools/sfx-lab.html`. ultrathink.
 >
-> ⛔ **§0: MI1–MI3.** Build exactly the answers written there. ⚠ The Mimic is
+> ⛔ **§0: MI1–MI3.** Build exactly those answers. ⚠ The Mimic is
 > on probation: build it to be cut in one row (MI3).
 >
 > **1. The bolt's speed becomes an overridable reader** on `WeaverBolt` (the
