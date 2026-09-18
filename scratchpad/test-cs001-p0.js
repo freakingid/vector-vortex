@@ -16,7 +16,10 @@ H.assert(true, "built script parses under node --check");
 const X = H.buildGame();
 
 H.assert(typeof X.C === "object" && X.C !== null, "C is an object");
-H.eq(X.C.GAME_ID, "vector-vortex", "GAME_ID matches the Worker registry name");
+// ⛔ REWRITTEN IN PLACE AT CS012 P6 (the review): GAME_ID is kit-storage's SAVE
+// KEYSPACE, and since CS012 P3 the Worker's names are C.LEADERBOARD_GAME_IDS.
+// The value did not move — renaming it would orphan every stored key.
+H.eq(X.C.GAME_ID, "vector-vortex", "GAME_ID is the save keyspace, and it never moves");
 H.eq(X.C.SHOT_MAX, 8, "shot cap");
 H.assert(X.C.LAYER_THRESHOLD && Object.keys(X.C.LAYER_THRESHOLD).every(k => +k >= 2 && +k <= 4),
   "every music layer tier key is in 2..4 (a tier >=5 gate never opens)");

@@ -113,6 +113,7 @@ Thursday night resuming 436p
 Phase 3
 Phase 5
 Phase 4
+Phase 6
 When done, and oo is done, we want to update VS Code plugins and restart window.
 
 

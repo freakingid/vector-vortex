@@ -90,11 +90,21 @@ Continuous heat, gated introductions — the player should be able to *name* wha
 changed. GDD §8.1 is the design statement; this is what the build does with it.
 
 ⛔ **Shipped, CS007 P3 — the schedule is DATA in `C`.** `C.SPAWN_SCHEDULE` is
-seven `{ level, kind }` rows, cumulative and sorted; `eligibleKinds(level)`
+seven `{ level, kind }` rows, cumulative and sorted; `eligibleKinds(level, mode)`
 (`08-spawner.js`) returns the rows at or below the level and `pickSpawnKind()`
-picks **uniformly** from that. ⛔ **It is a function of the level and nothing
-else** — no board state, no heat, no draw. The set only ever grows, so a kind the
-player has learned never stops arriving.
+picks **uniformly** from that. ⛔ **It is a function of the level and the run's
+MODE, and nothing else** — no board state, no heat, no draw. The set only ever
+grows, so a kind the player has learned never stops arriving.
+
+⛔ **Shipped, CS012 P2 — Overdrive's rows are a SECOND table** (`C.SPAWN_SCHEDULE_OVERDRIVE`,
+GDD §8.1, Paul's O2), never a `mode` field on the rows above. `eligibleKinds()`
+merges the two in level order, a Classic row first at an equal level, and `mode`
+defaults to `"classic"`. ⚠ **This file's tables below are a CLASSIC run's.** In
+Overdrive every set gains the Reaver from level 6, so the sizes are one larger
+from 6 on and the Reaver takes 1/4 of releases at L6–8, 1/5 at L9–12, 1/6 at
+L13–17, 1/7 at L18–22 and 1/8 from L23 (arithmetic, from the uniform pick).
+⛔ **CS013 adds the Warden (11) and Mimic (16) to that second table**, which
+moves those shares again — and nothing in the Classic tables below.
 
 | Level | Introduced | How the build delivers it |
 |---|---|---|
@@ -113,7 +123,9 @@ player has learned never stops arriving.
 `Weaver.layThorn()` and `Weaver.fire()`; a row for either would put a parentless
 entity in the throat.
 
-⛔ **A ONE-ENTRY ELIGIBLE SET SPENDS NO DRAW; TWO OR MORE SPEND EXACTLY ONE.**
+⛔ **A ONE-ENTRY ELIGIBLE SET SPENDS NO DRAW; TWO OR MORE SPEND EXACTLY ONE**,
+and ⛔ **the rule is the same in both modes** — Overdrive's set is one entry at
+levels 1–2 as well, because its first row is at level 6 (CS012 P2).
 `rngPick()` on a single-element array still advances the run's one stream, and
 that stream is shared with every spawn lane — so a draw spent at levels 1–2 would
 move `test-cs004-p1.js`'s `GOLDEN_LANES`, whose whole 3,000-tick window lives

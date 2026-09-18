@@ -24,7 +24,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS009** | ✅ **Shipped 2026-09-16.** The audio engine: kit-audio (`AudioSys`, `MusicSys` with a stall-resyncing per-frame lookahead scheduler, the SFX player), the gesture unlock, `tools/music-lab.html` with SOLO, MUTE and PASS / FAIL per layer, the untiered `title` and `pulse` tracks, music by screen, OPTIONS' four volumes and MUSIC TRACK, `tools/sfx-lab.html`, the Classic SFX at their seats with the held Surger tone and the over-cap life sound, and the seventh soak (audio on and off, one hash). ⚠ Six phases plus a port commit; `drive` moved to CS012 | §4.4, §6.5, §10.5, §11.1–11.3, §11.7–11.8, §17 item 9 |
 | **CS010** | ✅ **Shipped 2026-09-16.** The intensity director: kit-audio 0.3.0 (bar-latched tier gates, the filter sweep, a limiter on the music, the menu duck and the event dips), a live-danger signal read through one `dangerInputs()` that writes no state, two earned layers on `pulse` (`cycle` tier 2, `tick` tier 3, both PASS), Paul's lab gains behind the limiter, music-lab's INTENSITY and TIER, the rim pulse on `heart`'s onsets, and the eighth soak. Five phases, as planned | §5, §11.1, §11.3–11.8, §17 item 9, §19 |
 | **CS011** | ✅ **Shipped 2026-09-16.** Meta: kit-names, kit-storage and kit-profile inlined at build, a silent ANONYMOUS first profile, settings / the Start Depth record / telemetry saved per profile, the local top 10 per mode with the bench flag, kit-leaderboard 0.2.1 and one `Leaderboard` over the bridge, SCORES (LOCAL / ONLINE), PROFILE with NAME entry (kit-input 0.8.0's text mode), and the ninth soak (working store and blocked, one hash). Six phases, as planned. ⚠ Achievements moved to CS015 (Paul's M4) | §4.6, §10.5, §15.1–15.4, §15.6 |
-| **CS012** | Overdrive core: mode flags, Jump, combo multiplier, the Reaver, and the `drive` track (Overdrive's AUTO default, from CS009); the combo input to the intensity director and the Overdrive intensity re-measure (from CS010) | §11.4, §11.7, §13, §14.2, §14.4, §14.6 |
+| **CS012** | ✅ **Shipped 2026-09-17.** Overdrive's core: the `drive` track (138 BPM, 36 bars A→B→C, Overdrive's AUTO), `C.MODE_FLAGS` and `modeHas()`, the Reaver in a new `07-enemies-overdrive.js` behind a second schedule table, OVERDRIVE on MODE with its own online board, SCORES per mode and a per-mode Start Depth record, the Jump (airborne as a phase, the lift, the shadow and kit-audio 0.4.0's high-pass), the combo multiplier at the kill sites with its readout, `comboLost`, the director's fifth input and `max_combo`'s real source, and the tenth soak. Six phases, as planned | §11.4, §11.7, §13, §14.2, §14.4, §14.6, §15.3, §15.4, §19 |
 | **CS013** | Overdrive tokens and the remaining enemies: five powerups, the Warden, the Mimic on probation | §14.1, §14.6 |
 | **CS014** | The ring-flight Dive, hard-capped at 4 s / 6 rings | §14.5 |
 | **CS015** | Achievements: the id table (save data, never renamed) written once against the whole game, local-only, monotonic tiers and UTC ISO weeks. Planned once Overdrive exists (Paul's M4) | §15.5, §17 item 10 |
@@ -53,7 +53,7 @@ left CS011 for a new **CS015**, so onboarding became CS016 and ship CS017. The
 sweep read every live `CS015` / `CS016` pointer and every "achievements are
 CS011's" pointer. `log/` and `archive/` were not swept, for the same reason.
 
-**CS001 through CS011 are closed.** Their narratives are in `log/CS00#.md`;
+**CS001 through CS012 are closed.** Their narratives are in `log/CS0##.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -277,6 +277,52 @@ and X type. Every browser and device check is a skipped playtest: storage over
 `file://` and itch.io in Firefox and Safari, NAME on a pad, and a real run posted
 online. Still unowned: the pad-only silence, the VOICE bus, the Dive's visual and
 the Surger tone's 1.106 peak.
+
+**CS012 held as ONE changeset of six phases and shipped its row.** `drive` (P1),
+the mode flags, the Reaver and Overdrive's schedule (P2), Overdrive at the front
+door and on its own board (P3), the Jump (P5), the combo (P4) and the tenth soak
+plus the close (P6). ⚠ **P5 and P4 ran in the reverse of the planned order**, at
+Paul's request; nothing in P5 reads the combo, so the only visible consequence is
+that `STATE_FIELDS.CS012` reads `["jump", "combo"]`. Paul answered O1–O16 in the
+planning session and took **every recommendation**, which is the first time that
+has happened in this project — and the reason is worth naming: the plan priced
+each call with a measurement rather than an argument, and the one call it could
+not price (O14's sweep) it recommended *accepting*.
+
+**What CS012 shipped against the row.** ⛔ **Overdrive is a mode a player can
+choose, and it is flags rather than a fork.** `C.MODE_FLAGS` is two rows of two
+booleans with one reader, `modeHas()`; the Reaver goes through a second schedule
+table, the track through `C.MODE_TRACK` and the board through
+`C.LEADERBOARD_GAME_IDS`, so no flag exists for those three. ⛔ **The Jump is a
+PHASE, not a Skimmer depth** — `collideSkimmer()` skips its whole pass while
+airborne, which covers all seven contact killers and the rim sweep in one line,
+and the build still has exactly one two-depth comparison. Six shipped comments
+and two GDD sections had predicted the opposite for three changesets and were all
+corrected in that commit. ⛔ **The combo multiplies at the four kill lines and
+never inside `addScore()`**, so chips, the three clear bonuses and the Start
+Depth bonus stay unmultiplied — and a Classic run is bit-identical, asserted step
+for step against the combo mutated out of every site. ⛔ **OVERDRIVE is MODE's
+first row, and the row order IS GDD §13's highlight** — no mark, no colour, no
+flag, and fifteen closed front-door fixtures took one press each. Overdrive posts
+to `vector-vortex-overdrive`, SCORES lists either mode, and `progress` became v2
+per mode with a migration. `drive` is 36 bars at 138 BPM, untiered until Paul's
+lab pass. ⛔ **The tenth soak is two pairs** — Classic against a jump-pressed,
+Overdrive-stubbed twin, and Overdrive with music against Overdrive without —
+matching on every one of 232,014 frames, with Overdrive's invariants checked on
+every step of a played board. ⛔ **No baseline moved in any phase.**
+
+⚠ **What CS012 deliberately left.** **Tokens, the Warden and the Mimic are
+CS013's**, the ring-flight Dive CS014's, achievements CS015's. **`drive` ships
+unheard**: its gains are the composer's, no mix was rendered, and Paul's lab
+session ports as its own commit — ⚠ and a finding came out of trying to guard it,
+that under the limiter's curve the headroom gate cannot catch a louder track at
+all (red needs an input of 152.8), which is Paul's call and nobody's changeset.
+**The sweep still does not open end to end**: O14 said accept, record and keep
+GDD §19's ✗, and two independent measurements now agree at 0.6448–0.6519 against
+the 1.0 it needs. No intensity weight was rescaled, no telemetry column added, no
+bench key for an Overdrive enemy, and no kit module backported. Still unowned:
+the pad-only silence, the VOICE bus, the Dive's visual, the Surger tone's 1.106
+peak, and the whole palette.
 
 ---
 

@@ -465,3 +465,49 @@ for.
   needs to open end to end (GDD §19). That is a weights question (`C.INT_W_*`)
   and Paul's D6 ruled out rescaling them, so it is not a playtest — it is a
   number recorded and left alone.
+
+## CS012 P6 — the tenth soak's asks
+
+The soak proves what a machine can prove about Overdrive: that Classic is
+untouched by it, that the music cannot steer it, and that its invariants hold on
+every step of a played board. ⛔ **Three things it cannot pose, and all three are
+about a run rather than a rule.**
+
+- **Would have done:** three sittings, all Overdrive, all at the front door.
+  (1) MODE → OVERDRIVE → START DEPTH 1, and played five or six wells without
+  looking at anything but the rim — asking whether Overdrive reads as *the same
+  game with more in it* or as a different game. The soak's Overdrive session
+  runs 121,840 frames through levels 1–16 and cannot tell those apart.
+  (2) A run at START DEPTH 13 with the jump button deliberately overused, to find
+  out whether **18.8 % of the play steps spent airborne** — which is what the
+  scripted driver actually produced, against O6's 39.1 % ceiling — feels like a
+  tool or like a crutch, and whether the 509 refused presses read as *the
+  cooldown working* or as *the button not working*. ⛔ **A refused press has no
+  channel of its own**: the HUD glyph dims and fills, and that is all.
+  (3) A run played to a real game over with the eyes on the score, watching the
+  combo readout, the jump glyph and the level colour compete for the same glance
+  — the one arrangement question CS012 created and no assertion can settle.
+- **What we were trying to learn:** ⛔ **whether Overdrive's three additions
+  interact**, which is the only question a phase test structurally cannot ask.
+  P2 owns the Reaver, P4 the combo and P5 the Jump, and each asserts its own
+  behaviour in isolation; P6 asserts that they coexist without breaking an
+  invariant. Whether a board with Reavers *and* a live multiplier *and* a jump
+  available is fun, legible, or merely busy is a judgment about all three at
+  once. The soak's own numbers are the case for asking: 451 kills at multipliers
+  from ×1 to ×5, 98 combo losses, 274 takeoffs and 27 dives in one session — a
+  lot happening per minute, and nobody has watched any of it.
+- **Knobs:** `C.JUMP_COOLDOWN` (1.40) and `C.JUMP_TIME` (0.90) for sitting (2),
+  in that order — O6's table gives the airborne share for each origin, so a
+  change there is priced. `C.COMBO_KILLS_PER_STEP` (4) for sitting (1), which is
+  CS012 P4's ask and the same knob. `C.HUD_COMBO_SIZE` (56), `C.HUD_COMBO_Y` (6),
+  `C.HUD_JUMP_SIZE` and `C.HUD_JUMP_GAP` for sitting (3) — ⛔ **raising the combo
+  size re-derives the Fan well's 76.29 px clearance** (GDD §10.4).
+  `C.REAVER_HOP_RATE` (1.6) is **not** on this list: O1 measured that the climb
+  cannot move without re-deriving GDD §4.4's respawn guarantee, and the hop is
+  what "1.6×" names.
+- ⚠ **What no sitting can settle here, and it is the same one CS012 P4 flagged:**
+  O14's sweep. Two independent measurements now agree — 0.6519 on staged boards
+  and **0.6448** over 121,840 front-door frames — against the 1.0 the sweep needs
+  to open end to end. That is a weights question (`C.INT_W_*`), Paul's D6 ruled
+  out rescaling them, and a person listening to it would hear a filter that opens
+  most of the way. It is a number recorded and left alone, not a playtest.

@@ -176,8 +176,14 @@ S.boot();
   // C.LEADERBOARD_GAME_IDS names it first. test-cs012-p3.js owns the two ids.
   H.eq(rec.creates.length, 2, "⛔ the clients are made once each, lazily: one per mode");
   const cfg = rec.creates[0];
-  H.eq(J([cfg.endpoint, cfg.gameId, cfg.gameVersion]), J([C.LEADERBOARD_ENDPOINT, C.GAME_ID, C.GAME_VERSION]),
-       "⛔ the FIRST create() is Classic's, and gets C's endpoint, game id and version");
+  // ⛔ REWRITTEN IN PLACE AT CS012 P6 (the review): the claim is unchanged —
+  // the first client is Classic's and carries C's endpoint, BOARD id and
+  // version — but the constant that names a board moved at CS012 P3. C.GAME_ID
+  // is the SAVE keyspace and only happens to hold the same string; reading a
+  // board off it is the mistake CLAUDE.md's Leaderboard rule names.
+  H.eq(J([cfg.endpoint, cfg.gameId, cfg.gameVersion]),
+       J([C.LEADERBOARD_ENDPOINT, C.LEADERBOARD_GAME_IDS.classic, C.GAME_VERSION]),
+       "⛔ the FIRST create() is Classic's, and gets C's endpoint, BOARD id and version");
   H.eq(C.LEADERBOARD_ENDPOINT, "https://scores.coinlessgames.com", "C.LEADERBOARD_ENDPOINT (plan R18)");
   H.eq(typeof cfg.getPlayer, "function", "getPlayer is a callback");
 }
@@ -190,7 +196,7 @@ function checkPayload(sub, label) {
   H.assert(Number.isInteger(r.durationS) && r.durationS >= 0, `⛔ ${label}: durationS is an integer (${r.durationS})`);
   H.assert(r.outcome === "died" || r.outcome === "quit", `⛔ ${label}: outcome is died or quit (${r.outcome})`);
   if (REG === null) { H.skip(`${label}: coinless-kit's registry.js at f0b0eb2 is not readable beside this repo`); return; }
-  H.eq(J(Object.keys(r.stats).sort()), J(REG[C.GAME_ID].statsFields.slice().sort()),
+  H.eq(J(Object.keys(r.stats).sort()), J(REG[C.LEADERBOARD_GAME_IDS.classic].statsFields.slice().sort()),
        `⛔ ${label}: stats keys are exactly the registry's statsFields`);
   for (const k of Object.keys(r.stats)) {
     if (k === "mode") H.eq(r.stats[k], "classic", `${label}: stats.mode`);
@@ -358,19 +364,19 @@ const board = entries => ({ gameId: "vector-vortex", window: "all", entries });
 
 {
   H.eq(st.screen, "title", "fixture: on the title");
-  rec.queues[C.GAME_ID] = 0;
+  rec.queues[C.LEADERBOARD_GAME_IDS.classic] = 0;
   S.steps(1);
   H.eq(J(S.draw().lines), "[]", "⛔ an empty queue: no line");
-  rec.queues[C.GAME_ID] = 3;
+  rec.queues[C.LEADERBOARD_GAME_IDS.classic] = 3;
   H.eq(J(S.draw().lines), "[]", "⛔ the line is written in update(), never in draw()");
   S.steps(1);
   const v = S.draw();
   H.eq(J([v.lines, v.items.map(r => r.label)]), J([["3 SCORES QUEUED"], ["PLAY", "OPTIONS", "SCORES", "PROFILE"]]),
        "⛔ three queued: \"3 SCORES QUEUED\", the four rows unchanged");
-  rec.queues[C.GAME_ID] = 1;
+  rec.queues[C.LEADERBOARD_GAME_IDS.classic] = 1;
   S.steps(1);
   H.eq(J(S.draw().lines), J(["1 SCORE QUEUED"]), "one queued: singular");
-  rec.queues[C.GAME_ID] = 0;
+  rec.queues[C.LEADERBOARD_GAME_IDS.classic] = 0;
   S.steps(1);
   H.eq(J(S.draw().lines), "[]", "and the line goes when the queue empties");
 }

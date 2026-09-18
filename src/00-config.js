@@ -867,7 +867,7 @@ const C = {
   PROFILE_ANONYMOUS_NAME: "ANONYMOUS",
 
   // ---- Build / debug ------------------------------------------------------
-  GAME_VERSION:         "0.0.8",   // ⚠ 0.0.2 was never written here — see log/CS006.md
+  GAME_VERSION:         "0.0.9",   // ⚠ 0.0.2 was never written here — see log/CS006.md
   // ⛔ THE SAVE KEYSPACE, AND NOTHING ELSE (kit-storage: coinless.<GAME_ID>.<key>).
   // ⛔ Never change it: every stored key would be orphaned. The online boards are
   // LEADERBOARD_GAME_IDS above, one per mode (CS012 P3).
