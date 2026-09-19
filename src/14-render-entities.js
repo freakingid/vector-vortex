@@ -684,6 +684,99 @@ function drawSurger(ctx, well, lane, depth, tip, live) {
 }
 
 // ---------------------------------------------------------------------------
+// The Warden (GDD 6.4, 14.6, 10.2, 18; CS013 P3, W6) — a hovering silhouette
+// and the beam it fires down its lane.
+// ---------------------------------------------------------------------------
+//
+// ⛔ GDD 18 item 3: this has to be OURS, and it also has to be unmistakable
+// from the six silhouettes it shares a well with. The Vaulter is a symmetric
+// wingspan of four arm tips; the Reaver is that with barbs; the Carrier a
+// hollow diamond; the Weaver a coil; the Surger a run of right angles; the
+// Drifter a knot or a scatter. This is a broad SWEPT DELTA — two wingtips
+// raked back, a notched crown toward the throat and a notched keel toward the
+// rim — which reads as something hanging over the well rather than climbing
+// out of it, and reads that way at a glance even at 18 px above the rim line.
+//
+// Shape DATA, the same class of thing as WELLS' rim polygons; C.WARDEN_SIZE is
+// the tunable, and it is a LANE width like every other silhouette's.
+const WARDEN_POLY = [
+  { l: -1.00, d: -0.10 },   // the left wingtip, raked back
+  { l: -0.45, d: -0.55 },   // the left shoulder, toward the throat
+  { l:  0.00, d: -0.30 },   // the crown's notch
+  { l:  0.45, d: -0.55 },   // the right shoulder
+  { l:  1.00, d: -0.10 },   // the right wingtip
+  { l:  0.35, d:  0.45 },   // the right heel, toward the rim
+  { l:  0.00, d:  0.18 },   // the keel's notch, pointing into the well
+  { l: -0.35, d:  0.45 },   // the left heel
+];
+
+// ⛔ THE BEAM'S OWN PREALLOCATED POINTS AND ITS OWN PAIR, drawSurgeLane()'s
+// rule: a Warden's beam and a Surger's fuse can be live in the same lane in the
+// same frame, and `drawPoly(ctx, [a, b])` would allocate an array literal every
+// call (GDD 17's budget forbids per-frame allocation in the hot path).
+const _wardenTop = { x: 0, y: 0 };   // the lifted Warden's own rim point
+const _wardenTip = { x: 0, y: 0 };   // how far down the lane the beam has run
+const _wardenBeam = [_wardenTop, _wardenTip];
+
+// ⛔ THE BEAM RUNS DOWNWARD, FROM THE WARDEN TO THE RIM, and that is the
+// opposite of the Surger's fuse for a reason the player can read: a Surger
+// arms its lane from the throat UP at you, and a Warden is already above you
+// and reaches DOWN. Both say the same thing — this lane is about to be lethal —
+// and in both the tip ARRIVING is the instant the lane goes live (GDD 6.3's
+// visible fuse).
+//
+// ⛔ THE WIDTH IS THE STATE CHANGE, drawSurgeLane()'s rule: the beam creeps
+// down at plain lane weight while the fuse runs and slams to
+// C.WARDEN_BEAM_WIDTH for the discharge. ⛔ A per-entity multiplier on
+// laneLineWidth() and never a global glow constant (00-config.js).
+//
+// ⛔ FULL ALPHA AT EVERY DEPTH. GDD 10.3 governs what may be drawn OVER the
+// throat zone, and this is neither drawn there (it lives between the rim and
+// the Warden above it) nor drawn over the well — it IS the warning.
+function drawWardenBeam(ctx, well, lane, tip, live) {
+  const t = tip > 1 ? 1 : tip;
+  if (t <= 0) return;   // the first step of a fuse: nothing to draw, and a
+                        // zero-length path is not a drawing.
+  // Both ends start on the lane's rim point; liftPoints() raises the FIRST of
+  // the pair (n = 1) to where the Warden hovers, so `_wardenTip` is still the
+  // rim and the lerp below runs the beam down toward it as the fuse fills.
+  screenPos(well, lane, 1, _wardenTop);
+  screenPos(well, lane, 1, _wardenTip);
+  liftPoints(well, _wardenBeam, 1, C.WARDEN_LIFT);
+  _wardenTip.x = _wardenTop.x + (_wardenTip.x - _wardenTop.x) * t;
+  _wardenTip.y = _wardenTop.y + (_wardenTip.y - _wardenTop.y) * t;
+  drawPoly(ctx, _wardenBeam, false);
+  glowStroke(ctx, C.WARDEN_COLOR, laneLineWidth(1) * (live ? C.WARDEN_BEAM_WIDTH : 1), 1);
+}
+
+// ⛔ drawPoly + glowStroke, ONE CLOSED path, no fill (GDD 10.2), at full alpha
+// at every depth exactly as every other enemy — GDD 10.3 protects the
+// approaching thing, and this IS it.
+//
+// ⛔ THE LIFT IS DRAW-TIME ONLY AND IT IS liftPoints()' (05-skimmer.js), the
+// same function that raises the airborne craft: a Warden ALOFT is pushed
+// C.WARDEN_LIFT rim radii out from the well's screen centroid, and its `lane`
+// and `depth` are untouched. With C.WARDEN_LIFT at 0 the state hash does not
+// move, which is how the suite proves it (test-cs013-p3.js). A CLIMBING Warden
+// is not lifted at all: it is in the well like everything else.
+//
+// ⛔ THE BEAM GOES DOWN FIRST so the silhouette sits on top of its own strike —
+// the Warden is what the player has to read, and a beam at
+// C.WARDEN_BEAM_WIDTH drawn over it would swallow it at the moment it matters.
+// drawSurger()'s ordering, for drawSurger()'s reason.
+//
+// `aloft`, `tip` and `live` all come from the entity's own phase
+// (07-enemies-overdrive.js) rather than from anything decided here, which is
+// why the drawing and the lethality can never disagree.
+function drawWarden(ctx, well, lane, depth, aloft, tip, live) {
+  if (aloft) drawWardenBeam(ctx, well, lane, tip, live);
+  const pts = entityPoints(well, lane, depth, WARDEN_POLY, C.WARDEN_SIZE);
+  if (aloft) liftPoints(well, pts, WARDEN_POLY.length, C.WARDEN_LIFT);
+  drawPoly(ctx, pts, true);
+  glowStroke(ctx, C.WARDEN_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
 // The tokens (GDD 14.1, 16.3; CS013 P1, T4, T10) — a glyph inside a ring.
 // ---------------------------------------------------------------------------
 //

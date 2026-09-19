@@ -50,13 +50,14 @@ const MEASURE = !!process.env.P6_MEASURE;
 
 // ⛔ GDD §7's LITERALS (test-cs008-p2.js's trap 1, for its reason).
 const GDD = { thornChip: 5, weaver: 50, carrier: 100, vaulter: 150, surger: 200,
-              reaver: 300, wellPerLevel: 100, purgeUnspent: 500, noDeath: 1000,
+              reaver: 300, warden: 500, wellPerLevel: 100, purgeUnspent: 500, noDeath: 1000,
               bounty: 2000 };   // ⛔ CS013 P1: GDD §14.1's Bounty, collected — unmultiplied, not a kill
 
 // ⛔ IT TAKES THE BUILD: `instanceof` is per build and this file runs five
 // (test-cs012-p4.js's finding).
 function gddPoints(Z, e) {
   if (e instanceof Z.Reaver) return GDD.reaver;      // before Vaulter: it extends it
+  if (e instanceof Z.Warden) return GDD.warden;      // CS013 P3: GDD §7's 500, killed by a jump
   if (e instanceof Z.Vaulter) return GDD.vaulter;
   if (e instanceof Z.Carrier) return GDD.carrier;
   if (e instanceof Z.Weaver) return GDD.weaver;

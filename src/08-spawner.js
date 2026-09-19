@@ -78,6 +78,14 @@ const ENEMY_KINDS = {
   // A Classic run never asks for it, because only C.SPAWN_SCHEDULE_OVERDRIVE
   // names it.
   reaver: (lane, depth, dir) => new Reaver(lane, depth, dir),
+  // ⛔ OVERDRIVE'S SECOND ROW (CS013 P3; 07-enemies-overdrive.js). It takes
+  // `dir` like the Vaulter — the heading laneHop() folds and writes back while
+  // it hunts along the rim. The row is the ONLY way one reaches a board, and
+  // only C.SPAWN_SCHEDULE_OVERDRIVE names it, so a Classic run never asks.
+  // ⚠ It is released at depth 0 like everything else: a Warden is a THROAT
+  // arrival that climbs and then lifts off, not an entity that flies in from
+  // off the well (W2).
+  warden: (lane, depth, dir) => new Warden(lane, depth, dir),
 };
 
 // The RELEASE BUDGET — how many THREATS may be alive at once. ⛔ The MIN of the

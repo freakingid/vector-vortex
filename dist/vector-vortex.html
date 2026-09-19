@@ -229,6 +229,64 @@ const C = {
   REAVER_BARB_ROOT:     0.35,
   REAVER_COLOR:         "#FF4A4A",  // ⚠ = VAULTER_COLOR, shared (O16); the silhouette carries the difference
 
+  // ---- Warden (GDD 6.4, 14.6; CS013 P3) — Overdrive only ------------------
+  // "Flies above the well, fires down, killable only by Jump" (GDD 14.6), and
+  // W1's answer to how that is represented: ⛔ ALOFT IS A PHASE, NOT A DEPTH.
+  // It climbs its lane from the throat unshootable, goes ALOFT at depth 1 — the
+  // rim's own depth, the only legal one it has — and hunts along the rim from
+  // there, striking its own lane on its own clock (07-enemies-overdrive.js).
+  //
+  // ⛔ THE CLIMB IS THE ONLY THING HEAT TOUCHES (R6, R7). `WARDEN_CLIMB *
+  // climbMult()` is climbMult()'s sixth call site (test-cs007-p2.js); every
+  // cycle constant below is FLAT, and there is no eighth heat accessor. ⛔ And
+  // the hop duration is flat for H2's reason: GDD 17 item 3's soak bound is
+  // 2 * DT / WARDEN_HOP_TIME, and a heat-scaled hop would need re-deriving at
+  // every level.
+  //
+  // ⛔ ITS CLIMB IS NOT A CONTACT CLIMB, so it does not bind GDD 4.4's respawn
+  // guarantee and C.CLIMB_MAX_BASE does not move (R6): `killDepth` is null the
+  // whole way up, so it passes the rim band harmlessly. The guarantee still
+  // REACHES it — `anchored` is false, so respawnSkimmer() clamps it to 0.55 and
+  // a lift-off ends — and the arithmetic is the other way round from a
+  // climber's: a pushed Warden re-climbs in >= 1.79 s at L99 and then needs
+  // WARDEN_ARM + WARDEN_TELEGRAPH more, so its first discharge lands >= 2.84 s
+  // after the respawn, past C.RESPAWN_INVULN even without the invariant below.
+  WARDEN_CLIMB:         0.18,   // depth/s, throat -> ALOFT ~4.89 s at L11. ⚠ level-1 base
+  // -- the hunt, aloft (W3) — one hop toward the craft every INTERVAL --
+  WARDEN_HOP_INTERVAL:  0.90,   // s between hunt hops ⚠. ⛔ flat (R7)
+  WARDEN_HOP_TIME:      0.35,   // s to cross one lane ⚠. ⛔ flat (H2)
+  // -- the strike (W3): hover -> telegraph -> discharge, forever --
+  // ⛔ WARDEN_HOVER + WARDEN_TELEGRAPH + WARDEN_DISCHARGE = 2.35 s against the
+  // Jump's 2.30 s cycle (C.JUMP_TIME + C.JUMP_COOLDOWN): one strike per jump,
+  // which is what makes "killable only by Jump" a rhythm rather than a wait.
+  // ⛔ WARDEN_ARM is the FIRST hover after EVERY lift-off, the re-climb after a
+  // respawn push included — a Warden that has just arrived over the rim is not
+  // about to fire, and that beat is GDD 1.1 P2's "legible before lethal".
+  WARDEN_ARM:           0.60,   // s from lift-off to the first fuse ⚠
+  WARDEN_HOVER:         1.60,   // s between strikes ⚠
+  WARDEN_TELEGRAPH:     0.45,   // s of visible fuse ⚠ — the Surger's benchmark
+  // ⛔ WARDEN_DISCHARGE MUST STAY STRICTLY BELOW RESPAWN_INVULN (1.5 s), and it
+  // is the Surger's invariant for the Surger's reason (GDD 6.1, 4.4): a strike
+  // already running when the player respawns is survived by the invulnerability
+  // window and by nothing else. ⛔ asserted from the constants (test-cs013-p3.js).
+  WARDEN_DISCHARGE:     0.30,   // s the rim of its lane is lethal
+  // -- the look (W6) — ⚠ provisional, the same standing as the palette (O16) --
+  // ⛔ WARDEN_LIFT IS DRAW-TIME ONLY, exactly as C.JUMP_LIFT is (GDD 14.2): the
+  // silhouette is pushed out from the well's screen centroid, `lane` and the
+  // depth model are untouched, and at 0 the state hash does not move. 0.06 rim
+  // radii is 18 px — MEASURED over 233 lane centres, nothing leaves the world,
+  // and the craft rising to its own 0.12 apex passes through this height.
+  WARDEN_LIFT:          0.06,   // rim radii out from the well's centroid
+  WARDEN_SIZE:          0.80,   // lane widths spanned by the silhouette
+  // ⛔ A PER-ENTITY MULTIPLIER ON laneLineWidth() and never a global glow
+  // constant, the Surger's C.SURGE_LIT_WIDTH rule: the beam creeps down at
+  // plain lane weight while the fuse runs and SLAMS to this when the rim goes
+  // live, so the width jump is what says which instant it was.
+  WARDEN_BEAM_WIDTH:    2.20,   // ⚠ x laneLineWidth for the LIVE beam
+  // The centre of the widest gap in the palette (189.7° -> 255.1°, 65°),
+  // hue 222°, and clear of C.TOKEN_COLOR's warm 56° (O16, T10).
+  WARDEN_COLOR:         "#477EFF",  // ⚠ provisional, the same standing as the palette
+
   // ---- Carrier (GDD 6.1, 6.2) ---------------------------------------------
   // ⛔ CARRIER_SIZE and CARRIER_GLYPH_SIZE are LANE widths and nothing else.
   // entityPoints() (14-render-entities.js) scales a poly's `l` by size/2 and
@@ -496,10 +554,11 @@ const C = {
   // no-weight-table decision. eligibleKinds(level, mode) merges these into the
   // Classic rows in level order, a Classic row first at an equal level, for an
   // Overdrive run only. The same rules hold: cumulative, sorted, uniform pick, no
-  // weights, and a one-entry set spends no draw in either mode. CS013 adds the
-  // Warden (11) and the Mimic (16) here.
+  // weights, and a one-entry set spends no draw in either mode. ⛔ CS013 P3 added
+  // the Warden at 11; the Mimic at 16 is P4's.
   SPAWN_SCHEDULE_OVERDRIVE: [
     { level:  6, kind: "reaver" },
+    { level: 11, kind: "warden" },
   ],
 
   // ---- Collision (GDD 4.5) ------------------------------------------------
@@ -666,7 +725,7 @@ const C = {
     wardBreak:      { noise: true, filter: { type: "highpass", f: 800, to: 3000 }, sweep: 0.12, atk: 0.001, hold: 0.03, rel: 0.18, gain: 0.26 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
-  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
+  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5 },
 
   // ---- Overdrive (GDD 14) -------------------------------------------------
   // ⛔ THE TOKENS (GDD 14.1; CS013 P1, T1–T6, T10; 10-powerups.js). ⚠ Every
@@ -971,8 +1030,8 @@ const C = {
 // testable as a property over levels 1..200 rather than as a spot check —
 // test-cs007-p2.js asserts it off the BUILT file, so a future session that
 // writes a bare climb constant into an entity turns the suite red instead of
-// quietly escaping the clamp. The five climb rates are the one shape that
-// differs: they
+// quietly escaping the clamp. The SIX climb rates are the one shape that
+// differs (CS013 P3 added the Warden's, R6): they
 // keep their own constants and are multiplied by climbMult(), because GDD 8
 // says "climb speed", singular, and ONE multiplier is what keeps the respawn
 // guarantee (GDD 4.4) a single arithmetic statement.
@@ -2952,22 +3011,49 @@ function craftPoints(well, poly, pts, lane, squash, lift) {
   const s = squash > 0 ? (squash > 1 ? 1 : squash) : 0;
   const half = C.SKIMMER_WIDTH / 2 * (1 - C.SKIMMER_SQUASH * s);
   const reach = 1 + C.SKIMMER_SQUASH * s;
-  const rise = lift > 0 ? lift * C.WELL_RADIUS : 0;
-  // The centroid in SCREEN space, on the same mapping screenPos() uses.
-  const c = rise > 0 ? wellCentroid(well) : null;
-  const ccx = c ? C.WELL_CX + c.x * C.WELL_RADIUS : 0;
-  const ccy = c ? C.WELL_CY + c.y * C.WELL_RADIUS : 0;
 
   for (let i = 0; i < poly.length; i++) {
     const p = poly[i];
     // Depth 1 IS the rim (GDD 3.2) — a definition, not a tunable. Every
     // silhouette offset is measured inward from it.
-    const out = screenPos(well, lane + p.l * half, 1 + p.d * reach, pts[i]);
-    if (rise > 0) {
-      const dx = out.x - ccx, dy = out.y - ccy;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d > 0) { out.x += dx / d * rise; out.y += dy / d * rise; }
-    }
+    screenPos(well, lane + p.l * half, 1 + p.d * reach, pts[i]);
+  }
+  liftPoints(well, pts, poly.length, lift);
+  return pts;
+}
+
+// ⛔ THE LIFT ITSELF, AND IT IS THE BUILD'S ONE COPY OF IT (CLAUDE.md). `pts`
+// are ALREADY-PROJECTED screen points; each is pushed `lift` rim radii OUT from
+// the well's screen centroid, along its own outward direction. ⛔ `n` rather
+// than `pts.length`, because entityPoints()' memoized scratch is sized to its
+// own poly and a caller may lift a prefix of it.
+//
+// ⛔ AFTER THE PROJECTION AND NEVER AS A DEPTH: perspective() caps depth at 1,
+// so a point "outside the rim" would silently collapse back onto it, and a
+// depth above 1 is not a thing the depth model has (GDD 3.2). Leaving it in
+// screen space is also what keeps every lift DRAW-ONLY — at a lift of 0 this
+// function writes nothing at all, which is how C.JUMP_LIFT and C.WARDEN_LIFT
+// are each mutated to 0 in the suite to prove the state hash does not move.
+//
+// THREE call sites, and they are the same gesture at two scales: craftPoints()
+// above raises the airborne craft by C.JUMP_LIFT (GDD 14.2, CS012 P5), and
+// drawWarden() and drawWardenBeam() (14-render-entities.js) raise an ALOFT
+// Warden and the top of its beam by C.WARDEN_LIFT (GDD 14.6, CS013 P3).
+// ⛔ One function, so a craft rising past a hovering Warden reads as one space
+// rather than as two conventions that disagree the first time either is
+// retuned.
+function liftPoints(well, pts, n, lift) {
+  const rise = lift > 0 ? lift * C.WELL_RADIUS : 0;
+  if (!(rise > 0)) return pts;
+  // The centroid in SCREEN space, on the same mapping screenPos() uses.
+  const c = wellCentroid(well);
+  const ccx = C.WELL_CX + c.x * C.WELL_RADIUS;
+  const ccy = C.WELL_CY + c.y * C.WELL_RADIUS;
+  for (let i = 0; i < n; i++) {
+    const out = pts[i];
+    const dx = out.x - ccx, dy = out.y - ccy;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 0) { out.x += dx / d * rise; out.y += dy / d * rise; }
   }
   return pts;
 }
@@ -3514,6 +3600,37 @@ class Enemy {
     // The base is null, and every roster class sets its own; a null voice
     // plays the kill at the recipe's own pitch rather than no sound.
     this.sfxVoice = null;
+
+    // ⛔ THE NINTH FIELD (CS013 P3, W1): is this entity ABOVE the well rather
+    // than in it? False on everything in the Classic roster and on the Reaver;
+    // true on a Warden that has lifted off the rim (07-enemies-overdrive.js).
+    //
+    // ⛔ IT IS A PHASE, NOT A DEPTH, and that is CS012 P5's Jump rule pointed
+    // the other way. An aloft entity's `depth` is still a POSITION and it is
+    // still 1 — the rim's own depth, the only legal one it has (GDD 3.2: depth
+    // > 1 is not a position, and perspective() clamps it). What "above the
+    // well" means is expressed HERE, in a flag two sites read, and not by
+    // inventing a number the depth model cannot produce.
+    //
+    // ⛔ TWO READERS, AND THAT IS THE WHOLE MECHANISM (W1, W4):
+    //
+    //   collideShots()  SKIPS an aloft entity (09-collision.js). A shot never
+    //                   meets something above the well — so "killable only by
+    //                   Jump" costs the shot pass one line, and an aloft enemy
+    //                   does not shield the rim band of its lane either.
+    //   jumpStrike()    REQUIRES one. An airborne craft in its lane kills it,
+    //                   which is the build's FOURTH kill site and its FIFTH
+    //                   kill line. ⛔ A lane match on two flags, never a
+    //                   comparison of two depths: the dive strike is still the
+    //                   only one of those in the build (GDD 4.5 item 5).
+    //
+    // ⛔ WHAT IT IS NOT. It is not an exemption from anything else. `anchored`
+    // stays false, so GDD 4.4's rim push reaches an aloft Warden exactly as it
+    // reaches every other position — it comes down to 0.55, its lift-off ends,
+    // and it climbs back. It is not a second `killDepth`: a discharging Warden
+    // kills through the one comparison in collideSkimmer() like everything
+    // else. And it is not a second array — GDD 6.5's ONE array is unchanged.
+    this.aloft = false;
   }
 
   // Movement and AI. dt is C.FIXED_DT; `well` is the current well (topology
@@ -4919,6 +5036,269 @@ class Reaver extends Vaulter {
   points() { return C.PTS_REAVER; }
 }
 
+// ---------------------------------------------------------------------------
+// The Warden (GDD 6.4, 14.6, 4.5, 6.5) — "flies above the well, fires down,
+// killable only by Jump". Overdrive L11+, 500 points. Killed by the JUMP and by
+// nothing else; kills by discharging the rim of its own lane.
+// ---------------------------------------------------------------------------
+//
+// ⛔ ALOFT IS A PHASE, NOT A DEPTH (W1, and it is CS012 P5's Jump rule pointed
+// the other way). Its (lane, depth) is a lane and depth 1 — the rim's own
+// depth, the only legal one it has — and the ninth contract field `aloft`
+// (07-enemies.js) is what says it is ABOVE that rim rather than on it. The
+// LIFT is draw-time only, exactly as the craft's is. ⛔ No site outside
+// collideShots()'s skip and jumpStrike() knows any of this: the respawn push,
+// the clear check, the danger read and the Dive all read it as an ordinary
+// entity at depth 1.
+//
+// ⛔ THREE THINGS ARE EXPRESSED IN FIELDS THE CONTRACT ALREADY HAD, and that is
+// the return GDD 6.5's contract was designed to pay:
+//
+//   "unshootable"        onShot() declines and never dies (W2, W4). While it
+//                        CLIMBS a shot still reaches it — `aloft` is false —
+//                        and flies on past it, so it shields its lane on the
+//                        way up as a riding Drifter does. Aloft, the skip in
+//                        collideShots() means a shot never even asks.
+//   "fires down"         the discharge is `killDepth` mutated to the rim band
+//                        and restored, the Surger's mechanism (GDD 6.1). Its
+//                        depth IS 1, so `depth >= killDepth` is true and the
+//                        only remaining term is laneHit() — GDD 4.5 item 1's
+//                        comparison, paying out at a moment rather than a
+//                        depth. ⛔ NO NEW COLLISION CODE for its kill.
+//   "not purgeable"      GDD 4.3 reads the flag; purgeTarget() prefers the
+//                        DEEPEST enemy, so a purgeable Warden sitting at depth
+//                        1 would absorb every second Purge (MEASURED by
+//                        reading, W4). "Only by Jump" means only by Jump.
+//
+// ⛔ ITS BODY NEVER KILLS ON THE WAY UP. `killDepth` is null for the whole
+// climb, so it passes through the rim band harmlessly and the rim sweep never
+// sees it either. The one window in which it is lethal is its own discharge,
+// and the player is given WARDEN_TELEGRAPH of visible fuse — a beam creeping
+// down its lane, and the Surger's charge tone — to leave or to jump.
+//
+// ⛔ THE FUSE AND THE STRIKE REUSE THE SURGER'S TWO SOUNDS (W6), and the fuse
+// does it WITHOUT 19-sfx.js being edited: reconcileSurgeTones() is duck-typed
+// on `phase === "telegraph"` plus a chargeTip(), so naming the phase and
+// writing that reader IS the wiring. The meaning is the same sentence — "the
+// rim of this lane is about to be lethal; leave or jump" — and so is the
+// answer. ⚠ SETTLED (CLAUDE.md): the charge tone is a gameplay cue; this is a
+// second entity it cues, not a change to it.
+//
+// The nine fields: (lane, depth) a position, depth 1 while aloft; `purgeable`
+// false (W4); `blocksClear` true (W5), so a well with one standing does not
+// clear and the player's answer is a jump; `killDepth` null but for the
+// discharge; `anchored` false; `aloft` true from lift-off, false while
+// climbing and again if pushed; `sfxVoice` "warden". It is not cargo.
+class Warden extends Enemy {
+  // `dir` is the initial heading, the Vaulter's convention: anything
+  // non-negative, undefined included, is +1. It is only ever read through
+  // laneHop() below, which writes the folded heading back (⛔ GDD 3.5).
+  constructor(lane, depth, dir) {
+    super(lane, depth);
+    this.sfxVoice = "warden";   // C.SFX_KILL_PITCH.warden, from tools/sfx-lab.html
+
+    // ⛔ "Killable only by Jump" — the Purge is not a Jump (W4).
+    this.purgeable = false;
+    // ⛔ A Warden you never answered holds the well open (W5). It then counts
+    // against the concurrency ladder rather than adding pressure outside it.
+    this.blocksClear = true;
+
+    // "climb" | "hover" | "telegraph" | "discharge", written only by setPhase().
+    // Born climbing, at the throat, with a zero clock: ⛔ it can never discharge
+    // on its first step, from any spawn depth — the Surger's rule, for the
+    // Surger's reason (GDD 6.1).
+    this.phase = "climb";
+    // ⛔ Counts UP and is RESET AT EVERY TRANSITION (GDD 16.3). One timer for
+    // four phases is what makes "the phase decides what the number means" true.
+    this.strikeTimer = 0;
+    // Has it struck since this lift-off? ⛔ Cleared by setPhase("climb"), so
+    // the first hover after EVERY lift-off is C.WARDEN_ARM — see hoverTime().
+    this.struck = false;
+
+    // The hunt, aloft. ⛔ The heading, kept in step with laneHop's returned dir
+    // and never inferred from a lane comparison afterwards.
+    this.dir = dir < 0 ? -1 : 1;
+    // ⛔ Counts UP toward C.WARDEN_HOP_INTERVAL and HOLDS there, the Vaulter's
+    // rule: a Warden already in the craft's lane takes its hop the moment that
+    // stops being true, instead of waiting out a fresh interval.
+    this.hopTimer = 0;
+    this.hopping = false;
+    this.hopTime = 0;     // counts up toward C.WARDEN_HOP_TIME
+    this.hopFrom = this.lane;
+    this.hopDelta = 0;    // signed lane distance of this hop, already short-way
+  }
+
+  // ⛔ THE ONE WRITER OF `phase`, `killDepth` AND `aloft`, which is the only
+  // reason the three can never disagree — the Surger's setPhase() with the
+  // ninth contract field folded into it. An unrestored band would leave a
+  // permanently lane-lethal enemy hovering over the rim, and an unrestored
+  // `aloft` would leave a climbing one that no shot could reach: two bugs
+  // nothing downstream could tell from a bug in the collision pass.
+  setPhase(phase) {
+    this.phase = phase;
+    this.strikeTimer = 0;
+    this.aloft = phase !== "climb";
+    this.killDepth = phase === "discharge" ? 1 - C.RIM_CONTACT_DEPTH : null;
+    if (phase === "climb") this.struck = false;
+    if (phase === "discharge") { this.struck = true; sfx("surgeDischarge"); }
+  }
+
+  // How long THIS hover lasts. ⛔ The first one after a lift-off is
+  // C.WARDEN_ARM and every later one is C.WARDEN_HOVER: a Warden that arrived
+  // over the rim an instant ago is not about to fire, and that beat is the one
+  // the player gets to SEE it arrive (GDD 1.1 P2). ⛔ "After a LIFT-OFF", not
+  // "per Warden" — a pushed one re-climbs and is armed afresh, which is the
+  // slack W3's respawn arithmetic counts.
+  hoverTime() {
+    return this.struck ? C.WARDEN_HOVER : C.WARDEN_ARM;
+  }
+
+  // How far the fuse has run, as 0..1 of the lane, or 0 when the rim is not
+  // arming. ⛔ THE SURGER'S READER, BY NAME AND BY SHAPE, because that is what
+  // reconcileSurgeTones() (19-sfx.js) duck-types on: this method plus the phase
+  // name "telegraph" is the whole of W6's shared charge tone. The draw path
+  // reads the same number, so the sound and the beam can never disagree.
+  chargeTip() {
+    if (this.phase === "discharge") return 1;
+    if (this.phase !== "telegraph") return 0;
+    const t = this.strikeTimer / C.WARDEN_TELEGRAPH;
+    return t > 1 ? 1 : t;
+  }
+
+  update(dt, well, state) {
+    // ⛔ THE RESPAWN PUSH IS WHAT ENDS A LIFT-OFF, AND THE WARDEN LEARNS IT BY
+    // READING ITS OWN DEPTH. respawnSkimmer() (23-main.js) clamps every
+    // non-anchored entity above C.RESPAWN_PUSH_DEPTH down to it — this one
+    // included, because `aloft` is a phase and not an exemption (GDD 4.4's
+    // ⚠ SETTLED clamp). So a Warden below 1 is a Warden that is climbing again,
+    // whatever it was doing a step ago, and setPhase() puts the whole contract
+    // back: shootable-but-declining, contactless, and armed afresh.
+    if (this.aloft && this.depth < 1) {
+      this.landHop(well);
+      this.setPhase("climb");
+    }
+
+    if (this.phase === "climb") {
+      // ⛔ THROUGH THE ACCESSOR (CS007 P2, R6). climbMult()'s sixth call site,
+      // and the only thing heat touches on this entity. ⛔ It does NOT stop at
+      // the park depth the way a contact climber does: its killDepth is null,
+      // so it passes the rim band harmlessly and keeps going to depth 1, which
+      // is where it lifts off.
+      this.depth += C.WARDEN_CLIMB * climbMult() * dt;
+      if (this.depth >= 1) {
+        this.depth = 1;
+        this.setPhase("hover");
+      }
+      return;
+    }
+
+    this.strikeTimer += dt;
+
+    // ⛔ IT HOLDS ITS LANE THROUGH THE FUSE AND THE STRIKE. The fuse is a
+    // promise about one lane, and a Warden that drifted while it burned would
+    // be a fuse for a lane it was leaving.
+    if (this.phase === "telegraph") {
+      if (this.strikeTimer >= C.WARDEN_TELEGRAPH) this.setPhase("discharge");
+      return;
+    }
+    if (this.phase === "discharge") {
+      // ⛔ The restore is unconditional and happens BEFORE the collision pass of
+      // the step that ends the window, so the discharge is exactly
+      // C.WARDEN_DISCHARGE of lethal steps and not one more.
+      if (this.strikeTimer >= C.WARDEN_DISCHARGE) this.setPhase("hover");
+      return;
+    }
+
+    // Hovering: it hunts along the rim, and its strike clock runs.
+    if (this.hopTimer < C.WARDEN_HOP_INTERVAL) this.hopTimer += dt;
+    if (this.hopping) {
+      this.advanceHop(dt, well);
+    } else if (this.hopTimer >= C.WARDEN_HOP_INTERVAL) {
+      const dir = this.huntDir(well, state);
+      if (dir !== 0) { this.hopTimer = 0; this.startHop(well, dir); }
+    }
+
+    // ⛔ A STRIKE NEVER BEGINS MID-HOP. `lane` is continuous through a crossing,
+    // and at a half-integer BOTH neighbours are exactly C.HIT_LANE_TOL away —
+    // so a discharge started there would cover two lanes, which is not "its own
+    // lane". The clock HOLDS rather than restarting, so the strike lands on the
+    // step the hop does.
+    if (!this.hopping && this.strikeTimer >= this.hoverTime()) this.setPhase("telegraph");
+  }
+
+  // Which way the craft is, as -1 / 0 / +1. ⛔ laneDelta, never (a - b): the
+  // Vaulter's header (07-enemies.js) carries the whole reason. 0 means no hop
+  // this beat — no craft, a dead one, or it is already in the craft's lane.
+  huntDir(well, state) {
+    const target = state.skimmer;
+    if (!target || target.dead) return 0;
+    const d = laneDelta(well, this.lane, target.lane);
+    return d > 0 ? 1 : (d < 0 ? -1 : 0);
+  }
+
+  // ⛔ THROUGH laneHop(), AND THE dir IT RETURNS IS WRITTEN BACK (GDD 3.5).
+  // Nothing here reads well.closed: the topology lives inside laneHop /
+  // laneDelta / laneNormalize, so a Warden folds at an open well's wall and
+  // wraps a Ring's seam without a branch.
+  //
+  // ⛔ IT RIDES LANE CENTRES, so laneHop's fold bounds are its default range
+  // 0 .. lanes-1 — the boundary lattice is the Drifter's and nothing here
+  // touches it (CLAUDE.md, RATIONALE.md#boundary-lattice).
+  startHop(well, dir) {
+    const h = laneHop(well, this.lane, dir, dir);
+    this.dir = h.dir;
+    this.hopFrom = this.lane;
+    // The short way to the landing lane, so a hop across a closed well's seam
+    // travels one lane forward and not fifteen backwards.
+    this.hopDelta = laneDelta(well, this.lane, h.lane);
+    this.hopTime = 0;
+    this.hopping = true;
+  }
+
+  // Carry the crossing forward. ⛔ `lane` moves continuously over
+  // C.WARDEN_HOP_TIME, and landing is EXACT rather than the last interpolated
+  // step — an accumulated float error would leave it a hair off a lane centre
+  // and the next hop would inherit the drift.
+  advanceHop(dt, well) {
+    const dur = C.WARDEN_HOP_TIME;
+    this.hopTime += dt;
+    if (!(dur > 0) || this.hopTime >= dur) { this.landHop(well); return; }
+    this.lane = laneNormalize(well, this.hopFrom + this.hopDelta * (this.hopTime / dur));
+  }
+
+  // Land whatever crossing is in flight, exactly, and stop. Called at the end
+  // of a hop and by the respawn push, which must not leave a Warden parked
+  // half-way between two lanes for the reason update() gives.
+  landHop(well) {
+    if (!this.hopping) return;
+    this.lane = laneNormalize(well, this.hopFrom + this.hopDelta);
+    this.hopTime = C.WARDEN_HOP_TIME;
+    this.hopping = false;
+  }
+
+  // ⛔ drawPoly + glowStroke only (GDD 10.2), in 14-render-entities.js. The
+  // entity hands over its phase as an `aloft` flag, a 0..1 fuse and whether the
+  // rim is live, so the drawing and the lethality cannot drift apart.
+  draw(ctx, well) {
+    drawWarden(ctx, well, this.lane, this.depth, this.aloft, this.chargeTip(),
+               this.phase === "discharge");
+  }
+
+  // ⛔ IT DECLINES EVERY SHOT AND NEVER DIES (W2, W4). `false` is "the shot is
+  // not consumed", so a shot fired into a climbing Warden flies on and meets
+  // whatever is behind it on a LATER step — the Weaver bolt's shipped answer,
+  // and the base class's default spelled out rather than inherited silently,
+  // because "killable only by Jump" is this line.
+  //
+  // ⛔ It also answers the rim sweep (CS008 P1b passes null), and the answer is
+  // the same: a firing craft that touches a discharging Warden dies. Nothing
+  // here reads the argument.
+  onShot(shot) { return false; }
+
+  // GDD 7. The kill site pays it; the entity never scores itself.
+  points() { return C.PTS_WARDEN; }
+}
+
 // ==========================================================================
 // 08-spawner.js
 // ==========================================================================
@@ -5002,6 +5382,14 @@ const ENEMY_KINDS = {
   // A Classic run never asks for it, because only C.SPAWN_SCHEDULE_OVERDRIVE
   // names it.
   reaver: (lane, depth, dir) => new Reaver(lane, depth, dir),
+  // ⛔ OVERDRIVE'S SECOND ROW (CS013 P3; 07-enemies-overdrive.js). It takes
+  // `dir` like the Vaulter — the heading laneHop() folds and writes back while
+  // it hunts along the rim. The row is the ONLY way one reaches a board, and
+  // only C.SPAWN_SCHEDULE_OVERDRIVE names it, so a Classic run never asks.
+  // ⚠ It is released at depth 0 like everything else: a Warden is a THROAT
+  // arrival that climbs and then lifts off, not an entity that flies in from
+  // off the well (W2).
+  warden: (lane, depth, dir) => new Warden(lane, depth, dir),
 };
 
 // The RELEASE BUDGET — how many THREATS may be alive at once. ⛔ The MIN of the
@@ -5308,11 +5696,12 @@ function wellCleared(state) {
 // filters. Nothing here removes an array element; hits set `dead = true` and
 // the caller's .filter() does the removal (GDD 6.5). Never splice mid-loop.
 //
-// ⛔ SCORING, CS008 P2: ALL THREE OF THE BUILD'S KILL SITES ARE IN THIS FILE —
-// collideShots(), the rim sweep in collideSkimmer(), and both Purge uses. Each
-// awards `e.points()` through addScore() (12-scoring.js) on the false -> true
-// `dead` transition, beside the `tally.kills` it already counted, and nowhere
-// else. The Thorn's per-chip 5 is paid inside its own onShot(), not here.
+// ⛔ SCORING, CS008 P2: ALL OF THE BUILD'S KILL SITES ARE IN THIS FILE —
+// collideShots(), the rim sweep in collideSkimmer(), both Purge uses, and —
+// CS013 P3, W4 — jumpStrike(), a FOURTH site and a FIFTH line. Each awards
+// `e.points()` through addScore() (12-scoring.js) on the false -> true `dead`
+// transition, beside the `tally.kills` it already counted, and nowhere else.
+// The Thorn's per-chip 5 is paid inside its own onShot(), not here.
 //
 // ⛔ AND THE KILL SOUND, CS009 P5, beside the points at the same three edges:
 // `sfx("kill", e.sfxVoice)`, the pitch read off the entity's eighth contract
@@ -5400,6 +5789,17 @@ function collideShots(state, well) {
     for (let j = 0; j < state.enemies.length; j++) {
       const e = state.enemies[j];
       if (e.dead) continue;
+      // ⛔ ALOFT IS OUT OF REACH (GDD 14.6; CS013 P3, W1, W4; 07-enemies.js's
+      // ninth contract field). A shot never meets something ABOVE the well, so
+      // "killable only by Jump" costs this pass one line and no branch on a
+      // class. ⛔ It is also what keeps an unshootable Warden from SHIELDING
+      // the rim band of its lane: a shot is born at depth 1 and would otherwise
+      // be hit-tested against it on its first two steps, decline, and stop
+      // there — the Weaver bolt's shipped shielding, on an entity nothing can
+      // ever remove. ⛔ `aloft`, never `depth >= 1`: the flag is the phase, and
+      // a climbing Warden at depth 1 for one step is still shootable-and-
+      // declining rather than out of reach.
+      if (e.aloft) continue;
       // ⛔ + C.HIT_DEPTH_EPS, here and nowhere else: |1 - 0.95| is
       // 0.050000000000000044 in IEEE-754, and a rim-parked enemy must not
       // escape its fire-tick shot by 4.4e-17 (00-config.js, CS008 P1).
@@ -5782,11 +6182,66 @@ function updatePurge(state) {
   // tell "spent" from "spent twice" without a second field.
 }
 
+// ---------------------------------------------------------------------------
+// The jump strike (GDD 14.2, 14.6, 7; CS013 P3, W4) — the FOURTH kill site
+// ---------------------------------------------------------------------------
+//
+// ⛔ AN AIRBORNE CRAFT IN AN ALOFT ENTITY'S LANE KILLS IT. That is the whole
+// function, and it is what makes the Jump OFFENSIVE as well as defensive
+// (GDD 14.6): the Warden is killable only by a jump, because no shot, no rim
+// sweep and no Purge can reach something above the well.
+//
+// ⛔ A LANE MATCH ON TWO FLAGS, AND NOT A COMPARISON OF TWO DEPTHS. Airborne is
+// a PHASE on state.jump (05-skimmer.js) and aloft is a PHASE on the entity
+// (07-enemies.js) — neither side has a number for how far off the rim it is, so
+// the build still has exactly ONE two-depth comparison and it is the dive
+// strike's (GDD 4.5 item 5, 11-dive.js). Giving the craft a depth to make this
+// "honest" would be inventing a quantity to compare against a second one that
+// does not exist either.
+//
+// ⛔ IT IS THE FOURTH KILL SITE AND THE FIFTH KILL LINE (GDD 7), and the line is
+// the other four's rule verbatim: tally.kills, e.points() at the multiplier in
+// force, comboKill(), T2's drop roll, and sfx("kill", e.sfxVoice) off the
+// entity's own voice. GDD 7's "three kill sites, and no fourth" is corrected by
+// it, in that section and in CLAUDE.md.
+//
+// ⛔ `continue`, NEVER `return` — the rim sweep's rule (above), for the rim
+// sweep's reason: rotating airborne sweeps the craft through lanes, so one jump
+// may take two Wardens and both are asked. Nothing here is spliced; the dead
+// are removed by Game.update()'s end-of-frame filter.
+//
+// ⛔ NO INVULNERABILITY GUARD, exactly as the rim sweep has none: invulnerability
+// suspends dying, not playing. And no `killDepth` term — this pass is not about
+// what the entity does to the craft.
+//
+// It runs THIRD, after collideSkimmer(), and the two are mutually exclusive by
+// construction: that pass returns at once while airborne and this one returns
+// at once while grounded.
+function jumpStrike(state, well) {
+  const sk = state.skimmer;
+  if (!sk || sk.dead) return;
+  if (!jumpAirborne(state)) return;
+
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (e.dead || !e.aloft) continue;
+    if (!laneHit(well, e.lane, sk.lane)) continue;
+    e.dead = true;
+    state.tally.kills++;
+    addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice);
+  }
+}
+
 // The whole pass, in its fixed order. Called once per simulation step from
 // Game.update().
+//
+// ⛔ THE JUMP STRIKE RUNS THIRD (CS013 P3, W4). Shots resolve first, then
+// contact — which is skipped entirely while airborne — and then the one thing
+// an airborne craft can do to the board.
 function updateCollisions(state, well) {
   collideShots(state, well);
   collideSkimmer(state, well);
+  jumpStrike(state, well);
 }
 
 // ==========================================================================
@@ -7367,6 +7822,99 @@ function drawSurger(ctx, well, lane, depth, tip, live) {
   drawSurgeLane(ctx, well, lane, tip, live);
   drawPoly(ctx, entityPoints(well, lane, depth, SURGER_POLY, C.SURGER_SIZE), false);
   glowStroke(ctx, C.SURGER_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
+// The Warden (GDD 6.4, 14.6, 10.2, 18; CS013 P3, W6) — a hovering silhouette
+// and the beam it fires down its lane.
+// ---------------------------------------------------------------------------
+//
+// ⛔ GDD 18 item 3: this has to be OURS, and it also has to be unmistakable
+// from the six silhouettes it shares a well with. The Vaulter is a symmetric
+// wingspan of four arm tips; the Reaver is that with barbs; the Carrier a
+// hollow diamond; the Weaver a coil; the Surger a run of right angles; the
+// Drifter a knot or a scatter. This is a broad SWEPT DELTA — two wingtips
+// raked back, a notched crown toward the throat and a notched keel toward the
+// rim — which reads as something hanging over the well rather than climbing
+// out of it, and reads that way at a glance even at 18 px above the rim line.
+//
+// Shape DATA, the same class of thing as WELLS' rim polygons; C.WARDEN_SIZE is
+// the tunable, and it is a LANE width like every other silhouette's.
+const WARDEN_POLY = [
+  { l: -1.00, d: -0.10 },   // the left wingtip, raked back
+  { l: -0.45, d: -0.55 },   // the left shoulder, toward the throat
+  { l:  0.00, d: -0.30 },   // the crown's notch
+  { l:  0.45, d: -0.55 },   // the right shoulder
+  { l:  1.00, d: -0.10 },   // the right wingtip
+  { l:  0.35, d:  0.45 },   // the right heel, toward the rim
+  { l:  0.00, d:  0.18 },   // the keel's notch, pointing into the well
+  { l: -0.35, d:  0.45 },   // the left heel
+];
+
+// ⛔ THE BEAM'S OWN PREALLOCATED POINTS AND ITS OWN PAIR, drawSurgeLane()'s
+// rule: a Warden's beam and a Surger's fuse can be live in the same lane in the
+// same frame, and `drawPoly(ctx, [a, b])` would allocate an array literal every
+// call (GDD 17's budget forbids per-frame allocation in the hot path).
+const _wardenTop = { x: 0, y: 0 };   // the lifted Warden's own rim point
+const _wardenTip = { x: 0, y: 0 };   // how far down the lane the beam has run
+const _wardenBeam = [_wardenTop, _wardenTip];
+
+// ⛔ THE BEAM RUNS DOWNWARD, FROM THE WARDEN TO THE RIM, and that is the
+// opposite of the Surger's fuse for a reason the player can read: a Surger
+// arms its lane from the throat UP at you, and a Warden is already above you
+// and reaches DOWN. Both say the same thing — this lane is about to be lethal —
+// and in both the tip ARRIVING is the instant the lane goes live (GDD 6.3's
+// visible fuse).
+//
+// ⛔ THE WIDTH IS THE STATE CHANGE, drawSurgeLane()'s rule: the beam creeps
+// down at plain lane weight while the fuse runs and slams to
+// C.WARDEN_BEAM_WIDTH for the discharge. ⛔ A per-entity multiplier on
+// laneLineWidth() and never a global glow constant (00-config.js).
+//
+// ⛔ FULL ALPHA AT EVERY DEPTH. GDD 10.3 governs what may be drawn OVER the
+// throat zone, and this is neither drawn there (it lives between the rim and
+// the Warden above it) nor drawn over the well — it IS the warning.
+function drawWardenBeam(ctx, well, lane, tip, live) {
+  const t = tip > 1 ? 1 : tip;
+  if (t <= 0) return;   // the first step of a fuse: nothing to draw, and a
+                        // zero-length path is not a drawing.
+  // Both ends start on the lane's rim point; liftPoints() raises the FIRST of
+  // the pair (n = 1) to where the Warden hovers, so `_wardenTip` is still the
+  // rim and the lerp below runs the beam down toward it as the fuse fills.
+  screenPos(well, lane, 1, _wardenTop);
+  screenPos(well, lane, 1, _wardenTip);
+  liftPoints(well, _wardenBeam, 1, C.WARDEN_LIFT);
+  _wardenTip.x = _wardenTop.x + (_wardenTip.x - _wardenTop.x) * t;
+  _wardenTip.y = _wardenTop.y + (_wardenTip.y - _wardenTop.y) * t;
+  drawPoly(ctx, _wardenBeam, false);
+  glowStroke(ctx, C.WARDEN_COLOR, laneLineWidth(1) * (live ? C.WARDEN_BEAM_WIDTH : 1), 1);
+}
+
+// ⛔ drawPoly + glowStroke, ONE CLOSED path, no fill (GDD 10.2), at full alpha
+// at every depth exactly as every other enemy — GDD 10.3 protects the
+// approaching thing, and this IS it.
+//
+// ⛔ THE LIFT IS DRAW-TIME ONLY AND IT IS liftPoints()' (05-skimmer.js), the
+// same function that raises the airborne craft: a Warden ALOFT is pushed
+// C.WARDEN_LIFT rim radii out from the well's screen centroid, and its `lane`
+// and `depth` are untouched. With C.WARDEN_LIFT at 0 the state hash does not
+// move, which is how the suite proves it (test-cs013-p3.js). A CLIMBING Warden
+// is not lifted at all: it is in the well like everything else.
+//
+// ⛔ THE BEAM GOES DOWN FIRST so the silhouette sits on top of its own strike —
+// the Warden is what the player has to read, and a beam at
+// C.WARDEN_BEAM_WIDTH drawn over it would swallow it at the moment it matters.
+// drawSurger()'s ordering, for drawSurger()'s reason.
+//
+// `aloft`, `tip` and `live` all come from the entity's own phase
+// (07-enemies-overdrive.js) rather than from anything decided here, which is
+// why the drawing and the lethality can never disagree.
+function drawWarden(ctx, well, lane, depth, aloft, tip, live) {
+  if (aloft) drawWardenBeam(ctx, well, lane, tip, live);
+  const pts = entityPoints(well, lane, depth, WARDEN_POLY, C.WARDEN_SIZE);
+  if (aloft) liftPoints(well, pts, WARDEN_POLY.length, C.WARDEN_LIFT);
+  drawPoly(ctx, pts, true);
+  glowStroke(ctx, C.WARDEN_COLOR, laneLineWidth(depth), 1);
 }
 
 // ---------------------------------------------------------------------------

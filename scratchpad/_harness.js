@@ -228,6 +228,9 @@ function buildGame(opts = {}) {
     // the Ward's shell — the craft's own outline, scaled, draw-time only
     // (05-skimmer.js, CS013 P2, T9)
     "WARD_POLY", "wardPoints", "craftPoints",
+    // ⛔ the build's ONE copy of the lift math, shared by the airborne craft
+    // and by an aloft Warden (05-skimmer.js, CS013 P3)
+    "liftPoints",
     // the Jump — a PHASE on state.jump, never a craft depth (05-skimmer.js, CS012 P5)
     "updateJump", "resetJump", "jumpAirborne", "jumpCanFire", "jumpLift",
     // shots (06-shots.js, 14-render-entities.js, CS002 P3)
@@ -250,6 +253,8 @@ function buildGame(opts = {}) {
     "Surger", "SURGER_POLY", "drawSurger", "drawSurgeLane",
     // the mode flags, the Reaver and its silhouette (00/07-enemies-overdrive/14, CS012 P2)
     "modeHas", "Reaver", "REAVER_POLY", "drawReaver",
+    // the Warden, its silhouette and its beam (07-enemies-overdrive/14, CS013 P3)
+    "Warden", "WARDEN_POLY", "drawWarden", "drawWardenBeam",
     // the spawner and the well lifecycle (08/23, CS003 P2)
     "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit", "ENEMY_KINDS",
     // the release budget's count — THREATS, not entities (08, CS007 P1)
@@ -265,6 +270,8 @@ function buildGame(opts = {}) {
     // collision and the Purge (09-collision.js, CS003 P3)
     "updateCollisions", "collideShots", "collideSkimmer", "killSkimmer",
     "updatePurge", "purgeTarget",
+    // the jump strike — the FOURTH kill site (09-collision.js, CS013 P3, W4)
+    "jumpStrike",
     // death, lives and respawn (05/23, CS003 P4)
     "spawnSkimmer", "respawnSkimmer", "skimmerBlinkVisible",
     // the Dive (11-dive.js, CS006 P3)

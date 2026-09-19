@@ -180,6 +180,64 @@ const C = {
   REAVER_BARB_ROOT:     0.35,
   REAVER_COLOR:         "#FF4A4A",  // ⚠ = VAULTER_COLOR, shared (O16); the silhouette carries the difference
 
+  // ---- Warden (GDD 6.4, 14.6; CS013 P3) — Overdrive only ------------------
+  // "Flies above the well, fires down, killable only by Jump" (GDD 14.6), and
+  // W1's answer to how that is represented: ⛔ ALOFT IS A PHASE, NOT A DEPTH.
+  // It climbs its lane from the throat unshootable, goes ALOFT at depth 1 — the
+  // rim's own depth, the only legal one it has — and hunts along the rim from
+  // there, striking its own lane on its own clock (07-enemies-overdrive.js).
+  //
+  // ⛔ THE CLIMB IS THE ONLY THING HEAT TOUCHES (R6, R7). `WARDEN_CLIMB *
+  // climbMult()` is climbMult()'s sixth call site (test-cs007-p2.js); every
+  // cycle constant below is FLAT, and there is no eighth heat accessor. ⛔ And
+  // the hop duration is flat for H2's reason: GDD 17 item 3's soak bound is
+  // 2 * DT / WARDEN_HOP_TIME, and a heat-scaled hop would need re-deriving at
+  // every level.
+  //
+  // ⛔ ITS CLIMB IS NOT A CONTACT CLIMB, so it does not bind GDD 4.4's respawn
+  // guarantee and C.CLIMB_MAX_BASE does not move (R6): `killDepth` is null the
+  // whole way up, so it passes the rim band harmlessly. The guarantee still
+  // REACHES it — `anchored` is false, so respawnSkimmer() clamps it to 0.55 and
+  // a lift-off ends — and the arithmetic is the other way round from a
+  // climber's: a pushed Warden re-climbs in >= 1.79 s at L99 and then needs
+  // WARDEN_ARM + WARDEN_TELEGRAPH more, so its first discharge lands >= 2.84 s
+  // after the respawn, past C.RESPAWN_INVULN even without the invariant below.
+  WARDEN_CLIMB:         0.18,   // depth/s, throat -> ALOFT ~4.89 s at L11. ⚠ level-1 base
+  // -- the hunt, aloft (W3) — one hop toward the craft every INTERVAL --
+  WARDEN_HOP_INTERVAL:  0.90,   // s between hunt hops ⚠. ⛔ flat (R7)
+  WARDEN_HOP_TIME:      0.35,   // s to cross one lane ⚠. ⛔ flat (H2)
+  // -- the strike (W3): hover -> telegraph -> discharge, forever --
+  // ⛔ WARDEN_HOVER + WARDEN_TELEGRAPH + WARDEN_DISCHARGE = 2.35 s against the
+  // Jump's 2.30 s cycle (C.JUMP_TIME + C.JUMP_COOLDOWN): one strike per jump,
+  // which is what makes "killable only by Jump" a rhythm rather than a wait.
+  // ⛔ WARDEN_ARM is the FIRST hover after EVERY lift-off, the re-climb after a
+  // respawn push included — a Warden that has just arrived over the rim is not
+  // about to fire, and that beat is GDD 1.1 P2's "legible before lethal".
+  WARDEN_ARM:           0.60,   // s from lift-off to the first fuse ⚠
+  WARDEN_HOVER:         1.60,   // s between strikes ⚠
+  WARDEN_TELEGRAPH:     0.45,   // s of visible fuse ⚠ — the Surger's benchmark
+  // ⛔ WARDEN_DISCHARGE MUST STAY STRICTLY BELOW RESPAWN_INVULN (1.5 s), and it
+  // is the Surger's invariant for the Surger's reason (GDD 6.1, 4.4): a strike
+  // already running when the player respawns is survived by the invulnerability
+  // window and by nothing else. ⛔ asserted from the constants (test-cs013-p3.js).
+  WARDEN_DISCHARGE:     0.30,   // s the rim of its lane is lethal
+  // -- the look (W6) — ⚠ provisional, the same standing as the palette (O16) --
+  // ⛔ WARDEN_LIFT IS DRAW-TIME ONLY, exactly as C.JUMP_LIFT is (GDD 14.2): the
+  // silhouette is pushed out from the well's screen centroid, `lane` and the
+  // depth model are untouched, and at 0 the state hash does not move. 0.06 rim
+  // radii is 18 px — MEASURED over 233 lane centres, nothing leaves the world,
+  // and the craft rising to its own 0.12 apex passes through this height.
+  WARDEN_LIFT:          0.06,   // rim radii out from the well's centroid
+  WARDEN_SIZE:          0.80,   // lane widths spanned by the silhouette
+  // ⛔ A PER-ENTITY MULTIPLIER ON laneLineWidth() and never a global glow
+  // constant, the Surger's C.SURGE_LIT_WIDTH rule: the beam creeps down at
+  // plain lane weight while the fuse runs and SLAMS to this when the rim goes
+  // live, so the width jump is what says which instant it was.
+  WARDEN_BEAM_WIDTH:    2.20,   // ⚠ x laneLineWidth for the LIVE beam
+  // The centre of the widest gap in the palette (189.7° -> 255.1°, 65°),
+  // hue 222°, and clear of C.TOKEN_COLOR's warm 56° (O16, T10).
+  WARDEN_COLOR:         "#477EFF",  // ⚠ provisional, the same standing as the palette
+
   // ---- Carrier (GDD 6.1, 6.2) ---------------------------------------------
   // ⛔ CARRIER_SIZE and CARRIER_GLYPH_SIZE are LANE widths and nothing else.
   // entityPoints() (14-render-entities.js) scales a poly's `l` by size/2 and
@@ -447,10 +505,11 @@ const C = {
   // no-weight-table decision. eligibleKinds(level, mode) merges these into the
   // Classic rows in level order, a Classic row first at an equal level, for an
   // Overdrive run only. The same rules hold: cumulative, sorted, uniform pick, no
-  // weights, and a one-entry set spends no draw in either mode. CS013 adds the
-  // Warden (11) and the Mimic (16) here.
+  // weights, and a one-entry set spends no draw in either mode. ⛔ CS013 P3 added
+  // the Warden at 11; the Mimic at 16 is P4's.
   SPAWN_SCHEDULE_OVERDRIVE: [
     { level:  6, kind: "reaver" },
+    { level: 11, kind: "warden" },
   ],
 
   // ---- Collision (GDD 4.5) ------------------------------------------------
@@ -617,7 +676,7 @@ const C = {
     wardBreak:      { noise: true, filter: { type: "highpass", f: 800, to: 3000 }, sweep: 0.12, atk: 0.001, hold: 0.03, rel: 0.18, gain: 0.26 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
-  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
+  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5 },
 
   // ---- Overdrive (GDD 14) -------------------------------------------------
   // ⛔ THE TOKENS (GDD 14.1; CS013 P1, T1–T6, T10; 10-powerups.js). ⚠ Every
@@ -922,8 +981,8 @@ const C = {
 // testable as a property over levels 1..200 rather than as a spot check —
 // test-cs007-p2.js asserts it off the BUILT file, so a future session that
 // writes a bare climb constant into an entity turns the suite red instead of
-// quietly escaping the clamp. The five climb rates are the one shape that
-// differs: they
+// quietly escaping the clamp. The SIX climb rates are the one shape that
+// differs (CS013 P3 added the Warden's, R6): they
 // keep their own constants and are multiplied by climbMult(), because GDD 8
 // says "climb speed", singular, and ONE multiplier is what keeps the respawn
 // guarantee (GDD 4.4) a single arithmetic statement.

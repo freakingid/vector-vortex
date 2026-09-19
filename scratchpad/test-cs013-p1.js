@@ -368,6 +368,18 @@ function hunt(Z, i) {
   if (!best || !st.skimmer) return;
   const d = Z.laneDelta(well, st.skimmer.lane, best.lane) * RIGHT;
   if (d > 0.3) inp.keyDown("ArrowRight"); else if (d < -0.3) inp.keyDown("ArrowLeft");
+  // ⛔ CS013 P3, IN PLACE: an ALOFT entity is killable only by the Jump (W4)
+  // and it blocks the clear (W5), so a driver that never jumps stalls every
+  // board from L11 — the kills, the clears and the drop variety this section
+  // counts all fall with it. ⛔ The repair is the DRIVER, never the build and
+  // never a lowered level: it jumps when something aloft is already in reach,
+  // which is exactly the answer the player has.
+  if (st.enemies.some(e => !e.dead && e.aloft &&
+        Math.abs(Z.laneDelta(well, e.lane, st.skimmer.lane)) <= Z.C.HIT_LANE_TOL)) {
+    inp.keyDown("arrowup");
+  } else {
+    inp.keyUp("arrowup");
+  }
 }
 const BOARDS = [[1, 11], [6, 12], [11, 13], [16, 14], [23, 15]];
 function played(Z, ticks) {

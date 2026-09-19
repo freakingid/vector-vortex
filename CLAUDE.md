@@ -318,7 +318,9 @@ Purge destroys it**, and — seventh point, GDD §6.5 — an entity that is
 `blocksClear: false` and **not** `anchored` must decide explicitly whether it
 survives a dive. `startDive()` filters the board down to `anchored` survivors,
 so today the answer for the one entity in that position is *no*. And — CS009
-P5, GDD §6.5 — **decide explicitly its `sfxVoice`**, the eighth contract field.
+P5, GDD §6.5 — **decide explicitly its `sfxVoice`**, the eighth contract field,
+and — CS013 P3 — **decide explicitly its `aloft`**, the ninth, which is `false`
+for anything that lives in the well.
 ⛔ **A Classic enemy lives in `07-enemies.js`; an Overdrive enemy lives in
 `07-enemies-overdrive.js`** (CS012 P2, O15), against the contract in the first,
 and reaches the board only through `C.SPAWN_SCHEDULE_OVERDRIVE`. Its kill pitch
@@ -337,6 +339,16 @@ is nothing left that would. ⛔ **`updateJump()` is a TOTAL no-op outside
 a Classic run bit-identical with the button held. ⛔ **The lift and the shadow are
 DRAW-TIME ONLY**: `skimmerPoints()` takes a lift, `lane` and the depth model are
 untouched, and with `C.JUMP_LIFT` at 0 the state hash does not move.
+
+⛔ **ALOFT IS A PHASE TOO, AND IT IS THE NINTH CONTRACT FIELD** (CS013 P3, GDD
+§6.4, §6.5). `aloft` says an entity is ABOVE the well rather than in it — the
+Warden and nothing else. Its `depth` is still a POSITION and it is still **1**;
+⛔ **do not give anything a depth above 1** to say this. ⛔ **Two readers:**
+`collideShots()` SKIPS an aloft entity (a shot never meets one, and an
+unshootable one therefore does not shield its rim band), and `jumpStrike()`
+REQUIRES one. ⛔ **It exempts nothing else** — `anchored` stays false, so §4.4's
+push reaches it and ends the lift-off; a discharging Warden kills through the
+one `killDepth` comparison; the array is still one.
 
 ⛔ **`anchored` says what `depth` MEANS on an entity, not whether it moves.**
 `false` is a position; `true` is a length — the tip of an extent rooted at the
@@ -376,12 +388,21 @@ letterboxed by CSS.
 ⛔ **All scoring routes through `addScore()`** — it also owns extra-life
 milestones. Do not add a bypass without recording it here.
 
+⛔ **FOUR KILL SITES AND FIVE KILL LINES, ALL IN `09-collision.js`** (CS013 P3,
+W4; GDD §7): `collideShots()`, the rim sweep, BOTH Purge uses, and
+`jumpStrike()` — an airborne craft kills every aloft entity in its lane. ⛔ GDD
+§7's "three kill sites, and no fourth" is corrected, not stretched. ⛔ **The
+jump strike is a LANE MATCH ON TWO FLAGS**, so the build still has exactly ONE
+two-depth comparison, the dive strike. ⛔ **Its line must match none of
+`test-cs012-p4.js`'s six `COMBO_OUT` strings**, and a phase that edits a kill
+line repairs that list and `-p6.js`'s.
+
 ⛔ **OVERDRIVE'S COMBO MULTIPLIER IS APPLIED AT THE KILL SITES, NOT IN
-`addScore()`** (CS012 P4, O4, R6; GDD §7, §14.4). The four kill lines in
+`addScore()`** (CS012 P4, O4, R6; GDD §7, §14.4). The five kill lines in
 `09-collision.js` read `addScore(e.points() * comboMult()); comboKill(state);` —
 scored at the multiplier in force, and then raising it. ⛔ **That is not a
 bypass and it is not a second writer**: `addScore()` is unchanged. ⛔ **What is
-multiplied is exactly what builds it** — kill points at the three kill sites,
+multiplied is exactly what builds it** — kill points at the four kill sites,
 nothing else. The Thorn's per-chip 5, the three clear bonuses and the Start
 Depth bonus are **not** multiplied and build nothing, and the Dive's termination
 kill still pays nothing. ⛔ **Do not "unify" the multiplier into `addScore()`**:
@@ -696,14 +717,16 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     04-input.js        four devices -> one input struct
     05-skimmer.js      movement, snap assist, the wall squash, the blink, and
                        the Jump: state.jump, updateJump() (a no-op outside
-                       modeHas("jump")), resetJump(), and the draw-only lift
+                       modeHas("jump")), resetJump(), and liftPoints() — the
+                       build's ONE copy of the draw-only lift math
     06-shots.js        firing, lane-locked travel
     07-enemies.js      the entity contract + the Classic roster
-    07-enemies-overdrive.js  Overdrive's roster: the Reaver (CS013: Warden,
-                       Mimic). Extends 07-enemies.js's classes
+    07-enemies-overdrive.js  Overdrive's roster: the Reaver, the Warden
+                       (CS013 P4: the Mimic). Extends 07-enemies.js's classes
     08-spawner.js      spawnEnemy() — the ONE way in — cadence, quota, clear,
                        and GDD 8.1's introduction schedule per mode (eligibleKinds)
-    09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge
+    09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge, and
+                       jumpStrike() — the FOURTH kill site, W4
     10-powerups.js     Overdrive's tokens: state.tokens' ONE way in, dropToken()
                        (one draw per Overdrive kill; a no-op in Classic), the
                        life on the board (updateTokens()), the pickup, and

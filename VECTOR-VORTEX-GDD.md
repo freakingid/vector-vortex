@@ -638,17 +638,78 @@ The discharge is `SURGE_DISCHARGE` (0.30 s), and the fuse reaching the rim and t
 
 There is no bench key for it (O16): the six digit keys stay Classic's. Overdrive's START DEPTH 7 shows one.
 
+⛔ **Shipped, CS013 P3 — the Warden.** `class Warden extends Enemy` in
+`src/07-enemies-overdrive.js`, arriving at Overdrive L11 through
+`C.SPAWN_SCHEDULE_OVERDRIVE` (§8.1). §14.6 has what it does; the tables below
+are its contract and its numbers (plan §9, W1–W6). ⛔ **It is not a parameter
+variant of anything** — the Reaver subclasses the Vaulter because it is one, and
+this subclasses the base because it is not.
+
+| Field / method | Warden |
+|---|---|
+| `lane`, `depth` | a position; `depth` rises to **1** and holds there — the rim's own depth, the only legal one above the well (§3.2) |
+| `purgeable` / `blocksClear` | ⛔ **`false`** (W4) — "killable only by Jump", and `purgeTarget()` prefers the deepest, so a purgeable one at depth 1 would absorb every second Purge / `true` (W5) |
+| `killDepth` | `null`, **except** the rim band `1 − C.RIM_CONTACT_DEPTH` for its `WARDEN_DISCHARGE` window; one writer, `setPhase()` — the Surger's mechanism (§6.1) |
+| `anchored` | `false` — §4.4's respawn push reaches it, ends its lift-off, and it climbs back |
+| **`aloft`** *(the ninth field, §6.5)* | `true` from lift-off; `false` while it climbs, and again if it is pushed. Written only by `setPhase()`, beside `phase` and `killDepth` |
+| `sfxVoice` | `"warden"`, `C.SFX_KILL_PITCH.warden` **0.5** (sfx-lab candidate A) — the roster's lowest voice, for its heaviest kill |
+| `points()` / `onShot()` | `C.PTS_WARDEN` (500) / ⛔ **declines and never dies**, so a shot flies on past a climbing one and the rim sweep cannot save a firing craft |
+
+| Property | Constant | Value |
+|---|---|---|
+| Climb rate | `WARDEN_CLIMB` | 0.18 depth/s × `climbMult()` — throat → **aloft** 4.89 s at L11, 4.77 s at L16 |
+| Hunt hop interval, aloft | `WARDEN_HOP_INTERVAL` | 0.90 s ⚠ |
+| Lane crossing time | `WARDEN_HOP_TIME` | 0.35 s ⚠ — ⛔ flat, so §17 item 3's bound is `2 × DT / 0.35` = **0.0952** lanes/step |
+| First hover after **every** lift-off | `WARDEN_ARM` | 0.60 s ⚠ |
+| Hover between strikes | `WARDEN_HOVER` | 1.60 s ⚠ |
+| The fuse | `WARDEN_TELEGRAPH` | 0.45 s ⚠ — the Surger's benchmark |
+| The live rim | `WARDEN_DISCHARGE` | 0.30 s — ⛔ must stay **strictly below** `RESPAWN_INVULN` |
+| Drawn lift | `WARDEN_LIFT` | 0.06 rim radii ⚠ — ⛔ **draw-time only** |
+| Silhouette width / live-beam stroke | `WARDEN_SIZE` / `WARDEN_BEAM_WIDTH` | 0.80 lane widths ⚠ / 2.20 × `laneLineWidth` ⚠ |
+| Colour | `WARDEN_COLOR` | `#477EFF` ⚠ — hue 222°, the centre of the palette's widest gap (189.7° → 255.1°) |
+
+**The cycle is a phase string and one up-counting timer**, the Surger's
+precedent: *climb* — depth rises, unshootable-but-asked, `killDepth` null, so it
+passes the rim band harmlessly; *hover* — ⛔ **aloft at depth 1**, hunting one hop
+toward the craft every `WARDEN_HOP_INTERVAL`; *telegraph* — a beam runs down its
+lane and the Surger's charge tone sounds, and ⛔ **the rim is NOT lethal**;
+*discharge* — `killDepth` is the rim band and its depth is 1, so contact in its
+lane kills; *hover*, forever. ⛔ **It holds its lane through the fuse and the
+strike**, and ⛔ **a strike never begins mid-hop** — at a half-integer lane both
+neighbours are exactly `HIT_LANE_TOL` away and the discharge would cover two.
+
+⛔ **`WARDEN_HOVER + WARDEN_TELEGRAPH + WARDEN_DISCHARGE` is 2.35 s against the
+Jump's 2.30 s cycle** (§14.2): one strike per jump, which is what makes
+"killable only by Jump" a rhythm rather than a wait.
+
+⛔ **`WARDEN_DISCHARGE < RESPAWN_INVULN` is an INVARIANT and is asserted from the
+constants** — the Surger's, for the Surger's reason (§6.1, §4.4). It has slack on
+top of it: a pushed Warden re-climbs from 0.55 in ≥ 1.79 s even at
+`CLIMB_MULT_MAX`, then needs `WARDEN_ARM + WARDEN_TELEGRAPH` more, so its first
+discharge lands ≥ 2.84 s after a respawn (MEASURED, arithmetic).
+
+⛔ **Its climb is NOT a contact climb**, so `C.CLIMB_MAX_BASE` and §4.4's
+respawn guarantee do not move — `killDepth` is null the whole way up. It is
+`climbMult()`'s **sixth** call site (§8), and ⛔ **no cycle constant above is
+heat-derived**: the seven accessors stay seven.
+
+There is no bench key for it (O16). Overdrive's START DEPTH 13 shows one.
+
 ### 6.5 Entity contract
 
 ⛔ Matching Orbital Overhaul: every entity is a **class** with `constructor` / `update(dt)` / `draw()` / `dead`. Kill by setting `dead = true`; remove with an end-of-frame `.filter()`. **Never splice mid-loop.**
 
-⛔ **New enemies wire into seven places:** `startGame` reset, `update()` entity pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order, the well-clear condition, and — CS006 P3 — **the Dive**. **Decide explicitly whether the new hazard can be destroyed by the Purge**, and — CS009 P5 — **decide explicitly its `sfxVoice`**.
+⛔ **New enemies wire into seven places:** `startGame` reset, `update()` entity pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order, the well-clear condition, and — CS006 P3 — **the Dive**. **Decide explicitly whether the new hazard can be destroyed by the Purge**, — CS009 P5 — **decide explicitly its `sfxVoice`**, and — CS013 P3 — **decide explicitly its `aloft`**, which is `false` for anything that lives in the well.
 
 ⛔ **The seventh point, in full: an entity that is `blocksClear: false` and NOT `anchored` must decide explicitly whether it survives a dive.** Those two flags together are what let an entity be on the board at the moment a well counts as clear, and `startDive()` (§5) filters the board down to `anchored` survivors — so today the answer for the one entity in that position, the `WeaverBolt`, is *no*. A new one that wants a different answer is changing §5's hazard set, not adding a flag.
 
-⛔ **Shipped, CS012 P5 — AND NO CONTRACT FIELD MOVED FOR THE JUMP** (§14.2, §4.5). Airborne immunity is one skip at the top of `collideSkimmer()`, read off `state.jump`, so every entity in the roster inherited it without a ninth field, a second `killDepth` or a line in any class. ⛔ **A new enemy that kills by contact is immune to an airborne craft automatically**, and that is the intended answer — an entity that wanted to kill one would be changing §4.5, not adding a flag. `test-cs012-p5.js` stages all seven of the roster's contact killers and mutation-checks the skip.
+⛔ **Shipped, CS012 P5 — AND NO CONTRACT FIELD MOVED FOR THE JUMP** (§14.2, §4.5). Airborne immunity is one skip at the top of `collideSkimmer()`, read off `state.jump`, so every entity in the roster inherited it without a field, a second `killDepth` or a line in any class. ⛔ **A new enemy that kills by contact is immune to an airborne craft automatically**, and that is the intended answer — an entity that wanted to kill one would be changing §4.5, not adding a flag. `test-cs012-p5.js` stages all seven of the roster's contact killers and mutation-checks the skip. ⛔ **CS013 P3's Warden inherits it too** — its discharge is a `killDepth` the skip never had to learn about, staged against all three jump phases in `test-cs013-p3.js`.
 
-⛔ **Shipped, CS012 P2 — two enemy modules (Paul's O15).** `07-enemies.js` holds the base and the Classic roster; `07-enemies-overdrive.js`, concatenated directly after it and before `08-spawner.js`, holds Overdrive's (the Reaver; CS013's Warden and Mimic). Nothing moved out of the first. A new Overdrive enemy goes in the second, against the contract below, and enters through `C.SPAWN_SCHEDULE_OVERDRIVE`. ⛔ **A parameter variant may subclass its parent** — the Reaver extends the Vaulter, which gained two overridable readers (`hopDuration()`, `midClimbDir()`) and a `hopRate` of 1 — and that is not the base-class slope below: `Enemy` itself still carries no behaviour.
+⛔ **Shipped, CS013 P3 — THE NINTH FIELD, AND IT IS THE OTHER HALF OF THAT** (§6.4, §14.6; plan W1). `aloft` says the craft is not the only thing that can be off the rim. It is a **flag rather than a depth** for the identical reason airborne is a phase rather than a depth, and the consequence is the same: ⛔ **the build still has exactly ONE two-depth comparison, the dive strike** (§4.5 item 5), because `jumpStrike()` is a lane match on two flags. ⛔ **Do not give either side a number** to compare against the other — there is nothing left that would make one honest.
+
+⛔ **And the seventh point, answered for the Warden:** it is `blocksClear: true` and not `anchored`, so it is never on the board at a clear, `startDive()` drops it, and §5's hazard set is unchanged. The Purge is the other explicit answer: `purgeable: false`, because "killable only by Jump" means only by Jump.
+
+⛔ **Shipped, CS012 P2 — two enemy modules (Paul's O15).** `07-enemies.js` holds the base and the Classic roster; `07-enemies-overdrive.js`, concatenated directly after it and before `08-spawner.js`, holds Overdrive's (the Reaver, the Warden; CS013 P4's Mimic). Nothing moved out of the first. A new Overdrive enemy goes in the second, against the contract below, and enters through `C.SPAWN_SCHEDULE_OVERDRIVE`. ⛔ **A parameter variant may subclass its parent** — the Reaver extends the Vaulter, which gained two overridable readers (`hopDuration()`, `midClimbDir()`) and a `hopRate` of 1 — and that is not the base-class slope below: `Enemy` itself still carries no behaviour. ⛔ **Anything that is NOT a parameter variant extends the base**: CS013 P3's Warden writes its own climb, hop and hunt rather than inheriting a Vaulter's, because inheriting one would also inherit a park depth, a contact `killDepth` and an `onShot` that dies — and would make every closed `instanceof X.Vaulter` check match it.
 
 **Shipped, CS003 P1–P3 — read this before adding an enemy.** `07-enemies.js` holds the base class `Enemy`, and ⛔ **it is fields and signatures only: no movement, no AI, no draw code.** It exists so the ninth enemy cannot silently forget a field; the value is the field list, not the inheritance. ⚠ **That is a slope.** The first time a climb rate or a hop timer lands in the base, five enemies that do not climb inherit one and the bug is invisible until one of them is given a reason to read it. If the base ever acquires behaviour, that is the signal to flatten it back to independent classes — not to add a second field to switch the behaviour off.
 
@@ -662,7 +723,7 @@ There is no bench key for it (O16): the six digit keys stay Classic's. Overdrive
 | `blocksClear` | Whether it must be gone before the well counts as clear. The Thorn is `false`, and that is *why* a Thorn is still standing during the Dive (§5) rather than an oversight in the clear check. |
 | `killDepth` | §4.5's contact rule as a number: contact kills when `depth >= killDepth` and the lanes match. `null` means contact never kills — the Weaver's body. ⛔ **Every enemy that has a number uses the same one, `1 - C.RIM_CONTACT_DEPTH`, the Drifter included** — there is no term here for where the Skimmer is, so a `killDepth` of `0` would be lethal from the throat rather than "lethal on contact" (§4.5, CS005 P2). One comparison covers three of the five death conditions, which is why it is a field. ⛔ **The PARK depth is the same expression** (CS008 P1, §6.1): every climb stops at `1 - C.RIM_CONTACT_DEPTH`, so an enemy parks exactly on the band where it becomes lethal and where a fire-tick shot can reach it — written as the expression and never as `this.killDepth`, because of the mutation below. ⛔ **CS005 P3's Surger is the first entity in the roster that MUTATES this field** — `0` for its `SURGE_DISCHARGE` window and the rim band either side of it — which is how §4.5 item 3 is expressed with no extra field and no branch in the collision pass. That is a *cycle phase written into an existing field*, not a new kind of value, and the restore is as load-bearing as the mutation. |
 | `anchored` | ⛔ **What `depth` MEANS on this entity, not whether it moves.** `false` — the default, and every enemy but one — means `depth` is a **position**. `true` means `depth` is a **length**: the tip of an extent rooted at the throat. A stationary enemy whose `depth` is still a position is `false`; anything that ever reads `depth` as a length sets it true. The Thorn is the roster's only `true`. ⛔ **Its one reader is `respawnSkimmer()`**, which skips anchored entities: §4.4's rim push clamps `depth` down to 0.55, and on a length that is not a push but a free chip nobody earned, applied silently on every player death in the one place nobody would look. ⚠ **This is NOT a narrowing of §4.4's SETTLED clamp.** The band is untouched — everything above `RESPAWN_PUSH_DEPTH` still comes down to it, in every lane. The field says *which entities the clamp means anything for*, not *how far down it reaches*. See `RATIONALE.md#thorn-depth`. |
-| `sfxVoice` | ⛔ **Which kill sound it makes** (CS009 P5, Paul's A9): a string key into `C.SFX_KILL_PITCH`, read by the three kill sites on the false → true `dead` edge and handed to `sfx("kill", voice)`. The kill site reads the field, never a class name. The base is `null`, and each of the seven Classic roster classes sets its own (`vaulter`, `carrier`, `weaver`, `weaverBolt`, `thorn`, `drifter`, `surger`); CS012 P2's Reaver is the eighth voice, `reaver`, its pitch picked in `tools/sfx-lab.html`'s KILL PITCH table. DATA, not behaviour, so it does not tip the base down the slope above. |
+| `sfxVoice` | ⛔ **Which kill sound it makes** (CS009 P5, Paul's A9): a string key into `C.SFX_KILL_PITCH`, read by the **four** kill sites on the false → true `dead` edge and handed to `sfx("kill", voice)`. The kill site reads the field, never a class name. The base is `null`, and each of the seven Classic roster classes sets its own (`vaulter`, `carrier`, `weaver`, `weaverBolt`, `thorn`, `drifter`, `surger`); CS012 P2's Reaver is the eighth voice, `reaver`, and CS013 P3's Warden the ninth, `warden` (0.5, the lowest on the roster), each pitch picked in `tools/sfx-lab.html`'s KILL PITCH table. DATA, not behaviour, so it does not tip the base down the slope above. |
 
 **The four methods:** `update(dt, well, state)`, `draw(ctx, well)`, `onShot(shot)`, and — CS008 P2 — `points()`. ⛔ **`onShot` returns whether the shot is CONSUMED**, and the *enemy* decides what a hit does — the collision pass only asks. `true` retires the shot; `false` lets it fly on to whatever is behind. That is what keeps the Thorn (chip, consume) and an armoured entity (no damage, do not consume) out of the collision pass as special cases. The base returns `false` deliberately, so a subclass that forgets to override it lets shots through — visible — rather than eating them silently. ⛔ **Since CS008 P1b `onShot` is asked by §4.5's rim sweep as well as by shots** — `collideSkimmer()` calls `onShot(null)` on a rim enemy a firing Skimmer touches, and reads `dead` afterwards — which is how armour refuses the sweep and a Carrier splits under it with no branch in the pass. ⚠ The argument is `null` on that path and the return value is ignored: no `onShot` in the build reads its argument (measured), and one that did would throw there. ⛔ **`points()` is what destroying the entity is worth (§7)**, read by the **kill site** on the false → true `dead` transition and handed to `addScore()`. The entity never scores itself on death. The base returns `0`, the same default-safe shape as `onShot`'s `false`. The Thorn's is `0` too, because it pays per chip from inside its own `onShot()`: a hit is what the enemy decides.
 
@@ -734,7 +795,7 @@ Overdrive adds a combo multiplier — §14.4.
 | Thorn | `0`. It pays `PTS_THORN` per chip, from its own `onShot()`, the killing chip included |
 | Weaver bolt | `0`, inherited |
 
-- ⛔ **Three kill sites, and no fourth.** `collideShots()`, the rim sweep in `collideSkimmer()` (§4.5, a shot kill that never had to fly), and **both** Purge uses (normal points, P2s). Each awards on the false → true `dead` transition, beside `tally.kills`.
+- ⛔ **FOUR kill sites, and no fifth.** `collideShots()`, the rim sweep in `collideSkimmer()` (§4.5, a shot kill that never had to fly), **both** Purge uses (normal points, P2s), and — ⛔ **shipped, CS013 P3** — `jumpStrike()`, where an airborne craft in an aloft Warden's lane kills it (§6.4, §14.2, §14.6; plan W4). Each awards on the false → true `dead` transition, beside `tally.kills`. ⚠ **This line read "three kill sites, and no fourth" until CS013 P3**, and the fourth is here because the Warden is killable by nothing else: no shot, no sweep and no Purge reaches something above the well, so a site was the only place its 500 could be paid. ⛔ **Four SITES, five LINES** — the Purge has two of them.
 - ⛔ **The Dive's termination kill pays nothing** (§5). It is not the player destroying a Thorn.
 - ⛔ **The clear bonuses are paid on the clear step, before the dive** (P4s), at the edge in `Game.update()` that counts `tally.wellsCleared`. `clearBonuses()` pays them in a fixed order: `PTS_WELL_PER_LEVEL × level`, then `PURGE_SAVED_BONUS` if `purgeUses === 0`, then `PTS_NO_DEATH_WELL` unless `state.diedThisWell`. CS008 P3 appends the Start Depth bonus.
 - ⛔ **"No death" is per well.** `killSkimmer()` sets `diedThisWell` and `enterWell()` clears it. A dive death comes after the edge has paid, and `nextWell()` clears it before the next well, so it never voids the bonus it follows.
@@ -829,12 +890,13 @@ Heat modulates spawn interval (floored), concurrent enemy cap, climb speed, vaul
 | 3–4 | + `carrierVaulter` | 2 | 1 |
 | 5 | + `weaver` | 3 | 1 |
 | 6–8 | + `reaver` | 4 | 1 |
-| 9–12 | + `drifter` | 5 | 1 |
-| 13–17 | + `surger` | 6 | 1 |
-| 18–22 | + `carrierDrifter` | 7 | 1 |
-| 23+ | + `carrierSurger` | 8 | 1 |
+| 9–10 | + `drifter` | 5 | 1 |
+| 11–12 | + **`warden`** | 6 | 1 |
+| 13–17 | + `surger` | 7 | 1 |
+| 18–22 | + `carrierDrifter` | 8 | 1 |
+| 23+ | + `carrierSurger` | 9 | 1 |
 
-⛔ The no-draw rule holds in both modes: Overdrive's L1–2 is one entry too (`test-cs012-p2.js`, counted). The uniform pick gives the Reaver 1/4 of releases at L6–8, falling to 1/8 from L23. CS013 adds the Warden (11) and the Mimic (16) as rows in the same table.
+⛔ The no-draw rule holds in both modes: Overdrive's L1–2 is one entry too (`test-cs012-p2.js`, counted). ⛔ **Shipped, CS013 P3 — the Warden's row at 11 is the table's second**, and the uniform pick then gives the Reaver 1/4 of releases at L6–8, 1/5 at L9–10, 1/6 at L11–12, 1/7 at L13–17, 1/8 at L18–22 and 1/9 from L23, with the Warden taking the same share from 11. ⛔ **`C.SPAWN_SCHEDULE` is untouched: a Classic set is still element for element the table above.** CS013 P4 adds the Mimic (16) to this table and nothing else.
 
 Compressed relative to the original (Pulsars at 17, Pulsar Tankers at 41) because our tuned ceiling is ~35–40, not ~99. A threat introduced past the window most players reach does not exist.
 
@@ -934,6 +996,8 @@ Score top-left, lives bottom-left, level and band top-right, Purge charge bottom
 | Bottom-right | the Purge glyph: bright at `purgeUses` 0, `HUD_PURGE_DIM_ALPHA` at 1, absent at 2 or more (§4.3) |
 
 ⛔ **Shipped, CS012 P5 — the jump glyph, OVERDRIVE ONLY** (§14.2, §16.3; `PLANNED-FEATURES-CS012.md` O8). A small raised-craft glyph with a short rim line under it sits `HUD_JUMP_GAP` **left of the Purge glyph, on its baseline**: bright when the jump is ready, dim with a **filling ring** while the cooldown runs, and ⛔ **absent while airborne** — the well is already saying that on two channels (§14.2). ⛔ **The ring is a POLYLINE**, `HUD_JUMP_RING_SEG` segments to a full turn, because `drawPoly` + `glowStroke` is the one path and an arc call would be a second. ⛔ **`hudLayout()`'s rectangle is the RING's extent**, not the craft's, so the throat-zone and touch-button assertions cover the whole footprint. It arrives on the view as `view.jump` — `null` in Classic, else `{ airborne, ready, ring }`, filled in place — so ⛔ **the four Classic rectangles are bit-identical**, asserted in `test-cs012-p5.js`. Combo is P4's and not built.
+
+⚠ **F1, ACCEPTED (CS013 P3, MEASURED at the plan).** The combo readout's rectangle (x 566.6–713.4, y 6–70) already contains **10 of 233 rim lane-centres** — Ring 0 and 15, Cross 0 and 1, Pinwheel 0, Clover 0 and 15, Fan 4–6 — so a craft, a rim enemy or an aloft Warden in those lanes is drawn partly under `×N`. CS012 P4 measured only the throat zone (§10.3), which the readout clears. ⛔ **It is accepted as provisional art, not fixed** (W6, K9): a 0.06 lift moves 11 of 233 into that rectangle against 10 at the rim, so the Warden adds one and does not create the overlap. An art pass owns it with the rest of the palette.
 
 ⛔ **Shipped, CS013 P1 — NO TOKEN HUD ITEM** (§14.1, T10). Each effect shows where it acts: a Recharge on the Purge glyph, a Bounty on the score, a Ward on the craft and a Lance or Spread on the shots (CS013 P2). `hudLayout()`'s rectangles did not move, so the four Classic rectangles and CS012's two are bit-identical.
 
@@ -1238,7 +1302,7 @@ Every entry point is `if (!AudioSys.ctx) return;`-guarded, headless-safe.
 | Event | Seat |
 |---|---|
 | `fire` | `updateShots()`, a shot that leaves the rim |
-| `kill` | the three kill sites (§6.5), on the false → true `dead` edge, pitched by `sfxVoice`. ⛔ Not the Dive's termination kill |
+| `kill` | the four kill sites (§6.5, §7), on the false → true `dead` edge, pitched by `sfxVoice`. ⛔ Not the Dive's termination kill. ⛔ **CS013 P3's jump strike is the fourth**, and it is the Warden's only kill sound |
 | `split` / `chip` / `bolt` | `Carrier.onShot`'s split; `Thorn.onShot`, per chip; `Weaver.fire()`, only for a bolt `spawnEnemy()` did not refuse |
 | `cross` | `Drifter.beginCrossTo()`, the one writer of `"cross"`, so the birth cross sounds too |
 | `surgeDischarge` | `Surger.setPhase("discharge")` |
@@ -1422,6 +1486,14 @@ The Overdrive Dive becomes a short ring corridor.
 ⛔ **Shipped, CS012 P2** (§6.4 has the contract). **1.6× scales the hop, never the climb** (Paul's O1): `hopDuration()` is `VAULT_HOP_TIME / REAVER_HOP_RATE` = 0.175 s at every level, and both intervals are `vaultInterval()` / `vaultRimInterval()` ÷ 1.6 (1.206 s and 0.316 s at L6; the rim floor 0.219 s stays above the hop). The climb is the Vaulter's `VAULT_CLIMB × climbMult()`, because a Reaver that climbed at 1.6× breaches §4.4's respawn guarantee from level 1 (MEASURED, plan §1.1); the guarantee is re-proved with a live Reaver at L6, L23 and L99. **"Vaults toward the Skimmer"** means every mid-climb hop takes `huntDir()`, from its first update and with no level gate, holding its lane while it is in the Skimmer's; at the rim it hunts as a Vaulter does, at its own interval. On an open well it folds at the wall through the inherited `laneHop()`; §17 item 3's soak bound for it is `2 × DT / 0.175` = 0.1905 lanes per step. §17 item 13 holds for it: 24/24 hopping in, climbing in and hunting in mid-climb, on the Ring and the Vee. The silhouette is the Vaulter's X with two swept barbs on its rim-side arms, in the Vaulter's colour ⚠ (O16).
 
 **Warden** (L11+) — flies above the well, fires down, killable only by Jump. Slightly circular (it exists to justify Jump) but it makes Jump offensive as well as defensive. ⛔ **Must be visible in peripheral vision** — an off-well enemy killing you from where you weren't looking is the definition of unfair. **Include.**
+
+⛔ **Shipped, CS013 P3** (§6.4 has the contract and the numbers; plan W1–W6). **"Flies above the well" is a PHASE, not a depth** (W1): it arrives out of the throat like every other threat, climbs its lane unshootable, and goes **aloft at depth 1** — the rim's own depth — with a ninth contract field, `aloft`, and a **draw-time lift** of `C.WARDEN_LIFT` 0.06 rim radii. ⛔ Nothing in the build gained a depth above 1, and the depth model is untouched.
+
+**"Fires down"** is the Surger's mechanism at the other end of the lane (§4.5, W3): aloft it hunts along the rim, one hop toward the craft every `WARDEN_HOP_INTERVAL`, and on its own clock it **hovers → telegraphs → discharges**, holding its lane through the last two. The fuse is a **beam running down its lane** and the Surger's own charge tone — duck-typed, so `19-sfx.js` was not edited — and the strike is `sfx("surgeDischarge")` and `killDepth` mutated to the rim band for `WARDEN_DISCHARGE`. Its cycle is **2.35 s against the Jump's 2.30 s**: one strike per jump.
+
+**"Killable only by Jump"** is two lines (W4): `collideShots()` skips an aloft entity, and `jumpStrike()` — the build's **fourth kill site** (§7) — kills every aloft entity within `HIT_LANE_TOL` of an airborne craft, at the multiplier in force and with a token roll, like every other site. ⛔ **Shots never, the Purge never** (`purgeable: false`): `purgeTarget()` prefers the deepest, so a purgeable Warden at depth 1 would absorb every second Purge. ⛔ **`blocksClear: true`** (W5), so a well with one standing does not clear and the player's answer is always the same one.
+
+⚠ **Peripheral visibility is a SKIPPED PLAYTEST** (W6, K9): MEASURED over 233 lane centres, a 0.06 lift leaves nothing off-screen and puts 11 of them inside the combo readout against 10 at the rim. Its colour is `#477EFF`, hue 222° — the centre of the palette's widest gap — and ⚠ provisional with the rest of it.
 
 **Mimic** (L16+) — reflects shots; vulnerable only while firing. **Probation.** Reflected shots that kill you are a hard sell: players read their own bullets as safe and reversing that betrays a deep expectation. Reflected shots are colour-shifted, larger, and 60% speed. Build it, playtest it, **cut it without ceremony if it reads as cheap.**
 
@@ -1759,7 +1831,7 @@ Required coverage:
 2. **Geometry** — all 16 wells: lane count matches vertices, no NaN in any derived position, at lane centres **and** at boundaries. ⛔ **And every lane centre of every well has a spoke of at least `C.MIN_LANE_SPOKE_PX`** (60 px at `WELL_RADIUS` 300). A shorter lane is one an enemy climbs in almost no screen distance — stationary, then lethal, with nothing for the player to read, which is §1.1 P2 failing. It is a **gate, not a tunable**: a well that fails it is redrawn or given a `throatOffset` (§3.3), and the constant is never lowered to admit it. The number separates the two wells CS006 P2 fixed (24 px, 30 px) from the tightest working one (Twist, 74 px) with no well inside 20 % of the line.
 3. ⛔ **Enemy wall behaviour** — no entity's lane leaves `[0, lanes-1]` on any open well, 5,000-tick soak each. Written against the §3.5 bug.
 4. **Shot cap** — never exceeds **the cap in force** under held fire. ⛔ **Reworded, CS013 P2 (§14.1's Spread; plan T8):** the cap is `SHOT_MAX`, or `SPREAD_SHOT_MAX` for as long as Spread is on, and the claim is the same one — no array grows without a bound. `test-cs002-p3.js` still reads `SHOT_MAX` on a Classic run; `test-cs013-p2.js` asserts both on the built fire path, and `test-cs012-p6.js`'s soak reads the cap off `state.powers` (repaired in place).
-5. **Purge** — first use clears all enemies and zero Thorns; second removes exactly one.
+5. **Purge** — first use clears all **purgeable** enemies and zero Thorns; second removes exactly one. ⛔ **Reworded, CS013 P3** (§6.4's Warden; plan W4): the claim is the one it always made — the Purge reads `purgeable` off the entity and never a class name — and the Thorn stopped being the only `false` the day "killable only by Jump" arrived. `test-cs005-p1.js` still reads the Thorn's case; `test-cs013-p3.js` asserts both Purge uses leave a Warden standing.
 6. **Carrier splits** — correct count and type per variant.
 7. **Heat monotonicity** — `heat(n+1) > heat(n)` for n in 1..200; every derived value inside its clamp.
 8. **Scoring** — total equals the sum of logged events. ⛔ **Shipped, CS008 P2, with no event log**: on eight played boards (levels 1–23, 120,000 steps), every step's score delta equals that step's events observed off the board. Those events are each kill priced from §7's table, each Thorn chip decoded from its length, and each clear's bonuses. `test-cs008-p2.js`, mutation-checked. ⛔ **In Overdrive, since CS013 P1, a collected Bounty is its own event**: an unmultiplied 2,000, priced per step in `test-cs012-p4.js` and `-p6.js` (repaired in place).

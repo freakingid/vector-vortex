@@ -115,22 +115,49 @@ function craftPoints(well, poly, pts, lane, squash, lift) {
   const s = squash > 0 ? (squash > 1 ? 1 : squash) : 0;
   const half = C.SKIMMER_WIDTH / 2 * (1 - C.SKIMMER_SQUASH * s);
   const reach = 1 + C.SKIMMER_SQUASH * s;
-  const rise = lift > 0 ? lift * C.WELL_RADIUS : 0;
-  // The centroid in SCREEN space, on the same mapping screenPos() uses.
-  const c = rise > 0 ? wellCentroid(well) : null;
-  const ccx = c ? C.WELL_CX + c.x * C.WELL_RADIUS : 0;
-  const ccy = c ? C.WELL_CY + c.y * C.WELL_RADIUS : 0;
 
   for (let i = 0; i < poly.length; i++) {
     const p = poly[i];
     // Depth 1 IS the rim (GDD 3.2) — a definition, not a tunable. Every
     // silhouette offset is measured inward from it.
-    const out = screenPos(well, lane + p.l * half, 1 + p.d * reach, pts[i]);
-    if (rise > 0) {
-      const dx = out.x - ccx, dy = out.y - ccy;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d > 0) { out.x += dx / d * rise; out.y += dy / d * rise; }
-    }
+    screenPos(well, lane + p.l * half, 1 + p.d * reach, pts[i]);
+  }
+  liftPoints(well, pts, poly.length, lift);
+  return pts;
+}
+
+// ⛔ THE LIFT ITSELF, AND IT IS THE BUILD'S ONE COPY OF IT (CLAUDE.md). `pts`
+// are ALREADY-PROJECTED screen points; each is pushed `lift` rim radii OUT from
+// the well's screen centroid, along its own outward direction. ⛔ `n` rather
+// than `pts.length`, because entityPoints()' memoized scratch is sized to its
+// own poly and a caller may lift a prefix of it.
+//
+// ⛔ AFTER THE PROJECTION AND NEVER AS A DEPTH: perspective() caps depth at 1,
+// so a point "outside the rim" would silently collapse back onto it, and a
+// depth above 1 is not a thing the depth model has (GDD 3.2). Leaving it in
+// screen space is also what keeps every lift DRAW-ONLY — at a lift of 0 this
+// function writes nothing at all, which is how C.JUMP_LIFT and C.WARDEN_LIFT
+// are each mutated to 0 in the suite to prove the state hash does not move.
+//
+// THREE call sites, and they are the same gesture at two scales: craftPoints()
+// above raises the airborne craft by C.JUMP_LIFT (GDD 14.2, CS012 P5), and
+// drawWarden() and drawWardenBeam() (14-render-entities.js) raise an ALOFT
+// Warden and the top of its beam by C.WARDEN_LIFT (GDD 14.6, CS013 P3).
+// ⛔ One function, so a craft rising past a hovering Warden reads as one space
+// rather than as two conventions that disagree the first time either is
+// retuned.
+function liftPoints(well, pts, n, lift) {
+  const rise = lift > 0 ? lift * C.WELL_RADIUS : 0;
+  if (!(rise > 0)) return pts;
+  // The centroid in SCREEN space, on the same mapping screenPos() uses.
+  const c = wellCentroid(well);
+  const ccx = C.WELL_CX + c.x * C.WELL_RADIUS;
+  const ccy = C.WELL_CY + c.y * C.WELL_RADIUS;
+  for (let i = 0; i < n; i++) {
+    const out = pts[i];
+    const dx = out.x - ccx, dy = out.y - ccy;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 0) { out.x += dx / d * rise; out.y += dy / d * rise; }
   }
   return pts;
 }

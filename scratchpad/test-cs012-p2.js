@@ -78,22 +78,29 @@ const CLASSIC = [
   { from: 23, to: 40, kinds: ["vaulter", "carrierVaulter", "weaver", "drifter", "surger", "carrierDrifter",
                               "carrierSurger"] },
 ];
+// ⛔ CS013 P3 rewrote the bands from L11 in place: the Warden's row joined this
+// table, so the sets from 11 on are one longer and the 9–12 band split at 11.
+// The claim is the one this table always made — the answer at every level is
+// the WRITTEN-OUT set, not a set derived from C.
 const OVERDRIVE = [
   { from:  1, to:  2, kinds: ["vaulter"] },
   { from:  3, to:  4, kinds: ["vaulter", "carrierVaulter"] },
   { from:  5, to:  5, kinds: ["vaulter", "carrierVaulter", "weaver"] },
   { from:  6, to:  8, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver"] },
-  { from:  9, to: 12, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter"] },
-  { from: 13, to: 17, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "surger"] },
-  { from: 18, to: 22, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "surger",
-                              "carrierDrifter"] },
-  { from: 23, to: 40, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "surger",
-                              "carrierDrifter", "carrierSurger"] },
+  { from:  9, to: 10, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter"] },
+  { from: 11, to: 12, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden"] },
+  { from: 13, to: 17, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden",
+                              "surger"] },
+  { from: 18, to: 22, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden",
+                              "surger", "carrierDrifter"] },
+  { from: 23, to: 40, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden",
+                              "surger", "carrierDrifter", "carrierSurger"] },
 ];
 const bandAt = (table, L) => table.find(b => L >= b.from && L <= b.to).kinds;
 
-H.eq(JSON.stringify(C.SPAWN_SCHEDULE_OVERDRIVE), JSON.stringify([{ level: 6, kind: "reaver" }]),
-     "⛔ C.SPAWN_SCHEDULE_OVERDRIVE is one row, the Reaver at 6 (GDD 14.6)");
+H.eq(JSON.stringify(C.SPAWN_SCHEDULE_OVERDRIVE),
+     JSON.stringify([{ level: 6, kind: "reaver" }, { level: 11, kind: "warden" }]),
+     "⛔ C.SPAWN_SCHEDULE_OVERDRIVE is the Reaver at 6 and — CS013 P3 — the Warden at 11 (GDD 14.6)");
 let odWrong = null, clWrong = null, clArg = null;
 for (let L = 1; L <= 40; L++) {
   const od = JSON.stringify(X.eligibleKinds(L, "overdrive"));
@@ -606,7 +613,11 @@ function hashes(Y, mode, steps, stopAt) {
 }
 {
   const Z = H.buildGame({ mutate: [[ROW, ""]] });
-  H.eq(JSON.stringify(Z.C.SPAWN_SCHEDULE_OVERDRIVE), "[]", "fixture: the mutated build has no Overdrive row");
+  // ⛔ CS013 P3 repaired this fixture in place: ROW is the REAVER's row, so the
+  // mutant now keeps the Warden's. The precondition the claim below needs is
+  // "a build whose Overdrive table differs", which is what it still is.
+  H.eq(JSON.stringify(Z.C.SPAWN_SCHEDULE_OVERDRIVE), JSON.stringify([{ level: 11, kind: "warden" }]),
+       "fixture: the mutated build has lost the Reaver's row and kept the Warden's");
   const a = hashes(X, "classic", 5000), b = hashes(Z, "classic", 5000);
   let diff = -1;
   for (let i = 0; i < 5000 && diff < 0; i++) if (a.out[i] !== b.out[i]) diff = i;

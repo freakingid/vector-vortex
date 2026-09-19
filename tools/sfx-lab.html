@@ -1308,7 +1308,7 @@ const MUSIC_TRACKS = {
     wardBreak:      { noise: true, filter: { type: "highpass", f: 800, to: 3000 }, sweep: 0.12, atk: 0.001, hold: 0.03, rel: 0.18, gain: 0.26 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
-  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
+  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5 },
 // ===== BLOCK SFX END =====
 </script>
 
@@ -1460,14 +1460,20 @@ const SFX_ALTS = {
 // pitch here: candidate A is BLOCK SFX's SFX_KILL_PITCH value, B and C below.
 const PITCH_BRIEFS = {
   reaver: "The Reaver's kill: a faster Vaulter (GDD 14.6). Related to the Vaulter's 1, brighter, and clear of the Weaver's 1.25.",
+  warden: "The Warden's kill (GDD 14.6, CS013 P3): 500 points, the board's heaviest, and the only one that costs a jump. The roster's lowest voice, clear of the Surger's 0.6.",
 };
 const PITCH_A_LABELS = {
   reaver: "bright",
+  warden: "deep",
 };
 const PITCH_ALTS = {
   reaver: [
     { label: "a semitone up", pitch: 1.06 },
     { label: "a fourth up", pitch: 1.33 },
+  ],
+  warden: [
+    { label: "deeper still", pitch: 0.42 },
+    { label: "between the Surger and the Carrier", pitch: 0.68 },
   ],
 };
 // ===== CANDIDATES END =====

@@ -25,11 +25,12 @@
 // filters. Nothing here removes an array element; hits set `dead = true` and
 // the caller's .filter() does the removal (GDD 6.5). Never splice mid-loop.
 //
-// ⛔ SCORING, CS008 P2: ALL THREE OF THE BUILD'S KILL SITES ARE IN THIS FILE —
-// collideShots(), the rim sweep in collideSkimmer(), and both Purge uses. Each
-// awards `e.points()` through addScore() (12-scoring.js) on the false -> true
-// `dead` transition, beside the `tally.kills` it already counted, and nowhere
-// else. The Thorn's per-chip 5 is paid inside its own onShot(), not here.
+// ⛔ SCORING, CS008 P2: ALL OF THE BUILD'S KILL SITES ARE IN THIS FILE —
+// collideShots(), the rim sweep in collideSkimmer(), both Purge uses, and —
+// CS013 P3, W4 — jumpStrike(), a FOURTH site and a FIFTH line. Each awards
+// `e.points()` through addScore() (12-scoring.js) on the false -> true `dead`
+// transition, beside the `tally.kills` it already counted, and nowhere else.
+// The Thorn's per-chip 5 is paid inside its own onShot(), not here.
 //
 // ⛔ AND THE KILL SOUND, CS009 P5, beside the points at the same three edges:
 // `sfx("kill", e.sfxVoice)`, the pitch read off the entity's eighth contract
@@ -117,6 +118,17 @@ function collideShots(state, well) {
     for (let j = 0; j < state.enemies.length; j++) {
       const e = state.enemies[j];
       if (e.dead) continue;
+      // ⛔ ALOFT IS OUT OF REACH (GDD 14.6; CS013 P3, W1, W4; 07-enemies.js's
+      // ninth contract field). A shot never meets something ABOVE the well, so
+      // "killable only by Jump" costs this pass one line and no branch on a
+      // class. ⛔ It is also what keeps an unshootable Warden from SHIELDING
+      // the rim band of its lane: a shot is born at depth 1 and would otherwise
+      // be hit-tested against it on its first two steps, decline, and stop
+      // there — the Weaver bolt's shipped shielding, on an entity nothing can
+      // ever remove. ⛔ `aloft`, never `depth >= 1`: the flag is the phase, and
+      // a climbing Warden at depth 1 for one step is still shootable-and-
+      // declining rather than out of reach.
+      if (e.aloft) continue;
       // ⛔ + C.HIT_DEPTH_EPS, here and nowhere else: |1 - 0.95| is
       // 0.050000000000000044 in IEEE-754, and a rim-parked enemy must not
       // escape its fire-tick shot by 4.4e-17 (00-config.js, CS008 P1).
@@ -499,9 +511,64 @@ function updatePurge(state) {
   // tell "spent" from "spent twice" without a second field.
 }
 
+// ---------------------------------------------------------------------------
+// The jump strike (GDD 14.2, 14.6, 7; CS013 P3, W4) — the FOURTH kill site
+// ---------------------------------------------------------------------------
+//
+// ⛔ AN AIRBORNE CRAFT IN AN ALOFT ENTITY'S LANE KILLS IT. That is the whole
+// function, and it is what makes the Jump OFFENSIVE as well as defensive
+// (GDD 14.6): the Warden is killable only by a jump, because no shot, no rim
+// sweep and no Purge can reach something above the well.
+//
+// ⛔ A LANE MATCH ON TWO FLAGS, AND NOT A COMPARISON OF TWO DEPTHS. Airborne is
+// a PHASE on state.jump (05-skimmer.js) and aloft is a PHASE on the entity
+// (07-enemies.js) — neither side has a number for how far off the rim it is, so
+// the build still has exactly ONE two-depth comparison and it is the dive
+// strike's (GDD 4.5 item 5, 11-dive.js). Giving the craft a depth to make this
+// "honest" would be inventing a quantity to compare against a second one that
+// does not exist either.
+//
+// ⛔ IT IS THE FOURTH KILL SITE AND THE FIFTH KILL LINE (GDD 7), and the line is
+// the other four's rule verbatim: tally.kills, e.points() at the multiplier in
+// force, comboKill(), T2's drop roll, and sfx("kill", e.sfxVoice) off the
+// entity's own voice. GDD 7's "three kill sites, and no fourth" is corrected by
+// it, in that section and in CLAUDE.md.
+//
+// ⛔ `continue`, NEVER `return` — the rim sweep's rule (above), for the rim
+// sweep's reason: rotating airborne sweeps the craft through lanes, so one jump
+// may take two Wardens and both are asked. Nothing here is spliced; the dead
+// are removed by Game.update()'s end-of-frame filter.
+//
+// ⛔ NO INVULNERABILITY GUARD, exactly as the rim sweep has none: invulnerability
+// suspends dying, not playing. And no `killDepth` term — this pass is not about
+// what the entity does to the craft.
+//
+// It runs THIRD, after collideSkimmer(), and the two are mutually exclusive by
+// construction: that pass returns at once while airborne and this one returns
+// at once while grounded.
+function jumpStrike(state, well) {
+  const sk = state.skimmer;
+  if (!sk || sk.dead) return;
+  if (!jumpAirborne(state)) return;
+
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (e.dead || !e.aloft) continue;
+    if (!laneHit(well, e.lane, sk.lane)) continue;
+    e.dead = true;
+    state.tally.kills++;
+    addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice);
+  }
+}
+
 // The whole pass, in its fixed order. Called once per simulation step from
 // Game.update().
+//
+// ⛔ THE JUMP STRIKE RUNS THIRD (CS013 P3, W4). Shots resolve first, then
+// contact — which is skipped entirely while airborne — and then the one thing
+// an airborne craft can do to the board.
 function updateCollisions(state, well) {
   collideShots(state, well);
   collideSkimmer(state, well);
+  jumpStrike(state, well);
 }

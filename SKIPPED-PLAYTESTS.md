@@ -572,3 +572,44 @@ about a run rather than a rule.**
   `C.WARD_SHELL_ALPHA` (0.85); `C.SFX.wardBreak` (sfx-lab candidate A, with two
   alternates beside it); `C.TOKEN_COLOR`, shared with the tokens themselves.
   ⛔ "One free hit" and "lanes −1, 0, +1" are GDD 14.1's and not knobs.
+
+## CS013 P3 — the Warden: peripheral visibility, a shared fuse tone, and how the jump kill feels
+
+- **Changeset / phase:** CS013 P3 (the Warden — aloft as a phase, the strike,
+  and the jump kill).
+- **Would have done:** three sittings, all Overdrive, START DEPTH 13. (1) Played
+  a full well on each of the sixteen wells' shapes he could reach, with a Warden
+  live, and after each one answered ONE question: *did I always know where it
+  was?* — including when it hovered over the top lanes, where the combo readout
+  overlaps the rim (F1). (2) Stood in a Warden's lane and let it fire, twice: once
+  with the music at its loudest tier and once silent, saying out loud each time
+  whether the rising tone he heard was a Surger's or the Warden's. (3) Jumped at
+  one, ten times: from its own lane, from three lanes away, and mid-rotation
+  across it — and said whether killing a thing by *flying into it* reads as a
+  kill or as a collision he got away with.
+- **What we were trying to learn:** ⛔ **GDD 14.6's ⛔ is a person's judgment
+  and nothing else** — "must be visible in peripheral vision; an off-well enemy
+  killing you from where you weren't looking is the definition of unfair." The
+  lift is MEASURED (§1.5: at 0.06 rim radii nothing leaves the world on any of
+  233 lane centres, 7 sit within 18 px of an edge and 11 fall inside the combo
+  rectangle against 10 at the rim), but *measured on screen* and *seen while
+  playing* are different questions and only the second one is the rule.
+  ⚠ **The shared fuse tone is the sharper risk.** W6 gives the Warden the
+  Surger's `surgeCharge` voice and its `surgeDischarge` on the grounds that the
+  sentence is identical — "the rim of this lane is about to be lethal; leave or
+  jump." If a player instead hears *a Surger* and looks down the well for a bar
+  that is not there, the sound has cost them the 0.45 s it was meant to buy, and
+  the answer is a second held-voice map in `19-sfx.js` rather than a retune.
+  ⚠ **And whether one strike per jump is a rhythm or a treadmill**: the cycle is
+  2.35 s against the Jump's 2.30 s by construction, which is a number, not a
+  feel. A non-jumping player cannot clear a Warden's well at all (W5, MEASURED),
+  so how quickly that reads as "jump at it" rather than "the well is stuck" is
+  the whole of the onboarding question CS016 inherits.
+- **Knobs:** `C.WARDEN_LIFT` (0.06 rim radii ⚠) and `C.WARDEN_COLOR`
+  (`#477EFF` ⚠, hue 222°); `C.WARDEN_SIZE` (0.80) and `WARDEN_POLY`'s eight
+  points; `C.WARDEN_BEAM_WIDTH` (2.20 ⚠) and `C.WARDEN_TELEGRAPH` (0.45);
+  `C.WARDEN_ARM` (0.60), `C.WARDEN_HOVER` (1.60), `C.WARDEN_HOP_INTERVAL`
+  (0.90) and `C.WARDEN_HOP_TIME` (0.35); `C.SFX_KILL_PITCH.warden` (0.5,
+  sfx-lab candidate A, two alternates beside it). ⛔ `C.WARDEN_DISCHARGE` 0.30
+  is bounded by `RESPAWN_INVULN` and is not freely tunable; "killable only by
+  Jump", `blocksClear` and the L11 row are GDD 14.6's and W4/W5's, not knobs.

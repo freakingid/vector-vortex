@@ -123,6 +123,37 @@ class Enemy {
     // The base is null, and every roster class sets its own; a null voice
     // plays the kill at the recipe's own pitch rather than no sound.
     this.sfxVoice = null;
+
+    // ⛔ THE NINTH FIELD (CS013 P3, W1): is this entity ABOVE the well rather
+    // than in it? False on everything in the Classic roster and on the Reaver;
+    // true on a Warden that has lifted off the rim (07-enemies-overdrive.js).
+    //
+    // ⛔ IT IS A PHASE, NOT A DEPTH, and that is CS012 P5's Jump rule pointed
+    // the other way. An aloft entity's `depth` is still a POSITION and it is
+    // still 1 — the rim's own depth, the only legal one it has (GDD 3.2: depth
+    // > 1 is not a position, and perspective() clamps it). What "above the
+    // well" means is expressed HERE, in a flag two sites read, and not by
+    // inventing a number the depth model cannot produce.
+    //
+    // ⛔ TWO READERS, AND THAT IS THE WHOLE MECHANISM (W1, W4):
+    //
+    //   collideShots()  SKIPS an aloft entity (09-collision.js). A shot never
+    //                   meets something above the well — so "killable only by
+    //                   Jump" costs the shot pass one line, and an aloft enemy
+    //                   does not shield the rim band of its lane either.
+    //   jumpStrike()    REQUIRES one. An airborne craft in its lane kills it,
+    //                   which is the build's FOURTH kill site and its FIFTH
+    //                   kill line. ⛔ A lane match on two flags, never a
+    //                   comparison of two depths: the dive strike is still the
+    //                   only one of those in the build (GDD 4.5 item 5).
+    //
+    // ⛔ WHAT IT IS NOT. It is not an exemption from anything else. `anchored`
+    // stays false, so GDD 4.4's rim push reaches an aloft Warden exactly as it
+    // reaches every other position — it comes down to 0.55, its lift-off ends,
+    // and it climbs back. It is not a second `killDepth`: a discharging Warden
+    // kills through the one comparison in collideSkimmer() like everything
+    // else. And it is not a second array — GDD 6.5's ONE array is unchanged.
+    this.aloft = false;
   }
 
   // Movement and AI. dt is C.FIXED_DT; `well` is the current well (topology

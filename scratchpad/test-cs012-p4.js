@@ -37,7 +37,7 @@ const J = v => JSON.stringify(v);
 
 // ⛔ Trap 1 — GDD §7, as written there.
 const GDD = { thornChip: 5, weaver: 50, carrier: 100, vaulter: 150, surger: 200,
-              drifter: [250, 500, 750], reaver: 300, wellPerLevel: 100,
+              drifter: [250, 500, 750], reaver: 300, warden: 500, wellPerLevel: 100,
               purgeUnspent: 500, noDeath: 1000,
               bounty: 2000 };   // ⛔ CS013 P1: GDD §14.1's Bounty, +2,000, collected — not a kill
 
@@ -46,6 +46,7 @@ const GDD = { thornChip: 5, weaver: 50, carrier: 100, vaulter: 150, surger: 200,
 // nothing in any of them and every non-vacuity check would pass on zero.
 function gddPoints(Z, e) {
   if (e instanceof Z.Reaver) return GDD.reaver;      // before Vaulter: it extends it
+  if (e instanceof Z.Warden) return GDD.warden;      // CS013 P3: GDD §7's 500, killed by a jump
   if (e instanceof Z.Vaulter) return GDD.vaulter;
   if (e instanceof Z.Carrier) return GDD.carrier;
   if (e instanceof Z.Weaver) return GDD.weaver;
@@ -396,8 +397,16 @@ const PLAYS = [
   { level: 23, held: false, purge: 311,  seeds: [11, 23] },
 ];
 
-// test-cs008-p2.js's recorded driver, unchanged.
-function drive(input, i, play) {
+// test-cs008-p2.js's recorded driver. ⛔ CS013 P3 gave it ONE addition, in
+// place: an optional build `Z`, and with it the driver JUMPS whenever something
+// ALOFT is already in its lane. An aloft Warden is killable only by the Jump
+// (W4) and blocks the clear (W5), so from L11 a driver that never jumps stalls
+// the board — §6's mutation window lost the clear its two bonus mutants need,
+// and §12's draw-stream fixture lost its live multiplier. ⛔ The repair is the
+// DRIVER, never the play's level and never a relaxed assertion. Called without
+// `Z` it is the recorded driver to the byte, which is what §11's Classic pair
+// still uses.
+function drive(input, i, play, Z) {
   if (i % 7 === 0)   input.mouseMove(((i * 37) % 181) - 90);
   if (i % 53 === 0)  input.keyDown("ArrowRight");
   if (i % 53 === 11) input.keyUp("ArrowRight");
@@ -408,6 +417,11 @@ function drive(input, i, play) {
   if (play.purge && i % play.purge === 0) input.keyDown("x");
   if (play.purge && i % play.purge === 4) input.keyUp("x");
   if (i % 300 === 0) input.mouseMove((Math.floor(i / 300) % 2) ? 4000 : -4000);
+  if (!Z) return;
+  const st = Z.state, sk = st.skimmer, well = Z.WELLS[st.wellIndex];
+  const reach = sk && !sk.dead && st.enemies.some(e => !e.dead && e.aloft &&
+    Math.abs(Z.laneDelta(well, e.lane, sk.lane)) <= Z.C.HIT_LANE_TOL);
+  if (reach) input.keyDown("arrowup"); else input.keyUp("arrowup");
 }
 function begin(Z, seed, level) {
   Z.Game.reset();
@@ -467,7 +481,7 @@ function itemEight(Z, ticks, plays) {
         lastKills = st.tally.kills;
         deathThisWell = false;
       }
-      drive(ZG.input, i, play);
+      drive(ZG.input, i, play, Z);
 
       const pre = st.enemies.slice();
       const before = new Map(pre.map(e => [e, e.depth]));
@@ -1085,7 +1099,7 @@ H.eq(X.TELEMETRY_FIELDS.indexOf("maxCombo"), 20, "⛔ the column kept its place 
     const per = [];
     ZG.input.keyDown(" ");
     for (let i = 0; i < 3000 && st.screen !== "gameover"; i++) {
-      drive(ZG.input, i, { held: true, purge: 311 });
+      drive(ZG.input, i, { held: true, purge: 311 }, Z);
       ZG.update(ZDT);
       per.push(`${draws}|${st.enemies.map(e => `${e.constructor.name}:${e.lane}:${e.depth}`).join("~")}`);
     }
@@ -1123,7 +1137,7 @@ H.eq(X.TELEMETRY_FIELDS.indexOf("maxCombo"), 20, "⛔ the column kept its place 
     let ms = 0;
     for (let i = 0; i < MEASURE_TICKS; i++) {
       if (st.screen === "gameover") { ZG.input.reset(); begin(Z, seed + i, play.level); st.screen = "play"; }
-      drive(ZG.input, i, play);
+      drive(ZG.input, i, play, Z);
       args.intensity.length = 0; args.sweep.length = 0;
       ms += ZC.FIXED_DT * 1000;
       Z.AudioSys.ctx.currentTime = ms / 1000;
