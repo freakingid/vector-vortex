@@ -1683,7 +1683,10 @@ const Game = (function () {
       // 0..C.JUMP_LIFT — 0 grounded, 0 recovering, 0 in Classic — so with
       // C.JUMP_LIFT at 0 the whole build is bit-identical. The craft's `lane`
       // and the depth model never hear about it (05-skimmer.js).
-      sk.draw(ctx, well, jumpLift(state.jump));
+      // ⛔ AND THE WARD'S SHELL IS THE SAME KIND OF VALUE (GDD 14.1; CS013 T9,
+      // T10): a flag handed to the draw, never a field on the craft. false on
+      // every Classic frame — state.powers is only written in Overdrive.
+      sk.draw(ctx, well, jumpLift(state.jump), state.powers.ward);
     }
     // ⛔ THE HUD IS LAST and reads only this view (15-render-hud.js). The view
     // object is filled in place, never allocated per frame.

@@ -85,6 +85,33 @@ const _skimPts = SKIMMER_POLY.map(function () { return { x: 0, y: 0 }; });
 //
 // Returns the shared scratch array. Copy out of it if you need to keep it.
 function skimmerPoints(well, lane, squash, lift) {
+  return craftPoints(well, SKIMMER_POLY, _skimPts, lane, squash, lift);
+}
+
+// ⛔ THE WARD'S SHELL (GDD 14.1; CS013 T9, T10) — THE CRAFT'S OWN SILHOUETTE,
+// SCALED, AND DRAW-TIME ONLY. `lane`, `depth` and the collision pass never hear
+// about it: the shell is a flag on state.powers and one stroke, exactly as the
+// lift is a value and one stroke. It is the craft's own outline rather than a
+// new shape so it inherits the wall squash and the jump lift for free and can
+// never drift off the thing it is protecting.
+//
+// Scaled about the craft's LOCAL ORIGIN, so the prongs stay on the rim line
+// (d = 0 scales to 0) and the shell reads as a bigger craft around the craft.
+// ⛔ Shape DATA, built once — no per-frame allocation (GDD 17's budget), and
+// its own scratch, so a shell and a craft can be projected in the same frame.
+const WARD_POLY = SKIMMER_POLY.map(function (p) {
+  return { l: p.l * C.WARD_SHELL_SCALE, d: p.d * C.WARD_SHELL_SCALE };
+});
+const _wardPts = WARD_POLY.map(function () { return { x: 0, y: 0 }; });
+
+function wardPoints(well, lane, squash, lift) {
+  return craftPoints(well, WARD_POLY, _wardPts, lane, squash, lift);
+}
+
+// The projection both of them share. ⛔ ONE COPY OF THE LIFT MATH: a second
+// would be a second answer to "where is the craft on screen", and the two
+// would disagree the first time either is retuned.
+function craftPoints(well, poly, pts, lane, squash, lift) {
   const s = squash > 0 ? (squash > 1 ? 1 : squash) : 0;
   const half = C.SKIMMER_WIDTH / 2 * (1 - C.SKIMMER_SQUASH * s);
   const reach = 1 + C.SKIMMER_SQUASH * s;
@@ -94,18 +121,18 @@ function skimmerPoints(well, lane, squash, lift) {
   const ccx = c ? C.WELL_CX + c.x * C.WELL_RADIUS : 0;
   const ccy = c ? C.WELL_CY + c.y * C.WELL_RADIUS : 0;
 
-  for (let i = 0; i < SKIMMER_POLY.length; i++) {
-    const p = SKIMMER_POLY[i];
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i];
     // Depth 1 IS the rim (GDD 3.2) — a definition, not a tunable. Every
     // silhouette offset is measured inward from it.
-    const out = screenPos(well, lane + p.l * half, 1 + p.d * reach, _skimPts[i]);
+    const out = screenPos(well, lane + p.l * half, 1 + p.d * reach, pts[i]);
     if (rise > 0) {
       const dx = out.x - ccx, dy = out.y - ccy;
       const d = Math.sqrt(dx * dx + dy * dy);
       if (d > 0) { out.x += dx / d * rise; out.y += dy / d * rise; }
     }
   }
-  return _skimPts;
+  return pts;
 }
 
 // ---------------------------------------------------------------------------
@@ -328,6 +355,11 @@ class Skimmer {
   // the dim band (GDD 3.7) — the band dims the WELL, and a player who cannot
   // see their own craft is the failure that rule is protecting against.
   //
+  // ⛔ `ward` IS OPTIONAL TOO, AND IT IS THE WARD'S WHOLE APPEARANCE (GDD
+  // 14.1; CS013 T9): true strokes the shell around the craft in C.TOKEN_COLOR.
+  // Game.draw() reads state.powers.ward and hands it over; nothing here reads
+  // `state`, and in Classic it is false on every frame.
+  //
   // ⛔ `lift` IS OPTIONAL AND IS TWO OF GDD 14.2's THREE AIRBORNE CHANNELS
   // (O7). Above 0 the craft is drawn raised off the rim line, and its own
   // outline is stroked FLAT ON THE RIM underneath at C.JUMP_SHADOW_ALPHA —
@@ -338,11 +370,18 @@ class Skimmer {
   // ⛔ skimmerPoints() returns the ONE shared scratch array, so the shadow's
   // path must be built and stroked before the lifted points overwrite it —
   // which is exactly what drawPoly + glowStroke do, in that order.
-  draw(ctx, well, lift) {
+  draw(ctx, well, lift, ward) {
     const squash = this.squashAmount();
     if (lift > 0) {
       drawPoly(ctx, skimmerPoints(well, this.lane, squash), true);
       glowStroke(ctx, C.SKIMMER_COLOR, C.LINE_W_RIM, C.JUMP_SHADOW_ALPHA);
+    }
+    // ⛔ UNDER THE CRAFT AND IN THE TOKEN COLOUR (T9, T10), so the silhouette
+    // the player steers reads over its own shell. It takes the same squash and
+    // the same lift, because it is the same outline.
+    if (ward) {
+      drawPoly(ctx, wardPoints(well, this.lane, squash, lift), true);
+      glowStroke(ctx, C.TOKEN_COLOR, C.LINE_W_RIM, C.WARD_SHELL_ALPHA);
     }
     drawPoly(ctx, skimmerPoints(well, this.lane, squash, lift), true);
     glowStroke(ctx, C.SKIMMER_COLOR, C.LINE_W_RIM, 1);

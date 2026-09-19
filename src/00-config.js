@@ -614,6 +614,7 @@ const C = {
     menuBack:       { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 },
     comboLost:      { osc: [{ type: "sawtooth", f: 587, to: 220 }, { type: "sawtooth", f: 392, to: 147 }], glide: 0.22, filter: { type: "lowpass", f: 3200, to: 700 }, sweep: 0.22, atk: 0.003, hold: 0.04, rel: 0.22, gain: 0.13 },
     collect:        { osc: [{ type: "triangle", f: 1320, to: 2640 }, { type: "square", f: 1980, to: 3960 }], glide: 0.06, filter: { type: "lowpass", f: 6000 }, atk: 0.002, hold: 0.03, rel: 0.14, gain: 0.1 },
+    wardBreak:      { osc: [{ type: "square", f: 1760, to: 587 }, { type: "square", f: 1319, to: 440 }], glide: 0.14, filter: { type: "highpass", f: 300, to: 1800, q: 0.9 }, sweep: 0.14, atk: 0.002, hold: 0.05, rel: 0.22, gain: 0.2 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
@@ -646,6 +647,10 @@ const C = {
   TOKEN_COLOR:          "#FFF347",  // ⚠ provisional, the same standing as the enemy palette
   TOKEN_SIZE:           0.80,   // lane widths spanned by the ring
   TOKEN_RING_SEG:       24,     // polyline segments to a full ring
+  // The Ward's shell: the craft's OWN silhouette, scaled about its local
+  // origin and stroked in TOKEN_COLOR around it (T9, P2). Draw-time only.
+  WARD_SHELL_SCALE:     1.45,   // ⚠ how far outside the craft the shell sits
+  WARD_SHELL_ALPHA:     0.85,   // ⚠ the shell's stroke alpha
   // ⛔ WHAT A MODE HAS, AS DATA (GDD 1, 20 #28: "flags in the config, not a
   // fork"; CS012 R1). One reader, modeHas() at the foot of this file. The
   // Reaver, the track and the board are not flags: they go through

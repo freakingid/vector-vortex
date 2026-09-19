@@ -278,7 +278,14 @@ function session(o) {
 
     // ---- no NaN, and bounded arrays (GDD 17 item 12) ------------------------
     if (state.enemies.length > C.ENEMY_CAP) fail("bounds", `${state.enemies.length} entities`);
-    if (state.shots.length > C.SHOT_MAX) fail("bounds", `${state.shots.length} shots`);
+    // ⛔ REPAIRED IN PLACE, CS013 P2 (T8; GDD 17 item 4): THE CAP IN FORCE.
+    // Spread raises it to C.SPREAD_SHOT_MAX for as long as it is on, so the
+    // bound this has always asserted — "no array grows without one" — is read
+    // off state.powers rather than off C.SHOT_MAX alone. ⛔ Not relaxed: a
+    // Classic step, and every Overdrive step without Spread, still reads
+    // C.SHOT_MAX exactly.
+    const shotCap = state.powers.spread ? C.SPREAD_SHOT_MAX : C.SHOT_MAX;
+    if (state.shots.length > shotCap) fail("bounds", `${state.shots.length} shots`);
     for (const v of [state.score, state.time, state.level, state.combo.mult, state.combo.since,
                      state.combo.peak, state.jump.t, state.jump.cool,
                      state.skimmer ? state.skimmer.lane : 0]) {
@@ -687,7 +694,7 @@ H.eq(odAudio.intensity.bad, 0,
   H.eq(inv.lattice, 0, `⛔ the multiplier is on its half-step lattice on every step${first(inv, "lattice")}`);
   H.eq(inv.peak, 0, "⛔ and `peak` never falls inside a run, nor sits below the live multiplier");
   H.eq(inv.nan, 0, `⛔ no NaN anywhere on the board (GDD 17 item 12)${first(inv, "nan")}`);
-  H.eq(inv.bounds, 0, "⛔ and no array past C.ENEMY_CAP / C.SHOT_MAX");
+  H.eq(inv.bounds, 0, "⛔ and no array past C.ENEMY_CAP / the shot cap in force (CS013 P2: C.SPREAD_SHOT_MAX while Spread is on)");
   H.eq(inv.airDeath, 0, `⛔ NO CONTACT DEATH WHILE AIRBORNE (GDD 14.2, R3)${first(inv, "airDeath")}`);
   H.eq(inv.airShot, 0, "⛔ and no shot leaves the rim airborne");
   H.eq(inv.cooldown, 0, `⛔ every takeoff respects C.JUMP_COOLDOWN, counted from landing (O6)${first(inv, "cooldown")}`);

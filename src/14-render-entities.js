@@ -38,12 +38,19 @@ function shotAlpha(depth) {
 // A short streak from the shot's leading edge (toward the throat) back to its
 // trailing edge (toward the rim), C.SHOT_LEN deep. The trailing edge is capped
 // at depth 1 — a shot fired this instant must not draw a tail past the rim.
-function drawShot(ctx, well, lane, depth) {
+//
+// ⛔ `pierce` IS A COLOUR AND NOTHING ELSE (GDD 14.1; CS013 T7, T10): a Lance
+// shot is the streak the player already knows, struck in the token gold, so
+// "my shots go through" is legible on the shots themselves and costs the HUD
+// nothing (T10). Draw-time only — the shot's own field (06-shots.js) decides
+// what a hit does, and this only decides what it looks like. ⛔ Optional, and
+// omitted it is the shipped colour, which is every caller before CS013 P2.
+function drawShot(ctx, well, lane, depth, pierce) {
   const tail = depth + C.SHOT_LEN > 1 ? 1 : depth + C.SHOT_LEN;
   screenPos(well, lane, depth, _shotHead);
   screenPos(well, lane, tail, _shotTail);
   drawPoly(ctx, [_shotHead, _shotTail], false);
-  glowStroke(ctx, C.SKIMMER_COLOR, laneLineWidth(depth), shotAlpha(depth));
+  glowStroke(ctx, pierce ? C.TOKEN_COLOR : C.SKIMMER_COLOR, laneLineWidth(depth), shotAlpha(depth));
 }
 
 // ---------------------------------------------------------------------------

@@ -540,3 +540,35 @@ about a run rather than a rule.**
   `TOKEN_GLYPHS` in `14-render-entities.js`; `C.SFX.collect` (sfx-lab candidate
   A, with B and C beside it). ⛔ `MAX_TOKENS` 2 and `TOKEN_HOVER_DEPTH` 0.80 are
   GDD 14.1's and not knobs.
+
+## CS013 P2 — Lance, Spread and the Ward: the feel of the widened volley, the pierce, and reading the shell
+
+- **Changeset / phase:** CS013 P2 (Lance, Spread and Ward — the three lasting
+  effects).
+- **Would have done:** three sittings, all Overdrive. (1) Collected a Spread at
+  START DEPTH 7 and played the rest of the well, asking whether three lanes at
+  the same 15 shots/s reads as *more power* or as *less aim* — and, at an open
+  well's wall, whether the two-shot volley feels like a gap or goes unnoticed.
+  (2) Collected a Lance and hunted a stacked lane and a thorned lane, asking
+  whether "a kill does not consume the shot" is legible from the gold streak
+  alone, and whether a 3× chip reads as three chips (three `chip` sounds would
+  say so; it ships as one) or as a bigger bite. (3) Took a Ward, then walked
+  into a Vaulter, a riding Drifter, a Surger's discharge and a bolt in turn, and
+  said out loud each time whether he had just died — the shell, the blink and
+  `wardBreak` against the `death` he did not hear.
+- **What we were trying to learn:** ⛔ **The Ward is the one effect whose
+  failure mode is a player who cannot tell a save from a death.** The shell is
+  the craft's own outline scaled by `WARD_SHELL_SCALE` 1.45 in the token gold, at
+  alpha 0.85; whether that separates from the craft's own stroke at speed, in the
+  dim band (GDD 3.7) and over a lit rim, is a colour-and-weight judgment no test
+  makes. ⚠ **And whether `wardBreak` is heard as relief rather than as a loss**:
+  its recipe is sfx-lab candidate A and Paul has not picked. Spread's cap of 24
+  is MEASURED to hold the facing lane's rate (plan §1.6, `test-cs013-p2.js`), but
+  ⚠ **whether 24 streaks on screen breaks GDD 1.1 P2's legibility is exactly
+  what a person sees and a rate does not** — and the per-frame allocation that
+  comes with them is CS017's to measure (plan F4, K14).
+- **Knobs:** `C.SPREAD_SHOT_MAX` (24 = 3 × `SHOT_MAX`) and the volley's lane
+  set; `C.LANCE_CHIP_MULT` (3); `C.WARD_SHELL_SCALE` (1.45) and
+  `C.WARD_SHELL_ALPHA` (0.85); `C.SFX.wardBreak` (sfx-lab candidate A, with two
+  alternates beside it); `C.TOKEN_COLOR`, shared with the tokens themselves.
+  ⛔ "One free hit" and "lanes −1, 0, +1" are GDD 14.1's and not knobs.

@@ -31,10 +31,11 @@ const trimEnd = s => s.replace(/\s+$/, "");
 // plan §7's event list (A8: the core set, no spawn cues), and A9's voices.
 // ⛔ CS012 P4 appended `comboLost` in place (GDD 14.4's "loss has its own
 // sound"; O8): the list is the build's own event set, not CS009's alone.
-// CS013 P1 appended `collect` in place (GDD 14.1's tokens; CS013 T11).
+// CS013 P1 appended `collect` in place (GDD 14.1's tokens; CS013 T11), and
+// CS013 P2 `wardBreak` (GDD 14.1's Ward; T9).
 const EVENTS = ["fire", "kill", "split", "chip", "bolt", "cross", "surgeCharge", "surgeDischarge",
   "death", "gameOver", "respawn", "purge", "purgeWeak", "extraLife", "lifeLost", "wellClear",
-  "dive", "diveStrike", "menuMove", "menuConfirm", "menuBack", "comboLost", "collect"];
+  "dive", "diveStrike", "menuMove", "menuConfirm", "menuBack", "comboLost", "collect", "wardBreak"];
 const VOICES = ["vaulter", "carrier", "weaver", "weaverBolt", "thorn", "drifter", "surger", "reaver"];   // CS012 P2: + reaver, in place
 
 function sliceModules(src) {
@@ -109,7 +110,7 @@ H.assert(/createSfxPlayer\(AudioSys, \{\s*noise: mulberry32\(C\.AUDIO_NOISE_SEED
     "⛔ the player reads no config, names no game instance, and draws no platform noise");
 }
 
-H.eq(JSON.stringify(Object.keys(C.SFX)), JSON.stringify(EVENTS), "⛔ C.SFX holds exactly the event list above, in its order (plan §7's, + CS012 P4's comboLost, + CS013 P1's collect)");
+H.eq(JSON.stringify(Object.keys(C.SFX)), JSON.stringify(EVENTS), "⛔ C.SFX holds exactly the event list above, in its order (plan §7's, + CS012 P4's comboLost, + CS013 P1's collect, + P2's wardBreak)");
 for (const name of EVENTS) {
   let err = null;
   try { sfxCheckRecipe(C.SFX[name]); } catch (e) { err = e.message; }

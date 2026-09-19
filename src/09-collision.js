@@ -44,6 +44,13 @@
 // the scope O4 ruled out. ⛔ Both are exactly 1 / a no-op in Classic, so a
 // Classic run is bit-identical to the build before this phase.
 //
+// ⛔ AND SINCE CS013 P2, TWO OF OVERDRIVE'S THREE LASTING TOKENS ARE READ IN
+// THIS FILE (GDD 14.1; T7, T9; 10-powerups.js). LANCE is one term on the line
+// that retires a shot — a kill does not consume a pierced one — and THE WARD is
+// one early return in killSkimmer(), below its invulnerability guard and above
+// everything a death does. ⛔ Neither adds a branch to the pass itself, and
+// both are plain reads of a flag that is only ever written in Overdrive.
+//
 // ⛔ AND SINCE CS013 P1, OVERDRIVE'S TOKEN DROP, AT THOSE SAME EDGES AND NOWHERE
 // ELSE (GDD 14.1; T2; 10-powerups.js). `dropToken(state, e)` follows
 // comboKill() on each of the four lines: EVERY kill at a kill site rolls, and
@@ -117,9 +124,20 @@ function collideShots(state, well) {
       if (!laneHit(well, shot.lane, e.lane)) continue;
 
       // Consumed retires the shot; the caller's filter frees its slot against
-      // C.SHOT_MAX the same step, which is what makes camping a thorned lane
+      // the cap the same step, which is what makes camping a thorned lane
       // chip rapidly (GDD 4.2, ⚠ SETTLED — emergent, not a bug to smooth out).
-      if (e.onShot(shot)) shot.dead = true;
+      //
+      // ⛔ AND SINCE CS013 P2, LANCE IS THE ONE EXCEPTION, AS ONE TERM (GDD
+      // 14.1; T7): a KILL does not consume a pierced shot. `pierce` is the
+      // shot's own field, captured at fire time (06-shots.js), and `e.dead` is
+      // read after onShot() — so a CHIP, a REFUSAL (the Weaver's bolt, a riding
+      // Drifter's armour) and a decline consume or fly on exactly as the enemy
+      // decided, with or without Lance. ⛔ THE `break` BELOW STAYS
+      // UNCONDITIONAL: a pierced shot still resolves against at most one enemy
+      // per step and meets the next on a LATER step, at a depth it has actually
+      // travelled to. Letting it walk the rest of the array would make one
+      // trigger pull clear a stacked lane, which is the economy above inverted.
+      if (e.onShot(shot) && !(shot.pierce && e.dead)) shot.dead = true;
       // ⛔ THE KILL, read off `e.dead` rather than off the return value:
       // onShot() answers "was the shot consumed", which is a different question
       // from "did the enemy die" — a Thorn chips and lives, and a Carrier that
@@ -287,6 +305,34 @@ function killSkimmer(state) {
   // dying, not playing. state.invulnTime counts UP and is armed to zero by the
   // respawn (02-state.js), so "expired" is the at-or-past-threshold case.
   if (state.invulnTime < C.RESPAWN_INVULN) return;
+
+  // ⛔ THE WARD ABSORBS IT, AND THAT IS NOT A DEATH (GDD 14.1, 4.4, 4.5; CS013
+  // T9; 10-powerups.js). BELOW the guard, deliberately and for the same reason
+  // `diedThisWell`, `deaths` and the combo are: a hit the guard declined was
+  // never a hit, and spending the shell on one would cost the player a free hit
+  // they never used. Above everything else, because nothing below this line
+  // happened — ⛔ no life, no `diedThisWell`, no `tally.deaths`, no combo loss,
+  // no freeze and no stop. GDD 14.1's "one free hit".
+  //
+  // What it DOES buy is the respawn's window and its blink, and nothing else
+  // (T9): state.invulnTime counts UP and is armed to zero here exactly as
+  // respawnSkimmer() arms it, so the player has C.RESPAWN_INVULN to leave.
+  // ⛔ NO RIM PUSH — nobody died, and the enemy that touched is still there;
+  // C.SURGE_DISCHARGE < C.RESPAWN_INVULN already covers a discharge running
+  // through the window.
+  //
+  // ⛔ ONE AT A TIME (T5): the flag is a boolean, so a second Ward collected
+  // while shelled is collected, sounds, and changes nothing.
+  // ⛔ Unconditional, like comboDeath() below — state.powers is never written
+  // outside Overdrive, so this is one boolean read in Classic and no branch.
+  // ⛔ A DIVE NEVER REACHES IT: startDive() calls resetTokens(), so no Ward
+  // survives the clear and the Thorn strike (GDD 4.5 item 5) cannot be absorbed.
+  if (state.powers.ward) {
+    state.powers.ward = false;
+    state.invulnTime = 0;
+    sfx("wardBreak");
+    return;
+  }
 
   sk.dead = true;
   state.lives -= 1;

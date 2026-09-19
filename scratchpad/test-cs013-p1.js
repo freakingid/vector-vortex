@@ -227,11 +227,19 @@ H.eq(J([S.tokens.length, S.powers]), J([0, { lance: false, spread: false, ward: 
   loaded();
   S.invulnTime = C.RESPAWN_INVULN;
   const lives = S.lives;
+  // ⛔ REPAIRED IN PLACE, CS013 P2 (T9): THE WARD NOW ABSORBS THE FIRST HIT, so
+  // reaching a death takes a second one and the shell is spent by the hit it
+  // absorbed rather than by the death. T5's claim is unchanged and is what the
+  // assertion below still reads: a DEATH keeps the tokens, Lance and Spread.
+  X.killSkimmer(S);
+  H.eq(J([S.skimmer.dead, S.lives, S.powers.ward]), J([false, lives, false]),
+       "fixture: the Ward absorbed the first hit — no death, no life, and the shell spent");
+  S.invulnTime = C.RESPAWN_INVULN;           // the Ward armed the respawn window
   X.killSkimmer(S);
   H.eq(S.lives, lives - 1, "fixture: the craft died");
   G.update(DT);                              // the respawn step
   H.assert(!S.skimmer.dead, "fixture: and respawned");
-  H.eq(J([S.tokens.length, S.powers]), J([1, { lance: true, spread: true, ward: true }]), "⛔ a death keeps the tokens and every power");
+  H.eq(J([S.tokens.length, S.powers]), J([1, { lance: true, spread: true, ward: false }]), "⛔ a death keeps the tokens, Lance and Spread (T5)");
 }
 {
   loaded();

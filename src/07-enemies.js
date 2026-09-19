@@ -887,26 +887,52 @@ class Thorn extends Enemy {
     drawThorn(ctx, well, this.lane, this.depth);
   }
 
-  // ⛔ CHIP, THEN CONSUME. The shot stopped at the tip — that is what the
-  // collision pass's one-line depth test means on an entity whose depth is its
-  // tip — so it does not fly on to whatever is sheltering behind the Thorn.
+  // ⛔ ONE CHIP OF LENGTH, AND ITS 5 POINTS (GDD 7, CS008 P2). A chip is what a
+  // hit DOES to a Thorn, and the enemy decides that — so the points are paid
+  // through addScore() from here, on every chip, the killing one included, and
+  // points() below is 0 so the kill site pays nothing on top. ⛔ NOT MULTIPLIED
+  // (GDD 7, 14.4; CS012 O4): only kill points take the combo, and this is the
+  // one line test-cs012-p4.js mutates to prove it.
   //
   // ⛔ Clamped at zero on the way out. depth < 0 is no more legal than depth > 1
   // (GDD 3.2), the entity is dead either way, and leaving a negative length in
   // the array for the rest of the step is a number no other system can produce.
-  //
-  // ⛔ AND IT SCORES PER CHIP, FROM HERE (GDD 7, CS008 P2). A chip is what a hit
-  // DOES to a Thorn, and the enemy decides that — so the 5 points are paid
-  // through addScore() on every chip, the killing one included, and points()
-  // below is 0 so the kill site pays nothing on top.
-  onShot(shot) {
+  chip() {
     addScore(C.PTS_THORN);
-    sfx("chip");
     this.depth -= C.THORN_CHIP;
     if (this.depth <= 0) {
       this.depth = 0;
       this.dead = true;
     }
+  }
+
+  // ⛔ CHIP, THEN CONSUME. The shot stopped at the tip — that is what the
+  // collision pass's one-line depth test means on an entity whose depth is its
+  // tip — so it does not fly on to whatever is sheltering behind the Thorn.
+  //
+  // ⛔ AND IT IS THE FIRST onShot IN THE BUILD THAT READS ITS ARGUMENT (GDD
+  // 6.5, 14.1; CS013 T7). Lance is GDD 14.1's "chips Thorns at 3×", and the
+  // multiplier is read off the SHOT — `pierce`, captured when it left the rim
+  // (06-shots.js) — so a Lance that ended with the well cannot reach back into
+  // a shot already in flight.
+  //
+  //   ⛔ `null` IS A LEGAL ARGUMENT and means one chip. GDD 4.5's rim sweep
+  //      calls onShot(null), and this is the reason that call is safe now that
+  //      an onShot reads what it is handed. A Thorn's killDepth is null, so it
+  //      never reaches the sweep at all (test-cs013-p2.js asserts that rather
+  //      than assuming it) — but the guard is what makes the claim local.
+  //   ⛔ PER CHIP OF LENGTH, CLAMPED BY WHAT IS LEFT. Three chips take three
+  //      times C.THORN_CHIP and pay three calls of 5; a Thorn with one chip of
+  //      length left pays once and dies, because chip() sets `dead` and the
+  //      loop stops. "5 per chip" stays literally true either way, which is
+  //      what keeps both closed chip decoders (test-cs008-p2.js,
+  //      test-cs012-p4.js) reading the board correctly with no edit.
+  //   ⛔ ONE `chip` SOUND PER HIT, not per chip of length: the hit is the
+  //      event, and three stacked voices on one step is not what Lance does.
+  onShot(shot) {
+    const chips = shot && shot.pierce ? C.LANCE_CHIP_MULT : 1;
+    sfx("chip");
+    for (let i = 0; i < chips && !this.dead; i++) this.chip();
     return true;
   }
 

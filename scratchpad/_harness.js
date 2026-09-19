@@ -225,10 +225,16 @@ function buildGame(opts = {}) {
     "newState", "createInput", "INPUT_KEYS_DEFAULT", "Game",
     // the Skimmer (05-skimmer.js, CS002 P2)
     "Skimmer", "SKIMMER_POLY", "skimmerPoints",
+    // the Ward's shell — the craft's own outline, scaled, draw-time only
+    // (05-skimmer.js, CS013 P2, T9)
+    "WARD_POLY", "wardPoints", "craftPoints",
     // the Jump — a PHASE on state.jump, never a craft depth (05-skimmer.js, CS012 P5)
     "updateJump", "resetJump", "jumpAirborne", "jumpCanFire", "jumpLift",
     // shots (06-shots.js, 14-render-entities.js, CS002 P3)
     "Shot", "updateShots", "drawShot",
+    // Spread's volley — the facing lane and its two neighbours, deduplicated
+    // at an open well's wall (06-shots.js, CS013 P2, T8)
+    "fireLanes",
     // the RNG, the entity contract and the Vaulter (01/07/14, CS003 P1)
     "mulberry32", "rngInt", "rngPick", "invPerspective",
     "Enemy", "Vaulter", "entityPoints", "VAULTER_POLY", "drawVaulter",

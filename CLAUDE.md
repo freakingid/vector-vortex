@@ -413,6 +413,26 @@ is) and the budgeted-effect constants (`BOUNTY_POINTS`, `LANCE_CHIP_MULT`,
 (tokens emptied, `state.powers` off); a death keeps both. ⛔ A Bounty is
 `addScore()`, unmultiplied, and builds nothing.
 
+⛔ **LANCE IS ONE TERM ON THE LINE THAT RETIRES A SHOT, AND THE `break` STAYS
+UNCONDITIONAL** (CS013 P2, T7): `if (e.onShot(shot) && !(shot.pierce && e.dead))`
+— **a KILL does not consume the shot**, and nothing else changes, because a
+chip, a refusal and a decline are not kills. ⛔ `pierce` is the SHOT's field,
+copied at fire time from `state.powers.lance`, so a lapsed Lance cannot reach a
+shot in flight. ⛔ **`Thorn.onShot()` is the ONE `onShot` that reads its
+argument** — `null` (the rim sweep) means one chip — and it pays `PTS_THORN`
+**per chip of LENGTH**, clamped by what is left, so `    addScore(C.PTS_THORN);`
+stays in the build exactly once (`test-cs012-p4.js`) and both closed chip
+decoders read a 3× chip unedited. ⛔ **The shot cap is the CAP IN FORCE**:
+`C.SHOT_MAX`, or `C.SPREAD_SHOT_MAX` while Spread is on (GDD §17 item 4).
+
+⛔ **THE WARD IS ONE EARLY RETURN IN `killSkimmer()`, BELOW THE INVULNERABILITY
+GUARD AND ABOVE EVERYTHING A DEATH DOES** (CS013 P2, T9), and the ONE
+`sfx("wardBreak")` seat. ⛔ **It is not a death**: no life, no `diedThisWell`,
+no `tally.deaths`, no combo loss, no freeze, no stop. It clears the flag and
+sets `state.invulnTime = 0` — the respawn's window and its blink, ⛔ **with no
+rim push**. ⛔ A Dive is safe because `startDive()` spends every power, never
+because this function knows what a dive is.
+
 ### Audio
 
 ⛔ **`MusicSys` lives alongside `AudioSys`, never inside it.** `AudioSys` is a

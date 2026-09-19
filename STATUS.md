@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.9 · Changeset: CS013 (P1 of 5 done) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5 · Tokens: drop + 2/5 effects
+Version: 0.0.9 · Changeset: CS013 (P2 of 5 done) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5 · Tokens: 5/5 effects
 
 ## Phase ledger — CS013
 
@@ -9,44 +9,41 @@ CS012's ledger and review notes: `log/CS012.md`.
 
 | Phase | Commit | One line |
 |---|---|---|
-| P1 | this commit | Tokens: `state.tokens` / `state.powers`; `10-powerups.js` (`dropToken()` the ONE way in, one draw per Overdrive kill, a no-op in Classic; `updateTokens()`; Bounty, Recharge; lasting flags); both tables in `C`; `drawToken()`; `C.SFX.collect`. `test-cs013-p1.js` (140). Four closed files in place, one edit unpredicted. 2 of 2 red |
+| P2 | this commit | Lance, Spread, Ward (T7–T9): `Shot.pierce` at fire time + `fireLanes()` + the cap in force (`06-shots.js`); one term on the shot-retiring line and the Ward's early return below `killSkimmer()`'s guard (`09-collision.js`); `Thorn.chip()` × `LANCE_CHIP_MULT`, paid per chip of length; the gold streak and `WARD_POLY`/`craftPoints()`'s shell; `C.SFX.wardBreak`. `test-cs013-p2.js` (167). ⚠ TWO unpredicted closed edits, both findings below. 3 of 3 red |
+| P1 | `18b812a` | Tokens: `state.tokens` / `state.powers`; `10-powerups.js` (`dropToken()` the ONE way in, one draw per Overdrive kill, a no-op in Classic; `updateTokens()`; Bounty, Recharge; lasting flags); both tables in `C`; `drawToken()`; `C.SFX.collect`. `test-cs013-p1.js` (140). Four closed files in place, one edit unpredicted. 2 of 2 red |
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
-  **673.2 KB**); the manifest is checked both directions against `src/`, and a
+  **684.5 KB**); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **67 files, all green, zero skips** (299 s at P1:
-  ⚠ machine load — HEAD's own `test-cs008-p8.js` took 88 s that session).
-- **CS001–CS011 are closed; each has a `log/CS0##.md`.** The wells and the depth
-  model (CS001); the loop, the Skimmer, shots and four input devices (CS002); the
-  entity contract, the spawner, collision, the Purge, death and respawn (CS003);
-  the Carrier, Weaver and Thorn (CS004); the boundary lattice, the Drifter and
-  the Surger — ⛔ **the Classic roster is complete at six and GDD §6.2's variant
-  table at three** (CS005); the renumber, past-99 progression, `throatOffset` and
-  **the Dive** — ⛔ **all five of GDD §4.5's death conditions are live** (CS006);
-  the heat clock and GDD §8.1's schedule as DATA, telemetry (CS007); scoring,
-  Start Depth, one text path, the HUD and the whole front door (CS008); the audio
-  engine, `title` and `pulse`, 23 SFX seats (CS009); the intensity director, the
-  limiter, the duck and dips (CS010); the inlined kit, profiles, persistence, the
-  local top 10 and kit-leaderboard (CS011).
+- `node scratchpad/run-all.js`: **68 files, all green, zero skips** (⚠ machine
+  load moves the wall clock a lot — 299 s at P1, HEAD's own `test-cs008-p8.js`
+  taking 88 s of it).
+- **CS001–CS011 are closed; each has a `log/CS0##.md`** (wells and the depth
+  model; the loop, craft, shots and four devices; the entity contract, spawner,
+  collision, Purge and respawn; the Carrier, Weaver, Thorn, Drifter and Surger;
+  the renumber and the Dive; the heat clock, the schedule as DATA and telemetry;
+  scoring, Start Depth, the HUD and the front door; the audio engine, the
+  director and the limiter; the inlined kit, profiles and the boards).
+  ⛔ **The Classic roster is complete at six and GDD §6.2's variant table at
+  three** (CS005); ⛔ **all five of GDD §4.5's death conditions are live**
+  (CS006).
 - **CS012 closed 2026-09-17 — OVERDRIVE'S CORE.** `drive`; `C.MODE_FLAGS` and
   `modeHas()`; the Reaver in `07-enemies-overdrive.js` behind
   `C.SPAWN_SCHEDULE_OVERDRIVE`; OVERDRIVE on MODE with its own board, SCORES per
   mode and `progress` v2; the Jump (kit-audio **0.4.0**); the combo multiplier.
   `log/CS012.md`.
 - ⛔ **TEN SOAKS, AND THEY PROVE DIFFERENT THINGS ON DIFFERENT BOARDS.**
-  `test-cs003-p5.js` (Vaulter, level 2, the per-tick lane SPEED bound);
-  `-cs004-p5.js` (three kinds, level 7); `-cs005-p5.js` and `-cs006-p5.js` (full
-  board, level 23; the latter owns the Dive); `-cs007-p5.js` (the ESCALATING
-  run). ⛔ The front-door soaks: `-cs008-p8.js` (Start Depths 1 / 5 / 9, the
-  rim-arrival property); `-cs009-p6.js` (audio on vs off); `-cs010-p5.js`
-  (`dangerInputs` spied vs a constant reading); `-cs011-p6.js` (a working store
-  vs `storage: "blocked"`, then a reload); **`-cs012-p6.js` (TWO PAIRS — Classic
-  as-is vs jump-pressed-and-stubbed, and Overdrive on the recording fake vs no
-  audio API; 110,174 + 121,840 frames; Overdrive's invariants on every step; a
-  reload holding BOTH modes).** ⛔ A future changeset adds an eleventh file rather
-  than widening a closed one.
+  `-cs003-p5` (Vaulter, L2, the per-tick lane SPEED bound); `-cs004-p5` (three
+  kinds, L7); `-cs005-p5` and `-cs006-p5` (full board, L23; the latter owns the
+  Dive); `-cs007-p5` (the ESCALATING run). ⛔ The front-door soaks: `-cs008-p8`
+  (Start Depths 1/5/9, rim arrival); `-cs009-p6` (audio on vs off); `-cs010-p5`
+  (`dangerInputs` spied vs constant); `-cs011-p6` (a working store vs
+  `storage: "blocked"`, then a reload); **`-cs012-p6` (TWO PAIRS — Classic as-is
+  vs jump-pressed-and-stubbed, Overdrive on the recording fake vs no audio API;
+  110,174 + 121,840 frames; Overdrive's invariants per step; a reload holding
+  BOTH modes).** ⛔ An eleventh file, never a widened closed one.
 - ⛔ **`test-cs006-p5.js` carries the count-based form of the no-draw rule**, a
   function of the LEVEL: `spawnEnemy`'s 1 plus `pickSpawnLane`'s bounded
   `[1, C.SPAWN_LANE_TRIES]`, plus +0 at levels 1–2 and +1 from level 3.
@@ -97,11 +94,39 @@ CS012's ledger and review notes: `log/CS012.md`.
   are seed-fragile; P3's and P4's schedule rows will move them again.
 - ⛔ **ITEM 8 PRICES A BOUNTY PER STEP via a `collectToken` spy** in
   `test-cs012-p4.js` and `-p6.js`. A new unmultiplied event owes both a price.
-- ⛔ **`state.powers` IS SET AND UNREAD** until P2 (R11). **`purgeUses` has a
-  second zeroing writer** (Recharge). `C.TOKEN_COLOR` `#FFF347` is the warm
-  gold; ⛔ the Warden's blue and the Mimic's violet (W6, MI3) must not reach for
-  it or for the eight enemy colours (O16). `LANCE_CHIP_MULT` and
-  `SPREAD_SHOT_MAX` exist, unread.
+- ⛔ **`state.powers` IS NOW READ IN THREE FILES** (P2): `06-shots.js` (the cap
+  and the volley, `spread`; `pierce` stamped on each `Shot` from `lance`),
+  `09-collision.js` (one term on the shot-retiring line; the Ward's early
+  return in `killSkimmer()`) and `23-main.js`'s draw (`ward` → the shell).
+  **`purgeUses` has a second zeroing writer** (Recharge). `C.TOKEN_COLOR`
+  `#FFF347` is the warm gold and is now ALSO a pierced shot's streak and the
+  Ward's shell; ⛔ the Warden's blue and the Mimic's violet (W6, MI3) must not
+  reach for it or for the eight enemy colours (O16).
+- ⛔ **THE SHOT CAP IS THE CAP IN FORCE, NOT `C.SHOT_MAX`** (P2, T8; GDD §17
+  item 4 reworded). `C.SPREAD_SHOT_MAX` 24 while Spread is on, and 24 IS
+  reached: MEASURED 24 in flight, 15.0 /s per lane on three lanes.
+  ⛔ **A test that bounds `state.shots` reads the cap off `state.powers`** —
+  `test-cs012-p6.js`'s soak was repaired for exactly this, and
+  `test-cs002-p3.js`'s Classic claim is unmoved.
+- ⛔ **`killSkimmer()` HAS A SECOND EARLY RETURN, AND EVERY DEATH PATH MEETS IT**
+  (P2, T9). Below the invulnerability guard, above everything a death does:
+  ⛔ **a P3 or P4 death condition inherits the Ward automatically**, and a
+  staged death in an Overdrive fixture must clear `state.powers.ward` or set up
+  two hits. ⛔ The Dive is safe only because `startDive()` spends every power —
+  a forced-on shell absorbs a Thorn strike (asserted both ways in
+  `test-cs013-p2.js`).
+- ⛔ **`Thorn.onShot()` READS ITS ARGUMENT — the build's first** (P2, T7). ⛔ A
+  new `onShot` must decide what `null` means to it: the rim sweep passes `null`,
+  and a Thorn never reaches the sweep (`killDepth` null, asserted). ⛔ The pay
+  line moved into `Thorn.chip()` and `    addScore(C.PTS_THORN);` is STILL in
+  the build exactly once (`test-cs012-p4.js:607`).
+- ⚠ **FINDING (P2, MEASURED) — TWO CLOSED-FILE EDITS PLAN §11 DID NOT PREDICT,
+  both "a claim written before the effect existed", restored in place.**
+  (1) `test-cs013-p1.js`'s "a death keeps every power": the Ward is spent by the
+  hit it ABSORBS, so the fixture needed a second hit and the assertion now reads
+  T5's own wording (tokens, Lance and Spread). ⚠ **T5 and T9 interact**, and
+  plan §11's P2 row says "none". (2) `test-cs012-p6.js`'s "no array past
+  `C.SHOT_MAX`" — the cap in force, above.
 - ⛔ **`hudLayout()` HAS TWO OVERDRIVE RECTANGLES, BOTH TIGHT, AND TOKENS ADDED
   NONE** (T10). The Classic four and the jump box are bit-identical with or
   without the combo (`test-cs012-p4.js`, `-p5.js`). ⛔ The centre-top band is
@@ -156,25 +181,20 @@ CS012's ledger and review notes: `log/CS012.md`.
   limit (`test-cs006-p3.js` has the mechanism proof), and `test-cs007-p5.js`'s
   well-stall gate does not catch a reverted `threatCount()` — the blocked-beat
   assertion beside it does.
-- ⚠ **Unowned, and none is reachable by the suite's drivers:** a second Purge
-  prefers a Weaver bolt above 0.95 over a parked enemy and pays 0 (PREDICTED); a
-  run STARTING past level 99 would get the modulo well and no band roll
-  (unreachable while `C.START_DEPTH_CAP` is 81); no played board reaches
-  `C.LIVES_MAX` (`test-cs008-p2.js`'s staged rows are the cap's proof); a rim
-  Vaulter hunts the Skimmer's CONTINUOUS lane, so a player parked between two
-  centres has it hopping back and forth. **GDD §12's four-second promise is
-  CS016's.**
+- ⚠ **Unowned, none reachable by the suite's drivers:** a second Purge prefers a
+  bolt above 0.95 and pays 0 (PREDICTED); a run STARTING past 99 gets the modulo
+  well and no band roll (unreachable at `START_DEPTH_CAP` 81); no played board
+  reaches `C.LIVES_MAX` (`test-cs008-p2.js`'s staged rows are the proof); a rim
+  Vaulter hunts the CONTINUOUS lane, so a player parked between centres has it
+  hopping back and forth. **GDD §12's four-second promise is CS016's.**
 - ⛔ **A chosen level is reached from START DEPTH**, never `w`; a console unlock
   is `levelRecord("classic").noteCleared(81)`.
 
 ### The Jump and the combo (CS012 P4, P5)
 
-- ⛔ **AIRBORNE IS A PHASE, NOT A DEPTH.** `state.jump` `{ phase, t, cool,
-  latched }`; `collideSkimmer()` SKIPS ITS WHOLE PASS while `phase` is `"air"`,
-  which takes the rim sweep with it. ⛔ **There is still no Skimmer `depth` and
-  exactly ONE two-depth comparison in the build** (the dive strike). Six shipped
-  comments and two GDD sections predicted otherwise; all were corrected. ⛔ Do
-  not re-open it.
+- ⛔ **Airborne is a phase and the multiplier lives at the kill lines — both
+  rules are `CLAUDE.md`'s and are not repeated here.** The bag is `state.jump`
+  `{ phase, t, cool, latched }`.
 - ⛔ **THE LANDING STEP IS NOT AN AIRBORNE STEP** (CS012 P6, MEASURED).
   `updateJump()` runs at the TOP of `update()`, above `updateShots()` and the
   collision pass, so a step that BEGINS airborne can end in `recover` — which is
@@ -185,24 +205,22 @@ CS012's ledger and review notes: `log/CS012.md`.
   `JUMP_RECOVERY` is its first beat rather than a fourth timer. ⛔ **`resetJump()`
   HAS THREE CALLERS** — `enterWell()`, `respawnSkimmer()` and `startDive()` — and
   it does NOT clear `latched`; `killSkimmer()` forces `latched` true.
-- ⛔ **SIGNATURES MOVED:** `skimmerPoints(well, lane, squash, lift)` (a fourth,
-  optional argument; three-argument callers are bit-identical) and
-  `Skimmer.draw(ctx, well, lift)`. The HUD view carries `jump`, `null` in Classic.
+- ⛔ **FOUR SIGNATURES MOVED, EVERY ADDED ARGUMENT OPTIONAL** (older callers
+  bit-identical): `skimmerPoints(well, lane, squash, lift)`, `Skimmer.draw(ctx,
+  well, lift, ward)` (CS013 P2) and `drawShot(ctx, well, lane, depth, pierce)`
+  (P2). The HUD view carries `jump`, `null` in Classic. ⛔ `skimmerPoints()`'s
+  body is now `craftPoints(well, poly, pts, …)`, shared with `wardPoints()` —
+  **ONE copy of the lift math**; a third silhouette passes a poly and a scratch,
+  never a second projector.
 - ⛔ **`test-cs012-p5.js` PINS TWO TEXTS BY `mutate`, each exactly once in the
   build:** `  if (jumpAirborne(state)) return;` (with its newline) and
   `state.input.fire && jumpCanFire(state) &&`. It also `mutate`s
   `  JUMP_LIFT:            0.12,` to prove the lift is draw-only. ⚠ It RUNS
   `test-cs009-p5.js` in a child process, so a change that reddens that file
   reddens this one too, with a less useful message.
-- ⛔ **THE MULTIPLIER IS APPLIED AT THE FOUR KILL LINES, NEVER IN `addScore()`**
-  (O4, R6). ⛔ Chips, the three clear bonuses and the Start Depth bonus are not
-  multiplied and build nothing; the Dive's termination kill still pays nothing.
-- ⛔ **All five combo functions are no-ops (or exactly 1) outside
-  `modeHas("combo")`**, and `comboDrop()` is the ONE fall and the ONE
-  `sfx("comboLost")` seat. ⛔ **A lapse does NOT empty the kill count** — O3
-  empties it on a death alone. ⛔ `since` WRAPS at `C.COMBO_WINDOW`.
-  ⛔ **`peak` is 0 until the run's first kill**, so "never below the live
-  multiplier" starts there and not at `newState()`.
+- ⛔ **A lapse does NOT empty the kill count** — O3 empties it on a death alone.
+  ⛔ `since` WRAPS at `C.COMBO_WINDOW`. ⛔ **`peak` is 0 until the run's first
+  kill**, so "never below the live multiplier" starts there, not at `newState()`.
 - ⛔ **SIX MUTATION STRINGS TAKE THE COMBO OUT** (`COMBO_OUT`,
   `test-cs012-p4.js`), one per kill line plus `comboDeath()` and `updateCombo()`.
   The three kill lines are textually identical, so each string carries the line
@@ -230,10 +248,9 @@ CS012's ledger and review notes: `log/CS012.md`.
   (`drive`'s kick ×2: 0.3505 → 0.3564); red needs an input of 152.8. The gate
   guards the limiter's premise, the curve and the buses, and goes red without the
   limiter. ⛔ **Whether it should also bound the limiter's INPUT is Paul's call.**
-- ⛔ **`drive` IS UNTIERED, UNMARKED AND UNHEARD** (O13): its gains are the
-  composer's and no mix was rendered. ⛔ **Paul's lab port (a later commit)
-  rewrites `test-cs012-p1.js`'s "no tier" and "no audition mark" assertions in
-  place**; music-lab's slowest step for it is 76 BPM. ⚠ sfx-lab plays only
+- ⛔ **`drive` IS UNTIERED, UNMARKED AND UNHEARD** (O13). ⛔ **Paul's lab port
+  rewrites `test-cs012-p1.js`'s "no tier" / "no audition mark" in place**;
+  music-lab's slowest step for it is 76 BPM. ⚠ sfx-lab plays only
   `pulse` in context, so the Surger tone over `drive` has no lab audition.
   ⛔ One `beat: true` layer per track: `pulse`'s `heart`, `drive`'s `kick`.
 - ⚠ **Classic's intensity peaks at 0.668, Overdrive's at 0.6448** (CS012 P6, over
@@ -242,11 +259,10 @@ CS012's ledger and review notes: `log/CS012.md`.
 - ⚠ **Unowned:** the Surger tone's 1.106 sample peak at unity, the empty VOICE
   bus (A3), and R2's pad-only silence (kit-input's `onGesture` fires on
   `keydown`, `mousedown` and `touchend` only).
-- ⛔ **CS009 TRAPS IN AUDIO CODE.** (1) Never write the vocabulary scan's banned
-  word, even in a comment: `test-cs008-p6.js` scans the whole built file, and it
-  also bans "atari" (write "the original's"). (2) Never write `.key` after an
-  identifier ending in `e` (`tone.key`). (3) Never start a comment line with
-  `// 21-telemetry.js` or `// 22-meta.js`. (4) No platform RNG.
+- ⛔ **CS009 TRAPS IN AUDIO CODE.** (1) The vocabulary scan reads the whole built
+  file, comments included, and also bans "atari" (write "the original's").
+  (2) Never `.key` after an identifier ending in `e`. (3) Never start a comment
+  line with `// 21-telemetry.js` or `// 22-meta.js`. (4) No platform RNG.
 - ⛔ **Never write the text `audioFrame()` inside `frame()`**, comments included
   (`test-cs009-p3.js` counts it there), and ⛔ `audioFrame()`'s body may not
   contain the text "draw".
@@ -272,10 +288,10 @@ CS012's ledger and review notes: `log/CS012.md`.
 
 ### Meta, menus and the front door
 
-- ⛔ **`22-meta.js` IS THE ONLY ROUTE TO STORAGE**, and kit-storage THROWS on an
-  undeclared key. ⛔ **Profile `p0`'s scope is the ROOT store.**
-  ⛔ **`Profiles.remove()`'s `OWN_KEYS` is the declared per-profile list**; CS015
-  adds `achievements` there and to `Store`. Never `scores` or `profiles`.
+- ⛔ **`22-meta.js` IS THE ONLY ROUTE TO STORAGE** (kit-storage THROWS on an
+  undeclared key), ⛔ **`p0`'s scope is the ROOT store**, and ⛔ **`OWN_KEYS` is
+  the declared per-profile list** — CS015 adds `achievements` there and to
+  `Store`; never `scores` or `profiles`.
 - ⛔ **THE BOOT BLOCK RUNS INSIDE THE HARNESS** (`Meta.boot()` writes `profiles`
   in every build). ⛔ **kit-leaderboard cannot be inlined**: `test-cs009-p1.js:508`
   bans its `setTimeout` and `test-cs002-p1.js` its `addEventListener`.
@@ -285,13 +301,12 @@ CS012's ledger and review notes: `log/CS012.md`.
   ⛔ **Meta writes no `state`.**
 - ⛔ **`Leaderboard` HOLDS ONE KIT CLIENT PER MODE**, over
   `C.LEADERBOARD_GAME_IDS`, both made by the first call that finds the module,
-  Classic first (C's key order); a throwing `create()` is not retried, per client.
-  `queueLength()` **sums both** and ONE stale token covers both. ⛔ **`C.GAME_ID`
-  is the SAVE keyspace, never a board id** — CS012 P6 repaired seven closed
-  assertions that read a board off it.
-- ⛔ **It is the ONE reader of `window.KitLeaderboard` and is LAZY on every call.**
-  A test that wants a board sets a fake on `X._env.win`, and ⛔ **a fake serving
-  both clients must count its queues and submits PER `gameId`.**
+  Classic first; a throwing `create()` is not retried, per client. `queueLength()`
+  **sums both** and ONE stale token covers both. ⛔ **`C.GAME_ID` is the SAVE
+  keyspace, never a board id** (CS012 P6 repaired seven closed assertions on it).
+  ⛔ **It is the ONE reader of `window.KitLeaderboard`, LAZY on every call**: a
+  test sets a fake on `X._env.win`, and ⛔ **a fake serving both clients counts
+  its queues and submits PER `gameId`.**
 - ⚠ **TWO TESTS READ coinless-kit's `registry.js`**, from `../coinless-kit`, and
   each SKIPS LOUDLY without it: `test-cs011-p5.js` at `git show f0b0eb2:` and
   `test-cs012-p3.js` at `e2efed5` (⛔ never `f8d34f3`). ⛔ **A closing phase
@@ -318,11 +333,10 @@ CS012's ledger and review notes: `log/CS012.md`.
   `for (const key of OWN_KEYS) scope.remove(key);`; `Profiles.remove`'s kit-first
   body, whitespace included; `const answer = b => { if (t === token) done(b); };`;
   and `currentRunId = mintRunId();` in `lib/kit-leaderboard/`.
-- ⛔ **The title has four rows (PLAY, OPTIONS, SCORES, PROFILE)**; game over has
-  three lines; ⛔ **OPTIONS HAS TEN ROWS AND THE WINDOW SHOWS SEVEN**, and rows
-  added go before BACK, never above TELEMETRY. ⛔ **NAME steps in place of the
-  menu model** (`stepName()`), armed and ended in `syncScreen()` only; ⚠ there
-  the keyboard's default Fire and Purge keys type (Space, Z, X). ⚠ **SETTLED —
+- ⛔ **The title has four rows**; game over three lines; ⛔ **OPTIONS HAS TEN
+  ROWS, THE WINDOW SHOWS SEVEN**, and rows added go before BACK, never above
+  TELEMETRY. ⛔ **NAME steps in place of the menu model** (`stepName()`), armed
+  and ended in `syncScreen()` only; ⚠ there Space, Z and X type. ⚠ **SETTLED —
   DELETE RUNS kit-profile's `remove(id)` BEFORE THE `remove(key)` CALLS.**
 - ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP.** ⛔ A settings save runs inside
   `update()` on a menu step, and `levelRecord(mode)` reads storage on every call
@@ -359,13 +373,12 @@ CS012's ledger and review notes: `log/CS012.md`.
   CS011's.
 - ⚠ `drawFragments`, `drawHud` and `drawMenu` read `C` for sizes and colours, so
   kit-fx and kit-menu extraction each owe an options argument. ⚠ `C.MENU_COL_W`
-  is 460 so "MOUSE SENSITIVITY" clears an adjusting detail. ⚠ The touch buttons
-  and the top-centre pause target are live but undrawn, and the combo readout
-  overlaps the pause target (O8 measured and accepted it).
+  460 clears "MOUSE SENSITIVITY" + an adjusting detail. ⚠ The touch buttons and
+  the top-centre pause target are live but undrawn, and the combo readout
+  overlaps that target (O8 measured and accepted it).
 - ⚠ **A closed test may pin the literal text of a line a later phase changes.**
-  ⛔ Pin only the argument the claim is about.
-- ⚠ `test-cs007-p4.js:479`'s comment still names `Profiles.keyFor` (a closed
-  file; not an assertion).
+  ⛔ Pin only the argument the claim is about. ⚠ `test-cs007-p4.js:479`'s comment
+  still names `Profiles.keyFor` (a closed file; not an assertion).
 
 ## Open questions (blocking)
 
@@ -393,7 +406,9 @@ CS012's ledger and review notes: `log/CS012.md`.
   `TELEMETRY_KINDS`, `telemetryRow()` and `22-meta.js`'s declared `telemetry`
   version move together.
 
-## Next up — CS013 P2
+## Next up — CS013 P3
 
-Lance, Spread and Ward (T7–T9), `wardBreak`: `IMPLEMENTATION-PHASES-CS013.md`'s
-P2 prompt. ⛔ Read "What CS013's next phases must act on" above first.
+The Warden (W1–W6): `aloft` as the ninth contract field, the climb, the hunt,
+the strike, the jump strike — a FOURTH kill site — and its row at level 11.
+`IMPLEMENTATION-PHASES-CS013.md`'s P3 prompt. ⛔ Read "What CS013's next phases
+must act on" above first.
