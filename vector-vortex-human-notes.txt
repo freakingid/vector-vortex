@@ -120,7 +120,7 @@ Done
 =====
 Changeset 13 is being built
 Phase 1
-Now it seems I need to play sfx-lab before next Phase
+Now it seems I need to play sfx-lab before next Phase. (That was just for one sound effect, collect)
 
 
 
