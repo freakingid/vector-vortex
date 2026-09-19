@@ -38,7 +38,8 @@ const J = v => JSON.stringify(v);
 // ⛔ Trap 1 — GDD §7, as written there.
 const GDD = { thornChip: 5, weaver: 50, carrier: 100, vaulter: 150, surger: 200,
               drifter: [250, 500, 750], reaver: 300, wellPerLevel: 100,
-              purgeUnspent: 500, noDeath: 1000 };
+              purgeUnspent: 500, noDeath: 1000,
+              bounty: 2000 };   // ⛔ CS013 P1: GDD §14.1's Bounty, +2,000, collected — not a kill
 
 // ⛔ IT TAKES THE BUILD. `instanceof` is per build, and this file runs several
 // (the mutants, the Classic pair): a copy closed over the outer one would match
@@ -438,7 +439,7 @@ function itemEight(Z, ticks, plays) {
   const out = { steps: 0, killCalls: 0, zeroKills: 0, bonusCalls: 0, chipCalls: 0, builds: 0, clears: 0,
                 deaths: 0, multsSeen: new Set(), byClass: {}, maxMult: 1,
                 badKill: 0, badBonus: 0, badTotal: 0, unmatched: 0, leftover: 0,
-                badBuilds: 0, diveScored: 0, unfit: 0, first: null };
+                badBuilds: 0, diveScored: 0, unfit: 0, bountyCalls: 0, first: null };
   const fail = (grp, msg) => { out[grp]++; if (!out.first) out.first = `${grp}: ${msg}`; };
 
   // trap 2 — the call log, with the multiplier live at each call.
@@ -450,6 +451,10 @@ function itemEight(Z, ticks, plays) {
     calls.push({ n, mult: st.combo.mult, kill });
   };
   Z.comboKill.before = function () { out.builds++; };
+  // ⛔ CS013 P1 (T6): a collected Bounty pays an UNMULTIPLIED 2,000 through
+  // addScore() and builds nothing. It is priced as its own event, per step.
+  let bounties = 0;
+  Z.collectToken.before = function (s, t) { if (t.kind === "bounty") bounties++; };
 
   for (const play of plays) for (const seed of play.seeds) {
     begin(Z, seed, play.level);
@@ -474,6 +479,7 @@ function itemEight(Z, ticks, plays) {
       const diveWas = st.dive.active;
       calls.length = 0;
       const builds0 = out.builds;
+      bounties = 0;
 
       ZG.update(ZDT);
       delete arr.push;
@@ -538,6 +544,8 @@ function itemEight(Z, ticks, plays) {
           if (at < 0 || Math.abs(price - Math.round(price)) > 1e-9) {
             fail("badKill", `tick ${i}: a kill paid ${c.n} at ×${c.mult} — no GDD §7 price on the board matches`);
           } else { want.splice(at, 1); }
+        } else if (c.n === GDD.bounty && bounties > 0) {
+          out.bountyCalls++; bounties--;
         } else if (c.n === GDD.thornChip && chips > 0) {
           out.chipCalls++; chips--;
         } else {
@@ -546,8 +554,8 @@ function itemEight(Z, ticks, plays) {
           else { bonuses.splice(at, 1); out.bonusCalls++; }
         }
       }
-      if (want.length || chips || bonuses.length) {
-        fail("leftover", `tick ${i}: ${want.length} kills (${want.join("/")}), ${chips} chips, ${bonuses.length} bonuses unpaid`);
+      if (want.length || chips || bonuses.length || bounties) {
+        fail("leftover", `tick ${i}: ${want.length} kills (${want.join("/")}), ${chips} chips, ${bonuses.length} bonuses, ${bounties} Bounties unpaid`);
       }
       if (st.score - s0 !== total) fail("badTotal", `tick ${i}: the delta is not the calls' sum`);
       // ⛔ EVERY KILL AT THOSE SITES BUILDS IT, AND NOTHING ELSE DOES (O4).
@@ -564,7 +572,7 @@ function itemEight(Z, ticks, plays) {
 
 {
   installSeed(SEED);
-  const Z = H.buildGame({ spy: ["addScore", "comboKill"] });
+  const Z = H.buildGame({ spy: ["addScore", "comboKill", "collectToken"] });
   const r = itemEight(Z, PLAY_TICKS, PLAYS);
   if (process.env.P4_MEASURE) console.log(J(Object.assign({}, r, { multsSeen: [...r.multsSeen] })));
   H.eq(r.bad, 0, `⛔ GDD §17 item 8 in OVERDRIVE: every step's score delta is its events at that step's ` +
@@ -578,6 +586,7 @@ function itemEight(Z, ticks, plays) {
   H.assert(r.bonusCalls > 0 && r.clears > 0, "non-vacuity: wells cleared and paid their bonuses");
   H.assert(r.deaths > 0, "non-vacuity: the player died");
   H.assert(r.killCalls > 0 && r.builds > 0, "non-vacuity: kills scored and built");
+  H.assert(r.bountyCalls > 0, `non-vacuity (CS013 P1): Bounties were collected and priced (${r.bountyCalls})`);
 }
 
 // ---- ⛔ MUTATION-CHECKED: multiplying a chip or a clear bonus is RED ---------
@@ -589,7 +598,7 @@ function mutantRed(mutate, what) {
   installSeed(SEED);
   let r = null, threw = null;
   try {
-    const Z = H.buildGame({ mutate, spy: ["addScore", "comboKill"] });
+    const Z = H.buildGame({ mutate, spy: ["addScore", "comboKill", "collectToken"] });
     r = itemEight(Z, MUT_TICKS, MUT_PLAYS);
   } catch (e) { threw = e.message; }
   H.eq(threw, null, `fixture: ${what} — the mutation string is in the build exactly once`);
@@ -599,7 +608,7 @@ function mutantRed(mutate, what) {
 // A control: the unmutated build is green over the same window.
 {
   installSeed(SEED);
-  const Z = H.buildGame({ spy: ["addScore", "comboKill"] });
+  const Z = H.buildGame({ spy: ["addScore", "comboKill", "collectToken"] });
   const r = itemEight(Z, MUT_TICKS, MUT_PLAYS);
   H.eq(r.bad, 0, `fixture: the mutation window is green unmutated${r.first ? " — " + r.first : ""}`);
   H.assert(r.maxMult > 1, "fixture: and it reaches a live multiplier");
@@ -612,11 +621,12 @@ mutantRed([["  addScore(C.PTS_WELL_PER_LEVEL * state.level);",
 mutantRed([["  if (!state.diedThisWell) addScore(C.PTS_NO_DEATH_WELL);",
             "  if (!state.diedThisWell) addScore(C.PTS_NO_DEATH_WELL * comboMult());"]],
           "multiplying the no-death bonus");
-mutantRed([["addScore(e.points() * comboMult()); comboKill(state); sfx(\"kill\", e.sfxVoice); }\n      break;",
-            "addScore(e.points()); comboKill(state); sfx(\"kill\", e.sfxVoice); }\n      break;"]],
+// ⛔ CS013 P1: the shot kill line carries dropToken() (T2), in both strings.
+mutantRed([["addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx(\"kill\", e.sfxVoice); }\n      break;",
+            "addScore(e.points()); comboKill(state); dropToken(state, e); sfx(\"kill\", e.sfxVoice); }\n      break;"]],
           "a shot kill paid without the multiplier");
-mutantRed([["addScore(e.points() * comboMult()); comboKill(state); sfx(\"kill\", e.sfxVoice); }\n      break;",
-            "addScore(e.points() * comboMult()); sfx(\"kill\", e.sfxVoice); }\n      break;"]],
+mutantRed([["addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx(\"kill\", e.sfxVoice); }\n      break;",
+            "addScore(e.points() * comboMult()); dropToken(state, e); sfx(\"kill\", e.sfxVoice); }\n      break;"]],
           "a shot kill that does not build the combo");
 
 // ---------------------------------------------------------------------------
@@ -652,15 +662,18 @@ function makeHasher(Z, extras) {
 
 // ⛔ ONE UNIQUE STRING PER SITE (trap 3). buildGame throws unless each is in the
 // build exactly once, so this list is its own uniqueness proof.
+// ⛔ CS013 P1 (T2): each kill line now carries dropToken() after comboKill(),
+// so the four kill strings carry it in BOTH `from` and `to` — only the combo
+// is mutated out; the token roll stays.
 const COMBO_OUT = [
-  ["addScore(e.points() * comboMult()); comboKill(state); sfx(\"kill\", e.sfxVoice); }\n      break;",
-   "addScore(e.points()); sfx(\"kill\", e.sfxVoice); }\n      break;"],
-  ["addScore(e.points() * comboMult()); comboKill(state); sfx(\"kill\", e.sfxVoice); continue; }",
-   "addScore(e.points()); sfx(\"kill\", e.sfxVoice); continue; }"],
-  ["if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx(\"kill\", e.sfxVoice); }",
-   "if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); sfx(\"kill\", e.sfxVoice); }"],
-  ["addScore(victim.points() * comboMult()); comboKill(state); sfx(\"kill\", victim.sfxVoice);",
-   "addScore(victim.points()); sfx(\"kill\", victim.sfxVoice);"],
+  ["addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx(\"kill\", e.sfxVoice); }\n      break;",
+   "addScore(e.points()); dropToken(state, e); sfx(\"kill\", e.sfxVoice); }\n      break;"],
+  ["addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx(\"kill\", e.sfxVoice); continue; }",
+   "addScore(e.points()); dropToken(state, e); sfx(\"kill\", e.sfxVoice); continue; }"],
+  ["if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx(\"kill\", e.sfxVoice); }",
+   "if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points()); dropToken(state, e); sfx(\"kill\", e.sfxVoice); }"],
+  ["addScore(victim.points() * comboMult()); comboKill(state); dropToken(state, victim); sfx(\"kill\", victim.sfxVoice);",
+   "addScore(victim.points()); dropToken(state, victim); sfx(\"kill\", victim.sfxVoice);"],
   ["\n  comboDeath(state);\n", "\n"],
   ["\n    updateCombo(state, dt);\n", "\n"],
 ];
@@ -1062,7 +1075,10 @@ H.eq(X.TELEMETRY_FIELDS.indexOf("maxCombo"), 20, "⛔ the column kept its place 
     installSeed(SEED);
     const Z = H.buildGame({ mutate });
     const ZG = Z.Game, st = Z.state, ZDT = Z.C.FIXED_DT;
-    begin(Z, 11, 13);
+    // ⛔ CS013 P1: the token roll (T2) moved this board, and seed 11's run ended
+    // at ×1 — the fixture below lost its precondition. Seed 17 restores a live
+    // multiplier at the end (×2.5, MEASURED), which is what the claim needs.
+    begin(Z, 17, 13);
     let draws = 0;
     const raw = st.rng;
     st.rng = function () { draws++; return raw(); };

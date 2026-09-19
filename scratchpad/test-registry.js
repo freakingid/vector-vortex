@@ -64,6 +64,10 @@ const STATE_FIELDS = {
   // are Overdrive's, both are reset by newState(), and neither is read at all
   // in Classic.
   CS012: ["jump", "combo"],
+  // ⛔ A SECOND ARRAY AND ONE BAG (CS013 P1, R2): `tokens` is Overdrive's second
+  // entity array (a token is not an enemy, T1) and `powers` the three lasting
+  // effects' flags, which CS013 P2 gives their readers. Both reset by newState().
+  CS013: ["tokens", "powers"],
 };
 
 function stateFields() {

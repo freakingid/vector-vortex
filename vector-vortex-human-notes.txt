@@ -119,7 +119,9 @@ Done
 
 =====
 Changeset 13 is being built
-Ready to start cs013 p1 next time
+Phase 1
+Now it seems I need to play sfx-lab before next Phase
+
 
 
 

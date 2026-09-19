@@ -252,6 +252,10 @@ function buildGame(opts = {}) {
     // bounded redraws directly, which is the form that outlives a golden
     "pickSpawnLane",
     "enterWell", "nextWell", "startGame",
+    // Overdrive's tokens — the one way in, the step, the pickup, the reset, the
+    // kind pick, and the draw (10-powerups.js, 14-render-entities.js, CS013 P1)
+    "dropToken", "updateTokens", "collectToken", "resetTokens", "tokenKind", "liveTokens",
+    "drawToken", "tokenGlyph", "TOKEN_GLYPHS", "TOKEN_RING_POLY", "shotAlpha",
     // collision and the Purge (09-collision.js, CS003 P3)
     "updateCollisions", "collideShots", "collideSkimmer", "killSkimmer",
     "updatePurge", "purgeTarget",

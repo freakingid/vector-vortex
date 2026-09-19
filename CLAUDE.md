@@ -394,6 +394,25 @@ it would silently take all four.
 and the ONE `sfx("comboLost")` seat**, so the sound is once per fall rather than
 once per cause. ⛔ **The combo spends no RNG draw and calls no `heat()`.**
 
+### Tokens
+
+⛔ **A TOKEN IS NOT AN ENEMY. It lives in a SECOND ARRAY, `state.tokens`, and
+`dropToken(state, e)` (`10-powerups.js`) is its ONE way in** (CS013 P1, T1;
+GDD §6.5, §14.1). No contract field, no `ENEMY_KINDS` row, and none of
+`state.enemies`' readers sees one — `state.shots` is the precedent.
+⛔ **Every kill at a kill site rolls, and each OVERDRIVE kill spends exactly ONE
+draw from the run's one stream, drop or no drop, at `MAX_TOKENS` too** (T2):
+`dropToken()` follows `comboKill()` on the four kill lines. ⛔ **It is a total
+no-op in Classic** (`modeHas("tokens")`, no draw), which is what keeps
+`P1_DETERMINISM_HASH` and every Classic soak unmoved. ⛔ The Dive's termination
+kill is not a kill site and rolls nothing.
+⛔ **GDD §14.1's two tables stay two**: `C.TOKEN_WEIGHTS` (which token a drop
+is) and the budgeted-effect constants (`BOUNTY_POINTS`, `LANCE_CHIP_MULT`,
+`SPREAD_SHOT_MAX` — what one does). Neither names the other's numbers.
+⛔ **The well owns them**: `enterWell()` and `startDive()` call `resetTokens()`
+(tokens emptied, `state.powers` off); a death keeps both. ⛔ A Bounty is
+`addScore()`, unmultiplied, and builds nothing.
+
 ### Audio
 
 ⛔ **`MusicSys` lives alongside `AudioSys`, never inside it.** `AudioSys` is a
@@ -665,7 +684,10 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
     08-spawner.js      spawnEnemy() — the ONE way in — cadence, quota, clear,
                        and GDD 8.1's introduction schedule per mode (eligibleKinds)
     09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge
-    10-powerups.js     Overdrive tokens
+    10-powerups.js     Overdrive's tokens: state.tokens' ONE way in, dropToken()
+                       (one draw per Overdrive kill; a no-op in Classic), the
+                       life on the board (updateTokens()), the pickup, and
+                       resetTokens(), which the well calls
     11-dive.js         the Dive: the beat, the Thorn strike, the loop guard
     12-scoring.js      addScore() — the ONE writer — the clear bonuses, and the
                        COMBO: state.combo, comboMult()/comboKill()/comboDeath()/

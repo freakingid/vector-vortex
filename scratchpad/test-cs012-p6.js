@@ -50,7 +50,8 @@ const MEASURE = !!process.env.P6_MEASURE;
 
 // ⛔ GDD §7's LITERALS (test-cs008-p2.js's trap 1, for its reason).
 const GDD = { thornChip: 5, weaver: 50, carrier: 100, vaulter: 150, surger: 200,
-              reaver: 300, wellPerLevel: 100, purgeUnspent: 500, noDeath: 1000 };
+              reaver: 300, wellPerLevel: 100, purgeUnspent: 500, noDeath: 1000,
+              bounty: 2000 };   // ⛔ CS013 P1: GDD §14.1's Bounty, collected — unmultiplied, not a kill
 
 // ⛔ IT TAKES THE BUILD: `instanceof` is per build and this file runs five
 // (test-cs012-p4.js's finding).
@@ -156,8 +157,9 @@ function fakeKit() {
 function session(o) {
   installSeed(SEED);                        // trap 1
   let now = 0;
-  Date.now = () => (now += 7919);
-  const opts = { store: o.store, spy: ["addScore", "comboKill", "sfx", "newState"] };
+  const tick = o.clock || 7919;
+  Date.now = () => (now += tick);
+  const opts = { store: o.store, spy: ["addScore", "comboKill", "sfx", "newState", "collectToken"] };
   if (o.stub) opts.stub = ["updateCombo", "updateJump", "comboKill", "comboDeath"];
   if (o.audio) opts.audio = true;
   const X = H.buildGame(opts);
@@ -178,7 +180,7 @@ function session(o) {
            airShot: 0, cooldown: 0, reaverMode: 0, reaverLevel: 0, reaverLane: 0,
            badKill: 0, badBonus: 0, badTotal: 0, leftover: 0, badBuilds: 0, diveScored: 0 },
     tally: { takeoffs: 0, refused: 0, airSteps: 0, comboLost: 0, dives: 0, killCalls: 0, zeroKills: 0,
-             chipCalls: 0, bonusCalls: 0, unmultipliedAtMult: 0, builds: 0,
+             chipCalls: 0, bonusCalls: 0, unmultipliedAtMult: 0, builds: 0, bountyCalls: 0,
              byClass: {}, multsSeen: new Set(), maxMult: 1, maxPeak: 0 },
     // §2
     intensity: { bad: 0, first: null, max: 0, frames: 0 },
@@ -212,7 +214,7 @@ function session(o) {
   for (let m = 1; m <= C.COMBO_MAX; m += C.COMBO_STEP) LATTICE.push(m);
   const REAVER_LEVEL = (C.SPAWN_SCHEDULE_OVERDRIVE.filter(r => r.kind === "reaver")[0] || {}).level;
   const calls = [];
-  let lastKills = 0, builds = 0, runBoundary = false;
+  let lastKills = 0, builds = 0, runBoundary = false, bounties = 0;
   let pre = null, preArr = null, pushedE = null, shots0 = 0;
   let s0 = 0, level0 = 0, diveWas = false, screen0 = "", builds0 = 0;
   let jumpPhase0 = "ground", jumpCool0 = 0, peak0 = 0, deaths0 = 0, latched0 = false;
@@ -225,6 +227,9 @@ function session(o) {
       calls.push({ n, mult: state.combo.mult, kill });
     };
     X.comboKill.before = function () { builds++; };
+    // ⛔ CS013 P1 (T6): a collected Bounty is its own unmultiplied event, counted
+    // per step so item 8 prices exactly the Bounties the step took.
+    X.collectToken.before = function (s, t) { if (t.kind === "bounty") bounties++; };
     // ⛔ startGame() AND quitToTitle() both re-mint `state` (23-main.js), so the
     // one honest boundary marker is newState() itself — `peak` may fall there
     // and nowhere else.
@@ -249,7 +254,7 @@ function session(o) {
     // state.tally.kills immediately before they score, so re-reading it here
     // survives a run boundary that resets the tally (trap 5).
     lastKills = state.tally.kills;
-    calls.length = 0; builds0 = builds; runBoundary = false;
+    calls.length = 0; builds0 = builds; runBoundary = false; bounties = 0;
   }
 
   function postStep(stepped) {
@@ -348,6 +353,9 @@ function session(o) {
         const at = want.indexOf(price);
         if (at < 0) fail("badKill", `a kill paid ${c.n} at ×${c.mult} — no GDD §7 price on the board matches`);
         else want.splice(at, 1);
+      } else if (c.n === GDD.bounty && bounties > 0) {
+        bounties--; T.bountyCalls++;
+        if (c.mult > 1) T.unmultipliedAtMult++;
       } else {
         if (allowed.indexOf(c.n) < 0) fail("badBonus", `an unmultiplied call paid ${c.n} at ×${c.mult}`);
         else if (c.n === GDD.thornChip) T.chipCalls++;
@@ -356,6 +364,7 @@ function session(o) {
       }
     }
     if (want.length) fail("leftover", `${want.length} kill(s) unpaid (${want.join("/")})`);
+    if (bounties) fail("leftover", `${bounties} collected Bount(ies) unpaid`);
     if (state.score - s0 !== total) fail("badTotal", "the step's delta is not its calls' sum");
     const built = builds - builds0, scoredKills = calls.filter(c => c.kill).length;
     if (built !== scoredKills) fail("badBuilds", `${built} builds against ${scoredKills} scored kills`);
@@ -544,8 +553,14 @@ const classicJump = session({ mode: "classic", store: new Map(), stub: true });
 // below can hold BOTH modes. Its two sessions get equal copies of that Map.
 const S_OD = S_CLASSIC;
 const S_OD_B = new Map(S_CLASSIC);
-const odAudio = session({ mode: "overdrive", store: S_OD, audio: true, instrument: true });
-const odSilent = session({ mode: "overdrive", store: S_OD_B });
+// ⛔ CS013 P1: the token roll (one draw per Overdrive kill, T2) moved the
+// Overdrive boards, and at the shared 7919 ms clock the session stopped
+// clearing past its staged 13 (the non-vacuity in §5). The precondition is
+// restored by the RUN SEEDS — each run's seed is Date.now() — never relaxed:
+// at 7927 the Overdrive pair clears to 16 (MEASURED). The Classic pair keeps 7919.
+const OD_CLOCK = 7927;
+const odAudio = session({ mode: "overdrive", store: S_OD, audio: true, instrument: true, clock: OD_CLOCK });
+const odSilent = session({ mode: "overdrive", store: S_OD_B, clock: OD_CLOCK });
 
 if (MEASURE) {
   const brief = s => ({ frames: s.frames, steps: s.steps, cases: s.cases, script: s.script,
@@ -699,6 +714,7 @@ H.eq(odAudio.intensity.bad, 0,
   H.assert(T.unmultipliedAtMult > 0,
            `non-vacuity: unmultiplied calls were made WHILE the multiplier was above ×1 (${T.unmultipliedAtMult})`);
   H.assert(T.chipCalls > 0 && T.bonusCalls > 0, `non-vacuity: Thorns chipped (${T.chipCalls}) and wells paid (${T.bonusCalls})`);
+  H.assert(T.bountyCalls > 0, `non-vacuity (CS013 P1): Bounties were collected and priced (${T.bountyCalls})`);
   H.assert(T.killCalls > 300 && T.builds > 300, `non-vacuity: kills scored (${T.killCalls}) and built (${T.builds})`);
   for (const k of ["Vaulter", "Carrier", "Weaver", "Drifter", "Surger", "Reaver"]) {
     H.assert((T.byClass[k] || 0) > 0, `non-vacuity: a ${k} was killed on the front-door Overdrive board`);

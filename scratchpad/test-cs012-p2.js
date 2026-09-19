@@ -22,6 +22,7 @@ const { installSeed } = require("./_seeded-random.js");
 const { COUNTS } = require("./test-registry.js");
 
 const SEED = 20260916;
+const SOAK_SEED = SEED + 4;                 // §8's wall soak (CS013 P1, in place)
 
 installSeed(SEED);                          // ⛔ above the first buildGame()
 const X = H.buildGame({ spy: ["drawReaver", "drawVaulter", "glowStroke", "drawPoly"] });
@@ -35,9 +36,9 @@ const VEE = X.WELLS[7];
 H.assert(RING.closed && RING.lanes === 16, "fixture: WELLS[0] is the closed 16-lane Ring");
 H.assert(!VEE.closed && VEE.lanes === 13, "fixture: WELLS[7] is the open 13-lane Vee");
 
-function board(mode, level, wellIndex) {
+function board(mode, level, wellIndex, seed) {
   G.reset();
-  X.startGame(SEED, { mode });
+  X.startGame(seed === undefined ? SEED : seed, { mode });
   state.level = level;
   state.wellIndex = wellIndex === undefined ? (level - 1) % X.WELLS.length : wellIndex;
   X.enterWell();
@@ -48,9 +49,11 @@ function board(mode, level, wellIndex) {
 // ---------------------------------------------------------------------------
 // 1. THE MODE FLAGS (R1)
 // ---------------------------------------------------------------------------
+// ⛔ CS013 P1 (R3) added `tokens` to both rows, in place: a field in the rows,
+// never a new mode key. The claim — Classic has none, Overdrive has all — holds.
 H.eq(JSON.stringify(C.MODE_FLAGS),
-     JSON.stringify({ classic: { jump: false, combo: false }, overdrive: { jump: true, combo: true } }),
-     "⛔ C.MODE_FLAGS is R1's table: Classic has neither, Overdrive has both");
+     JSON.stringify({ classic: { jump: false, combo: false, tokens: false }, overdrive: { jump: true, combo: true, tokens: true } }),
+     "⛔ C.MODE_FLAGS is R1's table: Classic has none, Overdrive has all");
 for (const name of ["jump", "combo"]) {
   H.eq(X.modeHas(name, "classic"), false, `modeHas("${name}", "classic") is false`);
   H.eq(X.modeHas(name, "overdrive"), true, `modeHas("${name}", "overdrive") is true`);
@@ -160,14 +163,19 @@ function countingRun(mode, level, bandTop, ticks) {
   let draws = 0;
   state.rng = () => { draws++; return real(); };
   const seen = new Set(state.enemies);
-  const out = { perSpawn: [], idle: 0, extra: 0, maxLevel: state.level };
+  const out = { perSpawn: [], idle: 0, extra: 0, rolls: 0, maxLevel: state.level };
   for (let i = 0; i < ticks && state.screen === "play" && state.level <= bandTop; i++) {
     if (state.level > out.maxLevel) out.maxLevel = state.level;
     state.lives = C.START_LIVES;
     replay(G.input, i);
-    const before = draws;
+    const before = draws, k0 = state.tally.kills;
     G.update(DT);
-    const spent = draws - before;
+    // ⛔ CS013 P1 (T2): an Overdrive kill spends ONE token roll, and that draw is
+    // not the spawner's. It is excluded here so the count is still the claim —
+    // no kind draw on a one-entry set; test-cs013-p1.js counts the rolls.
+    const rolls = state.tally.kills - k0;
+    out.rolls += rolls;
+    const spent = draws - before - rolls;
     let added = 0;
     for (const e of state.enemies) if (!seen.has(e)) { seen.add(e); added++; }
     if (added === 1) out.perSpawn.push(spent);
@@ -186,7 +194,8 @@ function countingRun(mode, level, bandTop, ticks) {
   const lo = Math.min(...one.perSpawn), hi = Math.max(...one.perSpawn);
   H.assert(lo >= 2 && hi <= 1 + C.SPAWN_LANE_TRIES,
            `⛔ every Overdrive L1–2 spawn spends a lane draw and a heading, and no kind draw (${lo}..${hi})`);
-  H.eq(one.idle, 0, "⛔ and a tick that spawned nothing spends nothing");
+  H.eq(one.idle, 0, "⛔ and a tick that spawned nothing spends nothing but its kills' token rolls");
+  H.assert(one.rolls > 0, `fixture: the run killed, so the exclusion above is exercised (${one.rolls} rolls)`);
 
   const two = countingRun("overdrive", 3, 4, 6000);
   H.eq(X.eligibleKinds(two.maxLevel, "overdrive").length, 2, `the control ran on a TWO-entry set (L${two.maxLevel})`);
@@ -448,7 +457,11 @@ function pinWall(input, i) {
   const OPEN = X.WELLS.map((w, i) => i).filter(i => !X.WELLS[i].closed);
   H.eq(OPEN.length, COUNTS.openWells, "the soak covers every open well");
   for (const idx of OPEN) {
-    const well = board("overdrive", 7, idx);
+    // ⛔ CS013 P1: the token roll (one draw per Overdrive kill, T2) moved every
+    // board after its first kill, and at SEED the Trough and the Double-Vee lost
+    // their wall Reaver (0 wall-steps). The precondition is restored by the
+    // SEED, never relaxed: at SOAK_SEED every open well has Reavers at its wall.
+    const well = board("overdrive", 7, idx, SOAK_SEED);
     const last = new Map();
     let reavers = 0, wall = 0, out = null, fast = null;
     for (let i = 0; i < 5000; i++) {

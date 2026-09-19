@@ -511,3 +511,32 @@ about a run rather than a rule.**
   to open end to end. That is a weights question (`C.INT_W_*`), Paul's D6 ruled
   out rescaling them, and a person listening to it would hear a filter that opens
   most of the way. It is a number recorded and left alone, not a playtest.
+
+## CS013 P1 — the tokens: the drop rate, the rise and hover, the pull, the glyphs and the gold
+
+- **Changeset / phase:** CS013 P1 (tokens: the drop, the life on the board,
+  Bounty and Recharge).
+- **Would have done:** three sittings, all Overdrive. (1) Played five or six
+  wells from START DEPTH 1 and counted the tokens he SAW, asking whether about
+  one a well feels like a reward or like noise, and whether the fade-in from the
+  throat reads as "something is coming up" or goes unnoticed until it hovers.
+  (2) At START DEPTH 13, deliberately chased every token and asked whether
+  collection's pull toward danger reads as a choice (GDD 14.1) — above all a
+  token hovering in a telegraphing Surger's lane — and whether nine seconds, the
+  rise included, is long enough to decide. (3) Stopped on a board with two
+  tokens up and named each glyph at a glance, at the hover depth and while
+  rising: needle, fan, burst, gem, arc-over-craft. Then listened to `collect`
+  over `drive`, beside `kill` and `extraLife`.
+- **What we were trying to learn:** ⛔ **`C.TOKEN_DROP_CHANCE` (0.10) was
+  measured on two bots** (plan §1.3: 0.77–1.30 tokens per cleared well), and a
+  bot is not a player — a human who hunts gets more drops than the held driver
+  and fewer than the hunter. Whether gold `#FFF347` separates from the amber
+  Carrier, the band Amber and the Weaver's yellow-green at throat depth, where it
+  is faded, is a colour judgment. Whether the five glyphs are learnable is GDD
+  6.2's own question, asked of a new set.
+- **Knobs:** `C.TOKEN_DROP_CHANCE` (0.10) and the curve's `1 + threats`;
+  `C.TOKEN_WEIGHTS` (3/2/2/2/1); `C.TOKEN_RISE` (0.30); `C.TOKEN_LIFE` (9.0;
+  GDD 14.1's "a beat"); `C.TOKEN_SIZE` (0.80); `C.TOKEN_COLOR`; the five
+  `TOKEN_GLYPHS` in `14-render-entities.js`; `C.SFX.collect` (sfx-lab candidate
+  A, with B and C beside it). ⛔ `MAX_TOKENS` 2 and `TOKEN_HOVER_DEPTH` 0.80 are
+  GDD 14.1's and not knobs.

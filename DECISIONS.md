@@ -726,3 +726,4 @@ more bars of music at 120 BPM, or deciding the mix call in CS010.
 - The stored `lastUsed` stays `""` after a first launch (kit-profile's `select()` of the already-current `p0` is a no-op; a reload still selects the same profile). Accepted as-is, no kit edit, Paul, 2026-09-16: `log/CS011.md`, P1.
 - ⚠ Deleting a profile runs kit-profile's `remove(id)` before removing its keys, the reverse of CS011 plan R12's wording, so a refused delete deletes nothing. Kept as built, Paul, 2026-09-16: `log/CS011.md`, P4.
 - kit-leaderboard 0.2.1 (PATCH): `beginRun()` falls back to a `getRandomValues` UUID v4 without `crypto.randomUUID`, CS011 plan R18: `lib/kit-leaderboard/kit-leaderboard.NOTES.md`.
+- CS013's Overdrive calls (T1–T11, W1–W6, MI1–MI3) and readings (R1–R11), Paul, 2026-09-17: every recommendation, `PLANNED-FEATURES-CS013.md` §0, answered in the planning session.

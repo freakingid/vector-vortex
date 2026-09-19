@@ -89,6 +89,11 @@ function startDive(state) {
   // reason: what belongs to the well being left does not cross the throat.
   // ⛔ THE DIVE THEREFORE ALWAYS STARTS GROUNDED, in either mode.
   resetJump(state);
+  // ⛔ AND THE TOKENS END WITH THE WELL (GDD 14.1; CS013 T5; 10-powerups.js):
+  // no token rises through a Dive, and no Lance, Spread or Ward crosses the
+  // throat — so a Ward can never absorb this module's strike. Beside the jump
+  // and the shots, for their reason.
+  resetTokens(state);
   // GDD 5's rising sweep. HERE, so a repeated dive plays it again (plan §7).
   sfx("dive");
 }

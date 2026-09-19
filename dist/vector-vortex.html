@@ -662,21 +662,49 @@ const C = {
     menuConfirm:    { osc: [{ type: "triangle", f: 660 }, { type: "triangle", f: 990 }], atk: 0.002, hold: 0.05, rel: 0.12, gain: 0.1 },
     menuBack:       { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 },
     comboLost:      { osc: [{ type: "sawtooth", f: 587, to: 220 }, { type: "sawtooth", f: 392, to: 147 }], glide: 0.22, filter: { type: "lowpass", f: 3200, to: 700 }, sweep: 0.22, atk: 0.003, hold: 0.04, rel: 0.22, gain: 0.13 },
+    collect:        { osc: [{ type: "triangle", f: 1320, to: 2640 }, { type: "square", f: 1980, to: 3960 }], glide: 0.06, filter: { type: "lowpass", f: 6000 }, atk: 0.002, hold: 0.03, rel: 0.14, gain: 0.1 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
 
   // ---- Overdrive (GDD 14) -------------------------------------------------
+  // ⛔ THE TOKENS (GDD 14.1; CS013 P1, T1–T6, T10; 10-powerups.js). ⚠ Every
+  // value below but the three GDD numbers (MAX_TOKENS, TOKEN_HOVER_DEPTH,
+  // BOUNTY_POINTS) is provisional: a tuning or art pass owns it.
+  // ⛔ GDD 14.1's TWO TABLES ARE TWO, AND NEITHER NAMES THE OTHER'S NUMBERS: a
+  // weight is never a budget and a budget is never a weight, so retuning how
+  // often Ward drops cannot change what it does, and the reverse.
+  //
+  // -- the life on the board (T4) --
   MAX_TOKENS:           2,      // ⛔ readability cap on powerups on screen
   TOKEN_LIFE:           9.0,    // s. ⛔ counts UP toward this. GDD 16.3.
-  TOKEN_HOVER_DEPTH:    0.80,
+  TOKEN_HOVER_DEPTH:    0.80,   // rises to here and holds; collectable only here
+  TOKEN_RISE:           0.30,   // depth / s ⚠
+  // -- THE DROP-WEIGHT TABLE: which kills drop, and WHICH token a drop is (T2, T3) --
+  // p = TOKEN_DROP_CHANCE / (1 + threatCount()), off ONE draw per Overdrive
+  // kill; the kind is the same draw rescaled over these weights, in this order.
+  TOKEN_DROP_CHANCE:    0.10,   // ⚠ about one token per cleared well (plan §0 T2, MEASURED on bots)
+  TOKEN_WEIGHTS:        { bounty: 3, lance: 2, spread: 2, ward: 2, recharge: 1 },   // ⚠
+  // -- THE BUDGETED-EFFECT LIST: WHAT a token does, and how much (T6–T9) --
+  // Bounty pays this, unmultiplied; Recharge re-arms the Purge (no constant);
+  // Lance, Spread and Ward are CS013 P2's readers; Ward is one hit (no constant).
+  BOUNTY_POINTS:        2000,   // GDD 14.1's +2,000
+  LANCE_CHIP_MULT:      3,      // GDD 14.1's "chips Thorns at 3×"
+  SPREAD_SHOT_MAX:      24,     // ⚠ the shot cap while Spread is on (T8: 3 × SHOT_MAX)
+  // -- the look (T10) — one warm colour no enemy or band uses (hue 56°) --
+  TOKEN_COLOR:          "#FFF347",  // ⚠ provisional, the same standing as the enemy palette
+  TOKEN_SIZE:           0.80,   // lane widths spanned by the ring
+  TOKEN_RING_SEG:       24,     // polyline segments to a full ring
   // ⛔ WHAT A MODE HAS, AS DATA (GDD 1, 20 #28: "flags in the config, not a
   // fork"; CS012 R1). One reader, modeHas() at the foot of this file. The
   // Reaver, the track and the board are not flags: they go through
   // SPAWN_SCHEDULE_OVERDRIVE, MODE_TRACK and the board's game id.
+  // ⛔ A FEATURE IS A FIELD IN THE ROWS, NEVER A NEW TOP-LEVEL KEY: 22-meta.js
+  // derives `progress`'s modes from Object.keys(MODE_FLAGS). CS013 P1 added
+  // `tokens` (R3).
   MODE_FLAGS: {
-    classic:   { jump: false, combo: false },
-    overdrive: { jump: true,  combo: true },
+    classic:   { jump: false, combo: false, tokens: false },
+    overdrive: { jump: true,  combo: true,  tokens: true },
   },
   // ⛔ THE JUMP'S FOUR TIMERS, AND ALL FOUR COUNT UP (GDD 14.2, 16.3; O6).
   // JUMP_COOLDOWN runs from LANDING, and JUMP_RECOVERY is its first 0.20 s —
@@ -1128,7 +1156,8 @@ function rngPick(rng, arr) {
 // and P4 added `lives` and `invulnTime`. CS006 P1 adds `bandRoll`, and P3 adds
 // `dive` — which DELETED CS003 P2's hold field rather than joining it (GDD 5).
 // CS007 P4 adds `tally`, the run's cumulative counters. CS008 P2 adds `score`,
-// `nextLife` and `diedThisWell`; P3 adds `mode` and `startDepth`.
+// `nextLife` and `diedThisWell`; P3 adds `mode` and `startDepth`. CS012 adds
+// `jump` and `combo`; CS013 P1 adds `tokens` and `powers`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -1293,9 +1322,10 @@ function newState() {
     // GDD 4.3: one Purge charge per well, recharged on entry, never
     // accumulated. ⛔ A COUNT, not a flag: use 1 clears the well, use 2 kills
     // exactly one enemy, use 3+ does nothing, and CS008's PURGE_SAVED_BONUS
-    // asks whether this is still 0. enterWell() is the ONLY thing that puts it
-    // back to zero; 09-collision.js's updatePurge() is the only thing that
-    // raises it. (CS003 P2 landed this as the boolean `purgeReady`, which
+    // asks whether this is still 0. enterWell() puts it back to zero, and in
+    // Overdrive so does a collected Recharge token (CS013 P1, T6;
+    // 10-powerups.js) — nothing else; 09-collision.js's updatePurge() is the
+    // only thing that raises it. (CS003 P2 landed this as the boolean `purgeReady`, which
     // could not express the weak second use.)
     purgeUses: 0,
 
@@ -1374,6 +1404,27 @@ function newState() {
     //          lapse, and nothing can be killed in one
     //   peak   the highest `mult` this run reached. ⛔ Never falls
     combo: { mult: 1, kills: 0, since: 0, peak: 0 },
+
+    // ⛔ THE TOKENS (GDD 14.1; CS013 P1, T1, T5; 10-powerups.js). Overdrive's.
+    // ⛔ A SECOND ARRAY, NOT A KIND IN `enemies`: a token is not an enemy, and
+    // dropToken() is its ONE way in, as spawnEnemy() is an enemy's. It is empty
+    // for the whole of a Classic run — dropToken() is a no-op there.
+    //   kind       a key of C.TOKEN_WEIGHTS
+    //   lane       a lane CENTRE, written once at the drop; it never hops
+    //   depth      a POSITION, rising at C.TOKEN_RISE to C.TOKEN_HOVER_DEPTH
+    //   age        counts UP from the drop toward C.TOKEN_LIFE (GDD 16.3)
+    //   dead       set true to remove it, at the end of updateTokens()
+    //   collected  true when the craft took it — an instrument for the suite;
+    //              nothing in the simulation reads it
+    // ⛔ THE WELL OWNS THEM (T5): enterWell() and startDive() empty the array
+    // and reset `powers`; a death keeps both.
+    tokens: [],
+
+    // ⛔ THE LASTING EFFECTS (GDD 14.1's budgeted-effect list; T5, R11). A
+    // collected Lance, Spread or Ward sets its flag, and a duplicate does
+    // nothing more. CS013 P2 gives each its reader; resetTokens() clears all
+    // three with the well.
+    powers: { lance: false, spread: false, ward: false },
 
     // ⛔ THE RUN'S CUMULATIVE COUNTERS (GDD 15.6; 21-telemetry.js). CS007 P4.
     //
@@ -5141,6 +5192,13 @@ function wellCleared(state) {
 // Thorn's per-chip 5, the clear bonuses and the Start Depth bonus, which is
 // the scope O4 ruled out. ⛔ Both are exactly 1 / a no-op in Classic, so a
 // Classic run is bit-identical to the build before this phase.
+//
+// ⛔ AND SINCE CS013 P1, OVERDRIVE'S TOKEN DROP, AT THOSE SAME EDGES AND NOWHERE
+// ELSE (GDD 14.1; T2; 10-powerups.js). `dropToken(state, e)` follows
+// comboKill() on each of the four lines: EVERY kill at a kill site rolls, and
+// spends exactly ONE draw from the run's stream whether or not anything drops.
+// ⛔ It is a total no-op in Classic — no draw — and the Dive's termination
+// kill (11-dive.js) is not a kill site and rolls nothing.
 
 // Are two lanes the same lane, to within the contact tolerance? ⛔ laneDelta,
 // never (a - b): on a 16-lane Ring the distance from lane 15.9 to lane 0 is
@@ -5217,7 +5275,7 @@ function collideShots(state, well) {
       // splits dies. `e.dead` was false above, so this IS the false -> true
       // transition: the telemetry count (02-state.js's `tally`) and the points
       // (12-scoring.js), and nothing here branches on either.
-      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); }
+      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice); }
       break;
     }
   }
@@ -5342,7 +5400,7 @@ function collideSkimmer(state, well) {
     // ⛔ The rim sweep — the header above, and the four decisions in it.
     if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
       e.onShot(null);
-      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); continue; }
+      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice); continue; }
     }
     killSkimmer(state);
     return;   // one death per step, whatever else is touching
@@ -5525,7 +5583,7 @@ function updatePurge(state) {
     sfx("purge");
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); }
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice); }
     }
     return;
   }
@@ -5538,7 +5596,7 @@ function updatePurge(state) {
     // the weak use by firing it into an empty well.
     // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
     // branches of the panic button count here (02-state.js's `tally`).
-    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points() * comboMult()); comboKill(state); sfx("kill", victim.sfxVoice); }
+    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points() * comboMult()); comboKill(state); dropToken(state, victim); sfx("kill", victim.sfxVoice); }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.
@@ -5554,7 +5612,174 @@ function updateCollisions(state, well) {
 // ==========================================================================
 // 10-powerups.js
 // ==========================================================================
-// 10-powerups.js — placeholder. See VECTOR-VORTEX-GDD.md for the section that owns this.
+// 10-powerups.js — Overdrive's tokens (GDD 14.1, 16.3; CS013 P1,
+// PLANNED-FEATURES-CS013.md T1–T6). What lives here: the drop (dropToken(), the
+// ONE way a token enters the well), a token's life on the board
+// (updateTokens(): the rise, the age, the collection, the expiry), the two
+// instant effects (Bounty, Recharge), the lasting flags a pickup sets on
+// state.powers, and resetTokens(), which the well calls. The draw is
+// drawToken() (14-render-entities.js).
+//
+// ⛔ A TOKEN IS NOT AN ENEMY, AND IT LIVES IN ITS OWN ARRAY, state.tokens (T1).
+// state.shots is the precedent: a second entity array exactly because the
+// enemy passes would get it wrong. MEASURED at the plan (§1.4): state.enemies
+// has 19 reader sites, and a token inside it needs an answer at eight, three of
+// them wrong by default — collideShots() would hit-test it and its unconditional
+// `break` would let a hovering token SHIELD the rim enemies behind it;
+// respawnSkimmer()'s rim push would drop a hovering token to 0.55 on every
+// death; and spawnEnemy() would refuse it at ENEMY_CAP and spend a heading draw
+// it has no use for. dangerInputs(), telemetryRow() and laneCrowded() would each
+// count it as a threat. So: no contract field, no ENEMY_KINDS row, none of the
+// 19 sites touched, and GDD 6.5's "ONE array" is still true of enemies.
+//
+// ⛔ GDD 14.1's TWO TABLES ARE TWO. The DROP-WEIGHT TABLE (C.TOKEN_WEIGHTS,
+// read by tokenKind() below) says WHICH token a drop is; the BUDGETED-EFFECT
+// LIST (C.BOUNTY_POINTS here, C.LANCE_CHIP_MULT and C.SPREAD_SHOT_MAX in
+// CS013 P2) says WHAT each one does. Neither reads the other's numbers, so a
+// weight is never a budget and a budget is never a weight.
+//
+// ⛔ ONE DRAW PER OVERDRIVE KILL, FROM THE RUN'S ONE STREAM, AND NONE IN
+// CLASSIC (T2). The draw is spent whether or not anything drops — at
+// C.MAX_TOKENS too — and the kind comes from the SAME draw, rescaled. So "one
+// draw per Overdrive kill" is a count a test can make, as test-cs006-p5.js
+// counts one per spawn, and a Classic run spends exactly what it spent before.
+//
+// ⛔ NOTHING IN THE DRAW PATH CALLS state.rng() (CLAUDE.md, Math and
+// lifecycle). Every random value a token has was drawn here, in the simulation.
+
+// The kind a drop is, from `v` in [0, 1): the one draw rescaled by its drop
+// chance (T3). A weighted walk over C.TOKEN_WEIGHTS in its KEY ORDER — the
+// order is part of the table, so a board replays.
+function tokenKind(v) {
+  const w = C.TOKEN_WEIGHTS;
+  const keys = Object.keys(w);
+  let total = 0;
+  for (let i = 0; i < keys.length; i++) total += w[keys[i]];
+  let x = v * total;
+  for (let i = 0; i < keys.length; i++) {
+    x -= w[keys[i]];
+    if (x < 0) return keys[i];
+  }
+  return keys[keys.length - 1];
+}
+
+// Tokens on the board that have not been taken or expired.
+function liveTokens(state) {
+  let n = 0;
+  for (let i = 0; i < state.tokens.length; i++) if (!state.tokens[i].dead) n++;
+  return n;
+}
+
+// ⛔ THE ONE WAY A TOKEN ENTERS THE WELL (T1, T2, T3, T4). Called by the four
+// kill lines in 09-collision.js on the false -> true `dead` edge, beside
+// comboKill(): a shot, the rim sweep, and both Purge uses. ⛔ Not by the Dive's
+// termination kill, which is not a kill site and rolls nothing.
+//
+// ⛔ A TOTAL NO-OP OUTSIDE modeHas("tokens") — no draw, no write — which is what
+// keeps a Classic run bit-identical to the build before this changeset.
+//
+// p = C.TOKEN_DROP_CHANCE / (1 + threatCount()), read AFTER the victim is dead,
+// so GDD 14.1's "drop rate falls as enemy count rises" is the board the kill
+// leaves behind. A drop when the draw falls under p; the kind is that same draw
+// divided by p (T3). A board already at C.MAX_TOKENS still spends the draw and
+// discards the drop.
+//
+// Born at the victim's lane, rounded to a centre, and at its depth or the hover
+// depth, whichever is nearer the throat (T4). An anchored victim's depth is a
+// length, so a Thorn's token is born at its tip, where the last chip landed.
+function dropToken(state, e) {
+  if (!modeHas("tokens", state.mode)) return;
+  const u = state.rng();
+  const p = C.TOKEN_DROP_CHANCE / (1 + threatCount(state));
+  if (!(u < p)) return;
+  if (liveTokens(state) >= C.MAX_TOKENS) return;
+  const well = WELLS[state.wellIndex];
+  state.tokens.push({
+    kind: tokenKind(u / p),
+    // `+ 0` turns Math.round(-0.4)'s -0 into 0.
+    lane: laneNormalize(well, Math.round(e.lane) + 0),
+    depth: e.depth < C.TOKEN_HOVER_DEPTH ? e.depth : C.TOKEN_HOVER_DEPTH,
+    age: 0,
+    dead: false,
+    collected: false,
+  });
+}
+
+// ⛔ THE PICKUP (T6, R11). The two instant tokens act here and are done; a
+// lasting one sets its flag on state.powers, which CS013 P2 gives its reader.
+// ⛔ A DUPLICATE DOES NOTHING MORE (T5): a second Lance while one is on sets a
+// flag that is already true. It is still collected, and still sounds.
+//
+//   bounty    addScore(C.BOUNTY_POINTS). ⛔ NOT MULTIPLIED AND BUILDS NOTHING —
+//             CS012's O4: only kill points are multiplied, and what is
+//             multiplied is exactly what builds. It can cross a milestone and
+//             pay a life, as any addScore() can.
+//   recharge  state.purgeUses = 0, so the Purge is at full strength and its
+//             HUD glyph bright. ⚠ The "Purge unspent" clear bonus then pays
+//             again: clearBonuses() reads purgeUses === 0, and a recharged
+//             charge is unspent. tally.purgesSpent does not move.
+function collectToken(state, t) {
+  t.dead = true;
+  t.collected = true;
+  sfx("collect");
+  switch (t.kind) {
+    case "bounty":   addScore(C.BOUNTY_POINTS); break;
+    case "recharge": state.purgeUses = 0; break;
+    case "lance":    state.powers.lance = true; break;
+    case "spread":   state.powers.spread = true; break;
+    case "ward":     state.powers.ward = true; break;
+  }
+}
+
+// One simulation step of every token (T4), from Game.update()'s play step:
+// AFTER the collision pass and both end-of-frame filters, so a token dropped
+// this step is aged this step, and BEFORE the spawner and the clear edge, so a
+// Bounty or a Recharge taken on the clear step is paid before the bonuses.
+//
+//   rise     C.TOKEN_RISE depth per second toward C.TOKEN_HOVER_DEPTH, where
+//            it holds. Its lane never moves.
+//   age      counts UP from the drop (GDD 16.3: `token.age >= TOKEN_LIFE`,
+//            verbatim) and it expires on the step it gets there.
+//   collect  by touch: a LIVE craft within C.HIT_LANE_TOL of a token that has
+//            reached the hover depth. A rising token cannot be taken. Airborne
+//            counts — a pickup is not contact with a killer.
+//
+// ⛔ Removal is this function's own end-of-pass filter, never a splice (GDD
+// 6.5), and there is none to do on an empty board — a Classic step allocates
+// nothing here.
+function updateTokens(state, well, dt) {
+  if (state.tokens.length === 0) return;
+  const sk = state.skimmer;
+  const live = sk && !sk.dead;
+  let gone = 0;
+  for (let i = 0; i < state.tokens.length; i++) {
+    const t = state.tokens[i];
+    if (t.dead) { gone++; continue; }
+    if (t.depth < C.TOKEN_HOVER_DEPTH) {
+      t.depth += C.TOKEN_RISE * dt;
+      if (t.depth > C.TOKEN_HOVER_DEPTH) t.depth = C.TOKEN_HOVER_DEPTH;
+    }
+    t.age += dt;
+    if (t.age >= C.TOKEN_LIFE) { t.dead = true; gone++; continue; }
+    if (live && t.depth >= C.TOKEN_HOVER_DEPTH && laneHit(well, t.lane, sk.lane)) {
+      collectToken(state, t);
+      gone++;
+    }
+  }
+  if (gone) state.tokens = state.tokens.filter(t => !t.dead);
+}
+
+// ⛔ THE WELL OWNS THEM (T5). enterWell() and startDive() call this, so no
+// token rises through a Dive and no lasting effect crosses the throat — the
+// Dive is untouched, as CS012's R4 left it untouched by the Jump. ⛔ A death
+// does NOT call it: tokens stay on the board and Lance and Spread stay on,
+// which is the Purge charge's rule — re-armed on entry, never on death.
+function resetTokens(state) {
+  state.tokens = [];
+  state.powers.lance = false;
+  state.powers.spread = false;
+  state.powers.ward = false;
+}
 
 // ==========================================================================
 // 11-dive.js
@@ -5650,6 +5875,11 @@ function startDive(state) {
   // reason: what belongs to the well being left does not cross the throat.
   // ⛔ THE DIVE THEREFORE ALWAYS STARTS GROUNDED, in either mode.
   resetJump(state);
+  // ⛔ AND THE TOKENS END WITH THE WELL (GDD 14.1; CS013 T5; 10-powerups.js):
+  // no token rises through a Dive, and no Lance, Spread or Ward crosses the
+  // throat — so a Ward can never absorb this module's strike. Beside the jump
+  // and the shots, for their reason.
+  resetTokens(state);
   // GDD 5's rising sweep. HERE, so a repeated dive plays it again (plan §7).
   sfx("dive");
 }
@@ -6283,7 +6513,9 @@ function isLaneLit(s) {
 // point and so does not use entityPoints() at all. CS005 P2 adds the Drifter's
 // two silhouettes and P3 the Surger, which is BOTH: a silhouette at a point and
 // a segment along its lane. See drawThorn() and drawSurgeLane() at the foot.
-// CS008 P4 adds drawFragments(), the death fragmentation, at the very foot.
+// CS008 P4 adds drawFragments(), the death fragmentation, at the very foot, and
+// CS013 P1 drawToken() just above it — a token is not an enemy, but it is drawn
+// the same way.
 //
 // ⛔ drawPoly + glowStroke only (GDD 10.2). No fill, no sprite, no texture.
 //
@@ -6948,6 +7180,114 @@ function drawSurger(ctx, well, lane, depth, tip, live) {
   drawSurgeLane(ctx, well, lane, tip, live);
   drawPoly(ctx, entityPoints(well, lane, depth, SURGER_POLY, C.SURGER_SIZE), false);
   glowStroke(ctx, C.SURGER_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
+// The tokens (GDD 14.1, 16.3; CS013 P1, T4, T10) — a glyph inside a ring.
+// ---------------------------------------------------------------------------
+//
+// ⛔ A TOKEN IS NOT AN ENEMY (10-powerups.js), BUT IT IS DRAWN THE SAME WAY: a
+// local-space poly through entityPoints() + drawPoly + glowStroke, no fill.
+//
+// ⛔ ONE COLOUR, C.TOKEN_COLOR (T10), a warm hue no enemy or band uses, so a
+// token in a Surger's lane reads as a choice rather than a gotcha (GDD 14.1).
+// Gold means YOURS. The five kinds are told apart by GLYPH, by GDD 6.2's rule
+// (CARGO_GLYPHS above): a glyph is a miniature of its effect's own gesture.
+//
+//   lance     a long needle pointed down the lane — the shot that goes through
+//   spread    a three-way fan — the lane and both neighbours
+//   recharge  PURGE_GLYPH_POLY itself — the HUD's own Purge glyph
+//   bounty    a cut gem — the one that is only worth something
+//   ward      an arc over a craft — the shell
+//
+// ⛔ THE RING IS WHAT NO ENEMY HAS, and it DEPLETES over C.TOKEN_LIFE with no
+// numerals and no blink (GDD 16.3). A POLYLINE of C.TOKEN_RING_SEG segments, the
+// HUD rings' precedent, never an arc call. It starts on the rim side and
+// shrinks back toward that start as the token ages.
+//
+// ⛔ FADED BELOW C.READABILITY_DEPTH with shotAlpha() (GDD 10.3): a token is
+// not the approaching thing that rule protects, so it takes the shot's fade,
+// not an enemy's full alpha. Most kills happen in the throat zone (plan §1.3),
+// so most tokens are born faded and brighten as they rise.
+//
+// ⛔ NO PER-FRAME ALLOCATION. Every poly is built once and entityPoints()
+// memoizes its scratch on it; the ring's partial path is one preallocated array
+// of references into that scratch, the HUD rings' pattern.
+//
+// Shape DATA in entityPoints()' half-extent units, inside the ring's ±1. The
+// scale is C.TOKEN_SIZE. ⚠ Provisional art, like the palette.
+const TOKEN_RING_POLY = (function () {
+  const n = C.TOKEN_RING_SEG;
+  const out = [];
+  for (let i = 0; i <= n; i++) {
+    const a = Math.PI / 2 + 2 * Math.PI * (i / n);
+    out.push({ l: Math.cos(a), d: Math.sin(a) });
+  }
+  return out;
+})();
+const _tokenRing = [];
+
+// Each row is a list of strokes, { poly, closed }; the Ward's is two.
+// `recharge` is filled on first use: PURGE_GLYPH_POLY is 15-render-hud.js's,
+// concatenated after this file, so it does not exist yet at evaluation.
+const TOKEN_GLYPHS = {
+  lance: [{ closed: false, poly: [
+    { l: -0.22, d: -0.30 }, { l:  0.00, d: -0.62 }, { l:  0.22, d: -0.30 },
+    { l:  0.00, d: -0.62 }, { l:  0.00, d:  0.62 },
+  ] }],
+  spread: [{ closed: false, poly: [
+    { l: -0.55, d: -0.45 }, { l:  0.00, d:  0.50 }, { l:  0.00, d: -0.60 },
+    { l:  0.00, d:  0.50 }, { l:  0.55, d: -0.45 },
+  ] }],
+  recharge: null,
+  bounty: [{ closed: true, poly: [
+    { l: -0.55, d:  0.20 }, { l: -0.30, d:  0.50 }, { l:  0.30, d:  0.50 },
+    { l:  0.55, d:  0.20 }, { l:  0.00, d: -0.55 },
+  ] }],
+  ward: [
+    { closed: false, poly: [
+      { l: -0.55, d:  0.00 }, { l: -0.39, d:  0.42 }, { l:  0.00, d:  0.60 },
+      { l:  0.39, d:  0.42 }, { l:  0.55, d:  0.00 },
+    ] },
+    { closed: false, poly: [{ l: -0.40, d: -0.55 }, { l: 0.00, d: -0.18 }, { l: 0.40, d: -0.55 }] },
+  ],
+};
+
+// A kind's strokes, or null for a kind the table does not know (the ring alone
+// is drawn — visibly wrong, never a thrown exception).
+function tokenGlyph(kind) {
+  if (kind === "recharge" && TOKEN_GLYPHS.recharge === null) {
+    // The HUD glyph's unit radius shrunk to the other glyphs' ±0.55; y is DOWN
+    // on the HUD and the rim side is +d here, so it flips.
+    TOKEN_GLYPHS.recharge = [{ closed: true, poly: PURGE_GLYPH_POLY.map(function (q) {
+      return { l: q.x * 0.55, d: -q.y * 0.55 };
+    }) }];
+  }
+  return Object.prototype.hasOwnProperty.call(TOKEN_GLYPHS, kind) ? TOKEN_GLYPHS[kind] : null;
+}
+
+// ⛔ drawPoly + glowStroke only, no fill (GDD 10.2), in C.TOKEN_COLOR at
+// shotAlpha(depth). `age` is the token's own count-up clock; the ring shows
+// what is left of C.TOKEN_LIFE.
+function drawToken(ctx, well, kind, lane, depth, age) {
+  const alpha = shotAlpha(depth);
+  if (!(alpha > 0)) return;
+  const w = laneLineWidth(depth);
+  const glyph = tokenGlyph(kind);
+  if (glyph) {
+    for (let i = 0; i < glyph.length; i++) {
+      drawPoly(ctx, entityPoints(well, lane, depth, glyph[i].poly, C.TOKEN_SIZE), glyph[i].closed);
+      glowStroke(ctx, C.TOKEN_COLOR, w, alpha);
+    }
+  }
+  const left = 1 - age / C.TOKEN_LIFE;
+  if (!(left > 0)) return;
+  const segs = Math.max(1, Math.round(C.TOKEN_RING_SEG * (left > 1 ? 1 : left)));
+  const pts = entityPoints(well, lane, depth, TOKEN_RING_POLY, C.TOKEN_SIZE);
+  _tokenRing.length = segs + 1;
+  for (let i = 0; i <= segs; i++) _tokenRing[i] = pts[i];
+  drawPoly(ctx, _tokenRing, false);
+  glowStroke(ctx, C.TOKEN_COLOR, w, alpha);
 }
 
 // ---------------------------------------------------------------------------
@@ -11354,6 +11694,12 @@ function enterWell() {
   // well take off on the entry step without ever releasing (05-skimmer.js).
   resetJump(state);
 
+  // ⛔ AND THE TOKENS, EMPTY, WITH NO LASTING EFFECT ON (GDD 14.1: "lasts the
+  // current well only"; CS013 T5; 10-powerups.js). startDive() has already
+  // done it on the way here from a clear; this is the new run, the restart and
+  // the `w` cycler.
+  resetTokens(state);
+
   // A craft for this well. ⛔ Minted rather than carried over: lane counts
   // differ between wells, so the outgoing craft's lane may not exist here.
   // ⛔ state.lives is NOT touched — the reserve belongs to the run, not to the
@@ -12855,6 +13201,12 @@ const Game = (function () {
     // chip-away economy), not next.
     state.enemies = state.enemies.filter(e => !e.dead);
     state.shots = state.shots.filter(s => !s.dead);
+    // ⛔ THE TOKENS (GDD 14.1; CS013 T4; 10-powerups.js), once per play step,
+    // AFTER the one collision pass and both filters — so a token dropped by a
+    // kill this step is aged this step and the craft it meets is the one the
+    // pass left alive — and BEFORE the spawner and the clear edge, so a Bounty
+    // or a Recharge taken on the clear step is paid before the bonuses.
+    updateTokens(state, well, dt);
     updateSpawner(state, well, dt);
 
     // ⛔ A CLEARED WELL ENTERS THE DIVE (GDD 5). It does NOT call nextWell():
@@ -12901,6 +13253,13 @@ const Game = (function () {
     // The rim pulse is audioFrame()'s reading of this frame (CS010 P4), 0 off
     // play and with no audio. A value, never a clock or a draw of its own.
     drawWell(ctx, well, state.level, lit, state.bandRoll, rimGlow);
+    // ⛔ TOKENS ABOVE THE WELL AND BELOW EVERYTHING ELSE (GDD 14.1, 1.1 P2;
+    // CS013 T4, T10): a gift is never drawn over a threat. Read off the token's
+    // own fields; nothing here draws a random value.
+    for (let i = 0; i < state.tokens.length; i++) {
+      const t = state.tokens[i];
+      drawToken(ctx, well, t.kind, t.lane, t.depth, t.age);
+    }
     // Z-order: the well is the backdrop, enemies climb over it, shots travel
     // over them, and the Skimmer — always at depth 1, the rim — rides on top
     // of everything. Shots above enemies so a shot is never lost behind the

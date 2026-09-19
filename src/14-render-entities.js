@@ -7,7 +7,9 @@
 // point and so does not use entityPoints() at all. CS005 P2 adds the Drifter's
 // two silhouettes and P3 the Surger, which is BOTH: a silhouette at a point and
 // a segment along its lane. See drawThorn() and drawSurgeLane() at the foot.
-// CS008 P4 adds drawFragments(), the death fragmentation, at the very foot.
+// CS008 P4 adds drawFragments(), the death fragmentation, at the very foot, and
+// CS013 P1 drawToken() just above it — a token is not an enemy, but it is drawn
+// the same way.
 //
 // ⛔ drawPoly + glowStroke only (GDD 10.2). No fill, no sprite, no texture.
 //
@@ -672,6 +674,114 @@ function drawSurger(ctx, well, lane, depth, tip, live) {
   drawSurgeLane(ctx, well, lane, tip, live);
   drawPoly(ctx, entityPoints(well, lane, depth, SURGER_POLY, C.SURGER_SIZE), false);
   glowStroke(ctx, C.SURGER_COLOR, laneLineWidth(depth), 1);
+}
+
+// ---------------------------------------------------------------------------
+// The tokens (GDD 14.1, 16.3; CS013 P1, T4, T10) — a glyph inside a ring.
+// ---------------------------------------------------------------------------
+//
+// ⛔ A TOKEN IS NOT AN ENEMY (10-powerups.js), BUT IT IS DRAWN THE SAME WAY: a
+// local-space poly through entityPoints() + drawPoly + glowStroke, no fill.
+//
+// ⛔ ONE COLOUR, C.TOKEN_COLOR (T10), a warm hue no enemy or band uses, so a
+// token in a Surger's lane reads as a choice rather than a gotcha (GDD 14.1).
+// Gold means YOURS. The five kinds are told apart by GLYPH, by GDD 6.2's rule
+// (CARGO_GLYPHS above): a glyph is a miniature of its effect's own gesture.
+//
+//   lance     a long needle pointed down the lane — the shot that goes through
+//   spread    a three-way fan — the lane and both neighbours
+//   recharge  PURGE_GLYPH_POLY itself — the HUD's own Purge glyph
+//   bounty    a cut gem — the one that is only worth something
+//   ward      an arc over a craft — the shell
+//
+// ⛔ THE RING IS WHAT NO ENEMY HAS, and it DEPLETES over C.TOKEN_LIFE with no
+// numerals and no blink (GDD 16.3). A POLYLINE of C.TOKEN_RING_SEG segments, the
+// HUD rings' precedent, never an arc call. It starts on the rim side and
+// shrinks back toward that start as the token ages.
+//
+// ⛔ FADED BELOW C.READABILITY_DEPTH with shotAlpha() (GDD 10.3): a token is
+// not the approaching thing that rule protects, so it takes the shot's fade,
+// not an enemy's full alpha. Most kills happen in the throat zone (plan §1.3),
+// so most tokens are born faded and brighten as they rise.
+//
+// ⛔ NO PER-FRAME ALLOCATION. Every poly is built once and entityPoints()
+// memoizes its scratch on it; the ring's partial path is one preallocated array
+// of references into that scratch, the HUD rings' pattern.
+//
+// Shape DATA in entityPoints()' half-extent units, inside the ring's ±1. The
+// scale is C.TOKEN_SIZE. ⚠ Provisional art, like the palette.
+const TOKEN_RING_POLY = (function () {
+  const n = C.TOKEN_RING_SEG;
+  const out = [];
+  for (let i = 0; i <= n; i++) {
+    const a = Math.PI / 2 + 2 * Math.PI * (i / n);
+    out.push({ l: Math.cos(a), d: Math.sin(a) });
+  }
+  return out;
+})();
+const _tokenRing = [];
+
+// Each row is a list of strokes, { poly, closed }; the Ward's is two.
+// `recharge` is filled on first use: PURGE_GLYPH_POLY is 15-render-hud.js's,
+// concatenated after this file, so it does not exist yet at evaluation.
+const TOKEN_GLYPHS = {
+  lance: [{ closed: false, poly: [
+    { l: -0.22, d: -0.30 }, { l:  0.00, d: -0.62 }, { l:  0.22, d: -0.30 },
+    { l:  0.00, d: -0.62 }, { l:  0.00, d:  0.62 },
+  ] }],
+  spread: [{ closed: false, poly: [
+    { l: -0.55, d: -0.45 }, { l:  0.00, d:  0.50 }, { l:  0.00, d: -0.60 },
+    { l:  0.00, d:  0.50 }, { l:  0.55, d: -0.45 },
+  ] }],
+  recharge: null,
+  bounty: [{ closed: true, poly: [
+    { l: -0.55, d:  0.20 }, { l: -0.30, d:  0.50 }, { l:  0.30, d:  0.50 },
+    { l:  0.55, d:  0.20 }, { l:  0.00, d: -0.55 },
+  ] }],
+  ward: [
+    { closed: false, poly: [
+      { l: -0.55, d:  0.00 }, { l: -0.39, d:  0.42 }, { l:  0.00, d:  0.60 },
+      { l:  0.39, d:  0.42 }, { l:  0.55, d:  0.00 },
+    ] },
+    { closed: false, poly: [{ l: -0.40, d: -0.55 }, { l: 0.00, d: -0.18 }, { l: 0.40, d: -0.55 }] },
+  ],
+};
+
+// A kind's strokes, or null for a kind the table does not know (the ring alone
+// is drawn — visibly wrong, never a thrown exception).
+function tokenGlyph(kind) {
+  if (kind === "recharge" && TOKEN_GLYPHS.recharge === null) {
+    // The HUD glyph's unit radius shrunk to the other glyphs' ±0.55; y is DOWN
+    // on the HUD and the rim side is +d here, so it flips.
+    TOKEN_GLYPHS.recharge = [{ closed: true, poly: PURGE_GLYPH_POLY.map(function (q) {
+      return { l: q.x * 0.55, d: -q.y * 0.55 };
+    }) }];
+  }
+  return Object.prototype.hasOwnProperty.call(TOKEN_GLYPHS, kind) ? TOKEN_GLYPHS[kind] : null;
+}
+
+// ⛔ drawPoly + glowStroke only, no fill (GDD 10.2), in C.TOKEN_COLOR at
+// shotAlpha(depth). `age` is the token's own count-up clock; the ring shows
+// what is left of C.TOKEN_LIFE.
+function drawToken(ctx, well, kind, lane, depth, age) {
+  const alpha = shotAlpha(depth);
+  if (!(alpha > 0)) return;
+  const w = laneLineWidth(depth);
+  const glyph = tokenGlyph(kind);
+  if (glyph) {
+    for (let i = 0; i < glyph.length; i++) {
+      drawPoly(ctx, entityPoints(well, lane, depth, glyph[i].poly, C.TOKEN_SIZE), glyph[i].closed);
+      glowStroke(ctx, C.TOKEN_COLOR, w, alpha);
+    }
+  }
+  const left = 1 - age / C.TOKEN_LIFE;
+  if (!(left > 0)) return;
+  const segs = Math.max(1, Math.round(C.TOKEN_RING_SEG * (left > 1 ? 1 : left)));
+  const pts = entityPoints(well, lane, depth, TOKEN_RING_POLY, C.TOKEN_SIZE);
+  _tokenRing.length = segs + 1;
+  for (let i = 0; i <= segs; i++) _tokenRing[i] = pts[i];
+  drawPoly(ctx, _tokenRing, false);
+  glowStroke(ctx, C.TOKEN_COLOR, w, alpha);
 }
 
 // ---------------------------------------------------------------------------

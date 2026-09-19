@@ -89,6 +89,12 @@ function enterWell() {
   // well take off on the entry step without ever releasing (05-skimmer.js).
   resetJump(state);
 
+  // ⛔ AND THE TOKENS, EMPTY, WITH NO LASTING EFFECT ON (GDD 14.1: "lasts the
+  // current well only"; CS013 T5; 10-powerups.js). startDive() has already
+  // done it on the way here from a clear; this is the new run, the restart and
+  // the `w` cycler.
+  resetTokens(state);
+
   // A craft for this well. ⛔ Minted rather than carried over: lane counts
   // differ between wells, so the outgoing craft's lane may not exist here.
   // ⛔ state.lives is NOT touched — the reserve belongs to the run, not to the
@@ -1590,6 +1596,12 @@ const Game = (function () {
     // chip-away economy), not next.
     state.enemies = state.enemies.filter(e => !e.dead);
     state.shots = state.shots.filter(s => !s.dead);
+    // ⛔ THE TOKENS (GDD 14.1; CS013 T4; 10-powerups.js), once per play step,
+    // AFTER the one collision pass and both filters — so a token dropped by a
+    // kill this step is aged this step and the craft it meets is the one the
+    // pass left alive — and BEFORE the spawner and the clear edge, so a Bounty
+    // or a Recharge taken on the clear step is paid before the bonuses.
+    updateTokens(state, well, dt);
     updateSpawner(state, well, dt);
 
     // ⛔ A CLEARED WELL ENTERS THE DIVE (GDD 5). It does NOT call nextWell():
@@ -1636,6 +1648,13 @@ const Game = (function () {
     // The rim pulse is audioFrame()'s reading of this frame (CS010 P4), 0 off
     // play and with no audio. A value, never a clock or a draw of its own.
     drawWell(ctx, well, state.level, lit, state.bandRoll, rimGlow);
+    // ⛔ TOKENS ABOVE THE WELL AND BELOW EVERYTHING ELSE (GDD 14.1, 1.1 P2;
+    // CS013 T4, T10): a gift is never drawn over a threat. Read off the token's
+    // own fields; nothing here draws a random value.
+    for (let i = 0; i < state.tokens.length; i++) {
+      const t = state.tokens[i];
+      drawToken(ctx, well, t.kind, t.lane, t.depth, t.age);
+    }
     // Z-order: the well is the backdrop, enemies climb over it, shots travel
     // over them, and the Skimmer — always at depth 1, the rim — rides on top
     // of everything. Shots above enemies so a shot is never lost behind the

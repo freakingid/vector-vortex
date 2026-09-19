@@ -43,6 +43,13 @@
 // Thorn's per-chip 5, the clear bonuses and the Start Depth bonus, which is
 // the scope O4 ruled out. ⛔ Both are exactly 1 / a no-op in Classic, so a
 // Classic run is bit-identical to the build before this phase.
+//
+// ⛔ AND SINCE CS013 P1, OVERDRIVE'S TOKEN DROP, AT THOSE SAME EDGES AND NOWHERE
+// ELSE (GDD 14.1; T2; 10-powerups.js). `dropToken(state, e)` follows
+// comboKill() on each of the four lines: EVERY kill at a kill site rolls, and
+// spends exactly ONE draw from the run's stream whether or not anything drops.
+// ⛔ It is a total no-op in Classic — no draw — and the Dive's termination
+// kill (11-dive.js) is not a kill site and rolls nothing.
 
 // Are two lanes the same lane, to within the contact tolerance? ⛔ laneDelta,
 // never (a - b): on a 16-lane Ring the distance from lane 15.9 to lane 0 is
@@ -119,7 +126,7 @@ function collideShots(state, well) {
       // splits dies. `e.dead` was false above, so this IS the false -> true
       // transition: the telemetry count (02-state.js's `tally`) and the points
       // (12-scoring.js), and nothing here branches on either.
-      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); }
+      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice); }
       break;
     }
   }
@@ -244,7 +251,7 @@ function collideSkimmer(state, well) {
     // ⛔ The rim sweep — the header above, and the four decisions in it.
     if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
       e.onShot(null);
-      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); continue; }
+      if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice); continue; }
     }
     killSkimmer(state);
     return;   // one death per step, whatever else is touching
@@ -427,7 +434,7 @@ function updatePurge(state) {
     sfx("purge");
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
-      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); sfx("kill", e.sfxVoice); }
+      if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice); }
     }
     return;
   }
@@ -440,7 +447,7 @@ function updatePurge(state) {
     // the weak use by firing it into an empty well.
     // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
     // branches of the panic button count here (02-state.js's `tally`).
-    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points() * comboMult()); comboKill(state); sfx("kill", victim.sfxVoice); }
+    if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points() * comboMult()); comboKill(state); dropToken(state, victim); sfx("kill", victim.sfxVoice); }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
   // tell "spent" from "spent twice" without a second field.

@@ -13,7 +13,8 @@
 // and P4 added `lives` and `invulnTime`. CS006 P1 adds `bandRoll`, and P3 adds
 // `dive` — which DELETED CS003 P2's hold field rather than joining it (GDD 5).
 // CS007 P4 adds `tally`, the run's cumulative counters. CS008 P2 adds `score`,
-// `nextLife` and `diedThisWell`; P3 adds `mode` and `startDepth`.
+// `nextLife` and `diedThisWell`; P3 adds `mode` and `startDepth`. CS012 adds
+// `jump` and `combo`; CS013 P1 adds `tokens` and `powers`.
 //
 // newState() is the shipped-default shape; `state` is one of it. The two exist
 // separately so a reset writes defaults from one place instead of a second,
@@ -178,9 +179,10 @@ function newState() {
     // GDD 4.3: one Purge charge per well, recharged on entry, never
     // accumulated. ⛔ A COUNT, not a flag: use 1 clears the well, use 2 kills
     // exactly one enemy, use 3+ does nothing, and CS008's PURGE_SAVED_BONUS
-    // asks whether this is still 0. enterWell() is the ONLY thing that puts it
-    // back to zero; 09-collision.js's updatePurge() is the only thing that
-    // raises it. (CS003 P2 landed this as the boolean `purgeReady`, which
+    // asks whether this is still 0. enterWell() puts it back to zero, and in
+    // Overdrive so does a collected Recharge token (CS013 P1, T6;
+    // 10-powerups.js) — nothing else; 09-collision.js's updatePurge() is the
+    // only thing that raises it. (CS003 P2 landed this as the boolean `purgeReady`, which
     // could not express the weak second use.)
     purgeUses: 0,
 
@@ -259,6 +261,27 @@ function newState() {
     //          lapse, and nothing can be killed in one
     //   peak   the highest `mult` this run reached. ⛔ Never falls
     combo: { mult: 1, kills: 0, since: 0, peak: 0 },
+
+    // ⛔ THE TOKENS (GDD 14.1; CS013 P1, T1, T5; 10-powerups.js). Overdrive's.
+    // ⛔ A SECOND ARRAY, NOT A KIND IN `enemies`: a token is not an enemy, and
+    // dropToken() is its ONE way in, as spawnEnemy() is an enemy's. It is empty
+    // for the whole of a Classic run — dropToken() is a no-op there.
+    //   kind       a key of C.TOKEN_WEIGHTS
+    //   lane       a lane CENTRE, written once at the drop; it never hops
+    //   depth      a POSITION, rising at C.TOKEN_RISE to C.TOKEN_HOVER_DEPTH
+    //   age        counts UP from the drop toward C.TOKEN_LIFE (GDD 16.3)
+    //   dead       set true to remove it, at the end of updateTokens()
+    //   collected  true when the craft took it — an instrument for the suite;
+    //              nothing in the simulation reads it
+    // ⛔ THE WELL OWNS THEM (T5): enterWell() and startDive() empty the array
+    // and reset `powers`; a death keeps both.
+    tokens: [],
+
+    // ⛔ THE LASTING EFFECTS (GDD 14.1's budgeted-effect list; T5, R11). A
+    // collected Lance, Spread or Ward sets its flag, and a duplicate does
+    // nothing more. CS013 P2 gives each its reader; resetTokens() clears all
+    // three with the well.
+    powers: { lance: false, spread: false, ward: false },
 
     // ⛔ THE RUN'S CUMULATIVE COUNTERS (GDD 15.6; 21-telemetry.js). CS007 P4.
     //

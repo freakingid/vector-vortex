@@ -1,19 +1,23 @@
 # Vector Vortex — STATUS
-Version: 0.0.9 · Changeset: CS013 (not started) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5
+Version: 0.0.9 · Changeset: CS013 (P1 of 5 done) · Wells: 16/16 · Enemies: 6/6 Classic, 1/3 Overdrive · Tracks: 3/5 · Tokens: drop + 2/5 effects
 
 ## Phase ledger — CS013
 
-Not started. `PLANNED-FEATURES-CS013.md` is unwritten; `ROADMAP.md`'s row is
-Overdrive tokens, the Warden and the Mimic (GDD §14.1, §14.6). This ledger gets
-one line per phase. **CS012's ledger, reasoning, measurements, mutation records,
-baseline ledger, acceptance criteria and review notes are in `log/CS012.md`.**
+Plan: `PLANNED-FEATURES-CS013.md` (§0 answered, every recommendation);
+prompts: `IMPLEMENTATION-PHASES-CS013.md`. Reasoning per phase: `log/CS013.md`.
+CS012's ledger and review notes: `log/CS012.md`.
+
+| Phase | Commit | One line |
+|---|---|---|
+| P1 | this commit | Tokens: `state.tokens` / `state.powers`; `10-powerups.js` (`dropToken()` the ONE way in, one draw per Overdrive kill, a no-op in Classic; `updateTokens()`; Bounty, Recharge; lasting flags); both tables in `C`; `drawToken()`; `C.SFX.collect`. `test-cs013-p1.js` (140). Four closed files in place, one edit unpredicted. 2 of 2 red |
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
-  **655.0 KB**); the manifest is checked both directions against `src/`, and a
+  **673.2 KB**); the manifest is checked both directions against `src/`, and a
   missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **66 test files, all green, zero skips**, 118 s.
+- `node scratchpad/run-all.js`: **67 files, all green, zero skips** (299 s at P1:
+  ⚠ machine load — HEAD's own `test-cs008-p8.js` took 88 s that session).
 - **CS001–CS011 are closed; each has a `log/CS0##.md`.** The wells and the depth
   model (CS001); the loop, the Skimmer, shots and four input devices (CS002); the
   entity contract, the spawner, collision, the Purge, death and respawn (CS003);
@@ -78,27 +82,31 @@ baseline ledger, acceptance criteria and review notes are in `log/CS012.md`.**
 
 ## Known issues
 
-### What CS013 must act on first
+### What CS013's next phases must act on
 
-- ⛔ **THE TOKEN PALETTE IS STILL FREE, AND THAT WAS DELIBERATE.** GDD §14.1
-  reserves a warm palette no enemy uses for the five tokens, and CS012's O16
-  leaned on it: ⛔ **the Reaver has its own key `C.REAVER_COLOR` holding
-  `C.VAULTER_COLOR`'s value**, so the Classic set (red, amber, acid green, pale
-  green, violet, pink, pale cyan) is unchanged and nothing warm was spent. ⛔ **A
-  CS013 token colour that reaches for one of those eight re-opens O16.** The
-  whole enemy and menu palette is still ⚠ provisional and `tools/glow-lab.html`
-  does not exist.
-- ⛔ **`hudLayout()` NOW HAS TWO OVERDRIVE RECTANGLES, AND BOTH ARE TIGHT.**
-  The combo readout is centre-top and the jump glyph sits `C.HUD_JUMP_GAP` left
-  of the Purge glyph. ⛔ **The four Classic rectangles and the jump box are
-  bit-identical whether or not the combo is shown**, asserted in
-  `test-cs012-p4.js` and `-p5.js`; a third Overdrive item must keep that true.
-  ⛔ **MEASURED: the centre-top band is 76.29 px tall** (the Fan well, index 14,
-  is an arc across the top; every other well starts at y 154 or lower), and the
-  shipped sum `C.HUD_COMBO_Y` 6 + `HUD_COMBO_SIZE` 56 + 2 × `HUD_COMBO_PAD` 4 =
-  70 clears it by **6.29 px**. ⛔ **`HUD_COMBO_SIZE` cannot rise past ~62 without
-  moving the Fan or relaxing GDD §10.3**, and the ring is an **ellipse** because
-  a circle round the widest reading would be 148 px tall.
+- ⛔ **THE KILL LINES NOW CARRY `dropToken()`** (P1): `…comboKill(state);
+  dropToken(state, e); sfx("kill", …)`. `test-cs012-p4.js` pins them by
+  `mutate` in `COMBO_OUT` AND in two shot-kill `mutantRed` strings (`:615–619`,
+  ⚠ the one P1 edit plan §11 did not predict). ⛔ **P3's jump-strike kill line
+  must match none of them, and a phase that edits a kill line repairs both
+  lists.**
+- ⛔ **EVERY OVERDRIVE BOARD MOVED AFTER ITS FIRST KILL** (one roll each, K4).
+  Three closed fixtures were re-seeded to restore their preconditions:
+  `test-cs012-p2.js`'s wall soak (`SOAK_SEED`), `test-cs012-p4.js`'s ×1 run
+  (seed 17), `test-cs012-p6.js`'s Overdrive pair (`OD_CLOCK` 7927). ⚠ All three
+  are seed-fragile; P3's and P4's schedule rows will move them again.
+- ⛔ **ITEM 8 PRICES A BOUNTY PER STEP via a `collectToken` spy** in
+  `test-cs012-p4.js` and `-p6.js`. A new unmultiplied event owes both a price.
+- ⛔ **`state.powers` IS SET AND UNREAD** until P2 (R11). **`purgeUses` has a
+  second zeroing writer** (Recharge). `C.TOKEN_COLOR` `#FFF347` is the warm
+  gold; ⛔ the Warden's blue and the Mimic's violet (W6, MI3) must not reach for
+  it or for the eight enemy colours (O16). `LANCE_CHIP_MULT` and
+  `SPREAD_SHOT_MAX` exist, unread.
+- ⛔ **`hudLayout()` HAS TWO OVERDRIVE RECTANGLES, BOTH TIGHT, AND TOKENS ADDED
+  NONE** (T10). The Classic four and the jump box are bit-identical with or
+  without the combo (`test-cs012-p4.js`, `-p5.js`). ⛔ The centre-top band is
+  76.29 px (the Fan well); `HUD_COMBO_Y` 6 + `SIZE` 56 + 2 × `PAD` 4 clears it by
+  6.29 px, so `HUD_COMBO_SIZE` cannot pass ~62 (GDD §10.4).
 - ⛔ **AN OVERDRIVE ENEMY GOES IN `07-enemies-overdrive.js`** (CS012 P2, O15),
   against the contract in `07-enemies.js`, and reaches the board ONLY through
   `C.SPAWN_SCHEDULE_OVERDRIVE` — the Warden at 11 and the Mimic at 16. ⛔ There
@@ -107,29 +115,20 @@ baseline ledger, acceptance criteria and review notes are in `log/CS012.md`.**
   ⛔ **`scratchpad/test-registry.js`: `enemies` 7 and `enemyKinds` 10** — CS013's
   two are the next movers.
 - ⛔ **A MUTATION RUN THAT THROWS, OR ANSWERS UNREADABLY, IS A DEFECT IN THE
-  TEST, NOT A RESULT.** CS012 hit it three times (P3, P5, P6): an unguarded read
-  (`ob.submits[0].result`, `withIt.highpass.Q.value`) turns a mutant into a throw
-  that hides which claims it breaks, and a `join(",")` over a per-frame log turns
-  one into a 159,000-entry string. Guard the reads, report a COUNT and one index.
-  ⛔ **And `mutantRed()` asserts the mutation string was found exactly once
-  BEFORE asserting red** — a `buildGame` throw on a stale string reads as a pass.
+  TEST** (CS012 P3, P5, P6): guard the reads, report a COUNT and one index, and
+  ⛔ `mutantRed()` asserts its string is in the build exactly once BEFORE it
+  asserts red — a `buildGame` throw on a stale string reads as a pass.
 - ⚠ **FINDING (CS012 P2, MEASURED): CS008 P1's ε and `atRim()` mutations no
   longer redden a rim-arrival table alone.** P1b's sweep masks them under held
   fire. ⛔ **A CS013 item-13 test for the Warden or Mimic mutates the sweep AND ε
   together** (`test-cs012-p2.js` §9: 18/24). `atRim()` cannot redden a Reaver
   case at all, because a Reaver hunts mid-climb.
-- ⚠ **FINDING (CS012 P5, MEASURED): EVERY KIT `VERSION` BUMP IS A CLOSED-FILE
-  EDIT.** Three closed files pin `AUDIO_VERSION` by literal
-  (`test-cs009-p1.js:100`, `test-cs009-p4.js:98`, `test-cs010-p1.js:38`) and two
-  pin the signal path node by node (`test-cs009-p1.js`'s `gameRoute`;
-  `test-cs010-p1.js`'s "only the high-pass feeds the limiter" and its path walk).
-  ⛔ **A plan that names a kit version bump owes its §11 a row per pinning file**,
-  and one for the path if the bump moves a node.
-- ⚠ **FINDING (CS012 P4, MEASURED): DELETING A CONFIG OBJECT IS A DIFFERENT GREP
-  FROM RE-SOURCING ONE OF ITS KEYS.** `test-cs007-p4.js:153` and `:160` test key
-  ABSENCE (`!("score" in …)`) and become a `TypeError` when the object goes.
-  ⛔ **A plan that deletes a config object owes §11 a grep for `in <OBJECT>` as
-  well as for `<OBJECT>.`**
+- ⚠ **EVERY KIT `VERSION` BUMP IS A CLOSED-FILE EDIT.** FOUR files pin
+  `AUDIO_VERSION` by literal (`test-cs009-p1.js`, `-p4.js`, `test-cs010-p1.js`,
+  `test-cs012-p5.js`; CS013 plan F3) and two pin the signal path node by node.
+  ⛔ A plan that bumps a kit owes §11 a row per pinning file.
+- ⚠ **DELETING A CONFIG OBJECT IS A DIFFERENT GREP FROM RE-SOURCING A KEY**:
+  ⛔ a plan that deletes one owes §11 a grep for `in <OBJECT>` too.
 - ⛔ **`instanceof` IS PER BUILD.** A `gddPoints()`-style helper closed over one
   build matches nothing in any other, and every non-vacuity check then passes on
   zero (`test-cs012-p4.js`). Take the build as an argument.
@@ -394,10 +393,7 @@ baseline ledger, acceptance criteria and review notes are in `log/CS012.md`.**
   `TELEMETRY_KINDS`, `telemetryRow()` and `22-meta.js`'s declared `telemetry`
   version move together.
 
-## Next up — CS013
+## Next up — CS013 P2
 
-Plan it in a PLANNING session (`CLAUDE.md`'s three session kinds). `ROADMAP.md`'s
-row: **Overdrive tokens and the remaining enemies** — five powerups, the Warden,
-the Mimic on probation (GDD §14.1, §14.6). ⛔ Read "What CS013 must act on first"
-above before writing the plan, and ⛔ **every claim in it is MEASURED or
-PREDICTED.**
+Lance, Spread and Ward (T7–T9), `wardBreak`: `IMPLEMENTATION-PHASES-CS013.md`'s
+P2 prompt. ⛔ Read "What CS013's next phases must act on" above first.

@@ -613,21 +613,49 @@ const C = {
     menuConfirm:    { osc: [{ type: "triangle", f: 660 }, { type: "triangle", f: 990 }], atk: 0.002, hold: 0.05, rel: 0.12, gain: 0.1 },
     menuBack:       { osc: [{ type: "triangle", f: 660, to: 330 }], glide: 0.08, atk: 0.002, hold: 0.02, rel: 0.08, gain: 0.1 },
     comboLost:      { osc: [{ type: "sawtooth", f: 587, to: 220 }, { type: "sawtooth", f: 392, to: 147 }], glide: 0.22, filter: { type: "lowpass", f: 3200, to: 700 }, sweep: 0.22, atk: 0.003, hold: 0.04, rel: 0.22, gain: 0.13 },
+    collect:        { osc: [{ type: "triangle", f: 1320, to: 2640 }, { type: "square", f: 1980, to: 3960 }], glide: 0.06, filter: { type: "lowpass", f: 6000 }, atk: 0.002, hold: 0.03, rel: 0.14, gain: 0.1 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15 },
 
   // ---- Overdrive (GDD 14) -------------------------------------------------
+  // ⛔ THE TOKENS (GDD 14.1; CS013 P1, T1–T6, T10; 10-powerups.js). ⚠ Every
+  // value below but the three GDD numbers (MAX_TOKENS, TOKEN_HOVER_DEPTH,
+  // BOUNTY_POINTS) is provisional: a tuning or art pass owns it.
+  // ⛔ GDD 14.1's TWO TABLES ARE TWO, AND NEITHER NAMES THE OTHER'S NUMBERS: a
+  // weight is never a budget and a budget is never a weight, so retuning how
+  // often Ward drops cannot change what it does, and the reverse.
+  //
+  // -- the life on the board (T4) --
   MAX_TOKENS:           2,      // ⛔ readability cap on powerups on screen
   TOKEN_LIFE:           9.0,    // s. ⛔ counts UP toward this. GDD 16.3.
-  TOKEN_HOVER_DEPTH:    0.80,
+  TOKEN_HOVER_DEPTH:    0.80,   // rises to here and holds; collectable only here
+  TOKEN_RISE:           0.30,   // depth / s ⚠
+  // -- THE DROP-WEIGHT TABLE: which kills drop, and WHICH token a drop is (T2, T3) --
+  // p = TOKEN_DROP_CHANCE / (1 + threatCount()), off ONE draw per Overdrive
+  // kill; the kind is the same draw rescaled over these weights, in this order.
+  TOKEN_DROP_CHANCE:    0.10,   // ⚠ about one token per cleared well (plan §0 T2, MEASURED on bots)
+  TOKEN_WEIGHTS:        { bounty: 3, lance: 2, spread: 2, ward: 2, recharge: 1 },   // ⚠
+  // -- THE BUDGETED-EFFECT LIST: WHAT a token does, and how much (T6–T9) --
+  // Bounty pays this, unmultiplied; Recharge re-arms the Purge (no constant);
+  // Lance, Spread and Ward are CS013 P2's readers; Ward is one hit (no constant).
+  BOUNTY_POINTS:        2000,   // GDD 14.1's +2,000
+  LANCE_CHIP_MULT:      3,      // GDD 14.1's "chips Thorns at 3×"
+  SPREAD_SHOT_MAX:      24,     // ⚠ the shot cap while Spread is on (T8: 3 × SHOT_MAX)
+  // -- the look (T10) — one warm colour no enemy or band uses (hue 56°) --
+  TOKEN_COLOR:          "#FFF347",  // ⚠ provisional, the same standing as the enemy palette
+  TOKEN_SIZE:           0.80,   // lane widths spanned by the ring
+  TOKEN_RING_SEG:       24,     // polyline segments to a full ring
   // ⛔ WHAT A MODE HAS, AS DATA (GDD 1, 20 #28: "flags in the config, not a
   // fork"; CS012 R1). One reader, modeHas() at the foot of this file. The
   // Reaver, the track and the board are not flags: they go through
   // SPAWN_SCHEDULE_OVERDRIVE, MODE_TRACK and the board's game id.
+  // ⛔ A FEATURE IS A FIELD IN THE ROWS, NEVER A NEW TOP-LEVEL KEY: 22-meta.js
+  // derives `progress`'s modes from Object.keys(MODE_FLAGS). CS013 P1 added
+  // `tokens` (R3).
   MODE_FLAGS: {
-    classic:   { jump: false, combo: false },
-    overdrive: { jump: true,  combo: true },
+    classic:   { jump: false, combo: false, tokens: false },
+    overdrive: { jump: true,  combo: true,  tokens: true },
   },
   // ⛔ THE JUMP'S FOUR TIMERS, AND ALL FOUR COUNT UP (GDD 14.2, 16.3; O6).
   // JUMP_COOLDOWN runs from LANDING, and JUMP_RECOVERY is its first 0.20 s —
