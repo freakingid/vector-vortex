@@ -65,7 +65,7 @@ happen here, in Claude Code, including planning — `DECISIONS.md`, 2026-08-31.
 |---|---|---|
 | **Planning** | `PLANNED-FEATURES-CS0##.md`, `IMPLEMENTATION-PHASES-CS0##.md` | those two docs, committed |
 | **Build phase** | `src/`, `scratchpad/`, `log/CS0##.md`, the docs its phase names | one phase, committed |
-| **Close** | `log/CS0##.md`, `STATUS.md`, `ROADMAP.md`, `SKIPPED-PLAYTESTS.md` | the changeset closed |
+| **Close** | `log/CS0##.md`, `STATUS.md`, `ROADMAP.md`, `SKIPPED-PLAYTESTS.md`, `DECISIONS.md` | the changeset closed |
 
 1. **Read `STATUS.md` first.** Update it at the end of the session.
 2. **One phase per session.** Build only what the phase prompt scopes. Do not

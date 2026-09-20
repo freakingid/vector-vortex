@@ -287,8 +287,15 @@ them is in `log/CS0##.md`, not here.
   rule with no reasoning to move, and relocating it would delete the read-order
   skeleton every session needs. ⛔ The ⚠ SETTLED rule still forbids a standing
   sweep: the valve fires on an EDIT.
-- ⚠ **~2.1 KB of headroom under the 50 KB ceiling.** ⛔ A CS015 phase that
-  cannot fit its rule fires the valve on the section it is editing first.
+- ⚠ **`CLAUDE.md` IS AT 47,919 BYTES — ~2.0 KB of headroom under the 50 KB
+  ceiling.** ⛔ A CS015 phase that cannot fit its rule fires the valve on the
+  section it is editing first.
+- ✅ **A CLOSE PHASE NOW WRITES `DECISIONS.md` TOO** (Paul, 2026-09-20; 16 bytes
+  in `CLAUDE.md`'s session table). ⛔ **The changeset's calls are indexed AT THE
+  CLOSE**, one line each — ⛔ **a pointer, never the writeup**, and
+  `DECISIONS.md`'s own header states the form. This is what stopped CS012's
+  sixteen calls and CS014's nine going unindexed a third time: CS014 P3's review
+  found the gap and the table forbade it from fixing the gap it found.
 - ⚠ **`DECISIONS.md` has no row for CS012's sixteen calls (O1–O16) or CS014's
   nine (RF1–RF9).** CS010's, CS011's and CS013's are indexed there, so the index
   is incomplete. ⛔ Found by CS014 P3's review; ⛔ **a CLOSE phase may not write
