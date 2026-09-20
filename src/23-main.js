@@ -1648,6 +1648,24 @@ const Game = (function () {
     // The rim pulse is audioFrame()'s reading of this frame (CS010 P4), 0 off
     // play and with no audio. A value, never a clock or a draw of its own.
     drawWell(ctx, well, state.level, lit, state.bandRoll, rimGlow);
+    // ⛔ THE DIVE, DRAWN IN BOTH MODES (GDD 5, 14.5; CS014 P2, RF7-A), ABOVE
+    // THE WELL AND BELOW THE ENEMIES — where a token is (GDD 1.1 P2; CS013
+    // T4), so a Thorn a diver is threading is never behind a gift.
+    // ⛔ The descent first and the rings over it: the rungs are the well
+    // travelling and the rings are what you steer into.
+    // ⛔ Read off state.dive's own fields, and state.bandRoll for the colour —
+    // nothing here draws a random value and nothing here writes (CLAUDE.md,
+    // Math and lifecycle). ⛔ AN UNRESOLVED RING ONLY: `taken` goes null ->
+    // true/false once and for good (11-dive.js), and a resolved one has
+    // already passed the craft. In Classic the set is empty, so the loop is a
+    // no-op there and the descent is the whole visual.
+    if (state.dive.active) {
+      drawDiveRungs(ctx, well, state.dive.depth, wellBandColor(state.level, state.bandRoll));
+      for (let i = 0; i < state.dive.rings.length; i++) {
+        const r = state.dive.rings[i];
+        if (r.taken === null) drawRing(ctx, well, r.lane, r.depth, state.dive.depth);
+      }
+    }
     // ⛔ TOKENS ABOVE THE WELL AND BELOW EVERYTHING ELSE (GDD 14.1, 1.1 P2;
     // CS013 T4, T10): a gift is never drawn over a threat. Read off the token's
     // own fields; nothing here draws a random value.

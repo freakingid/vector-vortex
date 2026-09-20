@@ -285,6 +285,11 @@ function buildGame(opts = {}) {
     // C.DIVE_TIME_OD's one reader, layRings() is the set's ONE way in and
     // C.DIVE_RINGS_MAX's one reader, and takeRings() is the take pass.
     "diveTime", "layRings", "takeRings",
+    // the Dive's visual (14-render-entities.js, CS014 P2, RF7-A). ⛔ Three
+    // top-level functions so a test can spy or stub each: diveDrawDepth() is
+    // the one idea, drawDiveRungs() the descent (BOTH modes) and drawRing()
+    // one ring's arc. 13-render-well.js is untouched.
+    "diveDrawDepth", "drawDiveRungs", "drawRing", "rungScratch",
     // the interval spawner's kind source (08, CS004 P1). ⛔ THE EXPORT SURVIVED
     // THE SCHEDULE AND THE REASON CHANGED (CS007 P3): it used to be ⚠ TEMPORARY
     // because it went with C.DEBUG_SPAWN_KINDS, and GDD 8.1's introduction

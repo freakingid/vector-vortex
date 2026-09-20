@@ -33,11 +33,13 @@ const trimEnd = s => s.replace(/\s+$/, "");
 // sound"; O8): the list is the build's own event set, not CS009's alone.
 // CS013 P1 appended `collect` in place (GDD 14.1's tokens; CS013 T11),
 // CS013 P2 `wardBreak` (GDD 14.1's Ward; T9) and CS013 P4 `reflect` (GDD 14.6's
-// Mimic; MI3 — a hostile shot coming up your lane must be heard).
+// Mimic; MI3 — a hostile shot coming up your lane must be heard). CS014 P2
+// appended `ringTake` and `ringMiss` (GDD 5, 14.5; RF8-A — a ring's payout and
+// GDD 14.5's "you stop earning", which is otherwise invisible).
 const EVENTS = ["fire", "kill", "split", "chip", "bolt", "cross", "surgeCharge", "surgeDischarge",
   "death", "gameOver", "respawn", "purge", "purgeWeak", "extraLife", "lifeLost", "wellClear",
   "dive", "diveStrike", "menuMove", "menuConfirm", "menuBack", "comboLost", "collect", "wardBreak",
-  "reflect"];
+  "reflect", "ringTake", "ringMiss"];
 const VOICES = ["vaulter", "carrier", "weaver", "weaverBolt", "thorn", "drifter", "surger", "reaver",
   "warden", "mimic", "mimicShot"];   // CS012 P2: + reaver; CS013 P3: + warden;
                                      // P4: + mimic and mimicShot — all in place

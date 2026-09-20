@@ -706,3 +706,49 @@ about a run rather than a rule.**
   keeps its ✗ and nothing is rescaled (Paul's D6) — but whether a sweep that
   never opens is *audible as a sweep at all* is an ear question, and it has now
   been recorded four times without being asked.
+
+## CS014 P2 — the Dive you can see: does the descent READ as a flight, and is a miss audible?
+
+- **Changeset / phase:** CS014 P2 (the Dive's visual and the two audio seats).
+- **Would have done:** three sittings, all of them on the beat a run spends one
+  frame in six in. (1) **Classic, START DEPTH 13, ten wells, watching nothing
+  but the dive.** MEASURED at the plan (§1.3): **98 of 134 dives begin with an
+  empty board**, so in three dives out of four the descent is the ONLY thing on
+  screen — and before this phase there was nothing there at all. The question is
+  the one sentence RF7-A turns on: with `C.DIVE_RUNGS` cross-sections of the
+  well sweeping rim-ward past a craft that does not move, does it read as
+  *flying down the tube*, or as *rings coming up at you*? Named which, out loud,
+  on each of the ten. (2) **Overdrive, START DEPTH 13, ten wells, taking rings
+  deliberately and missing deliberately.** An Overdrive descent is **3.65 s**
+  and lays six rings one every **0.6083 s**; the ask is whether a ring's arc is
+  legible far enough out to decide, and whether the decision feels like steering
+  rather than luck — ⛔ the whole of RF2's answer is that a ring you must cross
+  the well for is a ring you can miss. (3) **The same ten with the screen turned
+  away**, saying from `ringTake` and `ringMiss` alone how many of the six he
+  took.
+- **What we were trying to learn:** ⛔ **Whether the descent is a flight and
+  whether a miss is audible — neither is a thing the suite can answer.** The
+  suite proves the descent is drawn in both modes, that a rung leaves at the rim
+  on the step the descent reaches its depth, that a ring's drawn arc is exactly
+  the arc `takeRings()` measures, that nothing is opaque in the throat zone, and
+  that none of it moves a hash. It cannot say whether **10 rungs over 2.25 s**
+  (Classic) or 3.65 s (Overdrive) reads as motion or as a strobe, whether
+  `C.DIVE_RUNG_ALPHA` 0.40 is a texture or a distraction over a board the player
+  is supposed to be reading Thorns on during the grace beat, or whether
+  aquamarine at hue 165° separates from a **band green** well at levels 81–96.
+  And the sound half is the sharper one: ⛔ **"you stop earning" is the ABSENCE
+  of a score** (GDD §14.5), so `ringMiss` is the only channel it has —
+  and it must never be mistaken for `diveStrike` (0.30), which costs a life on
+  the same beat. ⚠ **Both cues sit over `dive`'s 2.4 s rising sweep at 0.22**,
+  and sfx-lab plays them in context against it, but the lab is not a dive.
+- **Knobs:** `C.DIVE_RUNGS` (10 ⚠), `C.DIVE_RUNG_ALPHA` (0.40 ⚠),
+  `C.RING_ALPHA` (0.90 ⚠), `C.RING_ARC_SEG` (16) and `C.RING_COLOR`
+  (`#4AFFD1` ⚠) — ⛔ **all five are draw-time only, so every one of them is a
+  free tuning knob: moving any of them cannot move a hash** (`test-cs014-p2.js`
+  proves it at 0). The two recipes are `C.SFX.ringTake` and `C.SFX.ringMiss`,
+  ⛔ **picked in `tools/sfx-lab.html`, never hand-tuned here** — candidate A is
+  "sine fifth chime" and "triangle dip", each with two alternates and an
+  in-context sequence that lands the rings on the flight's own 0.6083 s.
+  ⚠ And if the answer to (2) is "luck", ⛔ **the honest lever is
+  `C.RING_LANE_STEP` (0.25 ⚠) or `C.RING_ARC_LANES` (1.5 ⚠), which are
+  simulation and P1's**, not a visual constant.

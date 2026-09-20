@@ -132,6 +132,44 @@ const C = {
   RING_ARC_LANES:       1.5,    // ⚠ half-width of a ring's arc, in lanes
   RING_LANE_STEP:       0.25,   // ⚠ lanes walked between rings, as a fraction of the well
 
+  // ---- The Dive's VISUAL (GDD 5, 10.2, 10.3; CS014 P2, RF7-A) -------------
+  // ⛔ BOTH MODES, AND THAT IS RF7's ANSWER. The descent is drawn in Classic
+  // and in Overdrive alike, and the rings on top of it in Overdrive. MEASURED
+  // at the plan (§1.3, §1.8): a run spends 15.71 % of its steps in a dive —
+  // 19.80 % at DIVE_TIME_OD — and before this phase not one render file
+  // mentioned the Dive at all, so one frame in six was a still board.
+  //
+  // ⛔ DRAW-TIME AND NOTHING ELSE. Every value here is read by
+  // 14-render-entities.js and by Game.draw(), never by the simulation: with
+  // the two alphas at 0 a played session hashes identically, frame for frame,
+  // in both modes (test-cs014-p2.js). That is C.JUMP_LIFT-at-0's proof.
+  //
+  // ⚠ ALL FIVE ARE PROVISIONAL ART, the same standing as the palette. Whether
+  // the flight READS as a flight is a hardware judgment the suite cannot make
+  // and is a skipped playtest (SKIPPED-PLAYTESTS.md, CS014 P2).
+  //
+  // ⛔ THE DESCENT IS THE WELL TRAVELLING, AND drawWell() IS UNTOUCHED. Its
+  // rim ring, throat ring and spokes are the frame the flight happens in;
+  // what moves is DIVE_RUNGS cross-sections of the well, laid at the midpoints
+  // of as many equal slices — layRings()' own lattice — and sweeping rim-ward
+  // past the craft as dive.depth falls, each leaving at the rim on the step
+  // the descent reaches its own depth. ⛔ So the renderer needs no camera and
+  // no second projection: diveDrawDepth() is the whole of it.
+  DIVE_RUNGS:           10,     // ⚠ cross-sections of the well in flight at once
+  DIVE_RUNG_ALPHA:      0.40,   // ⚠ a rung's peak alpha. ⛔ 0 draws no descent
+  // ⛔ A RING IS DRAWN WHERE A TOKEN IS — above the well, below the enemies
+  // (GDD 1.1 P2; CS013 T4) — and as an ARC across 2 x RING_ARC_LANES, the same
+  // half-width takeRings() reads, so what is drawn is exactly what is taken.
+  // ⛔ An UNRESOLVED ring only: `taken` goes null -> true/false once and for
+  // good, and a resolved one has already passed the craft.
+  RING_ARC_SEG:         16,     // polyline segments across a ring's arc
+  RING_ALPHA:           0.90,   // ⚠ a ring's alpha above READABILITY_DEPTH. ⛔ 0 draws no ring
+  // ⚠ Hue 165°, aquamarine, and it reaches for no other constant (STATUS.md):
+  // clear of every band colour (12°, 39°, 140°, 195°, 258°, 313°) and of the
+  // only entity a dive can hold, the Thorn's 254° — and of TOKEN_COLOR's warm
+  // 56°, the eight enemy colours, WARDEN_COLOR's 222° and MIMIC_COLOR's 287°.
+  RING_COLOR:           "#4AFFD1",  // ⚠ provisional, the same standing as the palette
+
   // ---- Enemies (GDD 6) ----------------------------------------------------
   SAFE_SPAWN_DEPTH:     0.75,   // never spawn above this in the player's lane
   // ⛔ GDD 6.3's "fair difficulty is a visible fuse", as seconds. It has sat
@@ -780,6 +818,8 @@ const C = {
     collect:        { osc: [{ type: "triangle", f: 1320, to: 2640 }, { type: "square", f: 1980, to: 3960 }], glide: 0.06, filter: { type: "lowpass", f: 6000 }, atk: 0.002, hold: 0.03, rel: 0.14, gain: 0.1 },
     wardBreak:      { noise: true, filter: { type: "highpass", f: 800, to: 3000 }, sweep: 0.12, atk: 0.001, hold: 0.03, rel: 0.18, gain: 0.26 },
     reflect:        { osc: [{ type: "square", f: 1760, to: 2640 }, { type: "triangle", f: 1175, to: 1760 }], glide: 0.05, filter: { type: "highpass", f: 600, to: 2200 }, sweep: 0.09, atk: 0.002, hold: 0.02, rel: 0.12, gain: 0.16 },
+    ringTake:       { osc: [{ type: "sine", f: 1568 }, { type: "sine", f: 2349 }], filter: { type: "highpass", f: 700 }, atk: 0.002, hold: 0.03, rel: 0.16, gain: 0.14 },
+    ringMiss:       { osc: [{ type: "triangle", f: 660, to: 440 }], glide: 0.07, filter: { type: "lowpass", f: 2200 }, atk: 0.002, hold: 0.02, rel: 0.09, gain: 0.07 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5, mimic: 1.4, mimicShot: 1.8 },

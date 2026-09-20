@@ -131,6 +131,7 @@ Now is CS014 planning
 Phase 1
 stuck on "final full suite"
 closed vs code window
+Phase 2  (of cs014, after unstuck and on desktop)
 
 
 

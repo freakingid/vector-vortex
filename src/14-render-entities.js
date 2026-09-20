@@ -997,6 +997,150 @@ function drawToken(ctx, well, kind, lane, depth, age) {
 }
 
 // ---------------------------------------------------------------------------
+// THE DIVE, DRAWN (GDD 5, 10.2, 10.3, 14.5; CS014 P2, RF7-A) — BOTH MODES
+// ---------------------------------------------------------------------------
+//
+// Before this phase not one render file mentioned the Dive, and a run spends
+// 15.71 % of its steps in one — 19.80 % under C.DIVE_TIME_OD (plan §1.3, §1.8).
+// ⛔ RF7-A: the DESCENT is drawn in Classic and Overdrive alike and the RINGS on
+// top of it in Overdrive, because a ring drawn against a still board does not
+// read as a flight.
+//
+// ⛔ THE ONE IDEA IS diveDrawDepth(), AND IT IS NOT A CAMERA AND NOT A SECOND
+// RENDERER (GDD 14.5's cap). It says where a thing at well-depth `depth` is
+// DRAWN while the descent is at `diveDepth`, in the depth model the whole game
+// already uses — no new projection, no transform, no window size, and
+// 13-render-well.js is untouched, which is why drawWell() needed no new
+// parameter for any of this.
+//
+// ⛔ AND IT IS PRESENTATION ONLY. Nothing here writes state, nothing here draws
+// a random value (CLAUDE.md, Math and lifecycle), and with C.DIVE_RUNG_ALPHA
+// and C.RING_ALPHA at 0 a played session hashes identically frame for frame in
+// both modes — C.JUMP_LIFT-at-0's proof (test-cs014-p2.js).
+
+// perspective() is the space screenPos lerps LINEARLY in, so a fixed step in it
+// is a fixed step in SCREEN distance (03-wells.js). The drawn fraction is
+// therefore just p / pc: the craft's own position IS the rim, and everything
+// below it swells outward toward that rim as the descent closes on it.
+//
+// ⛔ IDENTITY THROUGH THE GRACE BEAT. dive.depth holds at 1 there and
+// perspective(1) is 1, so a rung and a ring sit at their own depths until the
+// descent starts — which is the beat GDD 5 makes the player read the board in,
+// and it must not be a beat the board is also moving in.
+//
+// ⛔ AND IT IS EXACT AT THE RESOLUTION: a thing reaches the rim (1) precisely
+// when diveDepth equals its own depth, which is the step takeRings() resolves a
+// ring on (11-dive.js). What the player sees arrive is what the take pass
+// scored. Clamped at 1, so something already passed is never drawn beyond the
+// rim — and a pc of 0 (the descent's last step) puts everything there.
+//
+// ⚠ AND IT COMES OUT AS depth / diveDepth, WHICH IS WORTH KNOWING AND NOT
+// WORTH WRITING. perspective() is a power law, so (d^k / dc^k)^(1/k) is d / dc
+// exactly — the ratio is the same in either space. It is derived through
+// perspective() and invPerspective() anyway, because the CLAIM is "a fixed step
+// here is a fixed step in screen distance" (03-wells.js), which is a fact about
+// the easing rather than about this arithmetic: write the ratio directly and a
+// future non-power easing would silently stop meaning it.
+//
+// ⛔ A PURE FUNCTION OF TWO NUMBERS: no state, no well, no draw.
+function diveDrawDepth(depth, diveDepth) {
+  // ⛔ THE GRACE BEAT IS EXACT, not exact-to-float. pow(x, 1/k) after pow(x, k)
+  // is not the identity in binary — measured 0.5 back as 0.49999999999999994 —
+  // and the claim this function makes about that beat is bit-identity, not
+  // closeness. It is also every frame outside a dive, where dive.depth is 1.
+  if (diveDepth >= 1) return depth;
+  const pc = perspective(diveDepth);
+  if (!(pc > 0)) return 1;
+  const p = perspective(depth) / pc;
+  return p >= 1 ? 1 : invPerspective(p);
+}
+
+// ⛔ NO PER-FRAME ALLOCATION (GDD 17's perf budget). A rung is the well's own
+// cross-section, so its screen points are memoized ON THE WELL — wellThroat()'s
+// and entityPoints()' pattern, non-enumerable, one array per well ever. The
+// array is SHARED and reused between rungs within a frame, which is fine
+// because each is drawn and stroked before the next is built.
+function rungScratch(well) {
+  if (!well._rung) {
+    const n = wellVertCount(well);
+    const pts = new Array(n);
+    for (let i = 0; i < n; i++) pts[i] = { x: 0, y: 0 };
+    Object.defineProperty(well, "_rung", { value: pts, enumerable: false });
+  }
+  return well._rung;
+}
+
+// ⛔ THE DESCENT IS THE WELL TRAVELLING, AND IT IS THE WHOLE VISUAL IN CLASSIC.
+// C.DIVE_RUNGS cross-sections sit at the midpoints of as many equal slices —
+// layRings()' own lattice, deliberately, so the two read as one family — and
+// each sweeps rim-ward past the craft, leaving at the rim on the step the
+// descent reaches its own depth. ⛔ The well's own outline does NOT move: it is
+// the frame the flight happens in, and a rung is the only thing in it that does.
+//
+// ⛔ FADED AT BOTH ENDS AND THEREFORE NEVER POPPING: shotAlpha() below
+// C.READABILITY_DEPTH (GDD 10.3 — and the deepest rung is born at 0.05, well
+// inside the throat zone), and (1 - d) toward the rim, so a rung fades IN out
+// of the throat and OUT as it passes the craft. ⛔ One expression, no second
+// fade constant, and nothing opaque in the throat zone at either end.
+//
+// `color` is the well's band colour, handed over the way drawWell() is handed
+// state.bandRoll: this module reads no game state and draws no random value.
+function drawDiveRungs(ctx, well, diveDepth, color) {
+  const n = C.DIVE_RUNGS;
+  const rim = well.rim, thr = wellThroat(well);
+  const pts = rungScratch(well);
+  for (let i = 0; i < n; i++) {
+    const d = diveDrawDepth((n - i - 0.5) / n, diveDepth);
+    const alpha = shotAlpha(d) * (1 - d) * C.DIVE_RUNG_ALPHA;
+    if (!(alpha > 0)) continue;
+    // The cross-section in normalized rim space, then C.WELL_CX/CY/RADIUS —
+    // screenPos()'s own mapping, applied to a whole polygon at one depth the
+    // way projectPoly() applies it to the rim and throat rings.
+    const t = perspective(d);
+    for (let v = 0; v < pts.length; v++) {
+      const nx = thr[v].x + (rim[v].x - thr[v].x) * t;
+      const ny = thr[v].y + (rim[v].y - thr[v].y) * t;
+      pts[v].x = C.WELL_CX + nx * C.WELL_RADIUS;
+      pts[v].y = C.WELL_CY + ny * C.WELL_RADIUS;
+    }
+    drawPoly(ctx, pts, well.closed);
+    glowStroke(ctx, color, laneLineWidth(d), alpha);
+  }
+}
+
+// ⛔ A RING IS AN ARC, AND IT IS THE ARC THE TAKE PASS READS (CS014 RF2): it
+// spans 2 x C.RING_ARC_LANES about its lane, the same half-width takeRings()
+// measures with laneDelta, so what is drawn is exactly what is taken and the
+// player is never asked to guess where the edge was (GDD 1.1 P2).
+//
+// ⛔ AN OPEN PATH, and the lane offsets are NOT normalized — polyAt's backstop
+// flattens an arc that reaches past an open well's wall against the end vertex,
+// entityPoints()' rule and for entityPoints()' reason (a normalized offset
+// would wrap it to the far side of the well, GDD 3.5's bug in a rendering hat).
+//
+// ⛔ FADED BELOW C.READABILITY_DEPTH with shotAlpha() (GDD 10.3): the deepest
+// ring sits at 0.0833 (plan §1.7) and is in the throat zone for most of the
+// flight, so it takes the token's fade and brightens as it comes.
+//
+// ⛔ NO PER-FRAME ALLOCATION: one preallocated arc, drawToken()'s rule.
+const _ringArc = (function () {
+  const out = new Array(C.RING_ARC_SEG + 1);
+  for (let i = 0; i <= C.RING_ARC_SEG; i++) out[i] = { x: 0, y: 0 };
+  return out;
+})();
+
+function drawRing(ctx, well, lane, depth, diveDepth) {
+  const d = diveDrawDepth(depth, diveDepth);
+  const alpha = shotAlpha(d) * C.RING_ALPHA;
+  if (!(alpha > 0)) return;
+  const n = C.RING_ARC_SEG;
+  const lo = lane - C.RING_ARC_LANES, span = 2 * C.RING_ARC_LANES;
+  for (let i = 0; i <= n; i++) screenPos(well, lo + span * (i / n), d, _ringArc[i]);
+  drawPoly(ctx, _ringArc, false);
+  glowStroke(ctx, C.RING_COLOR, laneLineWidth(d), alpha);
+}
+
+// ---------------------------------------------------------------------------
 // The death fragmentation (GDD 4.4; CS008 P4, U9) — a kit-fx primitive.
 // ---------------------------------------------------------------------------
 //

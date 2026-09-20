@@ -334,8 +334,12 @@ function diveRun(mode, wellIndex, lane) {
        "⛔ four of the five kill lines are still the shared text, verbatim (GDD 7; 09-collision.js)");
   H.assert(SCRIPT.indexOf("addScore(victim.points() * comboMult()); comboKill(state); dropToken(state, victim);") !== -1,
            "⛔ and the second Purge use is the fifth");
+  // ⛔ REPAIRED IN PLACE, CS014 P2: the ban was `sfx\(`, written before RF8-A's
+  // two seats existed. The CLAIM is "no kill site, no kill line, no sfxVoice",
+  // and a ring's own cue is none of those — it has no sfxVoice because a ring
+  // is not an entity, which is exactly what the narrowed ban still says.
   const dive = SCRIPT.slice(SCRIPT.indexOf("function layRings"), SCRIPT.indexOf("function startDive"));
-  H.assert(!/comboKill|dropToken|tally\.kills|sfx\(/.test(dive.replace(/\/\/.*$/gm, "")),
+  H.assert(!/comboKill|dropToken|tally\.kills|sfx\("kill"|sfxVoice/.test(dive.replace(/\/\/.*$/gm, "")),
            "⛔ and the ring flight adds none of them — no kill site, no kill line, no sfxVoice (plan §7)");
   H.eq(SCRIPT.split("    addScore(C.PTS_THORN);").length - 1, 1,
        "⛔ the Thorn's per-chip 5 is still in the build exactly once (test-cs012-p4.js's decoder reads it)");
@@ -580,7 +584,12 @@ mutantRed([["  return modeHas(\"rings\") ? C.DIVE_TIME_OD : C.DIVE_TIME;",
           "diveTime() ignoring C.DIVE_TIME_OD", probeFlight, REAL);
 mutantRed([["  const n = C.DIVE_RINGS_MAX;", "  const n = C.DIVE_RINGS_MAX - 1;"]],
           "layRings() laying one ring fewer than C.DIVE_RINGS_MAX", probeFlight, REAL);
-mutantRed([["    if (r.taken) addScore(C.RING_POINTS);", "    if (r.taken) addScore(C.RING_POINTS * comboMult());"]],
+// ⛔ REPAIRED IN PLACE, CS014 P2: the pin is now the CALL and not the whole
+// line. P2 seated sfx("ringTake") beside the payout and sfx("ringMiss") on the
+// other branch (GDD 11.8, RF8-A), which moved the line this claim was never
+// about. The claim is the payout's ARGUMENT — unmultiplied — so that is what
+// is pinned, and `addScore(C.RING_POINTS)` is in the build exactly once.
+mutantRed([["addScore(C.RING_POINTS)", "addScore(C.RING_POINTS * comboMult())"]],
           "multiplying a ring's payout (RF4: it is the Bounty's row)",
           function (Z) {
             const ZC = Z.C, st = Z.state;

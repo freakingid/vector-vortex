@@ -176,6 +176,14 @@ function layRings(state, well) {
 //
 // ⛔ A DEAD CRAFT RESOLVES NOTHING, diveStrike()'s guard verbatim. The freeze is
 // running; the next live step respawns, restarts the dive and re-lays the set.
+//
+// ⛔ AND SINCE CS014 P2 THE RESOLUTION IS THE SEAT FOR BOTH SOUNDS (GDD 11.8;
+// RF8-A), one call on each branch of the one line that decides. ⛔ A MISS HAS
+// TO SOUND: "you stop earning" is the ABSENCE of a score, so without a cue the
+// only thing that tells the player is a number that did not move (GDD 1.1 P2).
+// ⛔ NEITHER IS A KILL SOUND AND NEITHER TAKES A VOICE — a ring has no
+// sfxVoice because a ring is not an entity, so there is no C.SFX_KILL_PITCH
+// row and the build's eleven voices are unmoved.
 function takeRings(state, well) {
   const sk = state.skimmer;
   if (!sk || sk.dead) return;
@@ -185,7 +193,8 @@ function takeRings(state, well) {
     if (r.taken !== null) continue;
     if (state.dive.depth > r.depth) continue;
     r.taken = Math.abs(laneDelta(well, r.lane, sk.lane)) <= C.RING_ARC_LANES;
-    if (r.taken) addScore(C.RING_POINTS);
+    if (r.taken) { addScore(C.RING_POINTS); sfx("ringTake"); }
+    else sfx("ringMiss");
   }
 }
 

@@ -21,9 +21,13 @@ const { installSeed } = require("./_seeded-random.js");
 const SEED = 20260919;
 installSeed(SEED);                          // ⛔ above the first buildGame()
 
+// ⛔ CS014 P2 appended `ringTake` and `ringMiss` in place (GDD 5, 14.5; RF8-A):
+// both are seated in takeRings() (11-dive.js), so the claim at the foot of
+// PART 1 — every one-shot event in this list HAS a seat, and every seat writes
+// no state and draws nothing — is the claim they belong to.
 const EVENTS = ["fire", "kill", "split", "chip", "bolt", "cross", "surgeCharge", "surgeDischarge",
   "death", "gameOver", "respawn", "purge", "purgeWeak", "extraLife", "lifeLost", "wellClear",
-  "dive", "diveStrike", "menuMove", "menuConfirm", "menuBack"];
+  "dive", "diveStrike", "menuMove", "menuConfirm", "menuBack", "ringTake", "ringMiss"];
 // ⛔ The gate's ratio (GDD 11.8, SETTLED; ⚠ provisional 0 dB): the tone's peak
 // at master over the loudest music moment's summed note peaks at master.
 const HEADROOM_RATIO = 1.0;

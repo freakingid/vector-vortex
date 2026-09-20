@@ -1307,6 +1307,8 @@ const MUSIC_TRACKS = {
     collect:        { osc: [{ type: "triangle", f: 1320, to: 2640 }, { type: "square", f: 1980, to: 3960 }], glide: 0.06, filter: { type: "lowpass", f: 6000 }, atk: 0.002, hold: 0.03, rel: 0.14, gain: 0.1 },
     wardBreak:      { noise: true, filter: { type: "highpass", f: 800, to: 3000 }, sweep: 0.12, atk: 0.001, hold: 0.03, rel: 0.18, gain: 0.26 },
     reflect:        { osc: [{ type: "square", f: 1760, to: 2640 }, { type: "triangle", f: 1175, to: 1760 }], glide: 0.05, filter: { type: "highpass", f: 600, to: 2200 }, sweep: 0.09, atk: 0.002, hold: 0.02, rel: 0.12, gain: 0.16 },
+    ringTake:       { osc: [{ type: "sine", f: 1568 }, { type: "sine", f: 2349 }], filter: { type: "highpass", f: 700 }, atk: 0.002, hold: 0.03, rel: 0.16, gain: 0.14 },
+    ringMiss:       { osc: [{ type: "triangle", f: 660, to: 440 }], glide: 0.07, filter: { type: "lowpass", f: 2200 }, atk: 0.002, hold: 0.02, rel: 0.09, gain: 0.07 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5, mimic: 1.4, mimicShot: 1.8 },
@@ -1345,6 +1347,8 @@ const SFX_BRIEFS = {
   wardBreak: "An Overdrive Ward absorbs a hit (GDD 14.1; CS013 T9) — the shell breaks and the player LIVES. It must never be mistaken for `death` (0.25) or `lifeLost` (0.18): brighter, shorter, and struck rather than sagging. It lands on the step a death would have, with the respawn's invulnerability starting under it.",
   reflect: "A Mimic sends your own shot back up your lane (GDD 14.6; CS013 MI1). \u26d4 A hostile shot coming up at you MUST be heard (GDD 1.1 P2), and it must not be mistaken for `fire` (0.12, falling) or `bolt` (0.12, a saw rise): metallic, struck, and it RISES where `fire` falls. It lands on the same step as the `fire` that caused it.",
   collect: "An Overdrive token taken (GDD 14.1; CS013 T11) — ONE recipe for all five. A gift, not a kill and not a life: brighter and far shorter than `extraLife` (0.18), and it can land on the step of a `kill`. There is no drop cue — a drop happens on a kill, which already sounds.",
+  ringTake: "A ring taken in Overdrive's Dive (GDD 5, 14.5; CS014 RF8) — it pays C.RING_POINTS, unmultiplied. It sounds up to six times in one 3.65 s flight, over `dive`'s long rising sweep (0.22, 110→880 Hz), so it has to sit ABOVE that sweep and be short enough not to blur into the next one 0.61 s later. ⛔ It can be followed at once by `extraLife` (0.18) and must not be mistaken for it: struck and flat, where extraLife lifts.",
+  ringMiss: "A ring the craft was not inside as the descent crossed it (CS014 RF8) — GDD 14.5's \"you stop earning\", which is otherwise invisible (GDD 1.1 P2). ⛔ Disappointment, not alarm: it must never be mistaken for `diveStrike` (0.30), which costs a life on the same beat. Quieter and shorter than every other cue in a dive, dry, and falling where `ringTake` is level.",
 };
 
 // Candidate A's label. Its recipe is C.SFX, read from BLOCK SFX.
@@ -1374,6 +1378,8 @@ const SFX_A_LABELS = {
   collect: "triangle sparkle",
   reflect: "square + triangle ping",
   wardBreak: "noise shatter",
+  ringTake: "sine fifth chime",
+  ringMiss: "triangle dip",
 };
 
 // Candidates B and C, in the recipe format of createSfxPlayer.
@@ -1462,6 +1468,14 @@ const SFX_ALTS = {
     { label: "noise clap up", recipe: { noise: true, filter: { type: "highpass", f: 900, to: 3600 }, sweep: 0.1, atk: 0.001, hold: 0.02, rel: 0.14, gain: 0.2 } },
     { label: "saw pair turn", recipe: { osc: [{ type: "sawtooth", f: 1320, to: 2640 }, { type: "sawtooth", f: 1328, to: 2656 }], glide: 0.08, filter: { type: "lowpass", f: 7000, to: 2000 }, sweep: 0.12, atk: 0.002, hold: 0.02, rel: 0.14, gain: 0.14 } },
   ],
+  ringTake: [
+    { label: "triangle pair lift", recipe: { osc: [{ type: "triangle", f: 1319, to: 1976 }, { type: "triangle", f: 1976, to: 2637 }], glide: 0.05, atk: 0.002, hold: 0.04, rel: 0.18, gain: 0.13 } },
+    { label: "square ping up", recipe: { osc: [{ type: "square", f: 1760, to: 2637 }], glide: 0.04, filter: { type: "lowpass", f: 7000 }, atk: 0.002, hold: 0.02, rel: 0.12, gain: 0.1 } },
+  ],
+  ringMiss: [
+    { label: "square thud", recipe: { osc: [{ type: "square", f: 330, to: 247 }], glide: 0.06, filter: { type: "lowpass", f: 1800 }, atk: 0.002, hold: 0.02, rel: 0.1, gain: 0.08 } },
+    { label: "noise brush", recipe: { noise: true, filter: { type: "lowpass", f: 2000, to: 600 }, sweep: 0.1, atk: 0.002, hold: 0.02, rel: 0.12, gain: 0.09 } },
+  ],
 };
 
 // ⛔ KILL-PITCH CANDIDATES (CS012 P2, R12). A voice added after CS009 picks its
@@ -1509,7 +1523,8 @@ const PITCH_ALTS = {
 const LAB = { lookahead: 0.20, crossfade: 0.60, fadeOut: 1.00, volRamp: 0.03, noiseSeed: 0x5EED0A0D,
               telegraph: 0.45, hitStop: 1.20,
               limit: { threshold: -24, knee: 0, ratio: 20, attack: 0.001, release: 0.10 },
-              gating: { thresholds: { 2: 0.25, 3: 0.40, 4: 0.80 }, ramp: 0.03 } };
+              gating: { thresholds: { 2: 0.25, 3: 0.40, 4: 0.80 }, ramp: 0.03 },
+              dive: { rings: 6, timeOd: 4.0, grace: 0.35 } };
 function labRng(seed) {
   let a = seed >>> 0;
   return function () {
@@ -1680,6 +1695,17 @@ function setMusic(on) {
 }
 
 // ---- the rows ----------------------------------------------------------------
+// ⛔ THE RING FLIGHT'S OWN CADENCE, derived from the shipped constants rather
+// than typed (CS014 P2): ring i is resolved when dive.depth reaches
+// (n - i - 0.5) / n, and dive.depth falls linearly from 1 over
+// DIVE_TIME_OD - DIVE_GRACE after the grace beat. Six beats, 0.6083 s apart.
+const RING_BEATS = (function () {
+  const n = LAB.dive.rings, span = LAB.dive.timeOd - LAB.dive.grace;
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(LAB.dive.grace + (1 - (n - i - 0.5) / n) * span);
+  return out;
+})();
+
 // Each: what "in context" plays, as the hint says. Neighbours are PICKED.
 const CONTEXT = {
   fire:           ["fire ×4, then a kill (voice below)", k => { for (let i = 0; i < 4; i++) at(i * 0.11, "fire", k); at(0.36, "kill", undefined, killPitch()); at(0.55, "fire", k); }],
@@ -1712,6 +1738,8 @@ const CONTEXT = {
   wardBreak:      ["collect a Ward → the hit it absorbs", k => { at(0, "collect"); at(1.1, "wardBreak", k); at(1.6, "fire"); }],
   collect:        ["fire → kill → the token rises → collect", k => { at(0, "fire"); at(0.08, "kill", undefined, killPitch()); at(1.3, "collect", k); at(1.5, "fire"); }],
   reflect:        ["held fire → a reflection → the next shot kills the Mimic", k => { at(0, "fire"); at(0.07, "reflect", k); at(0.14, "fire"); at(0.21, "fire"); at(0.28, "kill", undefined, SHIPPED.SFX_KILL_PITCH.mimic); }],
+  ringTake:       ["⛔ dive → four rings taken, at the flight's own 0.6083 s", k => { at(0, "dive"); RING_BEATS.slice(0, 4).forEach(t => at(t, "ringTake", k)); }],
+  ringMiss:       ["⛔ dive → take, take, MISS, take — the pair side by side", k => { at(0, "dive"); at(RING_BEATS[0], "ringTake"); at(RING_BEATS[1], "ringTake"); at(RING_BEATS[2], "ringMiss", k); at(RING_BEATS[3], "ringTake"); }],
 };
 
 function flash(id) {
