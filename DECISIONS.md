@@ -4,8 +4,16 @@ Judgment calls made **outside** the phase flow, where no plan doc covered the
 question. In-phase reasoning belongs in `log/CS0##.md`; rules belong in
 `CLAUDE.md`; the *why* behind a rule belongs in `RATIONALE.md`.
 
-Newest last. One entry per date, with the question, the call, and what would
-change it.
+Newest last. Two forms, and the second superseded the first at CS010: a dated
+**section** — the question, the call, and what would change it — and, from CS010
+on, **one line** in the list at the foot of this file. ⛔ **A pointer, never the
+writeup** (`CLAUDE.md`): the row names the calls, who answered, the date, and
+the document that holds the answers.
+
+⚠ **CS001–CS006 owe no §0 pointer row.** The "Paul's calls" table in a planning
+doc begins at `PLANNED-FEATURES-CS007.md`; those six changesets' calls are the
+dated sections below, and their absence from the list is not a gap. Audited
+2026-09-20, all fourteen changesets.
 
 ---
 
@@ -726,4 +734,8 @@ more bars of music at 120 BPM, or deciding the mix call in CS010.
 - The stored `lastUsed` stays `""` after a first launch (kit-profile's `select()` of the already-current `p0` is a no-op; a reload still selects the same profile). Accepted as-is, no kit edit, Paul, 2026-09-16: `log/CS011.md`, P1.
 - ⚠ Deleting a profile runs kit-profile's `remove(id)` before removing its keys, the reverse of CS011 plan R12's wording, so a refused delete deletes nothing. Kept as built, Paul, 2026-09-16: `log/CS011.md`, P4.
 - kit-leaderboard 0.2.1 (PATCH): `beginRun()` falls back to a `getRandomValues` UUID v4 without `crypto.randomUUID`, CS011 plan R18: `lib/kit-leaderboard/kit-leaderboard.NOTES.md`.
+- ⚠ **Backfilled 2026-09-20** (never written at the time; the finding is in `log/CS014.md`, CS014 P3's review). CS012's Overdrive calls (O1–O16) and readings (R1–R16), Paul, 2026-09-16: every recommendation, `archive/PLANNED-FEATURES-CS012.md` §0, answered in the planning session. Four a future session could mistake for oversights: ⛔ **the combo multiplier is applied AT THE KILL SITES, never inside `addScore()`** (O4 — what is multiplied is exactly what builds it, so chips, the three clear bonuses and the Start Depth bonus stay unmultiplied); ⛔ **MODE's row ORDER is GDD §13's default highlight** (O9 — no mark, no colour, no flag); ⛔ **`src/07-enemies-overdrive.js` is a new file and NOTHING moved out of `07-enemies.js`** (O15); and ⚠ **the filter sweep's ✗ is ACCEPTED, recorded and never rescaled** (O14).
+- ⚠ **Backfilled 2026-09-20.** CS012 ran **P5 (the Jump) before P4 (the combo)** at Paul's request, 2026-09-17: `log/CS012.md`, P5. Nothing in P5 reads the combo, so the only visible consequence is that `STATE_FIELDS.CS012` reads `["jump", "combo"]` rather than the plan's `["combo", "jump"]`.
 - CS013's Overdrive calls (T1–T11, W1–W6, MI1–MI3) and readings (R1–R11), Paul, 2026-09-17: every recommendation, `PLANNED-FEATURES-CS013.md` §0, answered in the planning session.
+- ⚠ **Backfilled 2026-09-20**, the same day it was answered. CS014's ring-flight calls (RF1–RF9) and readings (R1–R11), Paul, 2026-09-20: every recommendation, `PLANNED-FEATURES-CS014.md` §0, answered in the planning session — the third changeset running. Four a future session could mistake for oversights: ⛔ **a ring is a FIELD ON `state.dive`, not an enemy and not a token** (RF1 — MEASURED: only 5 of `state.enemies`' 20 readers run inside a dive, and both a ring would meet are wrong by default); ⛔ **a ring pays through `addScore()` UNMULTIPLIED, building nothing and rolling nothing** (RF4 — it is not a kill and a Dive is not a kill site, so the four kill sites and five kill lines are unmoved); ⛔ **all five of GDD §4.5's death conditions stay live in BOTH modes** (RF5 — §14.5's "no failure state beyond 'you stop earning'" is read as no NEW one); and ⚠ **the Dive's VISUAL ships in both modes and is deliberately NOT inside the one-line cut** (RF7 — cutting the rings leaves a Classic dive that still reads as a flight).
+- ⚠ **Backfilled 2026-09-20**, for a call made after the CS014 close. **`CLAUDE.md`'s ceiling valve was fired on `### Math and lifecycle` at Paul's direction**, in its own commit rather than waiting for a phase to edit the section: it stood at **7.0 KB** against the rule's ~4 KB line and the file had 476 bytes of headroom. The reasoning behind the Jump's phase, `aloft`, the Mimic's two-state budget and `MimicShot`'s `speed()` moved to a new `RATIONALE.md#entity-phases`; ⛔ **no rule was deleted** and each block names the anchor. `CLAUDE.md` 49,524 → 47,903 bytes. ⚠ This is the one time the valve has fired as a directed act rather than on an edit, and ⛔ **the ⚠ SETTLED rule against a standing cleanup sweep is unchanged.**
