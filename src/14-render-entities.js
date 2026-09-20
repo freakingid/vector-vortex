@@ -1,6 +1,6 @@
 // 14-render-entities.js — entity draw code, kept apart from 06-shots.js so the
 // glow/particle primitives here can move into kit-fx wholesale later (CLAUDE.md
-// "Modules built here, destined for the kit"). CS002 P3 added the shot streak;
+// "Kit modules and extraction"). CS002 P3 added the shot streak;
 // CS003 P1 adds the shared entity projection helper and the Vaulter; CS004 P2
 // adds the Carrier's hull and its cargo glyphs, P3 the Weaver and its bolt, and
 // P4 the Thorn — which is the first entity here that is NOT a silhouette at a

@@ -454,3 +454,206 @@ into a method is exactly the class of change that looks obviously equivalent and
 is not — an evaluation-order or a rounding difference does not show up in a
 diff. The proof is a Classic run bit-identical against a build carrying the old
 line, and it is cheap; reading the two forms is not a proof at all.
+
+---
+
+## #compaction
+
+**`CLAUDE.md` was compacted at Paul's direction on 2026-09-20**, after CS015 P1,
+from **47,919 to ~34.6 KB**. He asked whether it made sense that the file kept
+growing, and directed it made as efficient as possible without losing quality or
+consistency. ⛔ **No rule was deleted.** What left it was of three kinds, and all
+of it is below, verbatim or near it, under the anchor each `CLAUDE.md` section
+now names:
+
+1. **Reasons** — why a rule exists. They moved here.
+2. **History** — plan-letter codes (O2, T7, RF4, W4, MI1 …), "used to", the
+   phase that landed a rule, measurements that justified it. Those point into
+   `archive/` and `log/`, which are not session context, so they cost every
+   session and served none. The phase is recoverable from `git log -S`.
+3. **Repetition** — the same fact in two sections (`C.GAME_ID` is not a board id;
+   the one two-depth comparison; the Dive's termination kill pays nothing). Each
+   is now stated once.
+
+Why the file had grown: every changeset since CS009 added invariants, which is
+legitimate, but each arrived wrapped in its provenance and its argument, because
+the phase that wrote it had just made that argument. The ceiling rule only moved
+reasons out of sections over ~4 KB, and only on an edit, so a 2 KB section that
+was half reasoning never qualified. The new ceiling rule states the FORM a rule
+takes — shortest complete statement, reasons here, history in `log/`, a fact
+once — so the file grows by rules, not by their arguments. ⚠ The valve and the
+ban on standing sweeps are unchanged; this was one directed pass, like the
+2026-09-20 valve on `### Math and lifecycle`.
+
+Reasons with no better home, by the `CLAUDE.md` section they came from:
+
+- **Math and lifecycle.** Writing 2-D geometry into entity logic is the single
+  most common source of subtle bugs here (`#depth-model`). Clamping the player
+  but leaving enemy AI wrapping produces enemies that teleport across the well.
+  Breaking the draw-path RNG rule reads as a physics bug. The Skimmer gets no
+  `depth` even to make a resting `killDepth = 0` "honest". The Purge does not
+  route through `onShot`: a panic button that doubles the enemy count is not a
+  panic button.
+- **Scoring.** GDD §7 once said "three kill sites, and no fourth"; the jump
+  strike corrected it rather than stretched it. A ring is the Bounty's row, not
+  an entity price, so `09-collision.js` was not edited for it, and its crossing
+  an extra-life milestone is `addScore()` being the one writer and the one
+  life-awarder, unchanged. The combo is not unified into `addScore()` because it
+  would silently multiply all four unmultiplied payouts.
+- **The Dive.** A world zoom was MEASURED unavailable (×1.10 on the widest well),
+  which is why the visual adds no camera. The take pass sits above the strike
+  test for the strike's own ordering reason (`#ring-flight`).
+- **Shape.** `fetch()` and `import` both fail on `file://`; the module-bridge
+  exception fails there by design; no leaderboard module means the game plays
+  with no leaderboard. Without `noopener` an opened page gets a live handle back
+  into the game.
+- **Test rules.** `_harness.js` owns building, loading `dist/`, the env stubs and
+  the assertion counters. When an assertion is rewritten in place, the closed
+  phase still owns the *claim*; only the mechanism moved. The seed goes above
+  everything because some nondeterminism is spent at module-evaluation time.
+
+---
+
+## #vocabulary
+
+Atari owns the original's trade dress and terminology, and has enforced it — it
+blocked Jeff Minter, co-creator of the 1994 sequel, from shipping *TxK* ports.
+The mechanic is not protectable; the words and the look are the exposure. A
+variable named after a banned word is a legal exposure, not a style problem.
+
+The scan became a substring scan on 2026-09-20 (Paul's call, before CS015 P3's
+43 save-data ids): a whole-word `\b` test missed a banned word joined by `_` or
+camelCase. "web" alone excepts `webkit`, the browser's `webkitAudioContext`.
+
+---
+
+## #session-rules
+
+- **All three session kinds happen in Claude Code, planning included** —
+  `DECISIONS.md`, 2026-08-31.
+- **MEASURED vs PREDICTED (3b).** Mixing them silently is what made
+  `PLANNED-FEATURES-CS006.md`'s three false predictions expensive —
+  `DECISIONS.md`, 2026-08-31. "How many pointers does this renumber touch",
+  "does this move that baseline", "does that closed test already assert the
+  opposite" are each one command.
+- **The doc, not the conversation (3c).** The plan and the build are separate
+  sessions, and the gap between them is a check, not an inconvenience.
+- **Reasoning goes to `log/` as the phase goes.** `CLAUDE.md` once sent a phase's
+  reasoning to `log/` and simultaneously denied a build phase the file; CS007's
+  three `STATUS.md` entries came to 1,551 words against a 600 budget because of
+  it.
+- **The close's review is the point**: it is the one pass that reads every phase
+  together and catches what two phases said differently.
+
+---
+
+## #config
+
+- **`climbMult()` is the one multiplier on all five climbs** because that is what
+  keeps GDD §4.4's respawn guarantee a single arithmetic statement;
+  `test-cs007-p2.js` asserts it and the accessor rule off the built file, so a
+  direct read turns the suite red.
+- **`heat(1)` is exactly 0** so every derived value is its own level-1 base at
+  level 1, which makes every level-1 test in the suite provably unreachable by
+  the clock.
+- **A slower bolt breaches the respawn guarantee**: a pushed bolt reaches its kill
+  band inside the invulnerability window and is safe only because it
+  self-terminates at depth 1 first.
+- **`C.CLIMB_MAX_BASE`** is named once so a future faster entity cannot escape the
+  guarantee's assertion silently.
+- **A row for `thorn` or `weaverBolt`** would put a parentless entity in the
+  throat.
+- **The draw rule.** `rngPick()` on a single-element array still advances the
+  run's one stream, which is shared with every spawn lane — so a draw spent at
+  levels 1–2 moves `GOLDEN_LANES`, whose whole window lives there.
+- **No cargo weight table (SETTLED).** GDD §8's "cargo weights shift toward
+  Drifter/Surger" is delivered by arithmetic: the three Carrier variants are three
+  schedule rows, so cargo is 100 % Vaulter at L3–17, 50/50 at L18–22, 33/33/33
+  from L23. The missing table is a decision, not a gap.
+
+---
+
+## #readability
+
+Nothing opaque below `C.READABILITY_DEPTH` because that is what a well-known
+successor of the original was criticised for violating, and it is the difference
+between a game that feels tense and one that feels unfair.
+
+---
+
+## #tokens
+
+A token is not an enemy on `state.shots`' precedent: a second array none of
+`state.enemies`' readers sees. The jump strike inherited the token roll with the
+rest of its kill line (CS013 P5's review). The Classic no-op is what keeps
+`P1_DETERMINISM_HASH` and every Classic soak unmoved. `pierce` is copied at fire
+time so a lapsed Lance cannot reach a shot in flight; the Thorn's per-chip
+payment keeps both closed chip decoders reading a 3× chip unedited.
+
+---
+
+## #audio
+
+- **`scheduleStep` never consults intensity**: that is what makes note timing
+  provably fixed regardless of what the director does.
+- **The solo test**: a layer that only makes sense inside the stack is texture,
+  and texture is what produced the mud last time (`#music-layers`).
+- **Tier 1..4**: `f >= undefined` is always false, so a tier-5 layer would be
+  permanently silent.
+- **The `AudioSys.ctx` guard**: nothing starts before the first user gesture, and
+  the headless suite is safe.
+- **The high-pass before the limiter**: sweep and high-pass are both tone
+  controls on the programme, so the limiter sees the sound the game asked for.
+  A fixed Butterworth `Q` has a flat response at or under unity, which keeps
+  `test-cs009-p5.js`'s headroom model (D16) standing unedited.
+- **Struck, never swelled**: a pad that fades in is the sound Paul rejected. It
+  applies to `drive` and CS010's layers as to every other.
+
+---
+
+## #save-data
+
+- Renaming a key silently wipes player data; a `migrate` returning `undefined`
+  leaves the stored bytes standing.
+- `legacyRosterKey: null` keeps kit-profile's `afd_*` import path from running;
+  an empty string imports `afd_profiles_v1`.
+- A switch resets before it loads because the load path is written for a cold
+  boot: loading alone bleeds the outgoing profile's settings onto the incoming
+  one.
+- The `getRandomValues` fallback exists because an opaque origin (sandboxed
+  embed) is never a secure context, and `randomUUID` is secure-context-only.
+- An achievement id is save data however dated its spelling looks: renaming one
+  drops that unlock for every player.
+
+---
+
+## #kit
+
+- The boundary contract mirrors the kit's own hard constraint in reverse ("no game
+  code lives here, ever"). A module that violates it is not extractable, and
+  extraction is the whole point.
+- A kit fix is made in `lib/` deliberately, so the change is exercised by a real
+  game before it lands in the shared repo.
+- The `.NOTES.md` is the backport packet: a reviewer merging into coinless-kit
+  reads one file, not this game's decision history. A producing module's notes
+  double as its draft kit documentation, so extraction is copying code and notes,
+  not writing a doc from scratch — which is why these modules are kit-shaped from
+  v1: extraction is a copy, not a rewrite.
+
+---
+
+## #tools
+
+Each lab duplicates whatever slice of game logic it needs; drift there can only
+produce a bad preview, never a bad build.
+
+- **music-lab**: SOLO, MUTE, the PASS/FAIL mark, the TEMPO ladder, INTENSITY (the
+  real bar-latched setter and the sweep), TIER per PASS layer, and COPY TABLE,
+  which writes `tier`. It plays through the game's limiter.
+- **sfx-lab**: 2–3 candidates per event, ▶ alone, ▶ in context, a picked mark and
+  COPY OUT. Its BLOCK A, B and SFX are `16-audio-engine.js`, `17-audio-tracks.js`
+  and `00-config.js`'s SFX group.
+- **feel-lab** measures rather than demonstrates: traverse-and-stop time,
+  overshoot and settle time across `MOUSE_SENS`, `KEY_TAP_MS`, `KEY_RAMP` and
+  `GAMEPAD_SENS`; reachable over LAN via `npm run serve` (`tools/serve-lan.js`)
+  for the on-hardware phone pass.

@@ -301,22 +301,13 @@ them is in `log/CS0##.md`, not here.
 
 ## Carried tasks
 
-- ✅ **THE `CLAUDE.md` VALVE HAS FIRED ON `### Math and lifecycle`** (Paul's
-  direction, 2026-09-20, its own commit after the CS014 close). The section went
-  **7.0 KB → 5.4 KB** and the file **49,524 → 47,903 bytes**, ⛔ **with no rule
-  deleted**: the reasoning behind the Jump's phase, `aloft`, the Mimic's
-  two-state budget and `MimicShot`'s `speed()` moved to a new
-  `RATIONALE.md#entity-phases`, and the four blocks name it. ⚠ **What is left in
-  that section is RULE, twelve invariants, and the valve cannot shrink it
-  further** — the next reduction there is Paul deciding a rule has expired, not
-  a relocation. ⚠ **`## Code map` is 4.5 KB and is the other over-size section**,
-  and `log/CS014.md` records why the valve does not fire on it: it is entirely
-  rule with no reasoning to move, and relocating it would delete the read-order
-  skeleton every session needs. ⛔ The ⚠ SETTLED rule still forbids a standing
-  sweep: the valve fires on an EDIT.
-- ⚠ **`CLAUDE.md` IS AT 47,919 BYTES — ~2.0 KB of headroom under the 50 KB
-  ceiling.** ⛔ A CS015 phase that cannot fit its rule fires the valve on the
-  section it is editing first.
+- ✅ **`CLAUDE.md` WAS COMPACTED, 47,919 → ~34.6 KB** (Paul's direction,
+  2026-09-20, its own commit after CS015 P1), ⛔ **with no rule deleted**: reasons
+  moved to `RATIONALE.md` (new anchors, `#compaction` explains the pass),
+  history and plan-letter codes left, repeated facts are stated once. ⛔ **The
+  ceiling rule now states the FORM a rule takes** — shortest complete statement,
+  reasons in `RATIONALE.md`, history in `log/`, a fact once. ⚠ The valve and the
+  ban on standing sweeps are unchanged.
 - ✅ **A CLOSE PHASE NOW WRITES `DECISIONS.md` TOO** (Paul, 2026-09-20; 16 bytes
   in `CLAUDE.md`'s session table). ⛔ **The changeset's calls are indexed AT THE
   CLOSE**, one line each — ⛔ **a pointer, never the writeup**, and
@@ -396,5 +387,5 @@ retune any tier.
 
 ✅ **THE VOCABULARY SCAN IS NOW A SUBSTRING SCAN** (Paul, 2026-09-20, after P1):
 `test-cs008-p6.js` catches a banned word glued on by `_` or camelCase, and only
-`webkit` is excepted from "web". ⛔ **The close indexes this call in
-`DECISIONS.md`.** P3 still eyes every id and displayed name.
+`webkit` is excepted from "web"; indexed in `DECISIONS.md`. P3 still eyes
+every id and displayed name.
