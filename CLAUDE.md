@@ -295,17 +295,14 @@ wrapping produces enemies that teleport across the well.
 boundary lattice is a second set of legal positions.** `laneHop`'s fold bounds
 are a **parameter**, defaulting to the lane-centre range `0 … lanes-1`; a
 boundary rider passes `laneBoundaryLo(well)` / `laneBoundaryHi(well)` instead.
-⛔ **An open well's two outermost boundaries are not addressable** — `polyAt`
-clamps them onto the lane centres `0` and `lanes-1`, so an entity there is a
-second silhouette on top of a first. A rider is born at a lane centre and
-crosses onto the lattice through `boundaryFrom()`, which does **not** go through
-`laneHop`. See `RATIONALE.md#boundary-lattice`.
+⛔ **An open well's two outermost boundaries are not addressable.** A rider is
+born at a lane centre and crosses onto the lattice through `boundaryFrom()`,
+which does **not** go through `laneHop`. `RATIONALE.md#boundary-lattice`.
 
 ⛔ **Nothing in the draw path may call `state.rng()`.** A random value the
 renderer needs is drawn in the simulation, stored on `state`, and read by
-`draw()`. `draw()` runs on a frame clock and `update()` does not — a draw there
-makes the run's stream a function of frame rate, and the symptom reads as a
-physics bug. See `RATIONALE.md#draw-path-rng`.
+`draw()`. ⚠ The symptom of breaking it reads as a physics bug.
+`RATIONALE.md#draw-path-rng`.
 
 ⛔ **Entity lifecycle: class with `constructor` / `update(dt)` / `draw()` /
 `dead`.** Kill by setting `dead = true`; remove with an end-of-frame `.filter()`.
@@ -313,80 +310,63 @@ Never splice mid-loop.
 
 ⛔ **New enemies wire into seven places:** `startGame` reset, `update()` entity
 pass, `update()` collision pass, `update()` cleanup filter, `draw()` z-order,
-the well-clear condition, and **the Dive**. **Decide explicitly whether the
-Purge destroys it**, and — seventh point, GDD §6.5 — an entity that is
-`blocksClear: false` and **not** `anchored` must decide explicitly whether it
-survives a dive. `startDive()` filters the board down to `anchored` survivors,
-so today the answer for the one entity in that position is *no*. And — CS009
-P5, GDD §6.5 — **decide explicitly its `sfxVoice`**, the eighth contract field,
-and — CS013 P3 — **decide explicitly its `aloft`**, the ninth, which is `false`
-for anything that lives in the well.
+the well-clear condition, and **the Dive**. ⛔ **And FOUR things are decided
+EXPLICITLY, never by default** (GDD §6.5): whether the **Purge** destroys it;
+whether it **survives a dive**, if it is `blocksClear: false` and not `anchored`
+(`startDive()` keeps `anchored` survivors only, so today's one answer is *no*);
+its **`sfxVoice`**, the eighth contract field (CS009 P5); and its **`aloft`**,
+the ninth (CS013 P3), `false` for anything that lives in the well.
 ⛔ **A Classic enemy lives in `07-enemies.js`; an Overdrive enemy lives in
 `07-enemies-overdrive.js`** (CS012 P2, O15), against the contract in the first,
 and reaches the board only through `C.SPAWN_SCHEDULE_OVERDRIVE`. Its kill pitch
 comes from `tools/sfx-lab.html`'s KILL PITCH table.
 
 ⛔ **AIRBORNE IS A PHASE, NOT A DEPTH, AND THE SKIMMER HAS NO `depth` FIELD**
-(CS012 P5, GDD §14.2, §4.5). The Jump lives in one bag, `state.jump`, and one
-top-level `updateJump(state, dt)` (`05-skimmer.js`); `collideSkimmer()` SKIPS ITS
-WHOLE PASS while `phase` is `"air"` — contact and the rim sweep together — rather
-than comparing a craft depth against a `killDepth`. ⛔ **The build still has
-exactly ONE two-depth comparison, the dive strike.** Four shipped comments
-predicted the Jump would end that and were corrected when it shipped; ⛔ **do not
-give the Skimmer a `depth` to make a resting `killDepth = 0` "honest"** — there
-is nothing left that would. ⛔ **`updateJump()` is a TOTAL no-op outside
-`modeHas("jump")`** — it writes nothing, `latched` included — which is what keeps
-a Classic run bit-identical with the button held. ⛔ **The lift and the shadow are
-DRAW-TIME ONLY**: `skimmerPoints()` takes a lift, `lane` and the depth model are
-untouched, and with `C.JUMP_LIFT` at 0 the state hash does not move.
+(CS012 P5, GDD §14.2, §4.5). One bag, `state.jump`, and one top-level
+`updateJump(state, dt)` (`05-skimmer.js`); `collideSkimmer()` SKIPS ITS WHOLE
+PASS while `phase` is `"air"` — contact and the rim sweep together.
+⛔ **The build still has exactly ONE two-depth comparison, the dive strike**, and
+⛔ **do not give the Skimmer a `depth`** to make a resting `killDepth = 0`
+"honest". ⛔ **`updateJump()` is a TOTAL no-op outside `modeHas("jump")`**,
+`latched` included. ⛔ **The lift and the shadow are DRAW-TIME ONLY.**
+`RATIONALE.md#entity-phases`.
 
 ⛔ **ALOFT IS A PHASE TOO, AND IT IS THE NINTH CONTRACT FIELD** (CS013 P3, GDD
 §6.4, §6.5). `aloft` says an entity is ABOVE the well rather than in it — the
 Warden and nothing else. Its `depth` is still a POSITION and it is still **1**;
-⛔ **do not give anything a depth above 1** to say this. ⛔ **Two readers:**
-`collideShots()` SKIPS an aloft entity (a shot never meets one, and an
-unshootable one therefore does not shield its rim band), and `jumpStrike()`
-REQUIRES one. ⛔ **It exempts nothing else** — `anchored` stays false, so §4.4's
-push reaches it and ends the lift-off; a discharging Warden kills through the
-one `killDepth` comparison; the array is still one.
+⛔ **do not give anything a depth above 1.** ⛔ **Two readers:** `collideShots()`
+SKIPS one, `jumpStrike()` REQUIRES one. ⛔ **It exempts nothing else** —
+`anchored` stays false, the array is still one, and ⛔ **a new reader that wants
+to exclude one must say so itself.** `RATIONALE.md#entity-phases`.
 
 ⛔ **THE MIMIC'S BUDGET IS ITS TWO STATES, NOT A COUNTER** (CS013 P4, MI1; GDD
 §6.4, §14.6). Closed it consumes a shot and sends it back ONCE; that reflection
-is the only thing that OPENS it, and an open Mimic reflects nothing — so "at
-most one reflection per opening" is structural. ⛔ **Do not add a `reflected`
-latch or a cooldown**: held fire meets one 15 times a second, and the window is
-what bounds it. ⛔ **The opening is UNCONDITIONAL and `sfx("reflect")` is not**
-— the shot was consumed either way, so a spawn `ENEMY_CAP` refused is a lost
-beat for the Mimic, never a guard the player paid for and did not get
-(`Weaver.fire()`'s rule for the sound). ⛔ **`C.MIMIC_APEX` is BOUNDED, not
-tuned:** `≤ (1 − RIM_CONTACT_DEPTH) − SURGE_TELEGRAPH × (MIMIC_SHOT_RATIO /
-SHOT_TIME)` = 0.4308, asserted from the constants and on played boards — raising
-it or the ratio turns the suite red. ⚠ **The Mimic is ON PROBATION and cuts in
-ONE ROW** (MI3, GDD §21 #6): `{ level: 16, kind: "mimic" }` in
+is the only thing that OPENS it, and an open Mimic reflects nothing.
+⛔ **Do not add a `reflected` latch or a cooldown.** ⛔ **The opening is
+UNCONDITIONAL and `sfx("reflect")` is not.** ⛔ **`C.MIMIC_APEX` is BOUNDED, not
+tuned** — 0.4308 from the constants, against the shipped 0.40; raising it or
+`MIMIC_SHOT_RATIO` turns the suite red. ⚠ **The Mimic is ON PROBATION and cuts
+in ONE ROW** (MI3, GDD §21 #6): `{ level: 16, kind: "mimic" }` in
 `C.SPAWN_SCHEDULE_OVERDRIVE`. Keep it that way.
+`RATIONALE.md#entity-phases`.
 
 ⛔ **A PROJECTILE MAY BE A PARAMETER VARIANT TOO** (CS013 P4, MI2). `MimicShot
-extends WeaverBolt`: the bolt's speed is an overridable reader, `speed()`, and a
-variant overrides that and its draw and inherits the rest — the rim band,
-`blocksClear: false`, the self-termination, the declined shot, 0 points.
-⛔ **`C.WEAVER_BOLT_SPEED` is named ONCE in the build, inside that reader**, and
-is still never scaled by `climbMult()`. ⛔ **A speed refactor is proved by a
-HASH, never by reading:** a Classic run must be bit-identical against a build
-carrying the old line.
+extends WeaverBolt` over one overridable reader, `speed()`, and inherits the
+rest. ⛔ **`C.WEAVER_BOLT_SPEED` is named ONCE in the build, inside that
+reader**, and is still never scaled by `climbMult()`. ⛔ **A speed refactor is
+proved by a HASH, never by reading.** `RATIONALE.md#entity-phases`.
 
 ⛔ **`anchored` says what `depth` MEANS on an entity, not whether it moves.**
 `false` is a position; `true` is a length — the tip of an extent rooted at the
 throat, which is the Thorn and nothing else. A stationary enemy whose `depth` is
 still a position is `false`. Its one reader is `respawnSkimmer()`, which skips
-anchored entities: clamping a length is not GDD §4.4's push but a free chip.
-⚠ That is **not** a narrowing of §4.4's SETTLED band. See
+anchored entities. ⚠ That is **not** a narrowing of GDD §4.4's SETTLED band.
 `RATIONALE.md#thorn-depth`.
 
 ⚠ **SETTLED — the Purge kills Carriers WITHOUT splitting them, and it does that
-by omission.** `updatePurge()` sets `dead` directly and never calls `onShot()`;
-splitting lives in `Carrier.onShot`. Do not route the Purge through `onShot`
-"for consistency" — a panic button that doubles the enemy count is not a panic
-button. An omission is exactly what a later session unifies away.
+by omission.** `updatePurge()` sets `dead` directly and never calls `onShot()`.
+Do not route the Purge through `onShot` "for consistency" — a panic button that
+doubles the enemy count is not a panic button.
 
 ### Rendering
 

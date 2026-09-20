@@ -333,3 +333,124 @@ row mode-conditional, and leave the Overdrive dive with no hazard at all —
 MEASURED, item 5 fires on 5.3 % of dives against a driver that does not steer,
 and 0 % against one that does, so it is cheap to keep and it is the only thing
 that makes the beat a skill test rather than a pause.
+
+---
+
+## #entity-phases
+
+`CLAUDE.md`'s **Math and lifecycle** section carries four rules that all say the
+same thing from different sides: **a phase is not a depth, and a variant is not
+a new class.** ⚠ **The valve fired on that section at Paul's direction, in its
+own commit after the CS014 close** (2026-09-20) — it stood at **7.0 KB** against
+the ~4 KB line, which made it the largest single tax on every session in the
+project, and these are its reasons. ⛔ **Nothing here was deleted from `CLAUDE.md`; the rules stayed and
+the reasoning moved.** Landed CS012 P5, CS013 P3 and CS013 P4.
+
+### Why the Jump is a phase and the Skimmer has no `depth`
+
+The obvious build of a vertical escape axis is a `skimmer.depth` that is 1
+except while airborne, compared against each enemy's `killDepth` in the one
+collision pass. ⛔ **It was not built that way, and the reason is that the
+collision pass would have grown a second kind of comparison.**
+
+`collideSkimmer()`'s header has said since CS003 that *there is no term here for
+where the Skimmer is* — the pass is `e.depth >= e.killDepth` plus a lane match,
+and the craft's position is the LANE alone. A craft depth would have made it
+two depths, and the build's ONE two-depth comparison is the dive strike's
+(`11-dive.js`), where a position is compared against a LENGTH. That singularity
+is what `anchored` exists to record (`#thorn-depth`), and it is asserted by
+`test-cs013-p3.js`.
+
+⛔ **What `collideSkimmer()` does instead is return at once while `phase` is
+`"air"`**, which covers **all seven contact killers and the rim sweep in one
+line** rather than seven `killDepth` comparisons that each had to be got right.
+⚠ **Four shipped comments in `src/` and two GDD sections had predicted the
+opposite for three changesets** and were corrected in the commit that landed it
+— which is why the rule now says, in the imperative, ⛔ *do not give the Skimmer
+a `depth` to make a resting `killDepth = 0` "honest"*: there is nothing left in
+the build that would be made honest by it.
+
+**Why `updateJump()` is a TOTAL no-op outside `modeHas("jump")`**, writing
+nothing at all — `latched` included. The weaker version (run the state machine,
+suppress the effect) leaves a Classic run whose hash depends on whether the
+player was holding the jump button, which is a silent determinism break of
+exactly the kind `#draw-path-rng` describes. The total no-op is what lets
+`test-cs012-p5.js` assert a Classic run is bit-identical with the button held.
+
+**Why the lift and the shadow are draw-time only.** `skimmerPoints()` takes a
+lift; `lane` and the depth model are untouched. The proof is `C.JUMP_LIFT` at 0
+leaving the state hash unmoved, which makes the whole airborne silhouette a
+free tuning knob — the same proof CS014 P2's `C.DIVE_RUNG_ALPHA` and
+`C.RING_ALPHA` reuse.
+
+### Why `aloft` is a ninth contract field and not a depth above 1
+
+The Warden lives ABOVE the well. The tempting encoding is `depth > 1`, and
+⛔ **it breaks the depth model rather than extending it**: `depth` is normalized
+0 = throat, 1 = rim, and every reader in the build — `screenPos()`, the
+perspective curve, `shotAlpha()`, the readability contract — is written against
+that range. One entity outside it makes every one of those a special case.
+
+So the Warden's `depth` stays **1**, a POSITION, and a separate boolean says
+where it is relative to the well. ⛔ **It has exactly two readers**:
+`collideShots()` SKIPS an aloft entity — a shot never meets one, so an
+unshootable entity does not shield the rim band behind it — and `jumpStrike()`
+REQUIRES one, which is what makes the fourth kill site a lane match on two
+flags rather than a third depth comparison.
+
+⛔ **And it exempts nothing else, deliberately.** `anchored` stays `false`, so
+GDD §4.4's respawn push reaches a Warden and ends its lift-off; a discharging
+Warden still kills through the one `killDepth` comparison; `purgeTarget()`,
+`respawnSkimmer()`, `dangerInputs()`, `threatCount()` and `wellCleared()` all
+read it as an ordinary entity at depth 1, and the array is still one. ⛔ **A new
+reader that wants to exclude an aloft entity must say so itself** — a field that
+starts exempting things by default is a second entity array with extra steps.
+
+### Why the Mimic's budget is its two states and not a counter
+
+"At most one reflection per opening" could be a `reflected` latch, a cooldown,
+or a per-well quota. ⛔ **It is none of them, because the two states already
+bound it structurally**: a closed Mimic consumes a shot and sends it back once,
+that reflection is the only thing that OPENS it, and an open Mimic reflects
+nothing. There is no state in which a second reflection is reachable, so there
+is nothing for a latch to guard.
+
+⚠ **The number that makes this matter is the fire rate.** Held fire meets a
+Mimic about fifteen times a second, so any guard written as a *duration* is a
+guess about how many shots arrive inside it, and any guard written as a *count*
+is a second source of truth for something the phase already answers.
+
+⛔ **The opening is UNCONDITIONAL and `sfx("reflect")` is not**, and the
+asymmetry is deliberate. The shot was consumed either way, so the Mimic opens
+whether or not the reflected bolt could be spawned; but a spawn refused at
+`C.ENEMY_CAP` is a **lost beat for the Mimic**, never a guard the player paid
+for and did not get, so it makes no sound. That is `Weaver.fire()`'s own rule
+for its bolt, reused rather than re-argued.
+
+⛔ **`C.MIMIC_APEX` is BOUNDED, not tuned.** A reflection must give the player
+at least the Surger's fuse before it can kill, so the apex the bolt is born at
+is capped by
+`(1 − RIM_CONTACT_DEPTH) − SURGE_TELEGRAPH × (MIMIC_SHOT_RATIO / SHOT_TIME)` =
+**0.4308**, against the shipped 0.40. It is asserted from the constants and on
+played boards, so raising either it or the ratio turns the suite red rather than
+quietly making a reflection unfair — which is GDD §14.6's "hard sell" answered
+in arithmetic rather than by playtest.
+
+### Why a projectile may be a parameter variant
+
+`MimicShot extends WeaverBolt`, and the whole of the difference is one
+overridable reader plus a draw. ⛔ **The refactor that made it possible was
+turning `C.WEAVER_BOLT_SPEED` from an inline constant into `speed()`**, named
+ONCE in the build inside that reader — and it is still never scaled by
+`climbMult()`, because a slower bolt breaches GDD §4.4's respawn guarantee
+(`CLAUDE.md`, Config).
+
+The variant inherits the rim band, `blocksClear: false`, the self-termination at
+depth 1, the declined shot and 0 points, which is the Reaver's relationship to
+the Vaulter one layer down the hierarchy.
+
+⛔ **A speed refactor is proved by a HASH, never by reading.** Moving a constant
+into a method is exactly the class of change that looks obviously equivalent and
+is not — an evaluation-order or a rounding difference does not show up in a
+diff. The proof is a Classic run bit-identical against a build carrying the old
+line, and it is cheap; reading the two forms is not a proof at all.

@@ -274,13 +274,21 @@ them is in `log/CS0##.md`, not here.
 
 ## Carried tasks
 
-- ⚠ **`CLAUDE.md` IS AT 49,524 BYTES, 99.0 % OF ITS 50 KB CEILING** — **476
-  bytes of headroom**, the tightest it has ever been. CS014 P3 added the Dive's
-  visual rule and that is what spent it. ⛔ **The next phase that edits an
-  over-size section fires the valve there**, and ⚠ **`### Math and lifecycle` is
-  7.0 KB and `## Code map` 4.5 KB** — those two are the candidates. ⛔ The
-  ⚠ SETTLED rule still forbids a standing cleanup sweep: the valve fires on an
-  EDIT. ⛔ **A CS015 phase that cannot fit its rule must fire the valve first.**
+- ✅ **THE `CLAUDE.md` VALVE HAS FIRED ON `### Math and lifecycle`** (Paul's
+  direction, 2026-09-20, its own commit after the CS014 close). The section went
+  **7.0 KB → 5.4 KB** and the file **49,524 → 47,903 bytes**, ⛔ **with no rule
+  deleted**: the reasoning behind the Jump's phase, `aloft`, the Mimic's
+  two-state budget and `MimicShot`'s `speed()` moved to a new
+  `RATIONALE.md#entity-phases`, and the four blocks name it. ⚠ **What is left in
+  that section is RULE, twelve invariants, and the valve cannot shrink it
+  further** — the next reduction there is Paul deciding a rule has expired, not
+  a relocation. ⚠ **`## Code map` is 4.5 KB and is the other over-size section**,
+  and `log/CS014.md` records why the valve does not fire on it: it is entirely
+  rule with no reasoning to move, and relocating it would delete the read-order
+  skeleton every session needs. ⛔ The ⚠ SETTLED rule still forbids a standing
+  sweep: the valve fires on an EDIT.
+- ⚠ **~2.1 KB of headroom under the 50 KB ceiling.** ⛔ A CS015 phase that
+  cannot fit its rule fires the valve on the section it is editing first.
 - ⚠ **`DECISIONS.md` has no row for CS012's sixteen calls (O1–O16) or CS014's
   nine (RF1–RF9).** CS010's, CS011's and CS013's are indexed there, so the index
   is incomplete. ⛔ Found by CS014 P3's review; ⛔ **a CLOSE phase may not write
