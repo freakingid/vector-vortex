@@ -1077,7 +1077,7 @@ const C = {
   PROFILE_ANONYMOUS_NAME: "ANONYMOUS",
 
   // ---- Build / debug ------------------------------------------------------
-  GAME_VERSION:         "0.0.9",   // ⚠ 0.0.2 was never written here — see log/CS006.md
+  GAME_VERSION:         "0.0.10",  // ⚠ 0.0.2 was never written here — see log/CS006.md
   // ⛔ THE SAVE KEYSPACE, AND NOTHING ELSE (kit-storage: coinless.<GAME_ID>.<key>).
   // ⛔ Never change it: every stored key would be orphaned. The online boards are
   // LEADERBOARD_GAME_IDS above, one per mode (CS012 P3).
@@ -5996,12 +5996,12 @@ function wellCleared(state) {
 // transition, beside the `tally.kills` it already counted, and nowhere else.
 // The Thorn's per-chip 5 is paid inside its own onShot(), not here.
 //
-// ⛔ AND THE KILL SOUND, CS009 P5, beside the points at the same three edges:
+// ⛔ AND THE KILL SOUND, CS009 P5, beside the points on the same five lines:
 // `sfx("kill", e.sfxVoice)`, the pitch read off the entity's eighth contract
 // field (07-enemies.js). No sound call here writes `state` or draws.
 //
 // ⛔ AND SINCE CS012 P4, OVERDRIVE'S COMBO, AT THOSE SAME EDGES AND NOWHERE
-// ELSE (GDD 14.4; O4, R6; 12-scoring.js). Each of the four lines reads
+// ELSE (GDD 14.4; O4, R6; 12-scoring.js). Each of the five lines reads
 // `addScore(e.points() * comboMult()); comboKill(state);` — the kill is scored
 // at the CURRENT multiplier and then raises it. ⛔ addScore() is unchanged and
 // stays the one writer: a multiplier folded into it would also multiply the
@@ -6018,7 +6018,7 @@ function wellCleared(state) {
 //
 // ⛔ AND SINCE CS013 P1, OVERDRIVE'S TOKEN DROP, AT THOSE SAME EDGES AND NOWHERE
 // ELSE (GDD 14.1; T2; 10-powerups.js). `dropToken(state, e)` follows
-// comboKill() on each of the four lines: EVERY kill at a kill site rolls, and
+// comboKill() on each of the five lines: EVERY kill at a kill site rolls, and
 // spends exactly ONE draw from the run's stream whether or not anything drops.
 // ⛔ It is a total no-op in Classic — no draw — and the Dive's termination
 // kill (11-dive.js) is not a kill site and rolls nothing.
@@ -6598,10 +6598,11 @@ function liveTokens(state) {
   return n;
 }
 
-// ⛔ THE ONE WAY A TOKEN ENTERS THE WELL (T1, T2, T3, T4). Called by the four
+// ⛔ THE ONE WAY A TOKEN ENTERS THE WELL (T1, T2, T3, T4). Called by the five
 // kill lines in 09-collision.js on the false -> true `dead` edge, beside
-// comboKill(): a shot, the rim sweep, and both Purge uses. ⛔ Not by the Dive's
-// termination kill, which is not a kill site and rolls nothing.
+// comboKill(): a shot, the rim sweep, both Purge uses, and CS013 P3's jump
+// strike (W4), which inherited the roll with the rest of the line. ⛔ Not by
+// the Dive's termination kill, which is not a kill site and rolls nothing.
 //
 // ⛔ A TOTAL NO-OP OUTSIDE modeHas("tokens") — no draw, no write — which is what
 // keeps a Classic run bit-identical to the build before this changeset.
@@ -6952,7 +6953,7 @@ function diveRespawn(state, well) {
     const struck = diveHazard(state, well, lane, 0);
     // ⛔ NO addScore() AND NO `tally.kills`, and that is a decision (plan §0,
     // CS008 P2): the termination guarantee destroying a Thorn is not the player
-    // destroying it. The build's three kill sites are all in 09-collision.js.
+    // destroying it. The build's four kill sites are all in 09-collision.js.
     // ⛔ AND NO KILL SOUND (CS009 P5), for the same reason: diveStrike's sound
     // already covers the moment.
     if (struck) struck.dead = true;
@@ -7043,12 +7044,13 @@ function updateDive(state, well, dt) {
 //
 // ⛔ WHERE THE POINTS COME FROM. An enemy's worth is read off the entity through
 // its fourth contract method, points() (07-enemies.js, GDD 6.5), and awarded by
-// the KILL SITE on the false -> true `dead` transition. There are three kill
-// sites and no fourth (plan §3):
+// the KILL SITE on the false -> true `dead` transition. There are FOUR kill
+// sites and no fifth — three until CS013 P3 added the jump strike (W4):
 //
 //   collideShots()     a shot kill                          (09-collision.js)
 //   collideSkimmer()   the rim sweep — a shot that never had to fly (P1b)
 //   updatePurge()      both uses, normal points (Paul, P2s)
+//   jumpStrike()       an airborne craft in an aloft entity's lane (CS013 P3)
 //
 // ⛔ The Dive's termination kill awards NOTHING (11-dive.js): it is not the
 // player destroying a Thorn, and it is not counted in `tally.kills` either. The
@@ -7128,16 +7130,16 @@ function startBonus(d) {
 // ---------------------------------------------------------------------------
 //
 // ⛔ THE MULTIPLIER IS APPLIED AT THE KILL SITES AND NEVER INSIDE addScore()
-// (R6). `addScore(e.points() * comboMult())` — four lines in 09-collision.js.
+// (R6). `addScore(e.points() * comboMult())` — five lines in 09-collision.js.
 // addScore() stays the ONE writer of state.score and the one life-awarder, and
 // it is unchanged: a multiplier folded into it would silently multiply the
 // clear bonuses, the Start Depth bonus and the Thorn's per-chip 5, which is
 // exactly the scope O4 ruled out.
 //
 // ⛔ WHAT IT MULTIPLIES, AND WHAT BUILDS IT, ARE ONE RULE (O4): kill points at
-// the three kill sites — a shot, the rim sweep, and both Purge uses — and every
-// kill there builds it. Thorn chips, the clear bonuses and the Start Depth
-// bonus are NOT multiplied and do NOT build it. ⛔ The Dive's termination kill
+// the four kill sites — a shot, the rim sweep, both Purge uses and CS013 P3's
+// jump strike — and every kill there builds it. Thorn chips, the clear bonuses
+// and the Start Depth bonus are NOT multiplied and do NOT build it. ⛔ The Dive's termination kill
 // still pays nothing and builds nothing (GDD 5, 7).
 //
 // ⛔ EACH KILL SCORES AT THE CURRENT MULTIPLIER AND THEN RAISES IT. That is the
@@ -7172,7 +7174,7 @@ function comboDrop(state, to) {
   sfx("comboLost");
 }
 
-// A kill at one of O4's three sites. ⛔ Called AFTER the kill has been scored.
+// A kill at one of O4's four sites. ⛔ Called AFTER the kill has been scored.
 function comboKill(state) {
   if (!modeHas("combo", state.mode)) return;
   const c = state.combo;

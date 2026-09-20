@@ -56,10 +56,11 @@ function liveTokens(state) {
   return n;
 }
 
-// ⛔ THE ONE WAY A TOKEN ENTERS THE WELL (T1, T2, T3, T4). Called by the four
+// ⛔ THE ONE WAY A TOKEN ENTERS THE WELL (T1, T2, T3, T4). Called by the five
 // kill lines in 09-collision.js on the false -> true `dead` edge, beside
-// comboKill(): a shot, the rim sweep, and both Purge uses. ⛔ Not by the Dive's
-// termination kill, which is not a kill site and rolls nothing.
+// comboKill(): a shot, the rim sweep, both Purge uses, and CS013 P3's jump
+// strike (W4), which inherited the roll with the rest of the line. ⛔ Not by
+// the Dive's termination kill, which is not a kill site and rolls nothing.
 //
 // ⛔ A TOTAL NO-OP OUTSIDE modeHas("tokens") — no draw, no write — which is what
 // keeps a Classic run bit-identical to the build before this changeset.

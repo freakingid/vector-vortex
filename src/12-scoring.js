@@ -12,12 +12,13 @@
 //
 // ⛔ WHERE THE POINTS COME FROM. An enemy's worth is read off the entity through
 // its fourth contract method, points() (07-enemies.js, GDD 6.5), and awarded by
-// the KILL SITE on the false -> true `dead` transition. There are three kill
-// sites and no fourth (plan §3):
+// the KILL SITE on the false -> true `dead` transition. There are FOUR kill
+// sites and no fifth — three until CS013 P3 added the jump strike (W4):
 //
 //   collideShots()     a shot kill                          (09-collision.js)
 //   collideSkimmer()   the rim sweep — a shot that never had to fly (P1b)
 //   updatePurge()      both uses, normal points (Paul, P2s)
+//   jumpStrike()       an airborne craft in an aloft entity's lane (CS013 P3)
 //
 // ⛔ The Dive's termination kill awards NOTHING (11-dive.js): it is not the
 // player destroying a Thorn, and it is not counted in `tally.kills` either. The
@@ -97,16 +98,16 @@ function startBonus(d) {
 // ---------------------------------------------------------------------------
 //
 // ⛔ THE MULTIPLIER IS APPLIED AT THE KILL SITES AND NEVER INSIDE addScore()
-// (R6). `addScore(e.points() * comboMult())` — four lines in 09-collision.js.
+// (R6). `addScore(e.points() * comboMult())` — five lines in 09-collision.js.
 // addScore() stays the ONE writer of state.score and the one life-awarder, and
 // it is unchanged: a multiplier folded into it would silently multiply the
 // clear bonuses, the Start Depth bonus and the Thorn's per-chip 5, which is
 // exactly the scope O4 ruled out.
 //
 // ⛔ WHAT IT MULTIPLIES, AND WHAT BUILDS IT, ARE ONE RULE (O4): kill points at
-// the three kill sites — a shot, the rim sweep, and both Purge uses — and every
-// kill there builds it. Thorn chips, the clear bonuses and the Start Depth
-// bonus are NOT multiplied and do NOT build it. ⛔ The Dive's termination kill
+// the four kill sites — a shot, the rim sweep, both Purge uses and CS013 P3's
+// jump strike — and every kill there builds it. Thorn chips, the clear bonuses
+// and the Start Depth bonus are NOT multiplied and do NOT build it. ⛔ The Dive's termination kill
 // still pays nothing and builds nothing (GDD 5, 7).
 //
 // ⛔ EACH KILL SCORES AT THE CURRENT MULTIPLIER AND THEN RAISES IT. That is the
@@ -141,7 +142,7 @@ function comboDrop(state, to) {
   sfx("comboLost");
 }
 
-// A kill at one of O4's three sites. ⛔ Called AFTER the kill has been scored.
+// A kill at one of O4's four sites. ⛔ Called AFTER the kill has been scored.
 function comboKill(state) {
   if (!modeHas("combo", state.mode)) return;
   const c = state.combo;

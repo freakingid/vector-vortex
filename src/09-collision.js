@@ -32,12 +32,12 @@
 // transition, beside the `tally.kills` it already counted, and nowhere else.
 // The Thorn's per-chip 5 is paid inside its own onShot(), not here.
 //
-// ⛔ AND THE KILL SOUND, CS009 P5, beside the points at the same three edges:
+// ⛔ AND THE KILL SOUND, CS009 P5, beside the points on the same five lines:
 // `sfx("kill", e.sfxVoice)`, the pitch read off the entity's eighth contract
 // field (07-enemies.js). No sound call here writes `state` or draws.
 //
 // ⛔ AND SINCE CS012 P4, OVERDRIVE'S COMBO, AT THOSE SAME EDGES AND NOWHERE
-// ELSE (GDD 14.4; O4, R6; 12-scoring.js). Each of the four lines reads
+// ELSE (GDD 14.4; O4, R6; 12-scoring.js). Each of the five lines reads
 // `addScore(e.points() * comboMult()); comboKill(state);` — the kill is scored
 // at the CURRENT multiplier and then raises it. ⛔ addScore() is unchanged and
 // stays the one writer: a multiplier folded into it would also multiply the
@@ -54,7 +54,7 @@
 //
 // ⛔ AND SINCE CS013 P1, OVERDRIVE'S TOKEN DROP, AT THOSE SAME EDGES AND NOWHERE
 // ELSE (GDD 14.1; T2; 10-powerups.js). `dropToken(state, e)` follows
-// comboKill() on each of the four lines: EVERY kill at a kill site rolls, and
+// comboKill() on each of the five lines: EVERY kill at a kill site rolls, and
 // spends exactly ONE draw from the run's stream whether or not anything drops.
 // ⛔ It is a total no-op in Classic — no draw — and the Dive's termination
 // kill (11-dive.js) is not a kill site and rolls nothing.

@@ -238,7 +238,7 @@ function diveRespawn(state, well) {
     const struck = diveHazard(state, well, lane, 0);
     // ⛔ NO addScore() AND NO `tally.kills`, and that is a decision (plan §0,
     // CS008 P2): the termination guarantee destroying a Thorn is not the player
-    // destroying it. The build's three kill sites are all in 09-collision.js.
+    // destroying it. The build's four kill sites are all in 09-collision.js.
     // ⛔ AND NO KILL SOUND (CS009 P5), for the same reason: diveStrike's sound
     // already covers the moment.
     if (struck) struck.dead = true;

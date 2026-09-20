@@ -662,3 +662,47 @@ about a run rather than a rule.**
   bounded at 0.4308 by the fuse arithmetic, with 0.031 of headroom.
   ⛔ **And the one knob that is not a number: `{ level: 16, kind: "mimic" }` in
   `C.SPAWN_SCHEDULE_OVERDRIVE`.** Deleting that line is the cut, whole.
+
+---
+
+## CS013 P5 — the eleventh soak: is a full Overdrive board one game or four systems?
+
+- **Changeset / phase:** CS013 P5 (the eleventh soak, the review and the close).
+- **Would have done:** two sittings on the board the soak plays, and one on the
+  thing the soak cannot be. (1) **Overdrive, START DEPTH 17, five wells, fire
+  held.** That is the first depth where everything CS012 and CS013 built is on
+  the board at once — the Reaver, the Warden, the Mimic, a reflection, up to two
+  tokens, the Jump and a multiplier — and the only question is whether it reads
+  as one game. After each well, named the one thing he was actually tracking.
+  (2) **The same five wells with the HUD covered** except the score, to say
+  whether the board alone tells him what he has: a gold streak means Lance, a
+  gold shell means Ward, three streaks mean Spread, a bright Purge glyph means
+  Recharge — ⛔ **there is no HUD item for any of it** (T10), and that was a
+  deliberate call. (3) **Ten deliberate token pickups in a Surger's or a
+  Warden's lane**, saying each time whether going for it felt like a choice or a
+  gotcha — §14.1's own concern, in the one situation the suite can only count.
+- **What we were trying to learn:** ⛔ **Whether P2 survives full density.**
+  Every piece of CS013 is legible in isolation and asserted so; the soak proves
+  they do not corrupt each other's state, and it proves nothing at all about
+  whether a person can read them at the same time. The three specific risks are
+  named and none is answerable headless: a token in a lethal lane is a CHOICE
+  only if the player can see both in time; the five effects are invisible except
+  where they act, which is elegant if it works and a memory test if it does not;
+  and ⚠ **the driver has perfect information** — it steers to the deepest
+  entity, jumps at anything aloft the instant it is in reach, sidesteps every
+  reflection and walks to every token — so ⛔ **every difficulty number in this
+  changeset was measured against a player nobody is.**
+- **Knobs:** `C.TOKEN_DROP_CHANCE` (0.10 ⚠), `C.TOKEN_WEIGHTS`
+  (`{ bounty: 3, lance: 2, spread: 2, ward: 2, recharge: 1 }` ⚠),
+  `C.TOKEN_RISE` (0.30 ⚠), `C.TOKEN_LIFE` (9.0) and `C.TOKEN_HOVER_DEPTH`
+  (0.80); `C.MAX_TOKENS` (⛔ **2 is GDD §14.1's invariant, not a knob**);
+  `C.TOKEN_COLOR` (`#FFF347` ⚠) and `C.TOKEN_SIZE`; and, if the answer is "too
+  much at once", ⛔ **the honest lever is `C.SPAWN_SCHEDULE_OVERDRIVE`'s three
+  levels (6 / 11 / 16), not a drop rate** — spreading the introductions is
+  §8.1's own mechanism and costs one edit.
+- ⚠ **And one measurement this sitting would settle by ear:** the director's
+  maximum on a full CS013 board is **0.6860** (the highest yet, against CS010's
+  Classic 0.668), so the filter sweep reaches 6,187 Hz of its 18,000. ⛔ GDD §19
+  keeps its ✗ and nothing is rescaled (Paul's D6) — but whether a sweep that
+  never opens is *audible as a sweep at all* is an ear question, and it has now
+  been recorded four times without being asked.

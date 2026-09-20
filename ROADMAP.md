@@ -25,7 +25,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS010** | ✅ **Shipped 2026-09-16.** The intensity director: kit-audio 0.3.0 (bar-latched tier gates, the filter sweep, a limiter on the music, the menu duck and the event dips), a live-danger signal read through one `dangerInputs()` that writes no state, two earned layers on `pulse` (`cycle` tier 2, `tick` tier 3, both PASS), Paul's lab gains behind the limiter, music-lab's INTENSITY and TIER, the rim pulse on `heart`'s onsets, and the eighth soak. Five phases, as planned | §5, §11.1, §11.3–11.8, §17 item 9, §19 |
 | **CS011** | ✅ **Shipped 2026-09-16.** Meta: kit-names, kit-storage and kit-profile inlined at build, a silent ANONYMOUS first profile, settings / the Start Depth record / telemetry saved per profile, the local top 10 per mode with the bench flag, kit-leaderboard 0.2.1 and one `Leaderboard` over the bridge, SCORES (LOCAL / ONLINE), PROFILE with NAME entry (kit-input 0.8.0's text mode), and the ninth soak (working store and blocked, one hash). Six phases, as planned. ⚠ Achievements moved to CS015 (Paul's M4) | §4.6, §10.5, §15.1–15.4, §15.6 |
 | **CS012** | ✅ **Shipped 2026-09-17.** Overdrive's core: the `drive` track (138 BPM, 36 bars A→B→C, Overdrive's AUTO), `C.MODE_FLAGS` and `modeHas()`, the Reaver in a new `07-enemies-overdrive.js` behind a second schedule table, OVERDRIVE on MODE with its own online board, SCORES per mode and a per-mode Start Depth record, the Jump (airborne as a phase, the lift, the shadow and kit-audio 0.4.0's high-pass), the combo multiplier at the kill sites with its readout, `comboLost`, the director's fifth input and `max_combo`'s real source, and the tenth soak. Six phases, as planned | §11.4, §11.7, §13, §14.2, §14.4, §14.6, §15.3, §15.4, §19 |
-| **CS013** | Overdrive tokens and the remaining enemies: five powerups, the Warden, the Mimic on probation | §14.1, §14.6 |
+| **CS013** | ✅ **Shipped 2026-09-20.** Overdrive's tokens and its remaining enemies: five tokens in their own array behind one `dropToken()` (one draw per Overdrive kill, a total no-op in Classic), Bounty and Recharge instant, Lance / Spread / Ward with their readers, the two GDD §14.1 tables kept apart, `collect` and `wardBreak`; the **Warden** — aloft as a PHASE, the ninth contract field, and the **jump strike**, the build's fourth kill site; the **Mimic** on probation with `MimicShot extends WeaverBolt`, cutting in one schedule row; and the eleventh soak. Five phases, as planned | §14.1, §14.6, §6.4, §6.5, §7, §8.1, §17, §19 |
 | **CS014** | The ring-flight Dive, hard-capped at 4 s / 6 rings | §14.5 |
 | **CS015** | Achievements: the id table (save data, never renamed) written once against the whole game, local-only, monotonic tiers and UTC ISO weeks. Planned once Overdrive exists (Paul's M4) | §15.5, §17 item 10 |
 | **CS016** | Onboarding: first-run prompts, attract mode, the teach-in-four-seconds pass on level 1 | §12 |
@@ -53,7 +53,7 @@ left CS011 for a new **CS015**, so onboarding became CS016 and ship CS017. The
 sweep read every live `CS015` / `CS016` pointer and every "achievements are
 CS011's" pointer. `log/` and `archive/` were not swept, for the same reason.
 
-**CS001 through CS012 are closed.** Their narratives are in `log/CS0##.md`;
+**CS001 through CS013 are closed.** Their narratives are in `log/CS0##.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -319,10 +319,62 @@ that under the limiter's curve the headroom gate cannot catch a louder track at
 all (red needs an input of 152.8), which is Paul's call and nobody's changeset.
 **The sweep still does not open end to end**: O14 said accept, record and keep
 GDD §19's ✗, and two independent measurements now agree at 0.6448–0.6519 against
-the 1.0 it needs. No intensity weight was rescaled, no telemetry column added, no
+the 1.0 it needs. ⚠ **Both numbers were superseded in CS013 and the row did not
+move** — 0.6593 staged and 0.6860 over 114,446 front-door frames with the tokens,
+the Warden and the Mimic live (CS013 P5's review). No intensity weight was rescaled, no telemetry column added, no
 bench key for an Overdrive enemy, and no kit module backported. Still unowned:
 the pad-only silence, the VOICE bus, the Dive's visual, the Surger tone's 1.106
 peak, and the whole palette.
+
+**CS013 held as ONE changeset of five phases and shipped its row.** The tokens
+(P1), Lance, Spread and the Ward (P2), the Warden (P3), the Mimic (P4), the
+eleventh soak and the close (P5) — the order the plan named, and ⛔ **the seams
+were GDD §14.1's own**: P1 is the drop-weight table, the entity and the two
+instant effects, P2 the three with a budget, each of which edits a hot, pinned
+path. Paul answered T1–T11, W1–W6, MI1–MI3 in the planning session and took
+**every recommendation**, the second changeset running for which that is true —
+and, as in CS012, the reason is that the plan priced each call with a measurement
+rather than an argument.
+
+**What CS013 shipped against the row.** ⛔ **A token is not an enemy.** It lives
+in `state.tokens`, `dropToken()` is its one way in, and the plan MEASURED why:
+`state.enemies` has nineteen reader sites and a token inside it would shield the
+enemies behind it from shots, be pushed down the well on every death, be refused
+at `ENEMY_CAP` and be counted as a threat. ⛔ **Every kill at a kill site rolls,
+and each Overdrive kill spends exactly ONE draw from the run's one stream** —
+drop or no drop, at the cap too — which is a count a test can make, and it is a
+total no-op in Classic, so `P1_DETERMINISM_HASH` never moved. ⛔ **Aloft is a
+PHASE, not a depth**: the Warden arrives out of the throat like every other
+threat, climbs its lane unshootable and goes aloft at depth 1 with a draw-time
+lift, so nothing in the build gained a depth above 1 and the depth model is
+untouched. It is killable by the **jump strike** and nothing else — the build's
+**fourth kill site and fifth kill line**, a lane match on two flags, so the one
+two-depth comparison in the build is still the dive strike's. ⛔ **The Mimic's
+budget is its two states rather than a counter**: reflecting is the only thing
+that opens it and an open one reflects nothing, so "at most one reflection per
+opening" is structural — and `MIMIC_APEX` is bounded from the constants so every
+reflection gives at least the Surger's 0.45 s fuse, which is §14.6's "hard sell"
+answered in arithmetic. ⛔ **The eleventh soak is two paired sessions over one
+board-reading driver** — Classic against a build with the token calls and the
+jump strike stubbed out *and both new schedule rows removed*, and Overdrive with
+music against Overdrive without — matching on every one of 239,202 frames, with
+Overdrive's invariants checked on every played step. ⛔ **No baseline moved in
+any phase.**
+
+⚠ **What CS013 deliberately left.** **The ring-flight Dive is CS014's**,
+achievements CS015's, onboarding CS016's — and GDD §12's four-second promise now
+has two more things to teach, *jump at the thing you cannot shoot* and *leave the
+lane your own shot came back down*. ⚠ **The Mimic ships ON PROBATION and the cut
+is one line**: `{ level: 16, kind: "mimic" }` is the only thing that puts one on
+a board, proved by mutating that row out and playing a session that releases zero
+Mimics and zero reflections. The verdict is CS017's. **Nothing was tuned**: the
+drop rate, the weights, the rise, the Warden's eleven constants and the Mimic's
+are all ⚠ provisional and MEASURED on bots, and every ask is in
+`SKIPPED-PLAYTESTS.md`. ⚠ **Spread triples the shots on screen** — the cap in
+force is 24 where §17's performance budget still names 8 — and `drawShot()`
+allocates on every call; both are CS017's to measure. F1 and F2 are recorded and
+not fixed. Still unowned: the Dive's visual, the pad-only silence, the VOICE bus,
+the Surger tone's 1.106 peak, and the whole palette.
 
 ---
 

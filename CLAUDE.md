@@ -447,8 +447,9 @@ GDD §6.5, §14.1). No contract field, no `ENEMY_KINDS` row, and none of
 `state.enemies`' readers sees one — `state.shots` is the precedent.
 ⛔ **Every kill at a kill site rolls, and each OVERDRIVE kill spends exactly ONE
 draw from the run's one stream, drop or no drop, at `MAX_TOKENS` too** (T2):
-`dropToken()` follows `comboKill()` on the four kill lines. ⛔ **It is a total
-no-op in Classic** (`modeHas("tokens")`, no draw), which is what keeps
+`dropToken()` follows `comboKill()` on all FIVE kill lines — the jump strike
+inherited the roll with the rest of its line (CS013 P5's review).
+⛔ **It is a total no-op in Classic** (`modeHas("tokens")`, no draw), which is what keeps
 `P1_DETERMINISM_HASH` and every Classic soak unmoved. ⛔ The Dive's termination
 kill is not a kill site and rolls nothing.
 ⛔ **GDD §14.1's two tables stay two**: `C.TOKEN_WEIGHTS` (which token a drop
