@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.11 · Changeset: **CS015 planned 2026-09-20** · next: **CS015 P1** ·
+Version: 0.0.11 · Changeset: **CS015 planned + answered 2026-09-20** · next: **CS015 P1** ·
 Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 · Tokens: 5/5 effects
 
 ## Phase ledger
@@ -347,28 +347,43 @@ them is in `log/CS0##.md`, not here.
   ✅ **The Dive's visual leaves this list** — it was the oldest thing on it, open
   since CS006.
 
-## Next up — CS015 P1, and ⛔ TWELVE CALLS ARE OPEN
+## Next up — CS015 P1
 
-✅ **CS015 IS PLANNED** (2026-09-20, `PLANNED-FEATURES-CS015.md` +
-`IMPLEMENTATION-PHASES-CS015.md`, four phases). ⛔ **§0 IS NOT ANSWERED: A1–A12
-each carry a measurement and one recommendation, and an empty answer cell.**
-⛔ **P1 needs A2, A5, A6, A7, A11 and A12 before it starts**; a build phase that
-reaches a blank cell STOPS.
+✅ **CS015 IS PLANNED AND ANSWERED** (2026-09-20,
+`PLANNED-FEATURES-CS015.md` + `IMPLEMENTATION-PHASES-CS015.md`, four phases).
+✅ **Paul answered all twelve calls (A1–A12) and took EVERY recommendation**, with
+one qualification on A8. ⛔ **A build phase builds the answer in §0's column and
+does not re-open it**; the B and C branches are dead.
 
 ⚠ **This is the first changeset since CS008 whose main risk is a decision that
 cannot be revised, rather than a mechanism that can** — ⛔ **an achievement `id`
-is SAVE DATA and is never renamed**, so A8's table is written once, against a
-finished game, which is why Paul moved it out of CS011 (M4).
+is SAVE DATA and is never renamed**, so A8's table is written once, which is why
+Paul moved it out of CS011 (M4). ⛔ **P3 is alone in its session for that
+reason.**
 
-⚠ **Two calls collide with shipped invariants and the plan names both rather
-than picking:** A12 — the definition table has tunables in it and belongs to a
-module that may not read `C` (`createScores` is the shipped way through); and
-A8's `mimic_kill` rides on a probation only CS017 can close.
+⛔ **THE ANSWERS, in one line each.** A1 a SCREEN off the title, no toast (so
+CS015 is four phases, not five). A2 new `tally` fields into one flat `facts`
+object. A3 two seats, the clear edge and `Meta.runEnded()`. A4 `Meta.eligible()`
+extended — a bench run earns nothing. A5 one shared store, rows MODE-TAGGED.
+A6 `achievements` v1, §15.5's four stores, arrays not Sets, no `migrate`.
+A7 a weekly-only pool of 20, stride-walked, `weekKey` UTC from an injected
+`now()`. A8 ⛔ **23 lifetime rows.** A9 an unlock is worth NOTHING — no
+`addScore()` call. A10 one new `C.SFX` event, `unlock` (27 → 28). A11
+`{ id, tier, weekKey, at }`. A12 `C.ACHIEVEMENTS` as data, handed over as an
+option — ⛔ the answer to where the config invariant and the boundary contract
+collide, and `createScores`' shipped precedent.
 
-⛔ **Two rows of §9's proposed table are flagged rather than quietly kept:**
-`purge_wide` is MEASURED UNREACHABLE (best of 289 Purge uses is 4, not 6) and
-`purge_saver` MEASURED borderline (0, 0, 1 clears with the charge unspent).
-⚠ An unreachable predicate is a test that passes on zero.
+⛔ **A8's qualification: `purge_wide` IS DROPPED** — MEASURED unreachable (best
+of 289 Purge uses is **4**, not six), and lowering it would set a threshold from
+what a bot reached. ⚠ **`mimic_kill` STAYS** and its probation risk is accepted:
+if CS017 cuts the Mimic, one id is unearnable for new players and nothing else
+breaks. ⚠ **`carrier_split` is the one lifetime row with NO measurement behind
+it**, and ⛔ **the twenty weekly rows are a STARTING list that P3 settles,
+MEASURED** — a row no board reaches is reported, never shipped and never quietly
+lowered.
+
+⛔ **A threshold is NOT save data; only the `id` is.** A later changeset may
+retune any tier.
 
 ⛔ **The vocabulary scan cannot see through an underscore** (MEASURED, four
 mutants): a banned word hyphenated or spaced is red, the same word joined by

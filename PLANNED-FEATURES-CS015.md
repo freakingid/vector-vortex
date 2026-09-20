@@ -1,7 +1,7 @@
 # PLANNED-FEATURES-CS015 — achievements: the id table, written once
 
 **The `achievements` key declared, `20-achievements.js` built kit-shaped as
-`kit-achievements`' draft, ~24 lifetime ids plus five weekly rotated
+`kit-achievements`' draft, 23 lifetime ids plus five weekly rotated
 deterministically by UTC ISO week, monotonic tiers, and somewhere a player can
 see them. The thirteenth soak closes it (GDD §15.1, §15.5, §17 item 10, §19's
 Meta row, §21 #4).**
@@ -10,9 +10,11 @@ Meta row, §21 #4).**
 claim names what was run (§1 lists the probes) and was run at commit `b92da55`.
 A PREDICTED one says so.
 
-⛔ **§0 IS NOT ANSWERED.** Twelve calls, each priced with a measurement and
-carrying one recommendation. ⛔ **A build phase that reaches a call with no
-answer stops** (`CLAUDE.md` rule 3).
+✅ **§0 IS ANSWERED: Paul took every recommendation (2026-09-20)**, with one
+qualification on A8 — `purge_wide` is dropped, so the lifetime table is **23**
+rows rather than 24, and the weekly pool of 20 is settled BY P3, measured. A
+phase prompt that names a call builds the recommendation written beside it and
+does not re-open it.
 
 **Baseline for every measurement: commit `b92da55`** (the `DECISIONS.md` index
 rule, after the CS014 close).
@@ -62,12 +64,15 @@ reasoning. From `log/`, only `log/CS011.md`'s P1 and P2 store sections and
 
 ---
 
-## ⛔ 0. PAUL'S CALLS — NONE IS ANSWERED
+## ⛔ 0. PAUL'S CALLS — ✅ ALL ANSWERED 2026-09-20: EVERY RECOMMENDATION
 
 Each is a design call the GDD does not settle, with its measurement and one
-recommendation. ⛔ **A build phase builds the answer written in the right-hand
-column and does not invent one.** ⚠ Every number marked ⚠ is provisional in the
-sense CS012's O16 used: owned by a tuning pass, like the Classic palette.
+recommendation. ✅ **Paul answered all twelve on 2026-09-20 and took every
+recommendation**, with one qualification on A8 (below). ⛔ **A build phase builds
+the answer in the right-hand column and does not re-open it**; the B and C
+branches in each subsection are the record of what was priced, not a choice left
+open. ⚠ Every number marked ⚠ is provisional in the sense CS012's O16 used:
+owned by a tuning pass, like the Classic palette.
 
 ⚠ **CS015 IS THE FIRST CHANGESET SINCE CS008 WHOSE MAIN RISK IS A DECISION THAT
 CANNOT BE REVISED, RATHER THAN A MECHANISM THAT CAN.** Every changeset from
@@ -84,18 +89,18 @@ that surface so the table is written against what the game actually does.
 
 | # | The call | Recommendation | Answer |
 |---|---|---|---|
-| A1 | Where an achievement is SEEN — the GDD specs no surface at all | **A screen, reached from the title, and no toast.** One row appended AFTER PROFILE; §1.2 V1 MEASURED the cost at two closed assertions, and a toast has nowhere to go in Overdrive (§1.8) | |
-| A2 | What the evaluator READS | **One flat `facts` object the game builds at the seat**, from `state` plus new `tally` fields. §1.2 V3 MEASURED a `tally` field free; §1.7 MEASURED an event stream at six pinned kill-line strings plus two count assertions | |
-| A3 | WHEN it evaluates | **Two seats: the clear edge and `Meta.runEnded()`.** Never per step — §1.4 MEASURED that the clear edge already reads and writes storage on a play step, and §1.5 that a per-step clock read moves the soaks' faked week by 9.2 days | |
-| A4 | Whether a BENCH run earns anything | **No.** `Meta.eligible()` is the ONE gate, extended, not duplicated. ⚠ Its body is pinned by a closed `mutate` (§1.7) | |
-| A5 | Per mode, shared, or mode-TAGGED | **One shared store, rows MODE-TAGGED**: each id names the mode it reads, or `null` for either. Not a `C.MODE_FLAGS` field — that table is about what a RUN has | |
-| A6 | The `achievements` key's declared SHAPE and version | **v1, §15.5's four stores, arrays rather than Sets**, no `migrate`. §1.2 V2 MEASURED the cost at one closed assertion | |
-| A7 | The five WEEKLY, and the rotation | **A stride walk over a weekly-only pool of 20**, `weekKey` an ISO year-week in UTC from an injected `now()`. §1.6 MEASURED the function against six boundaries and the walk over 104 weeks | |
-| A8 | **THE ID TABLE ITSELF** — the call with no second chance | **The 24 + 20 in §9**, each row measured reachable or flagged. ⚠ Two rows are flagged: `purge_wide` is MEASURED UNREACHABLE and `mimic_kill` rides on a probation the plan cannot close | |
-| A9 | What an unlock is WORTH | **Nothing.** No points, no life, no `addScore()` call — so `addScore()` stays the one writer and GDD §7's table does not grow | |
-| A10 | Whether an unlock has a SOUND | **Yes, one new event, `unlock`**, sfx-lab candidate A, no `SFX_KILL_PITCH` voice. `C.SFX` 27 → 28 | |
-| A11 | The payload-shaped object's SHAPE (GDD §21 #4 names it and does not define it) | **`{ id, tier, weekKey, at }`**, returned from `evaluate()` as an array | |
-| A12 | Where the DEFINITION TABLE lives — ⛔ two invariants collide here | **`C.ACHIEVEMENTS` as data, handed to the module as an option**, which is `createScores`' shipped precedent (§1.9) | |
+| A1 | Where an achievement is SEEN — the GDD specs no surface at all | **A screen, reached from the title, and no toast.** One row appended AFTER PROFILE; §1.2 V1 MEASURED the cost at two closed assertions, and a toast has nowhere to go in Overdrive (§1.8) | ✅ As recommended |
+| A2 | What the evaluator READS | **One flat `facts` object the game builds at the seat**, from `state` plus new `tally` fields. §1.2 V3 MEASURED a `tally` field free; §1.7 MEASURED an event stream at six pinned kill-line strings plus two count assertions | ✅ As recommended |
+| A3 | WHEN it evaluates | **Two seats: the clear edge and `Meta.runEnded()`.** Never per step — §1.4 MEASURED that the clear edge already reads and writes storage on a play step, and §1.5 that a per-step clock read moves the soaks' faked week by 9.2 days | ✅ As recommended |
+| A4 | Whether a BENCH run earns anything | **No.** `Meta.eligible()` is the ONE gate, extended, not duplicated. ⚠ Its body is pinned by a closed `mutate` (§1.7) | ✅ As recommended |
+| A5 | Per mode, shared, or mode-TAGGED | **One shared store, rows MODE-TAGGED**: each id names the mode it reads, or `null` for either. Not a `C.MODE_FLAGS` field — that table is about what a RUN has | ✅ As recommended |
+| A6 | The `achievements` key's declared SHAPE and version | **v1, §15.5's four stores, arrays rather than Sets**, no `migrate`. §1.2 V2 MEASURED the cost at one closed assertion | ✅ As recommended |
+| A7 | The five WEEKLY, and the rotation | **A stride walk over a weekly-only pool of 20**, `weekKey` an ISO year-week in UTC from an injected `now()`. §1.6 MEASURED the function against six boundaries and the walk over 104 weeks | ✅ As recommended |
+| A8 | **THE ID TABLE ITSELF** — the call with no second chance | **The 24 + 20 in §9**, each row measured reachable or flagged. ⚠ Two rows are flagged: `purge_wide` is MEASURED UNREACHABLE and `mimic_kill` rides on a probation the plan cannot close | ✅ **23 rows: `purge_wide` DROPPED, `mimic_kill` KEPT.** The weekly pool of 20 stands as the starting list and ⛔ **P3 measures every row before landing it** |
+| A9 | What an unlock is WORTH | **Nothing.** No points, no life, no `addScore()` call — so `addScore()` stays the one writer and GDD §7's table does not grow | ✅ As recommended |
+| A10 | Whether an unlock has a SOUND | **Yes, one new event, `unlock`**, sfx-lab candidate A, no `SFX_KILL_PITCH` voice. `C.SFX` 27 → 28 | ✅ As recommended |
+| A11 | The payload-shaped object's SHAPE (GDD §21 #4 names it and does not define it) | **`{ id, tier, weekKey, at }`**, returned from `evaluate()` as an array | ✅ As recommended |
+| A12 | Where the DEFINITION TABLE lives — ⛔ two invariants collide here | **`C.ACHIEVEMENTS` as data, handed to the module as an option**, which is `createScores`' shipped precedent (§1.9) | ✅ As recommended |
 
 ### A1 — where an achievement is SEEN, and the GDD specs nothing
 
@@ -207,7 +212,7 @@ started was `levelRecord().noteCleared()` at ticks 1,897 and 3,833, both with
 ⛔ So the rule that holds today is telemetry's — "no telemetry write from a play
 step", because a full ring is **890,000 characters** (CS011's plan §1.6) — and
 not "no storage write on a play step". A fully-unlocked achievements envelope is
-**681 bytes** (MEASURED, computed over a 24-id table), seventeen times
+**681 bytes** (MEASURED, computed over a 24-id table; the shipped 23 are smaller), seventeen times
 `progress` and 1/1300th of the ring.
 
 **MEASURED (§1.5): the build calls `Date.now()` exactly TWICE** across a boot
@@ -354,8 +359,11 @@ roll.
   table: session-scoped challenges a player can finish in one sitting ("clear
   five wells in one run", "take four rings in one dive"), which is what a
   *weekly* is for. Cost: 20 more ids that are also save data and also never
-  renamed — the table grows from 24 to 44.
-- **B — draw the five from the 24 lifetime ids.** No second table, no second set
+  renamed — the table grows from 23 to 43. ✅ **The twenty below stand as the
+  STARTING list and ⛔ P3 settles them, MEASURED** (Paul, 2026-09-20): P3 runs
+  §1.3's reach probe over all twenty before landing them, and reports any row no
+  board reaches rather than shipping or silently lowering it.
+- **B — draw the five from the 23 lifetime ids.** No second table, no second set
   of ids to get right. It makes a weekly "do the thing you already did", and the
   four tiered lifetime rows make poor weeklies (a player at tier 3 of
   `wells_cleared` cannot re-earn it).
@@ -368,29 +376,30 @@ reads the platform clock cannot be driven by a test at all.
 
 ### A8 — ⛔ THE ID TABLE ITSELF, and it has no second chance
 
-§9 is the proposal: **24 lifetime** (8 tiered, 16 untiered) and **20 weekly**,
+§9 is the table: ✅ **23 lifetime** (9 tiered, 14 untiered) and **20 weekly**,
 each row with its id, its predicate in words, the mode it reads, the shipped
 system it reads, and ⛔ **whether the suite's existing front-door drivers can
 reach it**, MEASURED in §1.3.
 
-**MEASURED headline: 22 of the 24 lifetime rows are reachable by the front-door
-hunter**, and the two that are not are flagged in the table rather than quietly
-kept:
-- ⛔ **`purge_wide` is UNREACHABLE.** The biggest single Purge measured across
+**MEASURED headline: 22 of the 23 shipped rows are reachable by the front-door
+hunter**, the 23rd (`carrier_split`) is PREDICTED reachable and unmeasured, and
+the one row no board reached is CUT rather than quietly lowered:
+- ⛔ **`purge_wide` WAS UNREACHABLE AND IS DROPPED** (Paul, 2026-09-20). The
+  biggest single Purge measured across
   three sessions and 289 Purge uses took **4** enemies (Classic Start Depth 81);
   Classic Start Depth 1 and Overdrive Start Depth 9 both peaked at **2**. A row
   asking for six is a test that passes on zero, which is exactly what GDD §17
-  item 10 exists to stop. ⚠ Either the threshold comes down to what a board
-  actually offers, or the row goes.
+  item 10 exists to stop — and lowering it to four would set a threshold from
+  what a bot achieved rather than from what the mechanic is worth.
 - ⚠ **`purge_saver` is BORDERLINE.** Clears with `purgeUses === 0` measured
   **0, 0 and 1** across three sessions — the hunter spends its charge on every
   well. It is reachable by a player and all but unreachable by the driver, so
   its test needs a staged board rather than a played one.
-- ⚠ **`mimic_kill` rides on a probation this plan cannot close.** The Mimic is
-  ⚠ on probation and CS017 may cut it in one schedule row (GDD §21 #6). ⛔ An id
-  is never renamed and a cut one orphans: the row is here because the Mimic
-  ships today, and the honest alternatives are to drop the row now or to accept
-  that a cut leaves one id permanently unearnable for new players.
+- ⚠ **`mimic_kill` rides on a probation this plan cannot close, and it STAYS**
+  (Paul, 2026-09-20). The Mimic is ⚠ on probation and CS017 may cut it in one
+  schedule row (GDD §21 #6). ⛔ An id is never renamed and a cut one orphans: the
+  row is here because the Mimic ships today, and the accepted consequence is that
+  a cut leaves one id permanently unearnable for new players.
 
 Everything else the table needs, the drivers reach (§1.3): every Classic kind
 and every Overdrive kind killed, all five token kinds collected in one session,
@@ -953,7 +962,7 @@ const ach = createAchievements({ game: state });
 
 ---
 
-## 9. ⛔ THE PROPOSED ID TABLE (A8) — 24 LIFETIME
+## 9. ⛔ THE ID TABLE (A8) — ✅ 23 LIFETIME, ANSWERED
 
 ⛔ **Reachability is MEASURED against §1.3's front-door sessions.** "✅" means a
 probe session reached it; "⚠" means borderline, with the number; "❌" means
@@ -979,23 +988,33 @@ MEASURED unreachable.
 | 16 | `carrier_split` | destroy a Carrier and both its children in one well | both | **new `tally` field** | ⚠ PREDICTED reachable; not counted |
 | 17 | `rim_sweep` | kill an enemy with the rim sweep | both | **new `tally` field** | ⚠ **0, 0, 6** across three sessions |
 | 18 | `purge_saver` | clear a well with the Purge unspent. Tiers ⚠ 5 / 25 / 100 | both | `purgeUses === 0` at the clear edge | ⚠ **0, 0, 1** — a player reaches it, the driver does not |
-| 19 | `purge_wide` | one Purge that destroys six enemies | both | **new `tally` field** | ❌ **MEASURED UNREACHABLE: best of 289 uses is 4** |
-| 20 | `combo_max` | reach the ×8 multiplier | overdrive | `combo.peak` | ✅ 8 = `COMBO_MAX` |
-| 21 | `token_set` | collect all five token kinds, lifetime | overdrive | **new `tally` field** | ✅ all five in ONE session |
-| 22 | `ring_full` | take all six rings in one dive | overdrive | **new `tally` field** | ✅ a full set |
-| 23 | `jump_kill` | kill a Warden with a jump strike | overdrive | **new `tally` field** | ✅ 40 |
-| 24 | `mimic_kill` | destroy a Mimic | overdrive | **new `tally` field** | ✅ 19 — ⚠ **rides on the probation (GDD §21 #6)** |
+| 19 | `combo_max` | reach the ×8 multiplier | overdrive | `combo.peak` | ✅ 8 = `COMBO_MAX` |
+| 20 | `token_set` | collect all five token kinds, lifetime | overdrive | **new `tally` field** | ✅ all five in ONE session |
+| 21 | `ring_full` | take all six rings in one dive | overdrive | **new `tally` field** | ✅ a full set |
+| 22 | `jump_kill` | kill a Warden with a jump strike | overdrive | **new `tally` field** | ✅ 40 |
+| 23 | `mimic_kill` | destroy a Mimic | overdrive | **new `tally` field** | ✅ 19 — ⚠ **rides on the probation (GDD §21 #6)** |
 
-**Eight tiered rows, 24 ids, ⚠ every threshold provisional.** The tiered rows
-are 1–8; 9–24 are untiered. ⛔ **Ten of the rows need a new `tally` field** (5,
-6, 8, 11, 14, 16, 17, 19, 21, 22, 23, 24 — twelve if `purge_wide` and
-`mimic_kill` survive §0's answers), which is why A2-A's measurement matters more
-than any other in this plan.
+✅ **23 ids, NINE tiered, ⚠ every threshold provisional.** The tiered rows are
+1–8 plus `purge_saver` (18); the rest are untiered. ⛔ **A threshold is NOT save
+data and a later changeset may retune any of them — only the `id` is fixed.**
+
+⛔ **`purge_wide` IS DROPPED** (Paul, 2026-09-20): MEASURED unreachable at six,
+and "six" was the plan's number rather than a measured one, so the row goes
+rather than being quietly lowered to fit a bot's ceiling. ⚠ **`mimic_kill`
+STAYS**: the Mimic ships today, and if CS017 cuts it one id becomes unearnable
+for new players and nothing else breaks.
+
+⛔ **Eleven rows need a new `tally` field** (5, 6, 8, 11, 14, 16, 17, 20, 21, 22,
+23), which is why A2's measurement matters more than any other in this plan.
+⚠ **`carrier_split` (16) is the ONE row with no measurement behind it** — it is
+PREDICTED reachable, never counted. ⛔ **P3 asserts reachability per row**, so if
+it turns out unreachable the phase STOPS and surfaces it rather than shipping a
+test that passes on zero.
 
 ### The weekly pool (A7-A) — 20 session-scoped rows
 
-⚠ **Sketched, not settled: §0 A7 and A8 own it together.** Each is scoped to ONE
-run, so a week's five are all finishable in a sitting: clear five wells in one
+✅ **The starting list, and ⛔ P3 SETTLES IT, MEASURED** (Paul, 2026-09-20).
+Each is scoped to ONE run, so a week's five are all finishable in a sitting: clear five wells in one
 run; clear a well without firing more than N shots; reach level 20 from Start
 Depth 1; clear three wells in a row without dying; take four rings in one dive;
 collect three tokens in one well; reach ×4 in one run; destroy a Carrier and both
@@ -1005,8 +1024,9 @@ one run; clear a well with one life left; score 50,000 in one run; destroy 40
 enemies in one run; finish a dive with no ring missed; chip a Thorn to nothing in
 one pass; clear the starting well of a Start Depth 33+ run; survive a well with
 no Purge and no death; and end a run without a Thorn death. ⛔ **Every one of
-these is save data too**, and each owes the same reachability measurement §1.3
-gave the twenty-four.
+these is save data too**, and ⛔ **each owes the same per-row reachability
+measurement §1.3 gave the twenty-three, IN P3, BEFORE it lands.** ⛔ A row no
+board reaches is reported to Paul, never shipped and never quietly lowered.
 
 ---
 
@@ -1091,8 +1111,10 @@ row. Its CS011 verdict reads "✗ **CS015's — achievements** (Paul's M4)".
   table unlocks from a played or staged board (P3, P4).
 - **GDD §17 item 10 — "every predicate reachable; none throws on empty state;
   tiers monotonic"** — closed when P3 asserts all three, and ⛔ **reachability is
-  asserted per row, not in aggregate**: §1.3 already found one row (`purge_wide`)
-  that no board reaches, and an aggregate assertion would have hidden it.
+  asserted per row, not in aggregate**: §1.3 found one row (`purge_wide`) that no
+  board reaches and it was CUT, and an aggregate assertion would have hidden it.
+  ⛔ **The same per-row assertion covers the twenty weekly rows**, which P3
+  settles.
 - **§17 item 12 (the soak)** — the thirteenth file, both modes, working store
   and reload, ⛔ **a stubbed twin hashing identically step by step**.
 - **Quality:** no banned vocabulary — ⛔ **by the closed scan AND by eye, because
@@ -1139,14 +1161,18 @@ row. Its CS011 verdict reads "✗ **CS015's — achievements** (Paul's M4)".
   rule has expired — and ⚠ **`## Code map` is 4.5 KB with no reasoning to move**,
   so it is the wrong target too. ⛔ The likely valve targets are **Save data**
   and **Leaderboard**, both of which carry reasoning.
-- **K2 — `STATUS.md` is at 342 lines against ~400** (MEASURED). Four phases plus
-  a §0 defect entry. ⛔ P1 compresses before it adds; reasoning goes to
-  `log/CS015.md` **as it goes**, never at the close.
+- **K2 — ⛔ `STATUS.md` is at 391 lines against ~400 AS P1 STARTS** (MEASURED
+  after the answers landed; it was 342 at `b92da55`, and §0's defect entry plus
+  the answer record took it here). Four phases still to add to it. ⛔ **P1
+  compresses BEFORE it adds**; reasoning goes to `log/CS015.md` **as it goes**,
+  never at the close.
 - **K3 — ⛔ the id table cannot be revised.** §0's headline. A phase that finds a
   row wrong after it has shipped is looking at save data, not at code.
 - **K4 — ⛔ an unreachable predicate is a test that passes on zero.**
-  `purge_wide` is MEASURED unreachable and `purge_saver` and `rim_sweep` are
-  borderline. ⛔ **Reachability is asserted per row.**
+  `purge_wide` was MEASURED unreachable and is CUT; `purge_saver` and
+  `rim_sweep` are MEASURED borderline, and ⚠ **`carrier_split` is unmeasured
+  entirely.** ⛔ **Reachability is asserted per row**, for the 23 lifetime rows
+  and the 20 weekly ones alike.
 - **K5 — the vocabulary scan's underscore blind spot** (MEASURED, §0's
   findings). ⛔ Every id and every displayed name is checked by eye in P3.
 - **K6 — `e.key` inside `20-achievements.js` is red** (MEASURED), because its
@@ -1193,7 +1219,8 @@ row. Its CS011 verdict reads "✗ **CS015's — achievements** (Paul's M4)".
 - **A2 — `../coinless-kit` is present for the close** (K13). ⚠ MEASURED present
   at HEAD this session.
 - **A3 — the Mimic still ships at the CS015 close.** ⚠ Its probation verdict is
-  CS017's (GDD §21 #6), and `mimic_kill` depends on it (§9 row 24).
+  CS017's (GDD §21 #6), and `mimic_kill` depends on it (§9 row 23). ✅ Accepted
+  by Paul, 2026-09-20: a cut leaves that one id unearnable and nothing else.
 - **A4 — Classic and Overdrive share every constant CS015 reads.** Achievements
   read counters, and a counter counts the same event in both modes.
 - **A5 — the thirteenth soak fits `run-all.js`'s per-file timeout.** The twelfth

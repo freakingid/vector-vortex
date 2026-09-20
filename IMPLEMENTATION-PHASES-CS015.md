@@ -9,12 +9,13 @@ and `STATUS.md` automatically, and nothing else unless the prompt names it.
 ⛔ **`ultrathink` appears inside the prompt text where it is wanted.** It is a
 per-turn lever, so it has to be in the pasted message.
 
-⛔ **NOTHING IN `PLANNED-FEATURES-CS015.md` §0 IS ANSWERED.** Twelve calls,
-A1–A12, each with a measurement and one recommendation, and the answer column
-empty. ⛔ **A prompt below that names a call builds the ANSWER Paul wrote
-beside it. If that cell is blank, the phase STOPS and says so** — a build phase
-invents no design (`CLAUDE.md` rule 3). The B and C branches in §0 are the
-record of what was priced, not a choice left to the phase.
+✅ **EVERY CALL IS ANSWERED: Paul took every recommendation in
+`PLANNED-FEATURES-CS015.md` §0 (A1–A12), 2026-09-20**, with one qualification on
+A8 — ⛔ **`purge_wide` is DROPPED, so the lifetime table is 23 rows, and the
+weekly pool of 20 is settled BY P3, measured.** A prompt below that says "A3's
+answer" means A3's recommendation. ⛔ **The B and C branches in §0 are DEAD** —
+they are the record of what was priced, not a choice left open. Build the A
+branch. No phase's shape changed.
 
 **Baseline:** CS014 closed at `ae9daf1`; CS015 is planned on top of `b92da55`.
 - `node build.js` → 25 modules + 3 inlined kit, **781,198 bytes** (762.9 KB).
@@ -33,8 +34,9 @@ record of what was priced, not a choice left to the phase.
 - kit-names **0.1.0**, kit-storage **0.1.0**, kit-profile **0.1.1**,
   kit-leaderboard **0.2.1**, kit-input **0.8.0**, kit-audio **0.4.0**,
   kit-menu **0.1.0**. coinless-kit present beside the repo.
-- `STATUS.md` **342 lines** (plan K2); `CLAUDE.md` **47,919 bytes**, 95.8 % of
-  its 50 KB ceiling (plan K1).
+- `STATUS.md` ⛔ **391 lines** as P1 starts, against ~400 (plan K2: 342 at
+  `b92da55`, plus the §0 defect entry and the answer record); `CLAUDE.md`
+  **47,919 bytes**, 95.8 % of its 50 KB ceiling (plan K1).
 
 | Phase | Builds | Model | Effort |
 |---|---|---|---|
@@ -43,8 +45,8 @@ record of what was priced, not a choice left to the phase.
 | P3 | ⛔ The id table, whole, and the surface | Opus 5 | **high** |
 | P4 | The thirteenth soak, the review, the close | Opus 5 | **high** |
 
-⚠ **If A1 is answered C (a screen AND a toast), P3 splits in two and CS015 is
-five phases.** P3's prompt says so at its head.
+⛔ **A1 is answered: a SCREEN, no toast — so CS015 is FOUR phases and P3 does
+not split.** The five-phase branch below is dead.
 
 ---
 
@@ -71,9 +73,9 @@ Plan §2 has the argument. In short:
 
 | Before | What | Whose |
 |---|---|---|
-| **P1** | ⛔ **§0's answer column filled for A2, A5, A6, A7, A11 and A12** | **Paul — OPEN** |
-| P2 | ⛔ A2, A3, A4 and A9 answered | **Paul — OPEN** |
-| P3 | ⛔ A1, A8 and A10 answered | **Paul — OPEN** |
+| **P1** | §0's answer column filled for A2, A5, A6, A7, A11 and A12 | ✅ Done 2026-09-20 |
+| P2 | A2, A3, A4 and A9 answered | ✅ Done 2026-09-20 |
+| P3 | A1, A8 and A10 answered | ✅ Done 2026-09-20 |
 | P3 | `tools/sfx-lab.html` carries `unlock`'s brief, an A label, 1–2 alternates and an in-context sequence before a recipe is ported (only if A10 adds the event) | P3's own first act |
 | P4 | `../coinless-kit` present beside this repo — `test-cs011-p5.js` reads its registry at `f0b0eb2` and `test-cs012-p3.js` at `e2efed5`, and each SKIPS LOUDLY without it; ⛔ a close cannot skip | ✅ MEASURED present, 2026-09-20 |
 
@@ -129,11 +131,13 @@ precondition, never relaxed to let a broken one pass.**
 > `test-cs011-p4.js:20–60`, `test-cs011-p6.js:310–340` and
 > `test-cs002-p1.js:400–440`. Create `log/CS015.md`. ultrathink.
 >
-> ⛔ **§0: A2, A5, A6, A7, A11 and A12. Build exactly those answers.** If any
-> cell is blank, STOP and say so — a build phase invents no design.
+> ✅ **§0: A2, A5, A6, A7, A11 and A12 are ANSWERED — every recommendation.**
+> ⛔ **Build exactly those answers and do not re-open one**; the B and C branches
+> are dead. A build phase invents no design.
 >
-> **0. `STATUS.md` is at 342 lines and `CLAUDE.md` at 47,919 bytes** (plan K1,
-> K2) — ⛔ **~2.0 KB of headroom, the tightest any phase has started with.**
+> **0. ⛔ `STATUS.md` is at 391 lines against ~400, and `CLAUDE.md` at 47,919
+> bytes** (plan K1, K2) — ⛔ **~2.0 KB of headroom, the tightest any phase has
+> started with, and under 10 lines of `STATUS.md` headroom.**
 > Reasoning goes to `log/CS015.md`, which you create, **as you go**; hazards and
 > anything P2 must act on go to `STATUS.md`, one line in the ledger and ~200
 > words. ⛔ **If a `CLAUDE.md` section you edit is over ~4 KB, fire the valve
@@ -229,8 +233,8 @@ precondition, never relaxed to let a broken one pass.**
 > `test-cs012-p4.js:690–740` and `test-cs014-p1.js:320–345`. Append to
 > `log/CS015.md`. ultrathink.
 >
-> ⛔ **§0: A2, A3, A4 and A9. Build exactly those answers.** If any cell is
-> blank, STOP and say so.
+> ✅ **§0: A2, A3, A4 and A9 are ANSWERED — every recommendation.** ⛔ **Build
+> exactly those answers and do not re-open one.**
 >
 > **1. The counters (A2).** Each new `tally` field is incremented at the ONE
 > place its event actually happens, beside the counter already there. ⛔ **They
@@ -283,9 +287,9 @@ precondition, never relaxed to let a broken one pass.**
 
 **Model: Opus 5 · Effort: high**
 
-⚠ **If A1 was answered C (a screen AND a toast), split this phase in two**: P3a
-the table and the screen, P3b the toast, and CS015 becomes five phases. The
-toast's own hazard is in §5 below.
+⛔ **A1 is answered: a screen, no toast.** This phase does not split, and §5's
+toast paragraph below is DEAD — it is the record of what was priced. ⛔ **Build
+no HUD rectangle.**
 
 > Read `CLAUDE.md` and `STATUS.md`, then `PLANNED-FEATURES-CS015.md` §0
 > (A1, A8, A10 **and their ANSWERS**; the findings; R9), §1.2, §1.3, §1.7, §1.8,
@@ -299,14 +303,25 @@ toast's own hazard is in §5 below.
 > `test-cs008-p6.js:415–436` and `test-cs008-p4.js:35–60`. Append to
 > `log/CS015.md`. ultrathink.
 >
-> ⛔ **§0: A1, A8 and A10. Build exactly those answers.** If any cell is blank,
-> STOP and say so.
+> ✅ **§0: A1, A8 and A10 are ANSWERED — every recommendation, with A8's
+> qualification: 23 lifetime rows, `purge_wide` DROPPED.** ⛔ **Build exactly
+> those answers and do not re-open one.**
 >
 > **1. ⛔ THIS PHASE IS IRREVERSIBLE.** An achievement `id` is save data and is
 > never renamed (GDD §15.5; `CLAUDE.md`): renaming one drops that unlock for
-> every player who had it, and deleting one orphans it. ⛔ **Land A8's table
-> exactly as answered.** If a row looks wrong to you, ⛔ **stop and say so to
-> Paul — do not change it in the session you noticed it.**
+> every player who had it, and deleting one orphans it. ⛔ **Land §9's TWENTY-THREE
+> lifetime rows exactly as answered** — ⛔ `purge_wide` is DROPPED and is not
+> reinstated; ⚠ `mimic_kill` STAYS and its probation risk is accepted. ⛔ **A
+> threshold is NOT save data** and a later changeset may retune one; only the
+> `id` is fixed. If a row looks wrong to you, ⛔ **stop and say so to Paul — do
+> not change it in the session you noticed it.**
+>
+> **1a. ⛔ THE TWENTY WEEKLY ROWS ARE SETTLED HERE, MEASURED.** §9's weekly list
+> is the STARTING list, not a landed one. ⛔ **Run §1.3's reach probe over all
+> twenty before landing them**, and ⛔ **report any row no board reaches to Paul
+> rather than shipping it or quietly lowering it** — that is what dropping
+> `purge_wide` established. ⚠ **`carrier_split` (lifetime row 16) is the one
+> LIFETIME row with no measurement behind it**: measure it in the same pass.
 >
 > **2. ⛔ CHECK EVERY ID AND EVERY DISPLAYED NAME BY EYE against the ten banned
 > words** (`CLAUDE.md`'s vocabulary table; GDD §18). ⛔ **The closed scan is not
@@ -317,8 +332,9 @@ toast's own hazard is in §5 below.
 > that you checked, and how.
 >
 > **3. Reachability (GDD §17 item 10).** ⛔ **Assert every predicate reachable
-> PER ROW, never in aggregate** — plan §1.3 already found one row no board
-> reaches, and an aggregate assertion would have hidden it. ⛔ **None throws on
+> PER ROW, never in aggregate — all 23 lifetime rows AND all 20 weekly ones** —
+> plan §1.3 found one row no board reaches and it was CUT, and an aggregate
+> assertion would have hidden it. ⛔ **None throws on
 > empty state** (a fresh `newState()`, a fresh profile, an empty store), and
 > ⛔ **tiers are monotonic**, with a mutation that lowers one. ⚠ `purge_saver`
 > and `rim_sweep` are MEASURED borderline on a played board — stage a board for
@@ -333,7 +349,7 @@ toast's own hazard is in §5 below.
 > (plan §1.2, V1), the title costs two closed repairs and the OPTIONS row costs
 > none.
 >
-> **5. ⚠ IF A TOAST IS IN SCOPE:** `hudLayout()` returns six rectangles and
+> **5. ⛔ DEAD BRANCH — NO TOAST (A1).** Kept as the record of what was priced: `hudLayout()` returns six rectangles and
 > ⛔ **the jump glyph and the combo readout are each placed ABSOLUTELY, off no
 > other rectangle**, which is what keeps the four CS008 corners bit-identical —
 > asserted in `test-cs012-p4.js` and `test-cs012-p5.js`. A seventh must do the
