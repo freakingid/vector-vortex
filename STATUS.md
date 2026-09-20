@@ -314,11 +314,14 @@ them is in `log/CS0##.md`, not here.
   `DECISIONS.md`'s own header states the form. This is what stopped CS012's
   sixteen calls and CS014's nine going unindexed a third time: CS014 P3's review
   found the gap and the table forbade it from fixing the gap it found.
-- ⚠ **`DECISIONS.md` has no row for CS012's sixteen calls (O1–O16) or CS014's
-  nine (RF1–RF9).** CS010's, CS011's and CS013's are indexed there, so the index
-  is incomplete. ⛔ Found by CS014 P3's review; ⛔ **a CLOSE phase may not write
-  that file** (`CLAUDE.md`'s session table), so it is Paul's or a planning
-  session's.
+- ✅ **`DECISIONS.md`'S INDEX IS COMPLETE** — Paul backfilled CS012's sixteen
+  calls (O1–O16) and CS014's nine (RF1–RF9) in `4bfd169`, 2026-09-20, each row
+  marked ⚠ **Backfilled**. ⛔ **AUDITED 2026-09-20, all fourteen changesets**:
+  CS007–CS014 each have a §0 pointer row or a dated section, and ⚠ **CS001–CS006
+  owe no pointer row** — the "Paul's calls" table begins at
+  `PLANNED-FEATURES-CS007.md`, so CS002's and CS003's absence is not a gap (the
+  file's own header states this). ⛔ **CS015's row is the CLOSE's**, per the rule
+  `b92da55` added.
 - ⛔ **Paul, when he wants it: `drive`'s lab session** (PASS marks, tiers, gains,
   tempo). It ports as its own commit and rewrites `test-cs012-p1.js`'s "no tier"
   and "no audition mark" assertions in place. Nothing waits on it.

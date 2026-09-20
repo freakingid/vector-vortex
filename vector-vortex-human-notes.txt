@@ -134,6 +134,9 @@ closed vs code window
 Phase 2  (of cs014, after unstuck and on desktop)
 Phase 3
 
+=====
+Now is CS015 planning
+
 
 
 

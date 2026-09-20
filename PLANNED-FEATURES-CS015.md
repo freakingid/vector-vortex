@@ -546,13 +546,16 @@ reached in five of seven probe sessions.
   through — so the ids in §9 are checked by eye and the phase that lands them
   says so. ⚠ Whether the scan should also test `[_\b]` is Paul's; it is not
   CS015's to change.
-- ⚠ **`DECISIONS.md` still has no row for CS012's sixteen calls (O1–O16) or
-  CS014's nine (RF1–RF9).** `STATUS.md` carries this and says a CLOSE phase may
-  not write that file, "so it is Paul's or a planning session's". ⛔ **This
-  session did not write it**: `CLAUDE.md`'s session table gives a planning
-  session exactly two output documents, and widening that on my own reading is
-  the failure this shape exists to prevent. It is named here so the gap is not
-  found a fourth time.
+- ✅ **`DECISIONS.md`'S INDEX IS COMPLETE, and this plan first said otherwise.**
+  `STATUS.md` carried "no row for CS012's sixteen calls (O1–O16) or CS014's nine
+  (RF1–RF9)" as an open carried task, and this section repeated it without
+  checking the file. ⛔ **MEASURED: Paul backfilled both in `4bfd169` on
+  2026-09-20**, before this planning session began, each row marked ⚠
+  **Backfilled** — and `DECISIONS.md`'s header carries its own dated audit of
+  all fourteen changesets. ⚠ **The lesson is the one rule 3b already states**:
+  a claim in `STATUS.md` is a claim, not a measurement, and "does this file
+  carry that row" is one `grep`. ⛔ **CS015's own row is the CLOSE's** (§6), per
+  the rule `b92da55` added.
 
 ### ⚠ Readings this plan takes and flags
 
@@ -1161,7 +1164,7 @@ row. Its CS011 verdict reads "✗ **CS015's — achievements** (Paul's M4)".
   rule has expired — and ⚠ **`## Code map` is 4.5 KB with no reasoning to move**,
   so it is the wrong target too. ⛔ The likely valve targets are **Save data**
   and **Leaderboard**, both of which carry reasoning.
-- **K2 — ⛔ `STATUS.md` is at 391 lines against ~400 AS P1 STARTS** (MEASURED
+- **K2 — ⛔ `STATUS.md` is at 394 lines against ~400 AS P1 STARTS** (MEASURED
   after the answers landed; it was 342 at `b92da55`, and §0's defect entry plus
   the answer record took it here). Four phases still to add to it. ⛔ **P1
   compresses BEFORE it adds**; reasoning goes to `log/CS015.md` **as it goes**,

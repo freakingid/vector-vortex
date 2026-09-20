@@ -34,7 +34,7 @@ branch. No phase's shape changed.
 - kit-names **0.1.0**, kit-storage **0.1.0**, kit-profile **0.1.1**,
   kit-leaderboard **0.2.1**, kit-input **0.8.0**, kit-audio **0.4.0**,
   kit-menu **0.1.0**. coinless-kit present beside the repo.
-- `STATUS.md` ⛔ **391 lines** as P1 starts, against ~400 (plan K2: 342 at
+- `STATUS.md` ⛔ **394 lines** as P1 starts, against ~400 (plan K2: 342 at
   `b92da55`, plus the §0 defect entry and the answer record); `CLAUDE.md`
   **47,919 bytes**, 95.8 % of its 50 KB ceiling (plan K1).
 
@@ -135,7 +135,7 @@ precondition, never relaxed to let a broken one pass.**
 > ⛔ **Build exactly those answers and do not re-open one**; the B and C branches
 > are dead. A build phase invents no design.
 >
-> **0. ⛔ `STATUS.md` is at 391 lines against ~400, and `CLAUDE.md` at 47,919
+> **0. ⛔ `STATUS.md` is at 394 lines against ~400, and `CLAUDE.md` at 47,919
 > bytes** (plan K1, K2) — ⛔ **~2.0 KB of headroom, the tightest any phase has
 > started with, and under 10 lines of `STATUS.md` headroom.**
 > Reasoning goes to `log/CS015.md`, which you create, **as you go**; hazards and
@@ -429,9 +429,12 @@ no HUD rectangle.**
 > pointer, never the writeup** (the rule `b92da55` added to `CLAUDE.md`'s session
 > table).
 >
-> ⚠ **`DECISIONS.md` has no row for CS012's sixteen calls (O1–O16) or CS014's
-> nine (RF1–RF9).** That gap is Paul's or a planning session's, not a close's —
-> ⛔ **do not fix it here**, and say in `log/CS015.md` that you did not.
+> ✅ **`DECISIONS.md`'s index is otherwise COMPLETE** — CS012's O1–O16 and
+> CS014's RF1–RF9 were backfilled by Paul in `4bfd169`, and the file's header
+> carries a dated audit of all fourteen changesets. ⛔ **Add CS015's row and
+> nothing else**; if you find a changeset with no row, record it in `STATUS.md`
+> rather than writing it, and ⛔ **grep the file before believing a claim that
+> one is missing.**
 >
 > **4. GDD §19's Meta row.** ⛔ **Its achievements item is the row's LAST ✗.**
 > Write the verdict — met, half met or not met — beside the CS011 and CS012
