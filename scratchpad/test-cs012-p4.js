@@ -454,7 +454,7 @@ function itemEight(Z, ticks, plays) {
   const out = { steps: 0, killCalls: 0, zeroKills: 0, bonusCalls: 0, chipCalls: 0, builds: 0, clears: 0,
                 deaths: 0, multsSeen: new Set(), byClass: {}, maxMult: 1,
                 badKill: 0, badBonus: 0, badTotal: 0, unmatched: 0, leftover: 0,
-                badBuilds: 0, diveScored: 0, unfit: 0, bountyCalls: 0, first: null };
+                badBuilds: 0, diveScored: 0, unfit: 0, bountyCalls: 0, ringCalls: 0, first: null };
   const fail = (grp, msg) => { out[grp]++; if (!out.first) out.first = `${grp}: ${msg}`; };
 
   // trap 2 — the call log, with the multiplier live at each call.
@@ -510,9 +510,26 @@ function itemEight(Z, ticks, plays) {
         if (st.level !== level0 && !diveWas) deathThisWell = false;
       };
 
-      // ⛔ A DIVE SCORES NOTHING AND BUILDS NOTHING (GDD 5, 7).
+      // ⛔ REWRITTEN IN PLACE, CS014 P1 (RF4; plan §8, §11). "A dive scores
+      // nothing" is REPLACED by what replaced it, not deleted and not weakened:
+      // ⛔ EVERY addScore CALL INSIDE A DIVE IS ONE RING AT C.RING_POINTS,
+      // UNMULTIPLIED, AND NOTHING IN A DIVE BUILDS THE COMBO. That is the claim
+      // this branch was always making — a dive's score is exactly its events —
+      // and until CS014 a dive had no events. ⛔ A ring is not a kill and a Dive
+      // is not a kill site: the four kill sites and five kill lines are unmoved,
+      // the Dive's termination kill still pays nothing, and the payout is the
+      // Bounty's row (GDD 7, CS013 T6). ⚠ The LITERAL is read off the build
+      // rather than written here — C.RING_POINTS is provisional and owned by a
+      // tuning pass, and the claim is its shape, not its value.
       if (diveWas) {
-        if (calls.length) fail("diveScored", `tick ${i}: ${calls.length} addScore calls inside a dive`);
+        for (const c of calls) {
+          if (c.kill || c.n !== ZC.RING_POINTS) {
+            fail("diveScored", `tick ${i}: an addScore call of ${c.n} at ×${c.mult} inside a dive`);
+          } else { out.ringCalls++; }
+        }
+        if (calls.length > ZC.DIVE_RINGS_MAX) {
+          fail("diveScored", `tick ${i}: ${calls.length} ring payouts on one step`);
+        }
         if (out.builds !== builds0) fail("badBuilds", `tick ${i}: a dive built the combo`);
         endOfStep();
         continue;
@@ -602,6 +619,7 @@ function itemEight(Z, ticks, plays) {
   H.assert(r.deaths > 0, "non-vacuity: the player died");
   H.assert(r.killCalls > 0 && r.builds > 0, "non-vacuity: kills scored and built");
   H.assert(r.bountyCalls > 0, `non-vacuity (CS013 P1): Bounties were collected and priced (${r.bountyCalls})`);
+  H.assert(r.ringCalls > 0, `non-vacuity (CS014 P1): rings were taken inside dives and priced (${r.ringCalls})`);
 }
 
 // ---- ⛔ MUTATION-CHECKED: multiplying a chip or a clear bonus is RED ---------
@@ -1091,9 +1109,14 @@ H.eq(X.TELEMETRY_FIELDS.indexOf("maxCombo"), 20, "⛔ the column kept its place 
     const Z = H.buildGame({ mutate });
     const ZG = Z.Game, st = Z.state, ZDT = Z.C.FIXED_DT;
     // ⛔ CS013 P1: the token roll (T2) moved this board, and seed 11's run ended
-    // at ×1 — the fixture below lost its precondition. Seed 17 restores a live
+    // at ×1 — the fixture below lost its precondition. Seed 17 restored a live
     // multiplier at the end (×2.5, MEASURED), which is what the claim needs.
-    begin(Z, 17, 13);
+    // ⛔ CS014 P1 MOVED IT AGAIN, AND FOR A DIFFERENT REASON: an Overdrive dive
+    // is C.DIVE_TIME_OD 4.0 s rather than 2.6 (RF9), so the same draws land on
+    // later STEPS and 3,000 ticks reach a different board. Seed 17 now ends at
+    // ×1. Seed 59 ends at ×3 over the same window (MEASURED). ⛔ THE FIXTURE IS
+    // REPAIRED, NEVER THE CLAIM — the claim is that the two runs are identical.
+    begin(Z, 59, 13);
     let draws = 0;
     const raw = st.rng;
     st.rng = function () { draws++; return raw(); };

@@ -432,6 +432,15 @@ Depth bonus are **not** multiplied and build nothing, and the Dive's termination
 kill still pays nothing. ⛔ **Do not "unify" the multiplier into `addScore()`**:
 it would silently take all four.
 
+⛔ **A RING PAYS `C.RING_POINTS` THROUGH `addScore()`, UNMULTIPLIED, BUILDING
+NOTHING AND ROLLING NOTHING** (CS014 P1, RF4; GDD §7, §14.5) — the Bounty's
+row, not an entity price. A ring is not a kill and **a Dive is not a kill
+site**, so the four sites and five lines are unmoved, `09-collision.js` is not
+edited and the Dive's termination kill still pays nothing. ⛔ It CAN cross an
+extra-life milestone, and that is `addScore()` being the one writer and the one
+life-awarder, unchanged. ⚠ `C.RING_POINTS` is **provisional**, owned by a
+tuning pass.
+
 ⛔ **`comboMult()`, `comboKill()`, `comboDeath()` and `updateCombo()` live in
 `12-scoring.js` and are each a no-op — or exactly 1 — outside
 `modeHas("combo")`**, which is what keeps a Classic run bit-identical
@@ -478,6 +487,49 @@ no `tally.deaths`, no combo loss, no freeze, no stop. It clears the flag and
 sets `state.invulnTime = 0` — the respawn's window and its blink, ⛔ **with no
 rim push**. ⛔ A Dive is safe because `startDive()` spends every power, never
 because this function knows what a dive is.
+
+### The Dive
+
+⚠ **The valve fired here in the session that wrote this section** (CS014 P1):
+the reasoning is in `RATIONALE.md#ring-flight`, and the rules stay.
+
+⛔ **OVERDRIVE'S DIVE IS A RING FLIGHT AND IT IS THE SAME DIVE** (CS014 P1,
+GDD §5, §14.5). One module, `11-dive.js`; one beat; one strike; one
+termination guarantee. ⛔ **`modeHas("rings")` is the whole gate and
+`rings: false` in `C.MODE_FLAGS`' Overdrive row is the whole cut.**
+
+⛔ **`C.DIVE_TIME_OD` IS READ EXACTLY AS `C.DIVE_TIME` IS — the WHOLE dive,
+grace included**, through one accessor, `diveTime()`, which reads the FLAG and
+never `state.mode`. `C.DIVE_GRACE` is unchanged and is a slice off the front of
+whichever is in force.
+
+⛔ **A RING IS NOT AN ENEMY AND NOT A TOKEN EITHER. It is a FIELD ON
+`state.dive`, and `layRings()` is its ONE way in.** No contract field, no
+`ENEMY_KINDS` row, no `STATE_FIELDS` row, and ⛔ **no `anchored`** — its
+`depth` is a POSITION. `resetDive()` empties the set, so there is no second
+reset caller. ⛔ **A repeated dive RE-LAYS it.**
+
+⛔ **THE LATTICE IS A FUNCTION OF THE WELL AND OF CONSTANTS, AND OF NOTHING
+ELSE** — no draw (a dive still spends **zero** RNG, in both modes), no
+`heat()`, no `state.level`, not the craft's lane. The depths are the midpoints
+of `C.DIVE_RINGS_MAX` equal slices, laid rim-first and ⛔ **all strictly below
+1**; the arc centres walk through **`laneHop()`**, the build's one wall helper.
+
+⛔ **THE TAKE PASS IS A LANE MATCH INSIDE A DEPTH CROSSING, ABOVE THE STRIKE
+TEST AND ABOVE THE COMPLETION CHECK** — the strike's own ordering reason. The
+lane test is `laneDelta` against `C.RING_ARC_LANES`, as `laneHit` reads it
+against `C.HIT_LANE_TOL`: ⛔ **no second idea of lane-sameness and no second
+control model.** ⛔ It is **not** a second two-depth comparison — two
+POSITIONS, where the strike compares a position against a LENGTH. ⛔ **Each
+ring is resolved ONCE** (`taken`: `null` → `true`/`false`, for good), and "you
+stop earning" is that `false`: the ABSENCE of a call, with no counter, no
+streak and no full-set bonus.
+
+⛔ **CLASSIC IS A TOTAL NO-OP** — nothing laid, nothing taken, no draw spent,
+`C.DIVE_TIME` long — proved as a step-by-step hash against `layRings()` and
+`takeRings()` stubbed out (`test-cs014-p1.js`).
+
+⛔ **ALL FIVE OF GDD §4.5's DEATH CONDITIONS STAY LIVE IN BOTH MODES.**
 
 ### Audio
 
@@ -757,7 +809,9 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
                        (one draw per Overdrive kill; a no-op in Classic), the
                        life on the board (updateTokens()), the pickup, and
                        resetTokens(), which the well calls
-    11-dive.js         the Dive: the beat, the Thorn strike, the loop guard
+    11-dive.js         the Dive: the beat, the Thorn strike, the loop guard —
+                       and Overdrive's RING FLIGHT: diveTime(), layRings() (the
+                       set's ONE way in; a no-op in Classic) and takeRings()
     12-scoring.js      addScore() — the ONE writer — the clear bonuses, and the
                        COMBO: state.combo, comboMult()/comboKill()/comboDeath()/
                        updateCombo() (all no-ops outside modeHas("combo")), and

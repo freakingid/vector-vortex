@@ -49,10 +49,11 @@ function board(mode, level, wellIndex, seed) {
 // ---------------------------------------------------------------------------
 // 1. THE MODE FLAGS (R1)
 // ---------------------------------------------------------------------------
-// ⛔ CS013 P1 (R3) added `tokens` to both rows, in place: a field in the rows,
-// never a new mode key. The claim — Classic has none, Overdrive has all — holds.
+// ⛔ CS013 P1 (R3) added `tokens` to both rows and CS014 P1 (RF6, R2) `rings`,
+// each in place: a field in the rows, never a new mode key. The claim — Classic
+// has none, Overdrive has all — holds.
 H.eq(JSON.stringify(C.MODE_FLAGS),
-     JSON.stringify({ classic: { jump: false, combo: false, tokens: false }, overdrive: { jump: true, combo: true, tokens: true } }),
+     JSON.stringify({ classic: { jump: false, combo: false, tokens: false, rings: false }, overdrive: { jump: true, combo: true, tokens: true, rings: true } }),
      "⛔ C.MODE_FLAGS is R1's table: Classic has none, Overdrive has all");
 for (const name of ["jump", "combo"]) {
   H.eq(X.modeHas(name, "classic"), false, `modeHas("${name}", "classic") is false`);

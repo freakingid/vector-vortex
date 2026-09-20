@@ -210,12 +210,44 @@ function newState() {
     //
     //   active  the whole gameplay pass is short-circuited while true
     //   phase   "grace" | "descent" — GDD 5's two beats
-    //   timer   counts UP through the whole dive toward C.DIVE_TIME (GDD 16.3)
+    //   timer   counts UP through the whole dive toward diveTime() (GDD 16.3),
+    //           which is C.DIVE_TIME in Classic and C.DIVE_TIME_OD under
+    //           modeHas("rings") — the WHOLE dive either way, grace included
     //   depth   a POSITION, 1 at the rim falling to 0 at the throat. ⛔ Not the
     //           same quantity as an anchored entity's `depth`, which is a
     //           LENGTH — comparing the two is the strike test and it is the
     //           only two-depth comparison in the build (11-dive.js).
-    dive: { active: false, phase: "grace", timer: 0, depth: 1 },
+    //   rings   Overdrive's ring set — see below
+    //
+    // ⛔ A RING IS NOT AN ENEMY, AND IT IS NOT A TOKEN EITHER (GDD 14.5; CS014
+    // P1, RF1). It is a FIELD ON THIS BAG rather than a third top-level array,
+    // and the reason is the Dive's own shape rather than a token's. MEASURED at
+    // the plan (§1.4): state.enemies has TWENTY reader functions, and the Dive
+    // short-circuits the gameplay pass, so only FIVE of them run inside one —
+    // and ⛔ BOTH OF THE TWO THAT WOULD MEET A RING ARE WRONG BY DEFAULT:
+    //
+    //   respawnSkimmer()  GDD 4.4's ⚠ SETTLED rim push is a CLAMP over every
+    //                     lane, skipping only `anchored` entities. MEASURED:
+    //                     it collapses 3 of 6 rings onto C.RESPAWN_PUSH_DEPTH
+    //                     0.55. A ring's `depth` is a POSITION, so `anchored`
+    //                     would be a lie about what `depth` MEANS (GDD 6.5),
+    //                     and the alternative is a third exemption in a SETTLED
+    //                     rule.
+    //   startDive()       its `anchored` filter drops every ring on the repeat,
+    //                     which is exactly the job that function has.
+    //
+    // So a ring costs no contract field, no ENEMY_KINDS row, no STATE_FIELDS
+    // row and no exemption in either SETTLED rule. ⛔ state.dive is already a
+    // bag that only means anything while `active`, and resetDive() is already
+    // its one writer outside updateDive() — so the set inherits the whole
+    // lifecycle with no second reset caller. ⛔ ITS ONE WAY IN IS layRings(),
+    // from startDive(), under modeHas("rings") (11-dive.js).
+    //
+    //   a ring   { lane, depth, taken } — the arc's CENTRE lane and the depth
+    //            the descent resolves it at, both POSITIONS; `taken` is null
+    //            while the ring is still ahead, then true or false, once, for
+    //            good. "You stop earning" is that false.
+    dive: { active: false, phase: "grace", timer: 0, depth: 1, rings: [] },
 
     // ⛔ THE JUMP (GDD 14.2; O6, R2, R3; 05-skimmer.js). Overdrive's, and
     // updateJump() is a NO-OP in Classic — it writes nothing at all, not even

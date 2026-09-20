@@ -182,7 +182,7 @@ function session(o) {
            airShot: 0, cooldown: 0, reaverMode: 0, reaverLevel: 0, reaverLane: 0,
            badKill: 0, badBonus: 0, badTotal: 0, leftover: 0, badBuilds: 0, diveScored: 0 },
     tally: { takeoffs: 0, refused: 0, airSteps: 0, comboLost: 0, dives: 0, killCalls: 0, zeroKills: 0,
-             chipCalls: 0, bonusCalls: 0, unmultipliedAtMult: 0, builds: 0, bountyCalls: 0,
+             chipCalls: 0, bonusCalls: 0, unmultipliedAtMult: 0, builds: 0, bountyCalls: 0, ringCalls: 0,
              byClass: {}, multsSeen: new Set(), maxMult: 1, maxPeak: 0 },
     // §2
     intensity: { bad: 0, first: null, max: 0, frames: 0 },
@@ -336,9 +336,20 @@ function session(o) {
     if (state.dive.active !== diveWas && !state.dive.active) T.dives++;
     if (screen0 !== "play") return;
 
-    // ---- ⛔ A DIVE SCORES NOTHING AND BUILDS NOTHING (GDD 5, 7) -------------
+    // ⛔ REWRITTEN IN PLACE, CS014 P1 (RF4; plan §8, §11). "A dive scores
+    // nothing" is REPLACED by what replaced it: ⛔ EVERY addScore CALL INSIDE A
+    // DIVE IS ONE RING AT C.RING_POINTS, UNMULTIPLIED, and nothing in a Dive
+    // builds the combo. The claim is the one it always made — a dive's score is
+    // exactly its events — and until CS014 a dive had none. A ring is not a kill
+    // and a Dive is not a kill site (GDD 7): the four kill sites and five kill
+    // lines are unmoved and the termination kill still pays nothing. ⚠ The
+    // literal is read off the build — C.RING_POINTS is provisional.
     if (diveWas) {
-      if (calls.length) fail("diveScored", `${calls.length} addScore calls inside a dive`);
+      for (const c of calls) {
+        if (c.kill || c.n !== C.RING_POINTS) fail("diveScored", `an addScore call of ${c.n} at ×${c.mult} inside a dive`);
+        else T.ringCalls++;
+      }
+      if (calls.length > C.DIVE_RINGS_MAX) fail("diveScored", `${calls.length} ring payouts on one step`);
       if (builds !== builds0) fail("badBuilds", "a dive built the combo");
       return;
     }
@@ -703,7 +714,8 @@ H.eq(odAudio.intensity.bad, 0,
   H.eq(inv.reaverMode, 0, "⛔ a Reaver only ever appears in OVERDRIVE");
   H.eq(inv.reaverLevel, 0, `⛔ and only from C.SPAWN_SCHEDULE_OVERDRIVE's level${first(inv, "reaverLevel")}`);
   H.eq(inv.reaverLane, 0, `⛔ GDD 17 item 3: no Reaver lane leaves [0, lanes-1] on an open well${first(inv, "reaverLane")}`);
-  H.eq(inv.diveScored, 0, "⛔ a Dive scores nothing and builds nothing (GDD 5, 7)");
+  H.eq(inv.diveScored, 0, `⛔ every addScore call inside a Dive is ONE RING at C.RING_POINTS, unmultiplied, ` +
+       `and nothing in a Dive builds the combo (CS014 RF4)${first(inv, "diveScored")}`);
   H.eq(inv.badKill + inv.badBonus + inv.badTotal + inv.leftover + inv.badBuilds, 0,
        `⛔ GDD 17 item 8 IN OVERDRIVE, call by call: every kill pays a GDD §7 price on the board times the ` +
        `multiplier live at that call, and every other call is an UNMULTIPLIED literal (O4)` +
@@ -724,6 +736,7 @@ H.eq(odAudio.intensity.bad, 0,
            `non-vacuity: unmultiplied calls were made WHILE the multiplier was above ×1 (${T.unmultipliedAtMult})`);
   H.assert(T.chipCalls > 0 && T.bonusCalls > 0, `non-vacuity: Thorns chipped (${T.chipCalls}) and wells paid (${T.bonusCalls})`);
   H.assert(T.bountyCalls > 0, `non-vacuity (CS013 P1): Bounties were collected and priced (${T.bountyCalls})`);
+  H.assert(T.ringCalls > 0, `non-vacuity (CS014 P1): rings were taken inside dives and priced (${T.ringCalls})`);
   H.assert(T.killCalls > 300 && T.builds > 300, `non-vacuity: kills scored (${T.killCalls}) and built (${T.builds})`);
   for (const k of ["Vaulter", "Carrier", "Weaver", "Drifter", "Surger", "Reaver"]) {
     H.assert((T.byClass[k] || 0) > 0, `non-vacuity: a ${k} was killed on the front-door Overdrive board`);

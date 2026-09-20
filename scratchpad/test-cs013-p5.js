@@ -238,7 +238,7 @@ function session(o) {
              wardenJumpKills: 0, mimicKills: 0, reflections: 0, openings: 0,
              mimicShotAsks: 0, lanceChips: 0, spreadVolleys: 0, wardBreaks: 0,
              dives: 0, deaths: 0, takeoffs: 0, airSteps: 0, killCalls: 0, bountyCalls: 0,
-             chipCalls: 0, bonusCalls: 0, builds: 0, byClass: {},
+             chipCalls: 0, bonusCalls: 0, ringCalls: 0, builds: 0, byClass: {},
              maxTokens: 0, maxShots: 0, maxMult: 1, openWellWardenSteps: 0 },
     audio: { steps: 0, byTrack: {}, sfx: 0, frames: 0, max: 0, bad: 0 },
   };
@@ -433,9 +433,22 @@ function session(o) {
 
     if (screen0 !== "play") return;
 
-    // ---- ⛔ A DIVE SCORES NOTHING, BUILDS NOTHING AND ROLLS NOTHING ---------
+    // ---- ⛔ A DIVE PAYS ONLY RINGS, BUILDS NOTHING AND ROLLS NOTHING -------
+    // ⛔ REWRITTEN IN PLACE, CS014 P1 (RF4; plan §8, §11). "A dive scores
+    // nothing" is REPLACED by what replaced it, and the other two halves are
+    // UNCHANGED under RF4-A: ⛔ EVERY addScore CALL INSIDE A DIVE IS ONE RING AT
+    // C.RING_POINTS, UNMULTIPLIED, and a Dive still builds nothing and rolls
+    // nothing. A ring is not a kill and a Dive is not a kill site, so there is
+    // no comboKill(), no dropToken(), no tally.kills and no kill sound on the
+    // take — the four kill sites and five kill lines are unmoved (GDD 7), and
+    // the Dive's termination kill still pays nothing. ⚠ The literal is read off
+    // the build: C.RING_POINTS is provisional and owned by a tuning pass.
     if (diveWas) {
-      if (calls.length) fail("badTotal", `${calls.length} addScore calls inside a dive`);
+      for (const c of calls) {
+        if (c.kill || c.n !== C.RING_POINTS) fail("badTotal", `an addScore call of ${c.n} at ×${c.mult} inside a dive`);
+        else T.ringCalls++;
+      }
+      if (calls.length > C.DIVE_RINGS_MAX) fail("badTotal", `${calls.length} ring payouts on one step`);
       if (builds !== builds0) fail("badBuilds", "a dive built the combo");
       if (T.dropCalls !== dropCalls0) fail("dropCalls", "a dive rolled for a token");
       return;
@@ -747,6 +760,7 @@ H.assert(odAudio.tokenFrames > 0, `non-vacuity: tokens stood on the Overdrive bo
   H.assert(T.spreadVolleys > 0, `non-vacuity: Spread fired volleys (${T.spreadVolleys})`);
   H.assert(T.maxShots > C.SHOT_MAX, `non-vacuity: and the rack passed C.SHOT_MAX under the wider cap (${T.maxShots})`);
   H.assert(T.bountyCalls > 0, `non-vacuity: Bounties were collected and priced (${T.bountyCalls})`);
+  H.assert(T.ringCalls > 0, `non-vacuity (CS014 P1): rings were taken inside dives and priced (${T.ringCalls})`);
   H.assert(T.wardenJumpKills > 0, `non-vacuity: Wardens were JUMP-KILLED (${T.wardenJumpKills})`);
   H.assert(T.openWellWardenSteps > 0, `non-vacuity: Wardens stood on OPEN wells (${T.openWellWardenSteps} entity-steps)`);
   H.assert(T.mimicKills > 0, `non-vacuity: Mimics were killed (${T.mimicKills})`);

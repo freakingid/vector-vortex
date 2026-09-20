@@ -395,6 +395,58 @@ Camera widens, music drops to its foundation layer (§11.5), a rising doppler sw
 
 In Overdrive the Dive becomes a ring-flight — §14.5.
 
+⛔ **Shipped, CS014 P1 — AND IT IS THE SAME DIVE, NOT A SECOND ONE** (§14.5;
+`PLANNED-FEATURES-CS014.md` RF1–RF6, RF9). One module, `11-dive.js`; one beat;
+one strike; one termination guarantee. ⛔ **`modeHas("rings")` is the whole
+gate** and `rings: false` in `C.MODE_FLAGS`' Overdrive row is the whole cut.
+
+- **The beat is longer and it is derived the same way.** `diveTime()` returns
+  `C.DIVE_TIME_OD` 4.0 under the flag and `C.DIVE_TIME` 2.6 otherwise, and
+  ⛔ **each is the WHOLE dive, grace included** — `C.DIVE_GRACE` 0.35 is a slice
+  off the front of whichever is in force and is unchanged, so an Overdrive
+  descent is 3.65 s against Classic's 2.25 s. ⛔ The accessor reads the FLAG and
+  never `state.mode`, so the cut takes the length with it. ⚠ MEASURED: the
+  dive's share of a run rises from 13.82 % to 19.80 %.
+- **A ring is not an enemy and not a token either** (§6.5). It is a field on
+  `state.dive`, `state.dive.rings`, whose ONE way in is `layRings()` and which
+  `resetDive()` empties — so the set inherits this beat's whole lifecycle with
+  no second reset caller. No contract field, no `ENEMY_KINDS` row, no `anchored`
+  (its `depth` is a POSITION). ⛔ The reason is this section's own short-circuit:
+  MEASURED, only 5 of `state.enemies`' 20 readers run inside a dive, and both
+  that would meet a ring are wrong by default — §4.4's push collapses 3 of 6
+  onto 0.55, and `startDive()`'s `anchored` filter drops them on the repeat.
+  `RATIONALE.md#ring-flight`.
+- **Six rings, evenly spaced, and a repeat re-lays them.** The depths are the
+  midpoints of `C.DIVE_RINGS_MAX` equal slices, laid rim-first and all strictly
+  below 1 — which is why the grace beat resolves none. The arc centres walk
+  through `laneHop()`, the build's one wall helper, so they wrap on a closed
+  well and mirror-fold on an open one (§3.5). ⛔ **A function of the WELL and of
+  constants and of nothing else**: no draw, no `heat()`, no `state.level`, and
+  not the craft's lane. ⛔ **A dive still spends ZERO RNG draws, in both modes.**
+- **Each ring is an ARC, taken by a lane match inside a depth crossing.**
+  `laneDelta` against `C.RING_ARC_LANES`, exactly as `laneHit` reads it against
+  `C.HIT_LANE_TOL` — ⛔ **no second idea of lane-sameness and no second control
+  model**, which is §14.5's own named concern answered rather than accepted. ⛔ The
+  take pass runs **above the strike test and above the completion check**, the
+  strike's own ordering reason: the last step of a descent is at depth 0. ⛔ It
+  is **not** a second two-depth comparison — two POSITIONS, where the strike
+  compares a position against a LENGTH.
+- **Each ring is resolved ONCE and "you stop earning" is the ABSENCE of a
+  call.** `taken` goes `null` → `true` or `false` and never moves again: a ring
+  crossed from outside its arc is missed, not still available lower down. No
+  miss counter, no streak, no bonus for a full set.
+- **A ring pays `C.RING_POINTS` through `addScore()`, unmultiplied, building
+  nothing and rolling nothing** (§7). It is not a kill and this is not a kill
+  site; the Dive's termination kill still pays nothing. It CAN cross an
+  extra-life milestone. ⚠ The value is provisional.
+- ⛔ **All five of §4.5's death conditions stay live in both modes.** §14.5's
+  "no failure state beyond 'you stop earning'" is read as *no NEW one*: the
+  Thorn strike, `diveRespawn()`, the lane walk and the termination guarantee are
+  unchanged.
+- ⛔ **Classic is a total no-op** — nothing laid, nothing taken, no draw spent,
+  and the dive is `C.DIVE_TIME` long. Asserted as a step-by-step hash against a
+  build with `layRings()` and `takeRings()` stubbed out (`test-cs014-p1.js`).
+
 **Shipped, CS006 P3 — and it REPLACED the placeholder rather than joining it.** CS003 P2's one-second between-wells hold, its constant and its `state` field are all deleted; `src/11-dive.js` is the whole feature. ⛔ **The Dive short-circuits the gameplay pass**: while it runs there is no spawner, no entity pass, no Purge, no collision pass and no well-clear check. Only the respawn aftermath, the invulnerability clock, the craft's own rotation, the beat and the strike step. `Game.update()`'s branch sits **below** the game-over stop, so a dive death that ends a run stops the dive too and the frozen board stays on screen (§4.4).
 
 ⛔ **The Dive reads the OUTGOING well.** `enterWell()` clears `state.enemies` and mints a craft for the new well's lane count, so `nextWell()` is called at the dive's **end**, never before it. A dive that ran afterwards would thread an empty new well.
@@ -422,7 +474,7 @@ In Overdrive the Dive becomes a ring-flight — §14.5.
 
 ⚠ **The descent depth lives on `state.dive`, not on the Skimmer**, and `05-skimmer.js` was not touched. A `skimmer.depth` that is 1 except for 2.6 s is a field two systems can disagree about. It is also what keeps §4.5's "there is no term here for where the Skimmer is" literally true: `collideSkimmer()` does not run during a dive at all. ⛔ **§14.2's Jump is the moment that reopens that**, not this.
 
-⚠ **The Dive has no visual yet.** Camera widen, doppler and the descent's own rendering are presentation and are not CS006 P3's; the beat is simulation only, so a dive currently reads on screen as 2.6 s of a still board.
+⚠ **The Dive has no visual yet, and CS014 P2 owns it in BOTH modes** (RF7). Camera widen, doppler and the descent's own rendering are presentation and were not CS006 P3's; the beat is simulation only, so a dive currently reads on screen as a still board — ⚠ **now 4.0 s of one in Overdrive, with six rings nobody can see**. MEASURED: one frame in six of a run is this beat.
 
 ---
 
@@ -857,6 +909,7 @@ Overdrive adds a combo multiplier — §14.4.
 - ⛔ **NOT multiplied, and they build nothing:** the Thorn's per-chip 5, the three clear bonuses, and the Start Depth bonus. A multiplier folded into `addScore()` would have taken all four silently.
 - ⛔ **The Dive's termination kill still pays nothing and builds nothing** (§5).
 - ⛔ **Shipped, CS013 P2 — A LANCE CHIP IS THREE CHIPS, NOT ONE CHIP WORTH THREE** (§14.1, plan T7). Lance takes `LANCE_CHIP_MULT` × `THORN_CHIP` of length and pays `PTS_THORN` **per chip of length**, clamped by what is left — three calls of 5, never one of 15, and one call on a Thorn with one chip left. "5 per chip" stays literally true, which is why both closed chip decoders (`test-cs008-p2.js`, `test-cs012-p4.js`, each pricing a Thorn by its LENGTH change) read a Lance chip correctly with no edit. ⛔ Still **not multiplied** and it still builds nothing: it is a chip, not a kill.
+- ⛔ **Shipped, CS014 P1 — a taken RING pays `RING_POINTS` through `addScore()`, NOT multiplied, and builds nothing and rolls nothing** (§5, §14.5; plan RF4). The Bounty's row below, for the same reason: a ring is not a kill and a Dive is not a kill site, so the four sites and five lines are unmoved and `09-collision.js` is not edited. It can cross an extra-life milestone. ⚠ `RING_POINTS` is provisional, owned by a tuning pass.
 - ⛔ **Shipped, CS013 P1 — the Bounty token (§14.1) pays `BOUNTY_POINTS` (2,000) through `addScore()`, NOT multiplied, and builds nothing.** It is not a kill; O4's rule is that only kill points are multiplied and what is multiplied is exactly what builds. It can cross a milestone and pay a life. A Recharge token sets `purgeUses` to 0, so "Purge unspent" can pay after a spend (§4.3).
 - In Classic `comboMult()` returns exactly 1 and `n * 1 === n` in IEEE-754, so a Classic run's score is bit-identical to the build before CS012 P4 — asserted step by step, against the combo calls mutated out of every kill site (`test-cs012-p4.js`).
 
@@ -1430,7 +1483,7 @@ Attract mode after `ATTRACT_IDLE` (20 s).
 | Powerups | None — `dropToken()` is a no-op, `modeHas("tokens")` false (CS013 P1) | §14.1: five tokens, one draw per kill, `MAX_TOKENS` 2 (CS013) |
 | Jump | No | §14.2 |
 | Combo | No | §14.4 |
-| Dive | Thorn-dodge | Ring-flight |
+| Dive | Thorn-dodge, `DIVE_TIME` 2.6 s | §5, §14.5: ring-flight, `DIVE_TIME_OD` 4.0 s, six rings, `modeHas("rings")` (CS014 P1). ⛔ The Thorn-dodge is unchanged underneath it — §4.5 item 5 is live in both |
 | Extra enemies | No | Reaver, Warden, Mimic |
 | Music | `pulse` | `drive` |
 | Leaderboard | Own board: game id `vector-vortex` (CS011) | Own board: game id `vector-vortex-overdrive` (CS012 P3, O11). The Worker keeps each player's best row per game id and has no per-mode boards, so Overdrive cannot share `vector-vortex` (CS011 plan §1.4) |
@@ -1556,6 +1609,13 @@ The Overdrive Dive becomes a short ring corridor.
 **Concerns.** Different control model mid-run; highest build cost in the set; and it can break P4 by turning the breath into more work.
 
 ⛔ **Scope cap: max 4 seconds, max 6 rings, no failure state beyond "you stop earning," and it reuses the depth model** — rings are objects at decreasing depth in a lane-less tube, not a second renderer. Under those constraints it is a few hundred lines. **First candidate to cut under scope pressure**, falling back to the Classic thorn-dodge.
+
+⛔ **Shipped, CS014 P1 — THE FLIGHT, INSIDE EVERY ONE OF THOSE CAPS** (§5 has the full shape; `PLANNED-FEATURES-CS014.md` RF1–RF6, RF9). `C.DIVE_TIME_OD` 4.0 and `C.DIVE_RINGS_MAX` 6 are their first readers' arguments and are the caps themselves rather than tunables. The two concerns this section raised are answered rather than accepted:
+
+- ⛔ **"Different control model mid-run" — there is none.** The rim axis stays the only one, snap assist included, and "lane-less tube" is read as *the corridor has no lanes to climb* — which is what the Dive already is — rather than *the craft has no lane*, which it plainly has. A ring is an ARC over a contiguous run of lanes, taken through `laneDelta`, the same lane distance `laneHit` reads. ⛔ **A literally lane-less ring is taken by every diver on every dive**, so "you stop earning" would have nothing to attach to and the beat would be a four-second cutscene that pays (§1.1 P1 outranks this section; `RATIONALE.md#ring-flight`).
+- ⚠ **"It can break P4 by turning the breath into more work" — the cap is what bounds it, and the cost is MEASURED.** A 4.0 s dive is 62 % longer than a 2.6 s one and takes the dive's share of a run from 13.82 % to **19.80 %**. ⚠ Whether 4.0 still feels like a breath is a skipped playtest, and `C.DIVE_TIME_OD` is inside the cap either way.
+
+⛔ **THE CUT IS STILL ONE LINE** — `rings: false` in `C.MODE_FLAGS`' Overdrive row, MI3's shape. No ring is laid, so none is taken, drawn or sounded; an Overdrive dive is `C.DIVE_TIME` long and scores nothing, which is the Classic thorn-dodge; and no other changeset's code is touched. `test-cs014-p1.js` proves it, as `test-cs013-p4.js` proves the Mimic's.
 
 ### 14.6 Additional enemies
 

@@ -32,6 +32,21 @@
 // ⛔ NO RENDERING. GDD 5's camera widen and doppler are presentation and are not
 // this changeset's; the Dive is simulation only, and update() never touches the
 // canvas (23-main.js).
+//
+// ⛔ AND SINCE CS014 P1 THIS FILE ALSO OWNS THE RING FLIGHT (GDD 14.5; RF1-RF4,
+// RF6, RF9), which is OVERDRIVE'S DIVE AND NOT A SECOND ONE. There is one
+// module, one beat, one strike and one termination guarantee; what the mode
+// flag decides is how long the beat runs and whether there is anything in it
+// to fly through. ⛔ modeHas("rings") is the whole gate and `rings: false` in
+// C.MODE_FLAGS' Overdrive row is the whole cut (00-config.js).
+//
+// ⛔ CLASSIC IS A TOTAL NO-OP. Nothing is laid, nothing is taken, no draw is
+// spent and the dive is C.DIVE_TIME long — asserted as a step-by-step hash
+// against a build with layRings() and takeRings() stubbed out, the Jump's and
+// the token's proof (test-cs014-p1.js).
+//
+// ⛔ AND IT STILL SPENDS NO RNG. The ring lattice is a function of the WELL and
+// of constants — never a draw, and (R6) never the level or heat either.
 
 // ---------------------------------------------------------------------------
 // The beat fields, in one place
@@ -47,6 +62,131 @@ function resetDive(state) {
   d.phase = "grace";
   d.timer = 0;
   d.depth = 1;
+  // ⛔ EMPTIED HERE, WHICH IS WHY THE SET NEEDS NO SECOND RESET CALLER (RF1).
+  // enterWell() already calls this function, so a new run, the next level, the
+  // restart and the `w` debug cycler are all covered without any of them
+  // knowing a ring exists. Length, not a fresh array: the bag's identity is
+  // stable and nothing allocates on a path a well change takes.
+  d.rings.length = 0;
+}
+
+// ---------------------------------------------------------------------------
+// HOW LONG A DIVE IS (GDD 5, 14.5; RF9) — ⛔ THE WHOLE DIVE, GRACE INCLUDED
+// ---------------------------------------------------------------------------
+//
+// ⛔ C.DIVE_TIME_OD IS READ EXACTLY AS C.DIVE_TIME IS, and that is the rule
+// rather than a coincidence: C.DIVE_GRACE is a slice off the FRONT of whichever
+// one is in force, so there is one place the beats are derived and retuning
+// either length moves them together. The descent is 2.25 s in Classic and
+// 3.65 s under the flag.
+//
+// ⛔ GATED ON modeHas("rings") AND NOT ON state.mode (RF6). The cut has to take
+// the length with it: with `rings: false` in the Overdrive row an Overdrive
+// dive is C.DIVE_TIME long again, which is exactly the behaviour four closed
+// soak files assert today. A test on state.mode would leave a 4 s dive with
+// nothing in it.
+//
+// ⛔ THIS IS C.DIVE_TIME_OD's FIRST AND ONLY READER (plan §11).
+function diveTime() {
+  return modeHas("rings") ? C.DIVE_TIME_OD : C.DIVE_TIME;
+}
+
+// ---------------------------------------------------------------------------
+// ⛔ THE RING SET'S ONE WAY IN (GDD 14.5; RF1, RF2, RF3)
+// ---------------------------------------------------------------------------
+//
+// Called by startDive() and by nothing else, so "a ring exists only inside a
+// dive, only in a mode that has them" is structural rather than checked.
+//
+// ⛔ A REPEATED DIVE RE-LAYS THE SET, AND THAT IS RF3's ANSWER. A dive that
+// ends in a strike restarts through startDive(), so the rings come back and can
+// be earned again — GDD 5's "it repeats the dive, not the well", and
+// sfx("dive")'s own rule two lines below. MEASURED at the plan (§1.3): a dive
+// death is 7 in 132,956 steps, so re-earning is worth about one set per 19,000
+// steps rather than an exploit.
+//
+// ⛔ THE DEPTHS ARE THE MIDPOINTS OF C.DIVE_RINGS_MAX EQUAL SLICES, laid in
+// CROSSING order — rim first, 0.9167 down to 0.0833 at six. Every one is
+// strictly below 1, so the grace beat (where d.depth holds at 1) can never
+// resolve one and takeRings() needs no phase guard. That is arithmetic, not
+// luck: (n - i - 0.5) / n < 1 for every i >= 0.
+//
+// ⛔ THE LANE WALK GOES THROUGH laneHop(), THE BUILD'S ONE WALL HELPER (GDD
+// 3.5). It wraps on a closed well and MIRROR-FOLDS on an open one, and the
+// `dir` it returns is written back exactly as every hopper in the roster writes
+// it back — a walk that kept a stale direction would grind on the wall. ⚠ A
+// fold turns the walk around, so two rings near a wall can sit close together;
+// that is the fold behaving, not the lattice failing.
+//
+// ⛔ A FUNCTION OF THE WELL AND OF CONSTANTS, AND OF NOTHING ELSE: no draw (R3),
+// no level and no heat (R6), and not the craft's lane — a set measured from
+// where the player happens to be standing would make its first ring free on
+// every dive.
+//
+// ⛔ THIS IS C.DIVE_RINGS_MAX's FIRST AND ONLY READER (plan §11).
+function layRings(state, well) {
+  if (!modeHas("rings", state.mode)) return;
+  const rings = state.dive.rings;
+  const n = C.DIVE_RINGS_MAX;
+  const step = C.RING_LANE_STEP * well.lanes;
+  let lane = 0, dir = 1;
+  for (let i = 0; i < n; i++) {
+    rings.push({ lane: lane, depth: (n - i - 0.5) / n, taken: null });
+    const hop = laneHop(well, lane, step, dir);
+    lane = hop.lane;
+    dir = hop.dir;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// THE TAKE PASS (GDD 14.5, 7; RF2, RF4) — ⛔ AND IT IS NOT A COLLISION
+// ---------------------------------------------------------------------------
+//
+// 09-collision.js does not run during a dive at all, so this is not a fifth
+// entry to it and there is no new kill site and no new kill line: the build
+// still has FOUR sites and FIVE lines, all of them there (GDD 7).
+//
+// ⛔ A LANE MATCH INSIDE A DEPTH CROSSING, AND NEITHER IDEA IS NEW. The lane
+// test is laneDelta() against C.RING_ARC_LANES — the same lane-distance
+// function laneHit() reads against C.HIT_LANE_TOL, with the arc's own
+// half-width in place of the contact tolerance, so a Ring's seam is a
+// neighbourhood here too. ⛔ There is no second idea of lane-sameness and no
+// second control model: the rim axis is still the only one, snap assist
+// included (GDD 1.1 P1, and RF2's whole argument).
+//
+// ⛔ AND IT IS NOT A SECOND TWO-DEPTH COMPARISON (test-cs013-p3.js). `d.depth
+// <= r.depth` compares two POSITIONS, which is ordinary arithmetic. The build's
+// one two-depth comparison of the OTHER kind is the strike's, where a position
+// is compared against a LENGTH — that is what GDD 6.5's `anchored` field
+// records and what makes the strike singular.
+//
+// ⛔ EACH RING IS RESOLVED ONCE, AT THE STEP THE DESCENT REACHES IT, AND THAT
+// IS "YOU STOP EARNING" (plan §8). `taken` goes null -> true or null -> false
+// and never moves again, so a ring the craft was not inside is MISSED rather
+// than still available lower down. A miss is the ABSENCE of a call: no penalty,
+// no counter, no streak, and no bonus for a full set.
+//
+// ⛔ RF4's PAYOUT IS THE BOUNTY'S ROW, NOT AN ENTITY PRICE: addScore() with an
+// unmultiplied literal, and nothing else. ⛔ NO comboKill(), NO dropToken(), NO
+// tally.kills and NO sfx("kill") — a ring is not a kill and a Dive is not a
+// kill site, so what GDD 7 says is multiplied and what builds the combo are
+// both untouched (O4's rule working, not an exception to it). ⛔ addScore() is
+// unchanged and stays the ONE writer and the ONE life-awarder, so a ring can
+// cross an extra-life milestone and that is addScore() doing its job.
+//
+// ⛔ A DEAD CRAFT RESOLVES NOTHING, diveStrike()'s guard verbatim. The freeze is
+// running; the next live step respawns, restarts the dive and re-lays the set.
+function takeRings(state, well) {
+  const sk = state.skimmer;
+  if (!sk || sk.dead) return;
+  const rings = state.dive.rings;
+  for (let i = 0; i < rings.length; i++) {
+    const r = rings[i];
+    if (r.taken !== null) continue;
+    if (state.dive.depth > r.depth) continue;
+    r.taken = Math.abs(laneDelta(well, r.lane, sk.lane)) <= C.RING_ARC_LANES;
+    if (r.taken) addScore(C.RING_POINTS);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +234,15 @@ function startDive(state) {
   // throat — so a Ward can never absorb this module's strike. Beside the jump
   // and the shots, for their reason.
   resetTokens(state);
+  // ⛔ AND OVERDRIVE'S RING SET IS LAID (GDD 14.5; CS014 RF1, RF3) — layRings()
+  // is its ONE way in, and it is a no-op outside modeHas("rings"). ⛔ BELOW the
+  // filter and the three resets, deliberately: everything above belongs to the
+  // well being LEFT, and the set belongs to the flight about to start.
+  // ⛔ The well is read the way Game.update() and Game.draw() read it, off
+  // state.wellIndex — the OUTGOING well, because nextWell() runs at the dive's
+  // END. Taking it as a parameter would change a signature four closed files
+  // call by name.
+  layRings(state, WELLS[state.wellIndex]);
   // GDD 5's rising sweep. HERE, so a repeated dive plays it again (plan §7).
   sfx("dive");
 }
@@ -281,20 +430,32 @@ function updateDive(state, well, dt) {
   state.skimmer.update(dt, well, state.input);
 
   // ⛔ COUNTS UP, through the WHOLE dive (GDD 16.3 — no countdown anywhere in
-  // the build). C.DIVE_TIME is the total and C.DIVE_GRACE is a slice off its
-  // front, so the descent is DIVE_TIME - DIVE_GRACE and retuning either one
-  // moves the beats together.
+  // the build). diveTime() is the total — C.DIVE_TIME, or C.DIVE_TIME_OD under
+  // modeHas("rings") — and C.DIVE_GRACE is a slice off its front, so the
+  // descent is that total minus the grace and retuning either moves the beats
+  // together. ⛔ Read ONCE per step, into `total`, so the beat and the
+  // completion check below cannot disagree about which dive this is.
   d.timer += dt;
 
+  const total = diveTime();
   if (d.timer < C.DIVE_GRACE) {
     d.phase = "grace";
     d.depth = 1;
   } else {
     d.phase = "descent";
-    const span = C.DIVE_TIME - C.DIVE_GRACE;
+    const span = total - C.DIVE_GRACE;
     const t = span > 0 ? (d.timer - C.DIVE_GRACE) / span : 1;
     d.depth = t >= 1 ? 0 : 1 - t;
   }
+
+  // ⛔ OVERDRIVE'S RING FLIGHT, ABOVE THE STRIKE TEST AND ABOVE THE COMPLETION
+  // CHECK, FOR THE STRIKE'S OWN REASON (CS014 RF2). The last step of a descent
+  // is at depth 0, which is at or past every ring's depth — so a take pass
+  // below the completion check would never resolve the deepest ring, and one
+  // below the strike would silently unpay a diver who crossed a ring on the
+  // step a Thorn killed them. A no-op on an empty set, which is every Classic
+  // step and every grace step.
+  takeRings(state, well);
 
   // GDD 4.5 item 5. ⛔ Descent only — the grace beat is the input opportunity a
   // full-length Thorn would otherwise never give (00-config.js at DIVE_GRACE).
@@ -309,5 +470,5 @@ function updateDive(state, well, dt) {
   // rather than "divesSurvived": a diver who loses a life to a Thorn respawns
   // and finishes the dive, so this counts dives that REACHED C.DIVE_TIME. The
   // lives lost inside them are `thornDeaths`, beside it.
-  if (d.timer >= C.DIVE_TIME) { state.tally.divesCompleted++; nextWell(); }
+  if (d.timer >= total) { state.tally.divesCompleted++; nextWell(); }
 }

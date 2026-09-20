@@ -55,8 +55,11 @@ function withStream(values, fn) {
 // ---------------------------------------------------------------------------
 // 1. THE TWO TABLES, THE FLAG AND THE STATE (R2, R3, plan §8) — trap 2
 // ---------------------------------------------------------------------------
-H.eq(J(C.MODE_FLAGS.classic), J({ jump: false, combo: false, tokens: false }), "⛔ Classic's row: tokens false (R3)");
-H.eq(J(C.MODE_FLAGS.overdrive), J({ jump: true, combo: true, tokens: true }), "⛔ Overdrive's row: tokens true (R3)");
+// ⛔ CS014 P1 (RF6, R2) appended `rings` to both rows, in place. The claim is
+// unchanged and so is the line below it: a field in the ROWS, never a new
+// top-level mode key — 22-meta.js derives `progress`'s modes from these keys.
+H.eq(J(C.MODE_FLAGS.classic), J({ jump: false, combo: false, tokens: false, rings: false }), "⛔ Classic's row: tokens false (R3), rings false (CS014 RF6)");
+H.eq(J(C.MODE_FLAGS.overdrive), J({ jump: true, combo: true, tokens: true, rings: true }), "⛔ Overdrive's row: tokens true (R3), rings true (CS014 RF6)");
 H.eq(J(Object.keys(C.MODE_FLAGS)), J(["classic", "overdrive"]), "⛔ a field in the rows, never a new top-level mode key");
 H.eq(X.modeHas("tokens", "classic"), false, "modeHas(\"tokens\", \"classic\") is false");
 H.eq(X.modeHas("tokens", "overdrive"), true, "modeHas(\"tokens\", \"overdrive\") is true");

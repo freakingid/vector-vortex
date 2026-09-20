@@ -377,6 +377,7 @@ function itemEight(Z, ticks, plays) {
   const ZC = Z.C, st = Z.state, ZG = Z.Game, ZDT = ZC.FIXED_DT;
   const out = { steps: 0, killCalls: 0, chipCalls: 0, lanceChips: 0, bonusCalls: 0, bountyCalls: 0,
                 builds: 0, clears: 0, deaths: 0, pierceKills: 0, maxMult: 1, byClass: {},
+                ringCalls: 0,
                 badKill: 0, badBonus: 0, badTotal: 0, leftover: 0, badBuilds: 0, diveScored: 0, unfit: 0, first: null };
   const fail = (grp, msg) => { out[grp]++; if (!out.first) out.first = `${grp}: ${msg}`; };
 
@@ -432,8 +433,20 @@ function itemEight(Z, ticks, plays) {
         if (diveWas && !st.dive.active) deathThisWell = false;
         if (st.level !== level0 && !diveWas) deathThisWell = false;
       };
+      // ⛔ REWRITTEN IN PLACE, CS014 P1 (RF4; plan §8, §11). "A dive scores
+      // nothing" is REPLACED by what replaced it: ⛔ EVERY addScore CALL INSIDE A
+      // DIVE IS ONE RING AT C.RING_POINTS, UNMULTIPLIED, and nothing in a Dive
+      // builds the combo. The claim is the one it always made — a dive's score is
+      // exactly its events — and until CS014 a dive had none. A ring is not a kill
+      // and a Dive is not a kill site (GDD 7): the four kill sites and five kill
+      // lines are unmoved and the termination kill still pays nothing. ⚠ The
+      // literal is read off the build — C.RING_POINTS is provisional.
       if (diveWas) {
-        if (calls.length) fail("diveScored", `tick ${i}: ${calls.length} addScore calls inside a dive`);
+        for (const c of calls) {
+          if (c.kill || c.n !== ZC.RING_POINTS) fail("diveScored", `tick ${i}: an addScore call of ${c.n} at ×${c.mult} inside a dive`);
+          else out.ringCalls++;
+        }
+        if (calls.length > ZC.DIVE_RINGS_MAX) fail("diveScored", `tick ${i}: ${calls.length} ring payouts on one step`);
         if (out.builds !== builds0) fail("badBuilds", `tick ${i}: a dive built the combo`);
         endOfStep();
         continue;
@@ -513,6 +526,7 @@ const PLAYS = [{ level: 7, held: true, purge: 900, seeds: [3, 11] },
   H.assert(r.pierceKills > 0, `non-vacuity: ${r.pierceKills} steps ended with a pierced shot still in flight after a kill`);
   H.assert(r.bonusCalls > 0 && r.clears > 0, `non-vacuity: ${r.clears} wells cleared and paid their bonuses`);
   H.assert(Object.keys(r.byClass).length >= 4, `non-vacuity: four or more classes died (${J(r.byClass)})`);
+  H.assert(r.ringCalls > 0, `non-vacuity (CS014 P1): rings were taken inside dives and priced (${r.ringCalls})`);
 }
 
 // ---------------------------------------------------------------------------

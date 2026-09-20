@@ -90,12 +90,45 @@ H.assert(SCRIPT.indexOf("clearHold") === -1,
 // Non-vacuous: the scan can find a name that IS there.
 H.assert(SCRIPT.indexOf("DIVE_GRACE") !== -1, "the built-file scan is not vacuous");
 
-// ⛔ CS014's ring-flight, and it is not this changeset's. Both constants have
-// existed since CS001 and must still have no reader.
-H.assert(SCRIPT.indexOf("C.DIVE_TIME_OD") === -1,
-         "⛔ C.DIVE_TIME_OD is still unread — the Overdrive ring-flight is CS014's");
-H.assert(SCRIPT.indexOf("C.DIVE_RINGS_MAX") === -1,
-         "⛔ and so is C.DIVE_RINGS_MAX");
+// ⛔ REWRITTEN IN PLACE, CS014 P1: the ring flight SHIPPED, so "both constants
+// are still unread" is replaced by the behaviour that replaced it, not deleted
+// and not weakened (CLAUDE.md, Test rules). The claim this pair was always
+// making is that neither cap is read in more than one place and that neither
+// one reaches the CLASSIC dive — which is exactly what is asserted now.
+//
+// ⛔ AND IT IS WRITTEN AGAINST WHAT IS READ, NEVER AGAINST WHETHER SOMETHING
+// IS (plan §6 item 3). `rings: false` in C.MODE_FLAGS' Overdrive row is the
+// whole cut, and it changes no text in 11-dive.js — so this section stays green
+// through the cut, which a "has a reader" assertion would not.
+{
+  const fnText = n => {
+    const at = SCRIPT.indexOf(`\nfunction ${n}(`);
+    H.assert(at >= 0, `fixture: ${n}() is in the build`);
+    return SCRIPT.slice(at, SCRIPT.indexOf("\n}\n", at));
+  };
+  // ⚠ COUNTED ON CODE LINES ONLY. The two deleted assertions scanned the whole
+  // built file, comments included, which is right for a name that must not
+  // appear at all and wrong for one that now has a reader and a comment block
+  // explaining it (STATUS.md: strip comments before grepping a function's own
+  // source). The build's comments are all line comments.
+  const codeHits = tok => SCRIPT.split("\n")
+    .filter(L => L.trim().slice(0, 2) !== "//" && L.indexOf(tok) !== -1).length;
+  H.eq(codeHits("C.DIVE_TIME_OD"), 1,
+       "⛔ C.DIVE_TIME_OD is read in the build's CODE exactly once");
+  H.assert(fnText("diveTime").indexOf("C.DIVE_TIME_OD") !== -1,
+           "⛔ and the one reader is diveTime() (11-dive.js) — the whole dive, grace included");
+  H.eq(codeHits("C.DIVE_RINGS_MAX"), 1,
+       "⛔ C.DIVE_RINGS_MAX is read in the build's CODE exactly once");
+  H.assert(fnText("layRings").indexOf("C.DIVE_RINGS_MAX") !== -1,
+           "⛔ and the one reader is layRings() (11-dive.js), the ring set's one way in");
+  // Non-vacuous: the counter can find a name that IS on several code lines.
+  H.assert(codeHits("C.DIVE_GRACE") > 1, "the code-line counter is not vacuous");
+  // ⛔ AND NEITHER CAP REACHES THE CLASSIC DIVE. Every case in this file is a
+  // Classic run, so the beat below is C.DIVE_TIME's and the array is empty —
+  // the claim the two deleted lines were standing in for.
+  H.eq(X.diveTime(), C.DIVE_TIME,
+       "⛔ a Classic dive is still C.DIVE_TIME long — R1: no Classic constant moved");
+}
 
 for (const fn of ["resetDive", "startDive", "updateDive", "diveHazard",
                   "diveLaneBlocked", "diveStrike", "diveRespawnLane", "diveRespawn"]) {

@@ -95,6 +95,43 @@ const C = {
   DIVE_TIME_OD:         4.0,    // s, Overdrive ring-flight. ⛔ hard cap.
   DIVE_RINGS_MAX:       6,      // ⛔ hard cap.
 
+  // ---- The ring flight (GDD 14.5, 5, 7; CS014 P1, RF1–RF4, RF6, RF9) ------
+  // ⛔ THE TWO CAPS ABOVE FINALLY HAVE READERS, AND THEY ARE THE ONLY TWO
+  // NUMBERS HERE THAT ARE NOT PROVISIONAL. DIVE_TIME_OD is read by diveTime()
+  // and DIVE_RINGS_MAX by layRings(), both in 11-dive.js, and both are GDD
+  // 14.5's hard scope cap — 4 seconds, 6 rings — rather than a tuning knob.
+  // ⛔ DIVE_TIME_OD IS READ EXACTLY AS DIVE_TIME IS: the WHOLE dive, grace
+  // included (RF9). DIVE_GRACE is unchanged and is sliced off its front the
+  // same way, so an Overdrive descent is 3.65 s against Classic's 2.25 s.
+  //
+  // ⚠ THE THREE BELOW ARE PROVISIONAL in CS012 O16's sense — owned by a
+  // tuning pass, like C.COMBO_KILLS_PER_STEP and the palette. The SHAPE around
+  // them is not: six rings, evenly spaced, an arc each, an unmultiplied payout.
+  //
+  // ⛔ RING_POINTS IS UNMULTIPLIED AND BUILDS NOTHING (RF4, GDD 7): a ring is
+  // not a kill and a Dive is not a kill site, so this is the Bounty's row, not
+  // an entity price. MEASURED at the plan (§1.6): a median well pays 7,200, so
+  // a full set of six is 8.3 % of one — a breath's bonus, near GDD 7's
+  // PTS_NO_DEATH_WELL, and not a thing to farm.
+  //
+  // ⛔ RING_ARC_LANES IS A HALF-WIDTH IN LANES, read through laneDelta — the
+  // build's one idea of lane distance, exactly as C.HIT_LANE_TOL is (RF2). An
+  // arc therefore spans 2 x this, and a ring is taken by being inside it at the
+  // step the descent crosses its depth.
+  //
+  // ⛔ RING_LANE_STEP IS A FRACTION OF THE WELL, NOT A LANE COUNT, and that is
+  // what keeps the skill test the same shape on a 5-lane well and a 16-lane one:
+  // the walk asks for the same SHARE of the rim every time. MEASURED off the
+  // constants: at 0.25 on the widest well the walk is 4.0 lanes per ring and a
+  // ring's near edge is 2.5 lanes away, inside 0.6083 s — 4.1 lane/s against
+  // C.KEY_SPEED_MAX 14, so an attentive diver takes every one and an
+  // ill-placed one misses. ⛔ The walk goes through laneHop(), the build's ONE
+  // wall helper, so it wraps on a closed well and mirror-folds on an open one
+  // (GDD 3.5) rather than piling rings on a wall.
+  RING_POINTS:          100,    // ⚠ points a taken ring pays, UNMULTIPLIED
+  RING_ARC_LANES:       1.5,    // ⚠ half-width of a ring's arc, in lanes
+  RING_LANE_STEP:       0.25,   // ⚠ lanes walked between rings, as a fraction of the well
+
   // ---- Enemies (GDD 6) ----------------------------------------------------
   SAFE_SPAWN_DEPTH:     0.75,   // never spawn above this in the player's lane
   // ⛔ GDD 6.3's "fair difficulty is a visible fuse", as seconds. It has sat
@@ -785,10 +822,16 @@ const C = {
   // SPAWN_SCHEDULE_OVERDRIVE, MODE_TRACK and the board's game id.
   // ⛔ A FEATURE IS A FIELD IN THE ROWS, NEVER A NEW TOP-LEVEL KEY: 22-meta.js
   // derives `progress`'s modes from Object.keys(MODE_FLAGS). CS013 P1 added
-  // `tokens` (R3).
+  // `tokens` (R3), and CS014 P1 `rings` (RF6, R2).
+  // ⛔ `rings` IS ALSO THE RING FLIGHT'S WHOLE CUT (GDD 14.5, ROADMAP): this
+  // feature is CS014's first candidate to cut under scope pressure, and
+  // `true` -> `false` on the row below is the entire edit. No ring is laid, so
+  // none is taken, drawn or sounded, and an Overdrive dive goes back to being
+  // C.DIVE_TIME long and scoring nothing — the Classic thorn-dodge. It is the
+  // Mimic's one-row shape (CS013 MI3), and test-cs014-p1.js proves it.
   MODE_FLAGS: {
-    classic:   { jump: false, combo: false, tokens: false },
-    overdrive: { jump: true,  combo: true,  tokens: true },
+    classic:   { jump: false, combo: false, tokens: false, rings: false },
+    overdrive: { jump: true,  combo: true,  tokens: true,  rings: true  },
   },
   // ⛔ THE JUMP'S FOUR TIMERS, AND ALL FOUR COUNT UP (GDD 14.2, 16.3; O6).
   // JUMP_COOLDOWN runs from LANDING, and JUMP_RECOVERY is its first 0.20 s —

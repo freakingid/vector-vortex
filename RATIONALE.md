@@ -227,3 +227,109 @@ the FORBIDDEN key list of three closed soaks. ⚠ `startGame()` is the third
 caller and deliberately spends nothing either: GDD §4.6's Start Depth is not
 built, and when it is, the changeset that lands it owns the question of what a
 run *starting* past level 99 rolls.
+
+---
+
+## #ring-flight
+
+`CLAUDE.md`'s **The Dive** section states the ring flight's rules. This is why
+each one is what it is. Landed CS014 P1; every number marked MEASURED was
+measured by `PLANNED-FEATURES-CS014.md` at commit `144825e`.
+
+**Why a ring lives on `state.dive` rather than in `state.enemies` or in a third
+array.** CS013's token faced the same question and answered it differently on
+purpose. A token lives through the *play* pass, so the argument for its own
+array was the count of live readers it would have to answer: `state.enemies`
+had eight, three of them wrong by default. A ring lives only inside a dive, and
+**the Dive short-circuits the gameplay pass** — MEASURED over 133,376 played
+steps and 132 completed dives, only **5 of `state.enemies`' 20 reader
+functions** run inside one. So T1's central argument does not carry over, and
+the case had to be made on the two readers that do run, both of which are wrong
+by default and both of which were measured:
+
+- **GDD §4.4's respawn push collapses 3 of 6 rings onto 0.55.** MEASURED by
+  calling the shipped `respawnSkimmer()` on a board of six rings at the shipped
+  lattice: `0.083, 0.250, 0.417, 0.583, 0.750, 0.917` became
+  `0.083, 0.250, 0.417, 0.550, 0.550, 0.550`. The clamp skips only `anchored`
+  entities, and a ring's `depth` is a **position** — so `anchored: true` would
+  be a lie about what `depth` *means* (`#thorn-depth`), and the only alternative
+  is a third exemption in a ⚠ SETTLED rule.
+- **`startDive()`'s `anchored` filter drops every ring on the repeat**, which is
+  precisely the job that function has: it filters the board down to what belongs
+  to the hazard set.
+
+A *third top-level array* was priced too and loses to a field on a bag that
+already exists: `test-cs002-p1.js` asserts `state` carries exactly
+`test-registry.js`'s inventory, so `state.rings` buys a `STATE_FIELDS` row and a
+second reset caller for a lifetime `state.dive` already brackets. MEASURED with
+a stand-in build: a field on `state.dive` moved neither the registry nor the
+inventory, and a minimal `DiveRing extends Enemy` cost one extra red assertion
+(`test-cs012-p2.js`'s "no tick added two entities") **before** it had an
+`update`, a `draw`, an `onShot` or an `sfxVoice`.
+
+**Why the rings are lane-bound.** GDD §14.5 calls them "objects at decreasing
+depth in a lane-less tube" and names its own concern — "different control model
+mid-run". A *literally* lane-less ring is taken by every diver on every dive, so
+"you stop earning" has nothing to attach to and the flight becomes a four-second
+cutscene that pays. The reading that survives §1.1 P1 is that **the corridor has
+no lanes to climb**, which is what the Dive already is, rather than that the
+craft has no lane — it plainly has one, and the Thorn strike reads it.
+
+The skill test is then the rim axis, unchanged, and it is a real one. MEASURED:
+rotation is already live through the whole dive (`updateDive()` calls
+`state.skimmer.update()`), and the craft rotated in **90 of 132 dives**;
+a half-well traverse takes **0.571 s**, which does **not** fit inside
+`C.DIVE_GRACE` 0.35 s — so a ring the player must cross for is a ring they can
+miss, and one in reach is a ring they can take.
+
+**Why the arc walk is a fraction of the well and goes through `laneHop()`.**
+Two constraints fix it. The lattice may spend no draw (a dive spends **zero**,
+`test-cs006-p3.js`) and may not read the level or heat (CS014 R6) — so it is a
+function of the well and of constants, and of nothing else. It may not read the
+craft's lane either: a set measured from where the player happens to be standing
+makes its first ring free on every dive, which is the lane-less ring again under
+another name.
+
+`C.RING_LANE_STEP` is a **fraction of the well** rather than a lane count so the
+walk asks for the same *share* of the rim on a 5-lane well and a 16-lane one; an
+absolute step degenerates on a narrow closed well, where `laneDelta` makes four
+lanes the short way round into one. At the shipped 0.25 the widest well walks
+4.0 lanes per ring, and a ring's near edge is 2.5 lanes away across the
+**0.6083 s** between crossings — 4.1 lane/s against `C.KEY_SPEED_MAX` 14, which
+an attentive diver clears and an ill-placed one does not.
+
+The walk uses **`laneHop()`** because it is the build's one mirror-fold and the
+one place a wall is understood (GDD §3.5). `laneNormalize()` would *clamp*, and
+a clamp piles the tail of the walk onto one wall — MEASURED on the 7-lane Fan at
+0.25, rings 4 and 5 both land on lane 6. A fold turns the walk around instead,
+so two rings near a wall can sit close together; that is the fold behaving, and
+it is the same behaviour every hopper in the roster has.
+
+**Why the take pass sits above the strike test and above the completion check.**
+The strike's own reason, verbatim: the last step of a descent is at depth 0,
+which is at or past every ring. A take pass below the completion check would
+never resolve the deepest ring, and one below the strike would silently unpay a
+diver who crossed a ring on the step a Thorn killed them.
+
+**Why a ring pays an unmultiplied literal.** GDD §7's rule is that *what is
+multiplied is exactly what builds it* — kill points at the four kill sites. A
+ring is not a kill and a Dive is not a kill site, so this is that rule working
+rather than an exception to it, and it is the Bounty's answer (CS013 T6) and the
+Thorn chip's. Multiplying it would matter: MEASURED over 108 scored wells, the
+multiplier in force **at the clear edge** averages ×2.57 and reaches ×8, and it
+HOLDS through a Dive (CS012 O5) — so a multiplied set would be worth up to
+eight times its face value on the very dive that follows the well that earned
+it. At the shipped 100 a ring, six rings are **8.3 %** of a median well (7,200,
+MEASURED); at ×8 they would be 67 %.
+
+**Why "you stop earning" is an absence rather than a penalty.** A missed ring
+pays nothing and costs nothing: no miss counter, no streak, no bonus for a full
+set. A set is six calls or fewer and that is the whole mechanic — which is what
+keeps GDD §14.5's "no failure state beyond 'you stop earning'" literally true
+while §4.5's item 5 stays live in both modes. Those two are not in conflict:
+"no failure state" is read as *the ring flight adds no new one*. Removing item 5
+in Overdrive would break a shipped guarantee (GDD §4.5, §19), make §19's Core
+row mode-conditional, and leave the Overdrive dive with no hazard at all —
+MEASURED, item 5 fires on 5.3 % of dives against a driver that does not steer,
+and 0 % against one that does, so it is cheap to keep and it is the only thing
+that makes the beat a skill test rather than a pause.
