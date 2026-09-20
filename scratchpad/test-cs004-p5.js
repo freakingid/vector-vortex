@@ -385,7 +385,11 @@ H.assert(JSON.stringify(X.eligibleKinds(8)) === JSON.stringify(MIXED) &&
 // So the roster is derived: the distinct CLASSES the kind table can build,
 // minus the projectiles. CS005 adds two roster rows and four kinds and this
 // case needs no edit.
-const PROJECTILE_CLASSES = [X.WeaverBolt];
+// ⛔ CS013 P4 appended X.MimicShot in place: the CLAIM is unchanged — the
+// roster is "the distinct classes the kind table can build, MINUS the
+// projectiles" — and a reflected shot is a projectile, the bolt's own
+// subclass. Without it this derivation would count it as a roster row.
+const PROJECTILE_CLASSES = [X.WeaverBolt, X.MimicShot];
 
 const kindClasses = new Set();
 const cargoToKind = {};

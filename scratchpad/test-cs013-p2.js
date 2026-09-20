@@ -317,10 +317,16 @@ for (const [len, want] of [[C.THORN_CHIP, 1], [2 * C.THORN_CHIP, 2], [3 * C.THOR
 //
 // ⛔ GDD §7's literals, written out (test-cs008-p2.js's trap 1).
 const GDD = { thornChip: 5, weaver: 50, carrier: 100, vaulter: 150, surger: 200,
-              reaver: 300, wellPerLevel: 100, purgeUnspent: 500, noDeath: 1000, bounty: 2000 };
+              reaver: 300, mimic: 400, wellPerLevel: 100, purgeUnspent: 500, noDeath: 1000,
+              bounty: 2000 };
 // ⛔ trap 3: it takes the build.
 function gddPoints(Z, e) {
   if (e instanceof Z.Reaver) return GDD.reaver;      // before Vaulter: it extends it
+  // ⛔ CS013 P4 appended the Mimic in place (GDD §7's 400). The CLAIM is
+  // unchanged — every kill's price is on GDD §7's table, at the multiplier in
+  // force — and this board plays past L16, where one is now released. A
+  // MimicShot falls through to 0 with the bolt: neither is on that table.
+  if (e instanceof Z.Mimic) return GDD.mimic;
   if (e instanceof Z.Vaulter) return GDD.vaulter;
   if (e instanceof Z.Carrier) return GDD.carrier;
   if (e instanceof Z.Weaver) return GDD.weaver;

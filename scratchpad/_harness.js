@@ -255,6 +255,9 @@ function buildGame(opts = {}) {
     "modeHas", "Reaver", "REAVER_POLY", "drawReaver",
     // the Warden, its silhouette and its beam (07-enemies-overdrive/14, CS013 P3)
     "Warden", "WARDEN_POLY", "drawWarden", "drawWardenBeam",
+    // the Mimic, its two silhouettes and the reflected streak
+    // (07-enemies-overdrive/14, CS013 P4, MI1, MI2)
+    "Mimic", "MimicShot", "MIMIC_POLY_CLOSED", "MIMIC_POLY_OPEN", "drawMimic", "drawMimicShot",
     // the spawner and the well lifecycle (08/23, CS003 P2)
     "spawnEnemy", "updateSpawner", "resetSpawner", "wellCleared", "spawnLimit", "ENEMY_KINDS",
     // the release budget's count — THREATS, not entities (08, CS007 P1)

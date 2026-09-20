@@ -397,7 +397,9 @@ const DT = C.FIXED_DT;
 // P3, `enemyKinds` 5 -> 6 -> 7 -> 9 across P2, P3 and P4 — so this confirms
 // rather than moves them. The derivation is CS004's and needed no edit.
 
-const PROJECTILE_CLASSES = [X.WeaverBolt];
+// ⛔ CS013 P4 appended X.MimicShot in place (test-cs004-p5.js's rule): a
+// projectile is not a roster row, and the claim does not change.
+const PROJECTILE_CLASSES = [X.WeaverBolt, X.MimicShot];
 
 const kindClasses = new Set();
 for (const kind of Object.keys(X.ENEMY_KINDS)) {

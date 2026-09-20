@@ -613,3 +613,52 @@ about a run rather than a rule.**
   sfx-lab candidate A, two alternates beside it). ⛔ `C.WARDEN_DISCHARGE` 0.30
   is bounded by `RESPAWN_INVULN` and is not freely tunable; "killable only by
   Jump", `blocksClear` and the L11 row are GDD 14.6's and W4/W5's, not knobs.
+
+## CS013 P4 — the Mimic: ⛔ THE PROBATION ASK — does a reflected shot read as cheap?
+
+- **Changeset / phase:** CS013 P4 (the Mimic and its `MimicShot` — reflect-then-open,
+  the reflected shot, and the one-row cut).
+- ⛔ **THIS IS NOT A TUNING ASK. IT IS THE VERDICT GDD §14.6 AND §21 #6 RESERVE**
+  — "build it, playtest it, **cut it without ceremony if it reads as cheap**" —
+  and CS017 is where the answer lands. Every other entry in this file asks
+  whether a shipped thing feels right; this one asks whether a shipped thing
+  should exist.
+- **Would have done:** three sittings, all Overdrive, START DEPTH 17 (the first
+  depth that releases one). (1) Played five wells with fire held the way he
+  actually plays, and after each reflection that killed him answered ONE
+  question out loud, immediately, before thinking about it: *was that my fault?*
+  The count of "no" is the verdict. (2) Played five more wells with fire
+  **tapped** rather than held — the Mimic's cycle is built around held fire
+  (MEASURED: held fire meets one fifteen times a second, so it costs exactly one
+  reflection and dies inside its own 0.5 s window), and a player who taps meets
+  a guard that has re-armed. Said whether the second reflection reads as *his*
+  mistake or as the enemy cheating. (3) Stood one lane off a Mimic and shot it
+  deliberately, ten times, watching only the violet streak: said whether he read
+  it as **his own shot coming back** or as a new enemy projectile, and whether
+  0.477 s was enough to leave the lane.
+- **What we were trying to learn:** ⛔ **Whether the Mimic ships at all.**
+  §14.6's concern is a statement about players, not about numbers: "players read
+  their own bullets as safe and reversing that betrays a deep expectation." The
+  build answers the *fairness* half in arithmetic — ⛔ `MIMIC_APEX` is bounded so
+  every reflection gives at least `SURGE_TELEGRAPH` 0.45 s of flight, asserted
+  from the constants and on played boards (§6.4), and the reflected shot is
+  drawn as the player's own streak, colour-shifted and doubled, so it is
+  *legible* as the thing that came back. ⚠ **Legible and fair are not the same
+  as ACCEPTABLE**, and the third sitting is the one that separates them: a
+  player who reads it correctly, has time to leave, and still feels cheated is
+  the case the probation exists for. ⚠ **The second sitting is the sharper
+  risk**: the one-reflection budget is a property of HELD fire, and nothing in
+  the build gives a tapping player a different Mimic.
+- **Knobs:** `C.MIMIC_OPEN_TIME` (0.50 s ⚠ — the window, and the whole budget
+  rests on it being longer than the fire cadence); `C.MIMIC_SHOT_RATIO` (0.60,
+  GDD §14.6's "60% speed"); `C.MIMIC_SHOT_LEN` / `C.MIMIC_SHOT_WIDTH` (2 / 2 ⚠)
+  and `C.MIMIC_COLOR` (`#D447FF` ⚠, hue 286°); `C.MIMIC_SIZE` (0.72 ⚠),
+  `MIMIC_POLY_CLOSED` / `MIMIC_POLY_OPEN` and the three read channels
+  (`C.MIMIC_CLOSED_WIDTH` 0.70, `C.MIMIC_OPEN_WIDTH` 1.60,
+  `C.MIMIC_CLOSED_ALPHA` 0.55 — ⛔ bounded by the headless gate, ratio ≥ 2 and
+  alpha ≤ 0.7); `C.MIMIC_CLIMB` (0.16 ⚠); `C.SFX.reflect` and
+  `C.SFX_KILL_PITCH.mimic` / `.mimicShot` (1.4 / 1.8, sfx-lab candidate A, two
+  alternates each). ⛔ **`C.MIMIC_APEX` 0.40 is NOT a free knob** — it is
+  bounded at 0.4308 by the fuse arithmetic, with 0.031 of headroom.
+  ⛔ **And the one knob that is not a number: `{ level: 16, kind: "mimic" }` in
+  `C.SPAWN_SCHEDULE_OVERDRIVE`.** Deleting that line is the cut, whole.

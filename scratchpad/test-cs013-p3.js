@@ -184,16 +184,23 @@ const OVERDRIVE = [
   { from:  6, to:  8, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver"] },
   { from:  9, to: 10, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter"] },
   { from: 11, to: 12, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden"] },
-  { from: 13, to: 17, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden", "surger"] },
+  { from: 13, to: 15, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden", "surger"] },
+  // ⛔ CS013 P4 split the old 13–17 band in place: the CLAIM is unchanged — the
+  // set is a function of the level and the mode — and the Mimic's row at 16 is
+  // where it now grows (MI3).
+  { from: 16, to: 17, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden", "surger",
+                              "mimic"] },
   { from: 18, to: 22, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden", "surger",
-                              "carrierDrifter"] },
+                              "mimic", "carrierDrifter"] },
   { from: 23, to: 40, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden", "surger",
-                              "carrierDrifter", "carrierSurger"] },
+                              "mimic", "carrierDrifter", "carrierSurger"] },
 ];
 const bandAt = (table, L) => table.find(b => L >= b.from && L <= b.to).kinds;
 {
-  H.eq(J(C.SPAWN_SCHEDULE_OVERDRIVE), J([{ level: 6, kind: "reaver" }, { level: 11, kind: "warden" }]),
-       "⛔ C.SPAWN_SCHEDULE_OVERDRIVE is two rows: the Reaver at 6 and the Warden at 11 (GDD 14.6)");
+  H.eq(J(C.SPAWN_SCHEDULE_OVERDRIVE), J([{ level: 6, kind: "reaver" }, { level: 11, kind: "warden" },
+                                         { level: 16, kind: "mimic" }]),
+       "⛔ C.SPAWN_SCHEDULE_OVERDRIVE is three rows: the Reaver at 6, the Warden at 11 and — CS013 P4 — " +
+       "the Mimic at 16 (GDD 14.6)");
   H.eq(J(C.SPAWN_SCHEDULE.map(r => r.level + ":" + r.kind)),
        J(["1:vaulter", "3:carrierVaulter", "5:weaver", "9:drifter", "13:surger", "18:carrierDrifter",
           "23:carrierSurger"]),
@@ -1040,8 +1047,9 @@ function classicHashes(Z, steps) {
 {
   installSeed(SEED);
   const Z = H.buildGame({ mutate: [[ROW, ""]] });
-  H.eq(J(Z.C.SPAWN_SCHEDULE_OVERDRIVE), J([{ level: 6, kind: "reaver" }]),
-       "fixture: the mutated build has no Warden row");
+  H.eq(J(Z.C.SPAWN_SCHEDULE_OVERDRIVE), J([{ level: 6, kind: "reaver" }, { level: 16, kind: "mimic" }]),
+       "fixture: the mutated build has no Warden row (⛔ CS013 P4: it keeps the Mimic's, which is a " +
+       "LATER row — the precondition is a build that releases no Warden)");
   const STEPS = 5000;
   const a = classicHashes(X, STEPS), b = classicHashes(Z, STEPS);
   let diff = -1;

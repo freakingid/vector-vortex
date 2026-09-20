@@ -350,6 +350,30 @@ REQUIRES one. ⛔ **It exempts nothing else** — `anchored` stays false, so §4
 push reaches it and ends the lift-off; a discharging Warden kills through the
 one `killDepth` comparison; the array is still one.
 
+⛔ **THE MIMIC'S BUDGET IS ITS TWO STATES, NOT A COUNTER** (CS013 P4, MI1; GDD
+§6.4, §14.6). Closed it consumes a shot and sends it back ONCE; that reflection
+is the only thing that OPENS it, and an open Mimic reflects nothing — so "at
+most one reflection per opening" is structural. ⛔ **Do not add a `reflected`
+latch or a cooldown**: held fire meets one 15 times a second, and the window is
+what bounds it. ⛔ **The opening is UNCONDITIONAL and `sfx("reflect")` is not**
+— the shot was consumed either way, so a spawn `ENEMY_CAP` refused is a lost
+beat for the Mimic, never a guard the player paid for and did not get
+(`Weaver.fire()`'s rule for the sound). ⛔ **`C.MIMIC_APEX` is BOUNDED, not
+tuned:** `≤ (1 − RIM_CONTACT_DEPTH) − SURGE_TELEGRAPH × (MIMIC_SHOT_RATIO /
+SHOT_TIME)` = 0.4308, asserted from the constants and on played boards — raising
+it or the ratio turns the suite red. ⚠ **The Mimic is ON PROBATION and cuts in
+ONE ROW** (MI3, GDD §21 #6): `{ level: 16, kind: "mimic" }` in
+`C.SPAWN_SCHEDULE_OVERDRIVE`. Keep it that way.
+
+⛔ **A PROJECTILE MAY BE A PARAMETER VARIANT TOO** (CS013 P4, MI2). `MimicShot
+extends WeaverBolt`: the bolt's speed is an overridable reader, `speed()`, and a
+variant overrides that and its draw and inherits the rest — the rim band,
+`blocksClear: false`, the self-termination, the declined shot, 0 points.
+⛔ **`C.WEAVER_BOLT_SPEED` is named ONCE in the build, inside that reader**, and
+is still never scaled by `climbMult()`. ⛔ **A speed refactor is proved by a
+HASH, never by reading:** a Classic run must be bit-identical against a build
+carrying the old line.
+
 ⛔ **`anchored` says what `depth` MEANS on an entity, not whether it moves.**
 `false` is a position; `true` is a length — the tip of an extent rooted at the
 throat, which is the Thorn and nothing else. A stationary enemy whose `depth` is
@@ -721,8 +745,9 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
                        build's ONE copy of the draw-only lift math
     06-shots.js        firing, lane-locked travel
     07-enemies.js      the entity contract + the Classic roster
-    07-enemies-overdrive.js  Overdrive's roster: the Reaver, the Warden
-                       (CS013 P4: the Mimic). Extends 07-enemies.js's classes
+    07-enemies-overdrive.js  Overdrive's roster: the Reaver, the Warden, and
+                       the Mimic + its MimicShot (a WeaverBolt variant; the
+                       ONE sfx("reflect") seat). Extends 07-enemies.js's classes
     08-spawner.js      spawnEnemy() — the ONE way in — cadence, quota, clear,
                        and GDD 8.1's introduction schedule per mode (eligibleKinds)
     09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge, and

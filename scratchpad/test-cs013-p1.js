@@ -362,11 +362,35 @@ function hunt(Z, i) {
   inp.keyDown(" ");                         // fire held throughout
   if (i % 311 === 0) inp.keyDown("x");
   if (i % 311 === 4) inp.keyUp("x");
-  let best = null;
-  for (const e of st.enemies) if (!e.dead && !e.anchored && (best === null || e.depth > best.depth)) best = e;
+  // ⛔ CS013 P4, IN PLACE: A MimicShot IS NOT A TARGET, IT IS A THING TO LEAVE
+  // (MI2). It declines every shot and it kills by contact, so a driver that
+  // steers to the deepest thing on the board steers INTO the one entity on it
+  // that no shot can remove — and it was CAUSED by parking under a Mimic, so at
+  // L16+ the board makes more of them out of the driver's own fire and the
+  // kills, the clears and the drop variety this section counts all fall.
+  // ⛔ The repair is the DRIVER, never the build and never a lowered level:
+  // dodging is the player's ONLY answer to a reflected shot (GDD 14.6), so the
+  // driver skips one as a target and steers AWAY from one within a lane. ⛔ It
+  // is a no-op wherever no MimicShot exists — §8's Classic pair runs this same
+  // function and is bit-identical either way.
+  let best = null, dodge = null;
+  for (const e of st.enemies) {
+    if (e.dead) continue;
+    if (e instanceof Z.MimicShot) {
+      if (!st.skimmer) continue;
+      const dd = Z.laneDelta(well, st.skimmer.lane, e.lane);
+      if (Math.abs(dd) <= 1 && (dodge === null || Math.abs(dd) < Math.abs(dodge))) dodge = dd;
+      continue;
+    }
+    if (e.anchored) continue;
+    if (best === null || e.depth > best.depth) best = e;
+  }
   inp.keyUp("ArrowRight"); inp.keyUp("ArrowLeft");
   if (!best || !st.skimmer) return;
-  const d = Z.laneDelta(well, st.skimmer.lane, best.lane) * RIGHT;
+  // A dodge is a FULL push away rather than a delta, so a shot in the craft's
+  // own lane (delta 0, and -0 is still 0) still moves it.
+  const d = dodge !== null ? (dodge > 0 ? -RIGHT : RIGHT)
+                           : Z.laneDelta(well, st.skimmer.lane, best.lane) * RIGHT;
   if (d > 0.3) inp.keyDown("ArrowRight"); else if (d < -0.3) inp.keyDown("ArrowLeft");
   // ⛔ CS013 P3, IN PLACE: an ALOFT entity is killable only by the Jump (W4)
   // and it blocks the clear (W5), so a driver that never jumps stalls every
@@ -421,13 +445,21 @@ function played(Z, ticks) {
   Z.dropToken.before = Z.dropToken.after = Z.collectToken.before = null;
   return out;
 }
-const TICKS = 4000;                         // × five boards = 20,000 steps
+// ⛔ CS013 P4 RAISED THIS FROM 4,000 IN PLACE, AND IT IS A FIXTURE REPAIR
+// RATHER THAN A RELAXED CLAIM. The counts below are non-vacuity — "these
+// boards really killed, really dropped and really refused" — and the Mimic
+// costs the L16 and L23 boards real throughput on purpose: it absorbs a shot
+// per opening, it blocks the clear, and each reflection is one more thing the
+// driver must leave rather than shoot (MEASURED: 302 kills over 20,000 steps
+// with its row mutated out, 285 with it in). ⛔ The precondition is restored
+// by playing longer, never by lowering the number the claim is about.
+const TICKS = 5000;                         // × five boards = 25,000 steps
 {
   installSeed(SEED);
   const Y = H.buildGame({ spy: ["dropToken", "collectToken"] });
   const r = played(Y, TICKS);
   if (process.env.P1_MEASURE) console.log(J(r));
-  H.eq(r.steps, 20000, "fixture: 20,000 played Overdrive steps");
+  H.eq(r.steps, 25000, "fixture: 25,000 played Overdrive steps");
   H.eq(r.badCount, 0, `⛔ dropToken() is called ONCE PER KILL — every kill at a kill site rolls (T2)${r.first ? " — " + r.first : ""}`);
   H.eq(r.badDraws, 0, "⛔ and every Overdrive call spends EXACTLY ONE draw, drop or no drop");
   H.eq(r.over, 0, "⛔ MAX_TOKENS is never exceeded");

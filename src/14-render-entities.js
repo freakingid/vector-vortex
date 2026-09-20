@@ -777,6 +777,118 @@ function drawWarden(ctx, well, lane, depth, aloft, tip, live) {
 }
 
 // ---------------------------------------------------------------------------
+// The Mimic (GDD 6.4, 14.6, 6.3, 12, 10.2, 18; CS013 P4, MI1) — TWO POLYS AND
+// THREE CHANNELS, the Drifter's.
+// ---------------------------------------------------------------------------
+//
+// ⛔ GDD 12's PROMPT IS THE SPEC: `SOLID = ARMOURED · OPEN = VULNERABLE`. The
+// Mimic's two states differ on THREE things at once, and no one of them carries
+// the read alone — the Drifter's rule (GDD 6.3), for the Drifter's reason:
+//
+//   Channel        closed (armoured)                open ("firing", vulnerable)
+//   silhouette     a compact closed shell           a splayed OPEN path
+//   stroke width   x C.MIMIC_CLOSED_WIDTH (0.70)    x C.MIMIC_OPEN_WIDTH (1.60)
+//   alpha          C.MIMIC_CLOSED_ALPHA (0.55)      1
+//
+// ⛔ TWO POLYS, NOT ONE POLY RESTYLED. entityPoints() memoizes a scratch array
+// PER POLY, so the second costs one projection loop and zero allocation (the
+// Carrier's hull-and-glyph pattern, the Drifter's two states). One poly drawn
+// closed and then open differs by a single edge, which is not a read at a
+// glance — and at 400 points this is the read the player is paid for.
+//
+// ⛔ NO GLOBAL GLOW CONSTANT IS TOUCHED. glowStroke's wide pass is
+// `width * C.GLOW_WIDE_W`, so the narrower closed stroke is LITERALLY a harder
+// edge; GLOW_WIDE_W, GLOW_WIDE_ALPHA and GLOW_THIN_ALPHA are shared with the
+// well and every other entity and retuning one is an art pass across the build.
+// Both states are per-entity multipliers only.
+//
+// ⚠ The closed alpha can make it dim in the throat zone on the way up, exactly
+// as C.DRIFT_RIDE_ALPHA can. That is the same accepted trade: the alpha is a
+// STATE read rather than a distance fade, and GDD 10.3 governs what is drawn
+// OVER the throat, not an entity's own constant alpha.
+//
+// ⛔ GDD 18 item 3: ours. The closed shell is a blunt shield turned rim-ward —
+// a wide leading edge and a tapered back, with a notch where the two halves
+// meet, so it reads as something HELD UP rather than as a creature. Nothing
+// four-armed or radial: the Vaulter owns that silhouette.
+const MIMIC_POLY_CLOSED = [
+  { l:  0.00, d:  0.66 },   // the notch, rim-ward
+  { l:  0.52, d:  0.34 },
+  { l:  0.58, d: -0.34 },
+  { l:  0.00, d: -0.62 },
+  { l: -0.58, d: -0.34 },
+  { l: -0.52, d:  0.34 },
+];
+
+// OPEN is the same shell swung apart: an OPEN path whose two halves have
+// hinged away from the centre line, leaving the middle — the thing that was
+// being guarded — exposed. ⛔ `l` reaches exactly ±1, so C.MIMIC_SIZE means on
+// this what it means on every other silhouette: the lane widths it spans. The
+// path deliberately does NOT return, so drawPoly's `closed` argument is the
+// state and the shape agrees with it.
+const MIMIC_POLY_OPEN = [
+  { l: -0.30, d:  0.80 },
+  { l: -1.00, d:  0.30 },
+  { l: -0.84, d: -0.56 },
+  { l: -0.20, d: -0.10 },
+  { l:  0.20, d: -0.10 },
+  { l:  0.84, d: -0.56 },
+  { l:  1.00, d:  0.30 },
+  { l:  0.30, d:  0.80 },
+];
+
+// ⛔ drawPoly + glowStroke, one path, no fill (GDD 10.2). `open` selects all
+// three channels at once and is the ENTITY's own phase
+// (07-enemies-overdrive.js) rather than anything this module decides — which is
+// why the two states can never drift apart from the two behaviours.
+//
+// ⛔ Note that `!open` IS the `closed` argument, the Drifter's identity: GDD 12
+// promises SOLID = ARMOURED, armoured is exactly the closed phase, so the two
+// are the same boolean and writing them as one is what stops a later edit
+// changing the shape without changing the rule.
+function drawMimic(ctx, well, lane, depth, open) {
+  const poly = open ? MIMIC_POLY_OPEN : MIMIC_POLY_CLOSED;
+  const width = laneLineWidth(depth) * (open ? C.MIMIC_OPEN_WIDTH : C.MIMIC_CLOSED_WIDTH);
+  drawPoly(ctx, entityPoints(well, lane, depth, poly, C.MIMIC_SIZE), !open);
+  glowStroke(ctx, C.MIMIC_COLOR, width, open ? 1 : C.MIMIC_CLOSED_ALPHA);
+}
+
+// ⛔ THE REFLECTED SHOT IS THE PLAYER'S OWN STREAK, TURNED (GDD 14.6, MI2) —
+// "colour-shifted, larger". It is drawShot()'s drawing, not an enemy
+// silhouette: a SEGMENT ALONG the lane rather than a shape AT a point, so
+// entityPoints() does not apply, exactly as it does not to the Thorn or to the
+// Surger's fuse.
+//
+// ⛔ ITS OWN SCRATCH POINTS, NOT drawShot()'s. A player's shot and a reflected
+// one are live in the same frame by construction — the reflection is CAUSED by
+// a shot — and sharing module scratch between two segment drawers is the trap
+// drawSurgeLane() is written down for. The failure would be one streak drawn at
+// the other's length, intermittently, reading as a bug in the well.
+//
+// ⛔ THE STREAK TRAILS, WHICH IS WHAT "TURNED" MEANS. A player's shot leads
+// toward the throat and trails toward the rim; this one leads toward the RIM,
+// so its tail runs back toward the throat and is capped at depth 0. The mark is
+// the player's; the direction is the answer.
+//
+// ⛔ NO PER-FRAME ALLOCATION (GDD 17's perf budget). The point PAIR is
+// preallocated as well as the points — drawThorn()'s rule, for its reason.
+const _mimicHead = { x: 0, y: 0 };   // the leading edge, toward the rim
+const _mimicTail = { x: 0, y: 0 };   // C.MIMIC_SHOT_LEN x C.SHOT_LEN behind it
+const _mimicStreak = [_mimicHead, _mimicTail];
+
+function drawMimicShot(ctx, well, lane, depth) {
+  const len = C.SHOT_LEN * C.MIMIC_SHOT_LEN;
+  const tail = depth - len < 0 ? 0 : depth - len;
+  screenPos(well, lane, depth, _mimicHead);
+  screenPos(well, lane, tail, _mimicTail);
+  drawPoly(ctx, _mimicStreak, false);
+  // ⛔ shotAlpha() — the shot's own fade (GDD 10.3), because this IS a shot's
+  // streak. A reflection is born at C.MIMIC_APEX 0.40, above
+  // C.READABILITY_DEPTH, so it is at full alpha from the step it exists.
+  glowStroke(ctx, C.MIMIC_COLOR, laneLineWidth(depth) * C.MIMIC_SHOT_WIDTH, shotAlpha(depth));
+}
+
+// ---------------------------------------------------------------------------
 // The tokens (GDD 14.1, 16.3; CS013 P1, T4, T10) — a glyph inside a ring.
 // ---------------------------------------------------------------------------
 //

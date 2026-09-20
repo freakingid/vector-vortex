@@ -13,10 +13,12 @@ const COUNTS = {
   openWells: 6,     // of those, open topology
   tracks: 3,        // GDD 11.7 — raise as tracks land. CS009 P2: title, pulse.
                     // CS012 P1: drive
-  enemies: 8,       // GDD 6.1, 6.4 — raise as enemies land. CS005 P3: the
+  enemies: 9,       // GDD 6.1, 6.4 — raise as enemies land. CS005 P3: the
                     // Surger, which completes the Classic roster. CS012 P2: the
                     // Reaver, Overdrive's first. CS013 P3: the Warden,
-                    // Overdrive's second. ⛔ The next mover is CS013 P4's Mimic
+                    // Overdrive's second. CS013 P4: the Mimic, its third and
+                    // ⚠ the one ON PROBATION — GDD 21 #6's verdict is CS017's,
+                    // and cutting it moves this number back to 8
   // ⛔ NOT THE SAME NUMBER AS `enemies`, AND FROM CS004 P3 ON IT IS LARGER.
   // `enemies` counts GDD 6.1's ROSTER ROWS; this counts ENEMY_KINDS rows
   // (08-spawner.js), and the two stopped coinciding twice over:
@@ -25,12 +27,13 @@ const COUNTS = {
   //     carrierSurger, and moved this number alone);
   //   - the Weaver's BOLT is a kind and is not an enemy on the roster.
   // Keeping them as two numbers is what lets a phase say which one it moved.
-  enemyKinds: 11,   // vaulter, carrierVaulter, carrierDrifter, carrierSurger,
+  enemyKinds: 13,   // vaulter, carrierVaulter, carrierDrifter, carrierSurger,
                     // weaver, weaverBolt, thorn, drifter, surger; CS012 P2's
-                    // reaver and CS013 P3's warden. ⛔ GDD 6.2's variant table
-                    // is complete (neither Overdrive enemy is cargo, R16), so
-                    // the next movers are P4's mimic and mimicShot — TWO kinds
-                    // behind ONE roster row, the Weaver bolt's case.
+                    // reaver, CS013 P3's warden and P4's mimic and mimicShot.
+                    // ⛔ GDD 6.2's variant table is complete (no Overdrive enemy
+                    // is cargo, R16). ⛔ P4 moved this by TWO against `enemies`'
+                    // ONE: a mimicShot is a kind with no roster row, the Weaver
+                    // bolt's case, which is what keeps the two numbers apart.
 };
 
 // ⛔ THE state FIELD INVENTORY (02-state.js). An exhaustive list is a global

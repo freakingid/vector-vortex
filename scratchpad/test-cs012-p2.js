@@ -89,18 +89,22 @@ const OVERDRIVE = [
   { from:  6, to:  8, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver"] },
   { from:  9, to: 10, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter"] },
   { from: 11, to: 12, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden"] },
-  { from: 13, to: 17, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden",
+  { from: 13, to: 15, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden",
                               "surger"] },
+  { from: 16, to: 17, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden",
+                              "surger", "mimic"] },
   { from: 18, to: 22, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden",
-                              "surger", "carrierDrifter"] },
+                              "surger", "mimic", "carrierDrifter"] },
   { from: 23, to: 40, kinds: ["vaulter", "carrierVaulter", "weaver", "reaver", "drifter", "warden",
-                              "surger", "carrierDrifter", "carrierSurger"] },
+                              "surger", "mimic", "carrierDrifter", "carrierSurger"] },
 ];
 const bandAt = (table, L) => table.find(b => L >= b.from && L <= b.to).kinds;
 
 H.eq(JSON.stringify(C.SPAWN_SCHEDULE_OVERDRIVE),
-     JSON.stringify([{ level: 6, kind: "reaver" }, { level: 11, kind: "warden" }]),
-     "⛔ C.SPAWN_SCHEDULE_OVERDRIVE is the Reaver at 6 and — CS013 P3 — the Warden at 11 (GDD 14.6)");
+     JSON.stringify([{ level: 6, kind: "reaver" }, { level: 11, kind: "warden" },
+                     { level: 16, kind: "mimic" }]),
+     "⛔ C.SPAWN_SCHEDULE_OVERDRIVE is the Reaver at 6, — CS013 P3 — the Warden at 11 and — P4 — " +
+     "the Mimic at 16 (GDD 14.6)");
 let odWrong = null, clWrong = null, clArg = null;
 for (let L = 1; L <= 40; L++) {
   const od = JSON.stringify(X.eligibleKinds(L, "overdrive"));
@@ -613,11 +617,13 @@ function hashes(Y, mode, steps, stopAt) {
 }
 {
   const Z = H.buildGame({ mutate: [[ROW, ""]] });
-  // ⛔ CS013 P3 repaired this fixture in place: ROW is the REAVER's row, so the
-  // mutant now keeps the Warden's. The precondition the claim below needs is
-  // "a build whose Overdrive table differs", which is what it still is.
-  H.eq(JSON.stringify(Z.C.SPAWN_SCHEDULE_OVERDRIVE), JSON.stringify([{ level: 11, kind: "warden" }]),
-       "fixture: the mutated build has lost the Reaver's row and kept the Warden's");
+  // ⛔ CS013 P3 repaired this fixture in place and P4 again: ROW is the
+  // REAVER's row, so the mutant keeps every LATER row — the Warden's and the
+  // Mimic's. The precondition the claim below needs is "a build whose Overdrive
+  // table differs", which is what it still is.
+  H.eq(JSON.stringify(Z.C.SPAWN_SCHEDULE_OVERDRIVE),
+       JSON.stringify([{ level: 11, kind: "warden" }, { level: 16, kind: "mimic" }]),
+       "fixture: the mutated build has lost the Reaver's row and kept the Warden's and the Mimic's");
   const a = hashes(X, "classic", 5000), b = hashes(Z, "classic", 5000);
   let diff = -1;
   for (let i = 0; i < 5000 && diff < 0; i++) if (a.out[i] !== b.out[i]) diff = i;

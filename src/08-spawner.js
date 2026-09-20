@@ -86,6 +86,18 @@ const ENEMY_KINDS = {
   // arrival that climbs and then lifts off, not an entity that flies in from
   // off the well (W2).
   warden: (lane, depth, dir) => new Warden(lane, depth, dir),
+  // ⛔ OVERDRIVE'S THIRD ROW (CS013 P4; 07-enemies-overdrive.js), and ⚠ THE ONE
+  // LINE THAT IS THE MIMIC'S WHOLE PROBATION (MI3, GDD 14.6, 21 #6) together
+  // with its schedule row. `dir` is ignored — one lane, never hopping — and the
+  // draw spawnEnemy() spends on it is still spent, the Surger's case.
+  mimic: (lane, depth) => new Mimic(lane, depth),
+  // ⛔ A ROW FOR THE REFLECTED SHOT, AND NOT A SCHEDULE ROW — `weaverBolt`'s
+  // case exactly (00-config.js). Mimic.onShot() asks for it by name, so it
+  // inherits C.ENEMY_CAP and GDD 6.3's safe-spawn rule for free; a schedule row
+  // for it would put a reflected shot in the throat that nobody reflected.
+  // ⚠ It is NOT a GDD 6.1 roster row, so it is not counted among the enemies in
+  // scratchpad/test-registry.js — two kinds behind one roster row, the bolt's.
+  mimicShot: (lane, depth) => new MimicShot(lane, depth),
 };
 
 // The RELEASE BUDGET — how many THREATS may be alive at once. ⛔ The MIN of the

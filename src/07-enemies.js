@@ -808,9 +808,26 @@ class WeaverBolt extends Enemy {
       this.dead = true;
       return;
     }
-    this.depth += C.WEAVER_BOLT_SPEED * dt;
+    this.depth += this.speed() * dt;
     if (this.depth > 1) this.depth = 1;
   }
+
+  // ⛔ AN OVERRIDABLE READER, NOT A SECOND CONSTANT (CS013 P4, MI2 — the
+  // Reaver's hopDuration() precedent, 07-enemies-overdrive.js). A parameter
+  // variant of this projectile overrides ONE method and inherits the rest of
+  // the contract: the rim band, `blocksClear` false, the self-termination
+  // above, the declined shot below and the base's 0 points.
+  //
+  // ⛔ A CLASSIC BOLT IS BIT-IDENTICAL. `this.speed()` on a WeaverBolt returns
+  // C.WEAVER_BOLT_SPEED and nothing else, so the arithmetic on the line above
+  // is the shipped one to the bit — test-cs013-p4.js hashes a Classic run
+  // against the build before it to prove that rather than assert it by reading.
+  //
+  // ⛔ AND IT IS STILL NEVER SCALED BY climbMult() (H2; GDD 4.4): a pushed bolt
+  // is safe only because it self-terminates before it reaches its kill band, so
+  // a SLOWER bolt — not a faster one — is what would breach the respawn
+  // guarantee. test-cs007-p2.js reads the built file for that.
+  speed() { return C.WEAVER_BOLT_SPEED; }
 
   draw(ctx, well) {
     drawWeaverBolt(ctx, well, this.lane, this.depth);

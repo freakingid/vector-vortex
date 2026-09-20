@@ -37,7 +37,7 @@ const J = v => JSON.stringify(v);
 
 // ⛔ Trap 1 — GDD §7, as written there.
 const GDD = { thornChip: 5, weaver: 50, carrier: 100, vaulter: 150, surger: 200,
-              drifter: [250, 500, 750], reaver: 300, warden: 500, wellPerLevel: 100,
+              drifter: [250, 500, 750], reaver: 300, mimic: 400, warden: 500, wellPerLevel: 100,
               purgeUnspent: 500, noDeath: 1000,
               bounty: 2000 };   // ⛔ CS013 P1: GDD §14.1's Bounty, +2,000, collected — not a kill
 
@@ -47,6 +47,7 @@ const GDD = { thornChip: 5, weaver: 50, carrier: 100, vaulter: 150, surger: 200,
 function gddPoints(Z, e) {
   if (e instanceof Z.Reaver) return GDD.reaver;      // before Vaulter: it extends it
   if (e instanceof Z.Warden) return GDD.warden;      // CS013 P3: GDD §7's 500, killed by a jump
+  if (e instanceof Z.Mimic) return GDD.mimic;        // CS013 P4: GDD §7's 400, ⚠ on probation
   if (e instanceof Z.Vaulter) return GDD.vaulter;
   if (e instanceof Z.Carrier) return GDD.carrier;
   if (e instanceof Z.Weaver) return GDD.weaver;

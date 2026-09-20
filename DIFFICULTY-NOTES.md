@@ -41,7 +41,7 @@ that holds each clamp.
 |---|---|---|---|
 | Spawn interval | `spawnInterval()` | `C.SPAWN_INTERVAL` 1.60 | falls to **0.70**, held by `C.SPAWN_INTERVAL_MIN` |
 | Concurrent enemies | `enemyConcurrent()` | `C.ENEMY_CONCURRENT` 3 | rises to **8**, held by `C.ENEMY_CONCURRENT_MAX` — and read as `min(…, C.ENEMY_CAP)` by `spawnLimit()` |
-| Enemy climb speed | `climbMult()` | ×1 (the identity) | rises to **×1.40**, held by `C.CLIMB_MULT_MAX`. ⛔ **SIX call sites since CS013 P3** — one per entity climb, the Warden's included |
+| Enemy climb speed | `climbMult()` | ×1 (the identity) | rises to **×1.40**, held by `C.CLIMB_MULT_MAX`. ⛔ **SEVEN call sites since CS013 P4** — one per entity climb, the Warden's and the Mimic's included |
 | Vault interval | `vaultInterval()` | `C.VAULT_INTERVAL` 2.20 | falls to **1.00**, held by `C.VAULT_INTERVAL_MIN` |
 | Rim hunt interval | `vaultRimInterval()` | `C.VAULT_RIM_INTERVAL` 0.55 | falls to **0.35**, held by `C.VAULT_RIM_INTERVAL_MIN` |
 | Surge frequency (the interval falls) | `surgeInterval()` | `C.SURGE_INTERVAL` 2.60 | falls to **1.40**, held by `C.SURGE_INTERVAL_MIN` |
@@ -100,20 +100,22 @@ grows, so a kind the player has learned never stops arriving.
 GDD §8.1, Paul's O2), never a `mode` field on the rows above. `eligibleKinds()`
 merges the two in level order, a Classic row first at an equal level, and `mode`
 defaults to `"classic"`. ⚠ **This file's tables below are a CLASSIC run's**, and
-⛔ **CS013 P3 moved nothing in them.**
+⛔ **CS013 P3 and P4 moved nothing in them.**
 
-⛔ **Shipped, CS013 P3 — the Warden's row at 11**, the second in that table. The
-Overdrive set and the share the uniform pick gives each Overdrive enemy:
+⛔ **Shipped, CS013 P3 — the Warden's row at 11 and CS013 P4 — the Mimic's at
+16**, the second and third in that table, which is now COMPLETE at three rows.
+The Overdrive set and the share the uniform pick gives each Overdrive enemy:
 
-| Levels | Overdrive set size | Reaver's share | Warden's share |
-|---|---|---|---|
-| 1–5 | as Classic | — | — |
-| 6–8 | 4 | 1/4 | — |
-| 9–10 | 5 | 1/5 | — |
-| **11–12** | **6** | 1/6 | **1/6** |
-| 13–17 | 7 | 1/7 | 1/7 |
-| 18–22 | 8 | 1/8 | 1/8 |
-| 23+ | 9 | 1/9 | 1/9 |
+| Levels | Overdrive set size | Reaver's share | Warden's share | Mimic's share |
+|---|---|---|---|---|
+| 1–5 | as Classic | — | — | — |
+| 6–8 | 4 | 1/4 | — | — |
+| 9–10 | 5 | 1/5 | — | — |
+| **11–12** | **6** | 1/6 | **1/6** | — |
+| 13–15 | 7 | 1/7 | 1/7 | — |
+| **16–17** | **8** | 1/8 | 1/8 | **1/8** |
+| 18–22 | 9 | 1/9 | 1/9 | 1/9 |
+| 23+ | 10 | 1/10 | 1/10 | 1/10 |
 
 ⚠ **A Warden is the one release that does not come back as pressure the player
 can spend a shot on.** It is `blocksClear: true` and killable only by the Jump,
@@ -122,7 +124,26 @@ jumps at it — MEASURED, `test-cs013-p3.js`: a non-jumping driver at L13 sees 1
 released per 5,000 steps and clears no well. That is W5's intent (the Warden
 counts inside the ladder rather than adding pressure outside it), and the tuning
 question it raises — whether the ladder should make room for one — belongs to
-§8.2's pass, not here. ⛔ CS013 P4 adds the Mimic (16) to the same table.
+§8.2's pass, not here.
+
+⚠ **A MIMIC COSTS TWO SHOTS AND A HALF-SECOND, AND THAT IS WHAT IT COSTS THE
+BOARD.** MEASURED (`test-cs013-p1.js`, two played Overdrive boards at Start
+Depths 16 and 23, 8,000 steps): **302 kills over 20,000 steps with its row
+mutated out against 285 with it in** — it absorbs one shot per opening, it is
+`blocksClear: true`, and each reflection is one more thing the player must LEAVE
+rather than shoot. The difference is not a bug and no constant was retuned for
+it: P1's own played-board fixture was lengthened to 25,000 steps instead, which
+is a fixture repair rather than a lowered claim. ⚠ **It is also the one entity
+whose contribution to the curve is provisional in a second sense** — it is on
+probation (GDD §14.6, §21 #6), so ⛔ **cutting its one schedule row returns this
+table to CS013 P3's, exactly**, and nothing else here moves.
+
+⚠ **`MIMIC_CLIMB` is `climbMult()`'s SEVENTH call site and the ONLY thing heat
+touches on it** (R6, R7). `MIMIC_APEX`, `MIMIC_OPEN_TIME` and `MIMIC_SHOT_RATIO`
+are all FLAT at every level — and the apex is not a free tuning knob either: it
+is bounded by `(1 − RIM_CONTACT_DEPTH) − SURGE_TELEGRAPH × (MIMIC_SHOT_RATIO /
+SHOT_TIME)` = **0.4308**, so 0.40 has **0.031 of headroom** and a retune that
+pushed the Mimic closer to the rim would turn the suite red (GDD §6.4).
 
 | Level | Introduced | How the build delivers it |
 |---|---|---|

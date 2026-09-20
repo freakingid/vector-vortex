@@ -335,3 +335,198 @@ class Warden extends Enemy {
   // GDD 7. The kill site pays it; the entity never scores itself.
   points() { return C.PTS_WARDEN; }
 }
+
+// ---------------------------------------------------------------------------
+// The Mimic (GDD 6.4, 14.6, 6.1, 6.3, 6.5, 12) — "reflects shots; vulnerable
+// only while firing". Overdrive L16+, 400 points. ⚠ ON PROBATION.
+// ---------------------------------------------------------------------------
+//
+// ⚠ PROBATION IS A REAL STATE AND THIS CLASS IS BUILT FOR IT (MI3; GDD 14.6,
+// 19, 21 #6). "Reflected shots that kill you are a hard sell: players read
+// their own bullets as safe." ⛔ ONE SCHEDULE ROW IS THE WHOLE CUT — remove
+// `{ level: 16, kind: "mimic" }` from C.SPAWN_SCHEDULE_OVERDRIVE and no Mimic
+// and no MimicShot can reach a board, in either mode, at any level. Nothing
+// else in the build has to move for that to be true, and test-cs013-p4.js
+// proves it by mutating the row out and playing an Overdrive session at L16+.
+// The verdict is CS017's; the ask is in SKIPPED-PLAYTESTS.md.
+//
+// ⛔ REFLECT-THEN-OPEN, AND THE BUDGET IS WHY (MI1). MEASURED (plan §1.6,
+// §1.7): held fire meets a Mimic FIFTEEN TIMES A SECOND, and a Mimic that
+// reflected every shot would fill C.ENEMY_CAP in about a second. So a
+// reflection is a ONE-SHOT answer that spends the guard:
+//
+//   closed   guarding. A shot is CONSUMED and sent back once, as one
+//            MimicShot up its own lane, and the Mimic OPENS.
+//   open     "firing", for C.MIMIC_OPEN_TIME. A shot that reaches it here
+//            KILLS it and is consumed. Nothing is reflected.
+//
+// ⛔ AT MOST ONE REFLECTION PER OPENING, and it is structural rather than a
+// counter: reflecting is the only thing that opens it, and an open Mimic
+// reflects nothing. Under held fire the next shot lands about 0.1 s later
+// (PREDICTED: four steps, plus up to two declined by the crossing MimicShot)
+// and the window is 0.5 s, so ⛔ A MIMIC COSTS EXACTLY ONE REFLECTION.
+//
+// ⛔ THE OPEN/CLOSED READ IS GDD 12's PROMPT, `SOLID = ARMOURED · OPEN =
+// VULNERABLE`, and it is the Drifter's three channels (GDD 6.3): two polys —
+// one drawn CLOSED, one drawn OPEN — at two stroke widths and two alphas.
+// ⛔ It has a headless gate for the same reason the Drifter's does: an art rule
+// rots silently, so test-cs013-p4.js measures the ratio and the alpha back off
+// the real glowStroke calls.
+//
+// The nine fields: (lane, depth) a position, climbing to C.MIMIC_APEX and
+// holding; `purgeable` TRUE (the Drifter's precedent — "shots only while
+// crossing; Purge anywhere": the panic button answers what the guard refuses);
+// `blocksClear` true; `killDepth` ⛔ NULL AT EVERY DEPTH — its body never kills
+// and it never reaches the rim, so GDD 17 item 13 is not owed (R10); `anchored`
+// false; `aloft` false — it lives IN the well; `sfxVoice` "mimic". It is not
+// cargo.
+class Mimic extends Enemy {
+  // `dir` is ignored — one lane, never hopping, and `lane` is written once,
+  // here. The Carrier's, the Weaver's and the Surger's absence of code: it
+  // touches no lane helper, which is why it behaves identically on a Ring and
+  // on a Fan with no branch and no read of `well.closed`. ⛔ The spawner still
+  // spends its draw on a `dir` (08-spawner.js) — a kind that skipped it would
+  // make the run's ONE stream depend on what came out of the throat.
+  constructor(lane, depth) {
+    super(lane, depth);
+    this.sfxVoice = "mimic";   // C.SFX_KILL_PITCH.mimic, from tools/sfx-lab.html
+
+    // ⛔ THE PURGE ANSWERS IT IN EITHER STATE (GDD 4.3, 6.1's Drifter row).
+    // `purgeable` is inherited true and that is the explicit decision, not a
+    // default taken by accident: the guard refuses a SHOT, and a panic button
+    // armour could refuse would not be one. updatePurge() sets `dead` directly
+    // and never asks onShot(), so a purged Mimic reflects nothing (⚠ SETTLED).
+    // A Mimic must be gone before the well is clear, like every other threat.
+
+    // "closed" | "open", and one up-counting timer (GDD 16.3) — the Weaver's,
+    // the Drifter's and the Surger's precedent. ⛔ Born CLOSED: a Mimic that
+    // arrived already open would be a free 400 points for the shot that was
+    // already in the air.
+    this.phase = "closed";
+    this.openTimer = 0;        // counts UP toward C.MIMIC_OPEN_TIME while open
+  }
+
+  // Is it "firing" — the one window a shot kills it in (GDD 14.6)? The draw
+  // path reads this too, so the read and the rule can never drift apart.
+  open() { return this.phase === "open"; }
+
+  update(dt, well, state) {
+    // ⛔ climbMult()'s SEVENTH call site (R6; GDD 8's "climb speed", singular),
+    // and the only thing heat touches on this entity. ⛔ It stops at
+    // C.MIMIC_APEX and NOT at the park depth: its killDepth is null, so there
+    // is no band for it to park on, and the apex is bounded by MI2's
+    // arithmetic (00-config.js) rather than by the rim.
+    if (this.depth < C.MIMIC_APEX) {
+      this.depth += C.MIMIC_CLIMB * climbMult() * dt;
+      if (this.depth > C.MIMIC_APEX) this.depth = C.MIMIC_APEX;
+    }
+
+    // The window closes on its own clock. ⛔ It closes back to GUARDING rather
+    // than to anything new — the cycle is two states and nothing else, so a
+    // Mimic the player failed to finish costs them a second reflection.
+    if (this.phase === "open") {
+      this.openTimer += dt;
+      if (this.openTimer >= C.MIMIC_OPEN_TIME) {
+        this.phase = "closed";
+        this.openTimer = 0;
+      }
+    }
+  }
+
+  // ⛔ drawPoly + glowStroke only (GDD 10.2), in 14-render-entities.js. It hands
+  // over its own phase rather than a flag this module decides, the Drifter's
+  // rule: the two states can never drift apart from the two behaviours.
+  draw(ctx, well) {
+    drawMimic(ctx, well, this.lane, this.depth, this.open());
+  }
+
+  // ⛔ THE WHOLE OF MI1, AND BOTH BRANCHES CONSUME THE SHOT. The collision pass
+  // only asks; the enemy decides (GDD 6.5).
+  //
+  //   open    it dies and the shot is spent — GDD 14.6's "vulnerable only
+  //           while firing", as the one line that says it.
+  //   closed  the shot is spent, ONE MimicShot goes back up the lane, and the
+  //           Mimic opens.
+  //
+  // ⛔ THROUGH spawnEnemy(), THE ONE ENTRY POINT (GDD 6.5) — the FOURTH
+  // non-spawner caller, after the Carrier's split and the Weaver's two. It is
+  // called from inside collideShots()'s own loop over state.enemies, which is
+  // the Carrier split's ⚠ SETTLED path and is safe for the Carrier split's
+  // three reasons: the loop is index-based and re-reads `.length`, the `break`
+  // after onShot is unconditional, and removal is the end-of-frame filter.
+  // ⛔ Do not make that break conditional to "fix" a reflection resolving
+  // against a shot's own step.
+  //
+  // ⛔ THE SOUND ONLY FOR A SHOT THAT EXISTS — Weaver.fire()'s rule:
+  // spawnEnemy() refuses at C.ENEMY_CAP, and `reflect` for nothing is a lie
+  // about the lane, which on a hostile shot coming up at you is the worst
+  // possible lie (GDD 1.1 P2). ⛔ THE OPENING IS UNCONDITIONAL, because the
+  // shot was consumed either way: a refused reflection is a lost beat for the
+  // MIMIC, never a guard the player paid for and did not get.
+  onShot(shot) {
+    if (this.open()) {
+      this.dead = true;
+      return true;
+    }
+    if (spawnEnemy("mimicShot", this.lane, this.depth)) sfx("reflect");
+    this.phase = "open";
+    this.openTimer = 0;
+    return true;
+  }
+
+  // GDD 7. The kill site pays it; the entity never scores itself.
+  points() { return C.PTS_MIMIC; }
+}
+
+// ---------------------------------------------------------------------------
+// The MimicShot (GDD 14.6, 4.5 item 4; MI2) — the player's own shot, turned.
+// ---------------------------------------------------------------------------
+//
+// ⛔ A PARAMETER VARIANT OF THE WEAVER'S BOLT, AND THAT IS WHY IT SUBCLASSES
+// ONE (GDD 6.5, CS012 P2's rule). It overrides a speed reader and a draw and
+// inherits the whole contract: the rim band `killDepth`, `blocksClear` false,
+// `purgeable` true, `anchored` false, the self-termination the step after
+// depth 1, the declined shot, and the base's 0 points.
+//
+// ⛔ IT IS AN ENEMY, IN state.enemies (GDD 6.5's one array), and NOT a reversed
+// Shot in state.shots. A hostile entry in that array would need a new branch in
+// collideSkimmer(), which reads state.enemies only, and would count against the
+// PLAYER'S shot cap (06-shots.js). The bolt already answered this question.
+//
+// ⛔ "60% SPEED" IS A RATIO OF THE PLAYER'S SHOT (GDD 14.6): C.MIMIC_SHOT_RATIO
+// / C.SHOT_TIME = 1.1538 depth/s. Never heat-scaled (H2), and C.MIMIC_APEX is
+// bounded so every reflection gives at least C.SURGE_TELEGRAPH of flight to the
+// kill band (00-config.js has the arithmetic).
+//
+// ⛔ NOT SHOOTABLE, and that is the bolt's ⚠ SETTLED answer inherited rather
+// than re-decided: a reflected shot is DODGED, not answered. Rotating out of
+// the lane is the reply, and there is no second one. It briefly shields
+// whatever is behind it for the few steps of overlap, because collideShots()'s
+// `break` is unconditional — the bolt's shipped behaviour, and not a bug.
+//
+// ⛔ NOT A DIVE SURVIVOR (GDD 6.5's seventh wiring point): `blocksClear` false
+// and not `anchored` makes it the second entity that can be airborne when a
+// dive starts, and startDive() filters the board down to `anchored` survivors,
+// so the answer is the bolt's — no.
+class MimicShot extends WeaverBolt {
+  // `dir` is ignored: it travels the lane it was reflected in. The draw is
+  // still spent by spawnEnemy(), the bolt's case.
+  constructor(lane, depth) {
+    super(lane, depth);
+    this.sfxVoice = "mimicShot";   // C.SFX_KILL_PITCH.mimicShot, from tools/sfx-lab.html
+  }
+
+  // ⛔ The one override that makes it a variant (MI2). The bolt's update() is
+  // inherited unedited and reads this.
+  speed() { return C.MIMIC_SHOT_RATIO / C.SHOT_TIME; }
+
+  // ⛔ "Colour-shifted, larger" (GDD 14.6): the PLAYER'S STREAK, turned — drawn
+  // at C.MIMIC_SHOT_LEN x C.SHOT_LEN and C.MIMIC_SHOT_WIDTH x laneLineWidth, in
+  // C.MIMIC_COLOR. That it is the player's own mark is the whole read.
+  draw(ctx, well) {
+    drawMimicShot(ctx, well, this.lane, this.depth);
+  }
+
+  // ⛔ points() is the bolt's 0, by inheritance and on purpose: GDD 7 has no row
+  // for a reflected shot, and the only thing that destroys one is the Purge.
+}

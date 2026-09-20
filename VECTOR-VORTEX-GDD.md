@@ -695,6 +695,78 @@ heat-derived**: the seven accessors stay seven.
 
 There is no bench key for it (O16). Overdrive's START DEPTH 13 shows one.
 
+⛔ **Shipped, CS013 P4 — the Mimic, and ⚠ IT IS ON PROBATION.** `class Mimic
+extends Enemy` and `class MimicShot extends WeaverBolt` in
+`src/07-enemies-overdrive.js`, arriving at Overdrive L16 through
+`C.SPAWN_SCHEDULE_OVERDRIVE` (§8.1). §14.6 has what it does and what the
+probation is; the tables below are its contract and its numbers (plan MI1–MI3).
+
+| Field / method | Mimic | MimicShot |
+|---|---|---|
+| `lane`, `depth` | a position; climbs to `MIMIC_APEX` and **holds**, one lane, never hopping | a position, the bolt's — rim-ward, self-terminating the step after depth 1 |
+| `purgeable` / `blocksClear` | **`true`** (the Drifter's "Purge anywhere") / `true` | `true` / **`false`**, the bolt's |
+| `killDepth` | ⛔ **`null` at every depth** — its body never kills, and it never reaches the rim, so §17 items 13 and 14 are not owed (R10) | the rim band `1 − C.RIM_CONTACT_DEPTH` |
+| `anchored` / `aloft` | `false` / `false` — it lives **in** the well | `false` / `false` |
+| `sfxVoice` | `"mimic"`, `C.SFX_KILL_PITCH.mimic` **1.4** (sfx-lab candidate A) | `"mimicShot"`, **1.8** — the highest ordnance voice, under the Thorn's 2 |
+| `points()` / `onShot()` | `C.PTS_MIMIC` (400) / ⛔ **closed:** consumes, reflects once, opens. **Open:** dies, consumes | `0`, inherited / declines, never dies — the bolt's ⚠ SETTLED answer |
+
+| Property | Constant | Value |
+|---|---|---|
+| Climb rate | `MIMIC_CLIMB` | 0.16 depth/s × `climbMult()` — throat → apex ~2.5 s. `climbMult()`'s **seventh** call site |
+| The hold | `MIMIC_APEX` | 0.40 ⚠ — ⛔ **bounded**, see below |
+| The window | `MIMIC_OPEN_TIME` | 0.50 s ⚠ — "firing", and the one window a shot kills it in |
+| Reflected speed | `MIMIC_SHOT_RATIO` | 0.60 × (1 / `SHOT_TIME`) = **1.1538 depth/s** — §14.6's "60% speed" |
+| Silhouette width | `MIMIC_SIZE` | 0.72 lane widths ⚠ |
+| Stroke width, closed / open | `MIMIC_CLOSED_WIDTH` / `MIMIC_OPEN_WIDTH` | 0.70 / 1.60 × `laneLineWidth` |
+| Alpha, closed | `MIMIC_CLOSED_ALPHA` | 0.55 (open is 1) |
+| Reflected streak | `MIMIC_SHOT_LEN` / `MIMIC_SHOT_WIDTH` | 2 × `SHOT_LEN` / 2 × `laneLineWidth` ⚠ |
+| Colour | `MIMIC_COLOR` | `#D447FF` ⚠ — hue 286°, the centre of the 259.5° → 313.3° gap |
+
+**The cycle is a phase string and one up-counting timer**, the Weaver's, the
+Drifter's and the Surger's precedent — and it is **two states, not four**:
+*closed* — guarding; a shot is **consumed and sent back once** as one
+`MimicShot` up the Mimic's own lane, and it **opens**; *open* — "firing" for
+`MIMIC_OPEN_TIME`; a shot here **kills** it and is consumed; *closed*, forever.
+⛔ **At most one reflection per opening, and that is structural rather than a
+counter**: reflecting is the only thing that opens it, and an open Mimic
+reflects nothing. MEASURED (`test-cs013-p4.js`): under held fire in its lane a
+Mimic dies **inside** that window and costs **exactly one reflection**.
+
+⛔ **`MIMIC_APEX` IS BOUNDED, AND THE BOUND IS THE WHOLE FAIRNESS ARGUMENT.**
+A reflection must give the player at least `SURGE_TELEGRAPH` — the Surger's
+0.45 s "visible fuse" benchmark (§6.3) — before it is lethal:
+
+> `MIMIC_APEX ≤ (1 − RIM_CONTACT_DEPTH) − SURGE_TELEGRAPH × (MIMIC_SHOT_RATIO / SHOT_TIME)` = **0.4308**
+
+MEASURED (arithmetic): from 0.40 the flight to the band is **0.477 s**; 0.431
+is exactly 0.450 s and is the deepest legal apex. A reflection from **below**
+the apex only ever has longer. ⛔ It is asserted from the constants *and* on
+played boards, so raising the apex or the ratio turns the suite red rather than
+shipping a shot nobody can read. ⛔ **The other end is GDD §4.4**: a reflection
+slower than 0.30 depth/s would breach the respawn guarantee — pushed to
+`RESPAWN_PUSH_DEPTH` this one self-terminates at 0.390 s + one step, inside
+`RESPAWN_INVULN`, which is the bolt's argument and not a new one.
+
+**The open/closed read is §12's prompt, `SOLID = ARMOURED · OPEN = VULNERABLE`,
+and it is the Drifter's three channels** (§6.3): two polys — one drawn closed,
+one drawn open — at two stroke widths and two alphas, with the same headless
+gate (ratio ≥ 2, closed alpha ≤ 0.7), measured back off the real `glowStroke`
+calls. ⛔ **No global glow constant is touched.**
+
+⛔ **The reflected shot is the player's own streak, TURNED** — `drawShot()`'s
+drawing at `MIMIC_SHOT_LEN` × `SHOT_LEN` and `MIMIC_SHOT_WIDTH` ×
+`laneLineWidth`, in `MIMIC_COLOR`, leading rim-ward with its tail toward the
+throat. That it is the player's own mark is the whole read. It has **its own
+preallocated scratch points**, not `drawShot()`'s, because a shot and the
+reflection it caused are live in the same frame by construction.
+
+⚠ **AND THE WHOLE OF IT CUTS IN ONE ROW** (MI3; §14.6, §21 #6). Removing
+`{ level: 16, kind: "mimic" }` from `C.SPAWN_SCHEDULE_OVERDRIVE` removes every
+Mimic and every reflection from every board, in both modes, at every level —
+asserted by mutating that row out and playing an Overdrive session from Start
+Depth 16 (`test-cs013-p4.js`). There is no bench key for it (O16). Overdrive's
+START DEPTH 17 shows one.
+
 ### 6.5 Entity contract
 
 ⛔ Matching Orbital Overhaul: every entity is a **class** with `constructor` / `update(dt)` / `draw()` / `dead`. Kill by setting `dead = true`; remove with an end-of-frame `.filter()`. **Never splice mid-loop.**
@@ -709,7 +781,9 @@ There is no bench key for it (O16). Overdrive's START DEPTH 13 shows one.
 
 ⛔ **And the seventh point, answered for the Warden:** it is `blocksClear: true` and not `anchored`, so it is never on the board at a clear, `startDive()` drops it, and §5's hazard set is unchanged. The Purge is the other explicit answer: `purgeable: false`, because "killable only by Jump" means only by Jump.
 
-⛔ **Shipped, CS012 P2 — two enemy modules (Paul's O15).** `07-enemies.js` holds the base and the Classic roster; `07-enemies-overdrive.js`, concatenated directly after it and before `08-spawner.js`, holds Overdrive's (the Reaver, the Warden; CS013 P4's Mimic). Nothing moved out of the first. A new Overdrive enemy goes in the second, against the contract below, and enters through `C.SPAWN_SCHEDULE_OVERDRIVE`. ⛔ **A parameter variant may subclass its parent** — the Reaver extends the Vaulter, which gained two overridable readers (`hopDuration()`, `midClimbDir()`) and a `hopRate` of 1 — and that is not the base-class slope below: `Enemy` itself still carries no behaviour. ⛔ **Anything that is NOT a parameter variant extends the base**: CS013 P3's Warden writes its own climb, hop and hunt rather than inheriting a Vaulter's, because inheriting one would also inherit a park depth, a contact `killDepth` and an `onShot` that dies — and would make every closed `instanceof X.Vaulter` check match it.
+⛔ **Shipped, CS013 P4 — A PROJECTILE MAY BE A PARAMETER VARIANT TOO, AND IT IS THE SAME RULE** (§6.4, §14.6; plan MI2). `MimicShot extends WeaverBolt`: the bolt's speed became an **overridable reader**, `speed()`, and the variant overrides that and its draw and inherits the whole contract — the rim band, `blocksClear: false`, `purgeable: true`, the self-termination the step after depth 1, the declined shot and the base's 0 points. ⛔ **A Classic bolt is bit-identical across that change**, asserted as a step-by-step hash against a build carrying the pre-P4 line rather than by reading it (`test-cs013-p4.js`), and `C.WEAVER_BOLT_SPEED` is still never scaled by `climbMult()` (§4.4, H2). ⛔ **The seventh point, answered for both:** the `MimicShot` is the SECOND entity that can be airborne when a dive starts, and `startDive()` drops it — the bolt's answer, unchanged; the Mimic is `blocksClear: true` and not `anchored`, so it is never on the board at a clear. ⛔ **The Purge is the other explicit answer for both, and it is `true`**: the Drifter's "Purge anywhere" — a panic button a guard could refuse would not be one.
+
+⛔ **Shipped, CS012 P2 — two enemy modules (Paul's O15).** `07-enemies.js` holds the base and the Classic roster; `07-enemies-overdrive.js`, concatenated directly after it and before `08-spawner.js`, holds Overdrive's — the Reaver, the Warden, and CS013 P4's Mimic and its `MimicShot`. Nothing moved out of the first. A new Overdrive enemy goes in the second, against the contract below, and enters through `C.SPAWN_SCHEDULE_OVERDRIVE`. ⛔ **A parameter variant may subclass its parent** — the Reaver extends the Vaulter, which gained two overridable readers (`hopDuration()`, `midClimbDir()`) and a `hopRate` of 1 — and that is not the base-class slope below: `Enemy` itself still carries no behaviour. ⛔ **Anything that is NOT a parameter variant extends the base**: CS013 P3's Warden writes its own climb, hop and hunt rather than inheriting a Vaulter's, because inheriting one would also inherit a park depth, a contact `killDepth` and an `onShot` that dies — and would make every closed `instanceof X.Vaulter` check match it. ⛔ **CS013 P4's Mimic decides the same thing the same way and lands in the same place**: its lethality is a phase of its own cycle rather than a depth, so it extends the base — while its `MimicShot` extends the `WeaverBolt`, because a reflected shot IS a bolt at another speed (§6.4).
 
 **Shipped, CS003 P1–P3 — read this before adding an enemy.** `07-enemies.js` holds the base class `Enemy`, and ⛔ **it is fields and signatures only: no movement, no AI, no draw code.** It exists so the ninth enemy cannot silently forget a field; the value is the field list, not the inheritance. ⚠ **That is a slope.** The first time a climb rate or a hop timer lands in the base, five enemies that do not climb inherit one and the bug is invisible until one of them is given a reason to read it. If the base ever acquires behaviour, that is the signal to flatten it back to independent classes — not to add a second field to switch the behaviour off.
 
@@ -723,7 +797,7 @@ There is no bench key for it (O16). Overdrive's START DEPTH 13 shows one.
 | `blocksClear` | Whether it must be gone before the well counts as clear. The Thorn is `false`, and that is *why* a Thorn is still standing during the Dive (§5) rather than an oversight in the clear check. |
 | `killDepth` | §4.5's contact rule as a number: contact kills when `depth >= killDepth` and the lanes match. `null` means contact never kills — the Weaver's body. ⛔ **Every enemy that has a number uses the same one, `1 - C.RIM_CONTACT_DEPTH`, the Drifter included** — there is no term here for where the Skimmer is, so a `killDepth` of `0` would be lethal from the throat rather than "lethal on contact" (§4.5, CS005 P2). One comparison covers three of the five death conditions, which is why it is a field. ⛔ **The PARK depth is the same expression** (CS008 P1, §6.1): every climb stops at `1 - C.RIM_CONTACT_DEPTH`, so an enemy parks exactly on the band where it becomes lethal and where a fire-tick shot can reach it — written as the expression and never as `this.killDepth`, because of the mutation below. ⛔ **CS005 P3's Surger is the first entity in the roster that MUTATES this field** — `0` for its `SURGE_DISCHARGE` window and the rim band either side of it — which is how §4.5 item 3 is expressed with no extra field and no branch in the collision pass. That is a *cycle phase written into an existing field*, not a new kind of value, and the restore is as load-bearing as the mutation. |
 | `anchored` | ⛔ **What `depth` MEANS on this entity, not whether it moves.** `false` — the default, and every enemy but one — means `depth` is a **position**. `true` means `depth` is a **length**: the tip of an extent rooted at the throat. A stationary enemy whose `depth` is still a position is `false`; anything that ever reads `depth` as a length sets it true. The Thorn is the roster's only `true`. ⛔ **Its one reader is `respawnSkimmer()`**, which skips anchored entities: §4.4's rim push clamps `depth` down to 0.55, and on a length that is not a push but a free chip nobody earned, applied silently on every player death in the one place nobody would look. ⚠ **This is NOT a narrowing of §4.4's SETTLED clamp.** The band is untouched — everything above `RESPAWN_PUSH_DEPTH` still comes down to it, in every lane. The field says *which entities the clamp means anything for*, not *how far down it reaches*. See `RATIONALE.md#thorn-depth`. |
-| `sfxVoice` | ⛔ **Which kill sound it makes** (CS009 P5, Paul's A9): a string key into `C.SFX_KILL_PITCH`, read by the **four** kill sites on the false → true `dead` edge and handed to `sfx("kill", voice)`. The kill site reads the field, never a class name. The base is `null`, and each of the seven Classic roster classes sets its own (`vaulter`, `carrier`, `weaver`, `weaverBolt`, `thorn`, `drifter`, `surger`); CS012 P2's Reaver is the eighth voice, `reaver`, and CS013 P3's Warden the ninth, `warden` (0.5, the lowest on the roster), each pitch picked in `tools/sfx-lab.html`'s KILL PITCH table. DATA, not behaviour, so it does not tip the base down the slope above. |
+| `sfxVoice` | ⛔ **Which kill sound it makes** (CS009 P5, Paul's A9): a string key into `C.SFX_KILL_PITCH`, read by the **four** kill sites on the false → true `dead` edge and handed to `sfx("kill", voice)`. The kill site reads the field, never a class name. The base is `null`, and each of the seven Classic roster classes sets its own (`vaulter`, `carrier`, `weaver`, `weaverBolt`, `thorn`, `drifter`, `surger`); CS012 P2's Reaver is the eighth voice, `reaver`, CS013 P3's Warden the ninth, `warden` (0.5, the lowest on the roster), and CS013 P4's Mimic and its reflected shot the tenth and eleventh, `mimic` (1.4) and `mimicShot` (1.8), each pitch picked in `tools/sfx-lab.html`'s KILL PITCH table. DATA, not behaviour, so it does not tip the base down the slope above. |
 
 **The four methods:** `update(dt, well, state)`, `draw(ctx, well)`, `onShot(shot)`, and — CS008 P2 — `points()`. ⛔ **`onShot` returns whether the shot is CONSUMED**, and the *enemy* decides what a hit does — the collision pass only asks. `true` retires the shot; `false` lets it fly on to whatever is behind. That is what keeps the Thorn (chip, consume) and an armoured entity (no damage, do not consume) out of the collision pass as special cases. The base returns `false` deliberately, so a subclass that forgets to override it lets shots through — visible — rather than eating them silently. ⛔ **Since CS008 P1b `onShot` is asked by §4.5's rim sweep as well as by shots** — `collideSkimmer()` calls `onShot(null)` on a rim enemy a firing Skimmer touches, and reads `dead` afterwards — which is how armour refuses the sweep and a Carrier splits under it with no branch in the pass. ⚠ The argument is `null` on that path and the return value is ignored: no `onShot` in the build reads its argument (measured), and one that did would throw there. ⛔ **`points()` is what destroying the entity is worth (§7)**, read by the **kill site** on the false → true `dead` transition and handed to `addScore()`. The entity never scores itself on death. The base returns `0`, the same default-safe shape as `onShot`'s `false`. The Thorn's is `0` too, because it pays per chip from inside its own `onShot()`: a hit is what the enemy decides.
 
@@ -793,7 +867,9 @@ Overdrive adds a combo multiplier — §14.4.
 | Vaulter / Carrier / Weaver / Surger | `PTS_VAULTER` / `PTS_CARRIER` / `PTS_WEAVER` / `PTS_SURGER`. A Carrier pays for its hull; its children pay for themselves when they die |
 | Drifter | `PTS_DRIFTER[min(len−1, floor(depth × len))]`. **Equal bands, rim pays most**: depth < ⅓ → 250, < ⅔ → 500, else 750. A boundary belongs to the band above it. ⛔ The band count is the array's length, never a literal 3 |
 | Thorn | `0`. It pays `PTS_THORN` per chip, from its own `onShot()`, the killing chip included |
-| Weaver bolt | `0`, inherited |
+| Reaver *(OD)* / Warden *(OD)* | `PTS_REAVER` / `PTS_WARDEN` |
+| Mimic *(OD)* | `PTS_MIMIC`. ⚠ On probation (§14.6) — cut, and nothing else in this table moves |
+| Weaver bolt, MimicShot *(OD)* | `0`, inherited. Neither is on §7's table, and only the Purge destroys one |
 
 - ⛔ **FOUR kill sites, and no fifth.** `collideShots()`, the rim sweep in `collideSkimmer()` (§4.5, a shot kill that never had to fly), **both** Purge uses (normal points, P2s), and — ⛔ **shipped, CS013 P3** — `jumpStrike()`, where an airborne craft in an aloft Warden's lane kills it (§6.4, §14.2, §14.6; plan W4). Each awards on the false → true `dead` transition, beside `tally.kills`. ⚠ **This line read "three kill sites, and no fourth" until CS013 P3**, and the fourth is here because the Warden is killable by nothing else: no shot, no sweep and no Purge reaches something above the well, so a site was the only place its 500 could be paid. ⛔ **Four SITES, five LINES** — the Purge has two of them.
 - ⛔ **The Dive's termination kill pays nothing** (§5). It is not the player destroying a Thorn.
@@ -892,11 +968,12 @@ Heat modulates spawn interval (floored), concurrent enemy cap, climb speed, vaul
 | 6–8 | + `reaver` | 4 | 1 |
 | 9–10 | + `drifter` | 5 | 1 |
 | 11–12 | + **`warden`** | 6 | 1 |
-| 13–17 | + `surger` | 7 | 1 |
-| 18–22 | + `carrierDrifter` | 8 | 1 |
-| 23+ | + `carrierSurger` | 9 | 1 |
+| 13–15 | + `surger` | 7 | 1 |
+| 16–17 | + **`mimic`** | 8 | 1 |
+| 18–22 | + `carrierDrifter` | 9 | 1 |
+| 23+ | + `carrierSurger` | 10 | 1 |
 
-⛔ The no-draw rule holds in both modes: Overdrive's L1–2 is one entry too (`test-cs012-p2.js`, counted). ⛔ **Shipped, CS013 P3 — the Warden's row at 11 is the table's second**, and the uniform pick then gives the Reaver 1/4 of releases at L6–8, 1/5 at L9–10, 1/6 at L11–12, 1/7 at L13–17, 1/8 at L18–22 and 1/9 from L23, with the Warden taking the same share from 11. ⛔ **`C.SPAWN_SCHEDULE` is untouched: a Classic set is still element for element the table above.** CS013 P4 adds the Mimic (16) to this table and nothing else.
+⛔ The no-draw rule holds in both modes: Overdrive's L1–2 is one entry too (`test-cs012-p2.js`, counted). ⛔ **Shipped, CS013 P3 — the Warden's row at 11** and **CS013 P4 — the Mimic's at 16**, the table's second and third. The uniform pick then gives the Reaver 1/4 of releases at L6–8, 1/5 at L9–10, 1/6 at L11–12, 1/7 at L13–15, 1/8 at L16–17, 1/9 at L18–22 and 1/10 from L23, with the Warden taking the same share from 11 and the Mimic from 16. ⛔ **`C.SPAWN_SCHEDULE` is untouched: a Classic set is still element for element the table above.** ⛔ **`mimicShot` is not a row either**, for `weaverBolt`'s reason: it enters through `Mimic.onShot()`, and a row for it would put a reflected shot in the throat that nobody reflected. ⚠ **The Mimic's row is its whole probation** (§14.6, §21 #6): delete that one line and no Mimic and no reflection can reach any board. **Overdrive's table is complete at three rows.**
 
 Compressed relative to the original (Pulsars at 17, Pulsar Tankers at 41) because our tuned ceiling is ~35–40, not ~99. A threat introduced past the window most players reach does not exist.
 
@@ -1295,7 +1372,7 @@ In the struck column, the balance between layers held within 0.5 dB of P2. ✅ *
 
 Every entry point is `if (!AudioSys.ctx) return;`-guarded, headless-safe.
 
-**Shipped, CS009 P4 — the player and the recipes.** A sound is a **recipe**, plain data in `C.SFX`: one or two oscillators or noise, a glide, an optional low- or high-pass filter with a sweep, an attack/hold/release envelope and a peak gain. `createSfxPlayer()` (`16-audio-engine.js`, kit-audio 0.2.0) plays one with `play(recipe, { pitch })`, and holds one with `hold(recipe)`, whose `set(t01)` moves its pitch and whose `stop()` releases it. That held voice is the Surger's charge tone. `C.SFX` has one recipe for each of the 21 events in `PLANNED-FEATURES-CS009.md` §7, and no spawn cues (Paul's A8). The kill sound is one recipe, and `C.SFX_KILL_PITCH` gives each of the seven `sfxVoice` values its own pitch (A9). ⛔ **Every recipe is ported verbatim from `tools/sfx-lab.html`**, which offers 2–3 candidates per event. The build ships the picked one (A7). ✅ **Paul picked all 21 on 2026-09-16**, and the lab now lists each pick as its candidate A. ✅ **`collect` (CS013 P1) is picked too — Paul, 2026-09-19, candidate A as rendered**, with the lab's two alternates left beside it. ✅ **`wardBreak` (CS013 P2) is picked too — Paul, 2026-09-19, candidate B, "noise shatter"**: filtered noise rather than the two squares, which is the shell breaking rather than a tone sounding. Ported verbatim and now the lab's candidate A, with the two he did not pick beside it ("square pair crack", "triangle chime down") and a context play of collect → the hit it absorbs. The lab plays `surgeCharge` as a held voice driven 0 → 1 over `SURGE_TELEGRAPH` with `pulse` playing, and `purgeWeak` beside `purge`. `surgeCharge` peaks at 0.45, above `pulse`'s loudest summed step (0.434, MEASURED at P4). Paul's pick left it unchanged, and P5's headroom gate passed it.
+**Shipped, CS009 P4 — the player and the recipes.** A sound is a **recipe**, plain data in `C.SFX`: one or two oscillators or noise, a glide, an optional low- or high-pass filter with a sweep, an attack/hold/release envelope and a peak gain. `createSfxPlayer()` (`16-audio-engine.js`, kit-audio 0.2.0) plays one with `play(recipe, { pitch })`, and holds one with `hold(recipe)`, whose `set(t01)` moves its pitch and whose `stop()` releases it. That held voice is the Surger's charge tone. `C.SFX` has one recipe for each of the 21 events in `PLANNED-FEATURES-CS009.md` §7, and no spawn cues (Paul's A8). The kill sound is one recipe, and `C.SFX_KILL_PITCH` gives each `sfxVoice` value its own pitch (A9) — the Classic seven, plus `reaver` (CS012 P2), `warden` (CS013 P3) and `mimic` / `mimicShot` (CS013 P4), eleven in all. ⛔ **Every recipe is ported verbatim from `tools/sfx-lab.html`**, which offers 2–3 candidates per event. The build ships the picked one (A7). ✅ **Paul picked all 21 on 2026-09-16**, and the lab now lists each pick as its candidate A. ✅ **`collect` (CS013 P1) is picked too — Paul, 2026-09-19, candidate A as rendered**, with the lab's two alternates left beside it. ✅ **`wardBreak` (CS013 P2) is picked too — Paul, 2026-09-19, candidate B, "noise shatter"**: filtered noise rather than the two squares, which is the shell breaking rather than a tone sounding. Ported verbatim and now the lab's candidate A, with the two he did not pick beside it ("square pair crack", "triangle chime down") and a context play of collect → the hit it absorbs. The lab plays `surgeCharge` as a held voice driven 0 → 1 over `SURGE_TELEGRAPH` with `pulse` playing, and `purgeWeak` beside `purge`. `surgeCharge` peaks at 0.45, above `pulse`'s loudest summed step (0.434, MEASURED at P4). Paul's pick left it unchanged, and P5's headroom gate passed it.
 
 **Shipped, CS009 P5 — the seats.** Every seat makes one call, `sfx(name, voice)` (`19-sfx.js`). It returns at once with no context, reads only `C`, writes no `state`, and draws nothing from the run's stream. There are 23 call sites (MEASURED, a grep of `src/`). P6's audio-on soak is the proof that a run's hash does not move. The seats (`PLANNED-FEATURES-CS009.md` §7):
 
@@ -1313,6 +1390,7 @@ Every entry point is `if (!AudioSys.ctx) return;`-guarded, headless-safe.
 | `menuMove` / `menuConfirm` / `menuBack` | `Game.update()`'s menu step: a moved cursor, any action, the screen's `back` action. An entry step is silent. An adjusting row's value step is `menuMove` |
 | `collect` *(CS013 P1)* | ⛔ **ONE seat, `collectToken()` in `10-powerups.js`**: a token taken, one recipe for all five kinds (T11). Overdrive only, since only Overdrive drops tokens. No drop cue and no expiry cue; it does not dip the music |
 | `wardBreak` *(CS013 P2)* | ⛔ **ONE seat, `killSkimmer()` in `09-collision.js`**, below the invulnerability guard, where the Ward absorbs a hit (§4.4, T9). It is the sound of *not* dying, so it must never be mistaken for `death` or `lifeLost`; sfx-lab candidate A, and the only seat in that function that is not `death` / `gameOver`. Never in Classic |
+| `reflect` *(CS013 P4)* | ⛔ **ONE seat, `Mimic.onShot()` in `07-enemies-overdrive.js`**, and it sounds **only for a reflection `spawnEnemy()` did not refuse** — `Weaver.fire()`'s rule, and on a hostile shot coming up your lane a sound for nothing is the worst possible lie (§1.1 P2). sfx-lab candidate A, "square + triangle ping": it RISES where `fire` falls, so it cannot be mistaken for the shot that caused it. Never in Classic. ⚠ It goes with the Mimic if the probation cuts it (§14.6) |
 | `comboLost` *(CS012 P4)* | ⛔ **ONE seat, `comboDrop()` in `12-scoring.js`**, which is the one place the multiplier falls — so it sounds **once per FALL** rather than once per cause. A lapsed window and a death both come through it, and a fall that would not move the multiplier (a death at ×1) is silent. Never in Classic, where all four combo functions are no-ops |
 
 ⛔ **The charge tone is held, not played.** `audioFrame()` calls `reconcileSurgeTones(state.enemies, live)` once per frame. Each entity in `telegraph` that has a `chargeTip()` gets one voice, keyed in a `Map` in `19-sfx.js`, never a field on the entity, and `set(chargeTip())`. A voice stops when its Surger leaves `telegraph`, dies or is filtered. `live` comes from `Game.frame()`, which counts its play steps. If the frame ends frozen or off play (pause, any menu, game over, the death freeze), every voice stops. If the run is live but no step ran (a display faster than 60 Hz), the voices hold. Otherwise they follow the fuse.
@@ -1496,6 +1574,12 @@ The Overdrive Dive becomes a short ring corridor.
 ⚠ **Peripheral visibility is a SKIPPED PLAYTEST** (W6, K9): MEASURED over 233 lane centres, a 0.06 lift leaves nothing off-screen and puts 11 of them inside the combo readout against 10 at the rim. Its colour is `#477EFF`, hue 222° — the centre of the palette's widest gap — and ⚠ provisional with the rest of it.
 
 **Mimic** (L16+) — reflects shots; vulnerable only while firing. **Probation.** Reflected shots that kill you are a hard sell: players read their own bullets as safe and reversing that betrays a deep expectation. Reflected shots are colour-shifted, larger, and 60% speed. Build it, playtest it, **cut it without ceremony if it reads as cheap.**
+
+⚠ **Shipped, CS013 P4, AND STILL ON PROBATION** (§6.4 has the contract and the numbers; plan MI1–MI3). **"Vulnerable only while firing" is REFLECT-THEN-OPEN** (MI1): closed it is guarding, and a shot that reaches it is **consumed and sent back once** — one `MimicShot` up its own lane — which **opens** it for `MIMIC_OPEN_TIME` 0.5 s; a shot while open **kills** it. ⛔ **At most one reflection per opening**, and that is structural rather than a counter: reflecting is the only thing that opens it, and an open Mimic reflects nothing. MEASURED: held fire meets a Mimic fifteen times a second, so **a Mimic costs exactly one reflection** and dies inside the window it opened. A Purge kills it in either state.
+
+**"Reflected shots are colour-shifted, larger, and 60% speed"** is `class MimicShot extends WeaverBolt` (MI2) — the bolt's whole contract, with an overridable `speed()` reader the variant overrides at `MIMIC_SHOT_RATIO / SHOT_TIME` = 1.1538 depth/s, and the **player's own streak, turned**, at 2 × `SHOT_LEN` and 2 × width in `MIMIC_COLOR`. ⛔ It is not shootable — dodged, not answered, the bolt's ⚠ SETTLED answer — and ⛔ **`MIMIC_APEX` is bounded so every reflection gives at least `SURGE_TELEGRAPH` of flight before it is lethal** (§6.4's arithmetic, asserted from the constants and on played boards). That bound is this section's "hard sell" answered in arithmetic: a reflection the player cannot read would be exactly the cheap death the probation is about.
+
+⚠ **"Cut it without ceremony" IS ONE ROW** (MI3). `{ level: 16, kind: "mimic" }` in `C.SPAWN_SCHEDULE_OVERDRIVE` is the only thing that puts one on a board; deleting it removes every Mimic and every reflection from every board in both modes, and `test-cs013-p4.js` proves it by mutating that row out and playing an Overdrive session from Start Depth 16. ⛔ The verdict is CS017's (§21 #6), and the ask — **does a reflected shot read as cheap?** — is in `SKIPPED-PLAYTESTS.md`, because Paul does no playtests. Its colour is `#D447FF`, hue 286°, the centre of the palette's remaining 54° gap, and ⚠ provisional with the rest of it.
 
 ### 14.7 Level skip — **cut**
 
@@ -1871,8 +1955,11 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 - ✅ **Met — Jump with cooldown and an airborne state on three channels.** O6's three phases to the step, with the cooldown counting from LANDING (2.30 s cycle, 39.1 % airborne against a Surger's 2.78–3.08 s); airborne immunity against all seven contact killers and the rim sweep, mutation-checked; no shot airborne or recovering; the rising-edge takeoff and the re-latch across a death. The three channels ship: the draw-only lift (`JUMP_LIFT` 0 leaves the hash identical), the stroked rim shadow, and kit-audio **0.4.0**'s high-pass (`test-cs012-p5.js`). Played at P6: **274 takeoffs, 509 presses refused by the cooldown, zero contact deaths and zero shots on a wholly airborne step**, over 121,840 front-door frames, and the high-pass automated on exactly the 548 frames `jumpAirborne()` flipped. ⚠ **"Unmistakable" is a hardware judgment and a skipped playtest** — the suite asserts the three channels exist and where they are, never how they read.
 - ✅ **Met — the combo builds, decays, displays and feeds the director.** O3's build (+0.5 per 4 kills), lapse (one step per window, down to ×1, ⛔ the kill count kept) and death (×1 at once), O5's Dive hold, the half-step lattice and a `peak` that never falls, staged step by step and played (`test-cs012-p4.js`, `-p6.js`). It displays centre-top with a depletion ring, ⛔ absent at ×1 and in Classic, and clears the Fan well's throat zone by 6.29 px. It feeds the director as §11.4's literal formula. ⚠ **`C.COMBO_KILLS_PER_STEP` 4 was MEASURED on bots, not on a person** (§14.4) and is a skipped playtest.
 - ✅ **Met — the Reaver is correct.** The eight contract fields, the hop at 1.6× with the climb untouched, the mid-climb hunt, ⛔ the respawn guarantee re-proved with a live Reaver at L6, L23 and L99, §17 item 3's wall bound and item 13's 24/24 rim arrival (`test-cs012-p2.js`). Played at P6: 48 killed over 6,619 entity-steps, never below its schedule level, never outside `[0, lanes−1]` on an open well, and ⛔ **never once in a Classic session** — asserted on both Classic sessions, and red at 19,998 entity-steps with the mode dropped from `eligibleKinds()`.
-- ✗ **CS013's — five tokens, the Warden and the Mimic.** CS013 P1 shipped the drop, the life on the board, Bounty and Recharge; Lance, Spread and Ward are P2's. `PTS_WARDEN` and `PTS_MIMIC` are still unread.
+- ✗ **CS013's — five tokens and the Warden.** CS013 P1 shipped the drop, the life on the board, Bounty and Recharge; Lance, Spread and Ward are P2's; the Warden is P3's. The row closes at CS013 P5.
 - ✗ **CS014's — the ring-flight Dive.** Overdrive dives with the Classic thorn-dodge; `C.DIVE_TIME_OD` and `DIVE_RINGS_MAX` are unread.
+
+⛔ **Overdrive at CS013 P4 (2026-09-20).** Items unchanged since the CS012 close keep the verdicts above.
+- ✅ **Met, since CS013 P4 — the Mimic is present and flagged for playtest.** `class Mimic extends Enemy` and `class MimicShot extends WeaverBolt` (§6.4, §14.6), at Overdrive L16 through `C.SPAWN_SCHEDULE_OVERDRIVE`'s third row. The cycle is asserted staged and played: closed → one reflection and open, open → dead, the window closing, a Purge in either state, a Lance shot reflected and consumed, a Spread side shot reflecting into the Mimic's own lane, and ⛔ **under held fire a Mimic costs exactly one reflection and dies inside its own window**. The reflected shot's speed, its 0 points, its self-termination, its decline of every shot and its absence from a dive are asserted with it, and ⛔ **`MIMIC_APEX`'s bound holds from the constants and on played boards: every reflection's flight to the kill band is at least `SURGE_TELEGRAPH` 0.45 s** (MEASURED over 12,000 played steps from Start Depth 16). §17 item 3 holds for both by `Object.is` on every step over all sixteen wells. `PTS_MIMIC` has its first reader. ⚠ **"Flagged for playtest" is the point of the row**: the probation is live, the ask is in `SKIPPED-PLAYTESTS.md`, and ⛔ **MI3's cut is proved** — with that one row mutated out a played Overdrive session from Start Depth 16 releases zero Mimics and zero reflections, and a Classic run at the same Start Depth hashes identically to that build for 5,000 steps. The verdict is CS017's (§21 #6).
 
 **Audio** — per-frame lookahead scheduling, no `setTimeout`/`setInterval` for notes, no audible drift over 10 minutes; flagship tracks ≥ 36 bars (A→B→C) before loop (≥ 90 s until Paul's 2026-09-16 tempo call, §11.3); ⛔ **every gated layer passes the solo audition**; tier changes only on bar boundaries; intensity rises ~0.4 s and falls ~2.5 s; filter sweep audible end to end; Surger charge audible over music at every tier, verified by ear on hardware; volume sliders persist per profile.
 

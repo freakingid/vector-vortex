@@ -238,6 +238,69 @@ const C = {
   // hue 222°, and clear of C.TOKEN_COLOR's warm 56° (O16, T10).
   WARDEN_COLOR:         "#477EFF",  // ⚠ provisional, the same standing as the palette
 
+  // ---- Mimic (GDD 6.4, 14.6; CS013 P4) — Overdrive only, ON PROBATION -----
+  // "Reflects shots; vulnerable only while firing" (GDD 14.6), and MI1's answer
+  // to what that cycle is: ⛔ REFLECT-THEN-OPEN. Closed it is guarding — a shot
+  // is consumed and SENT BACK ONCE as a MimicShot — and that reflection OPENS
+  // it for MIMIC_OPEN_TIME, which is "firing" and is the window a second shot
+  // kills it in (07-enemies-overdrive.js).
+  //
+  // ⚠ ON PROBATION (GDD 14.6, 19, 21 #6): the verdict is CS017's, and
+  // ⛔ ONE SCHEDULE ROW IS THE WHOLE CUT (MI3) — remove
+  // `{ level: 16, kind: "mimic" }` from SPAWN_SCHEDULE_OVERDRIVE below and no
+  // Mimic and no MimicShot can reach a board.
+  //
+  // ⛔ THE CLIMB IS THE ONLY THING HEAT TOUCHES (R6, R7). `MIMIC_CLIMB *
+  // climbMult()` is climbMult()'s SEVENTH call site (test-cs007-p2.js); every
+  // other constant here is FLAT, and there is no eighth heat accessor. ⛔ Its
+  // climb is NOT a contact climb — `killDepth` is null at every depth — so
+  // C.CLIMB_MAX_BASE and GDD 4.4's respawn guarantee do not move (R6).
+  MIMIC_CLIMB:          0.16,   // depth/s, throat -> the apex ~2.5 s. ⚠ level-1 base
+  // ⛔ THE APEX IS BOUNDED, AND THE BOUND IS THE WHOLE FAIRNESS ARGUMENT (MI2).
+  // A reflected shot travels MIMIC_SHOT_RATIO / SHOT_TIME = 1.1538 depth/s
+  // toward the rim, and the player must get at least C.SURGE_TELEGRAPH of it —
+  // the Surger's 0.45 s "visible fuse" benchmark (GDD 6.3) — before it reaches
+  // the kill band. So:
+  //
+  //   ⛔ MIMIC_APEX <= (1 - RIM_CONTACT_DEPTH) - SURGE_TELEGRAPH * (MIMIC_SHOT_RATIO / SHOT_TIME)
+  //                  =  0.95 - 0.45 * 1.15385  =  0.4308
+  //
+  // MEASURED (arithmetic, plan MI2): from 0.40 the flight to the band is
+  // 0.477 s; 0.431 is exactly 0.450 s and is the deepest legal apex. A Mimic
+  // reflecting BELOW its apex — one still climbing — only ever has longer.
+  // ⛔ test-cs013-p4.js asserts this from the constants, so raising the apex or
+  // the ratio turns the suite red rather than shipping a shot nobody can read.
+  MIMIC_APEX:           0.40,   // ⚠ holds here, one lane, never hopping
+  MIMIC_OPEN_TIME:      0.50,   // s open ("firing") after a reflection ⚠. ⛔ flat
+  // GDD 14.6's "60% speed", as a RATIO of the player's own shot rather than a
+  // second speed constant: 0.6 / SHOT_TIME. ⛔ Never heat-scaled (H2) — and the
+  // bolt's argument applies (GDD 4.4): pushed to RESPAWN_PUSH_DEPTH it reaches
+  // the band at 0.347 s and self-terminates at 0.390 s + one step, both inside
+  // RESPAWN_INVULN, so it is safe by self-termination. ⛔ A reflected shot
+  // SLOWER than 0.30 depth/s would breach that, which is the other end of the
+  // bound above.
+  MIMIC_SHOT_RATIO:     0.60,
+  // -- the look (MI1, MI3) — ⚠ provisional, the same standing as the palette --
+  // ⛔ TWO POLYS AND THREE CHANNELS, THE DRIFTER'S (GDD 6.3, 12):
+  // SOLID = ARMOURED · OPEN = VULNERABLE. Closed is a compact shape drawn
+  // CLOSED at a narrow stroke and a dim alpha; open is a splayed one drawn OPEN
+  // at a wide stroke and full alpha. ⛔ test-cs013-p4.js is the headless gate,
+  // the Drifter's: the width ratio is at least 2 and the closed alpha at most
+  // 0.7, measured back off the real glowStroke calls.
+  MIMIC_SIZE:           0.72,   // lane widths spanned by the OPEN silhouette
+  MIMIC_CLOSED_WIDTH:   0.70,   // x laneLineWidth — armoured: a harder, thinner edge
+  MIMIC_OPEN_WIDTH:     1.60,   // x laneLineWidth — vulnerable: bloomed open
+  MIMIC_CLOSED_ALPHA:   0.55,   // and dim; open is 1
+  // "Colour-shifted, larger" (GDD 14.6): a reflected shot is the PLAYER'S OWN
+  // STREAK, turned — drawn at these multiples of C.SHOT_LEN and laneLineWidth,
+  // in the Mimic's colour. Draw-time only; MIMIC_SHOT_RATIO is the speed.
+  MIMIC_SHOT_LEN:       2.00,   // x SHOT_LEN
+  MIMIC_SHOT_WIDTH:     2.00,   // x laneLineWidth
+  // The centre of the 259.5° -> 313.3° gap (54°), hue 286° — clear of the
+  // eight enemy colours, of C.WARDEN_COLOR's 222° and of C.TOKEN_COLOR's warm
+  // 56° (MI3, O16, T10). Its shots are this colour too.
+  MIMIC_COLOR:          "#D447FF",  // ⚠ provisional, the same standing as the palette
+
   // ---- Carrier (GDD 6.1, 6.2) ---------------------------------------------
   // ⛔ CARRIER_SIZE and CARRIER_GLYPH_SIZE are LANE widths and nothing else.
   // entityPoints() (14-render-entities.js) scales a poly's `l` by size/2 and
@@ -506,10 +569,15 @@ const C = {
   // Classic rows in level order, a Classic row first at an equal level, for an
   // Overdrive run only. The same rules hold: cumulative, sorted, uniform pick, no
   // weights, and a one-entry set spends no draw in either mode. ⛔ CS013 P3 added
-  // the Warden at 11; the Mimic at 16 is P4's.
+  // the Warden at 11 and P4 the Mimic at 16. ⛔ `mimicShot` is NOT a row, for
+  // `weaverBolt`'s reason: it enters through Mimic.onShot(), and a row for one
+  // would put a reflected shot in the throat that nobody reflected.
+  // ⚠ THE MIMIC'S ROW IS THE WHOLE OF ITS PROBATION (MI3, GDD 14.6, 21 #6):
+  // delete that one line and no Mimic and no MimicShot can reach any board.
   SPAWN_SCHEDULE_OVERDRIVE: [
     { level:  6, kind: "reaver" },
     { level: 11, kind: "warden" },
+    { level: 16, kind: "mimic" },
   ],
 
   // ---- Collision (GDD 4.5) ------------------------------------------------
@@ -674,9 +742,10 @@ const C = {
     comboLost:      { osc: [{ type: "sawtooth", f: 587, to: 220 }, { type: "sawtooth", f: 392, to: 147 }], glide: 0.22, filter: { type: "lowpass", f: 3200, to: 700 }, sweep: 0.22, atk: 0.003, hold: 0.04, rel: 0.22, gain: 0.13 },
     collect:        { osc: [{ type: "triangle", f: 1320, to: 2640 }, { type: "square", f: 1980, to: 3960 }], glide: 0.06, filter: { type: "lowpass", f: 6000 }, atk: 0.002, hold: 0.03, rel: 0.14, gain: 0.1 },
     wardBreak:      { noise: true, filter: { type: "highpass", f: 800, to: 3000 }, sweep: 0.12, atk: 0.001, hold: 0.03, rel: 0.18, gain: 0.26 },
+    reflect:        { osc: [{ type: "square", f: 1760, to: 2640 }, { type: "triangle", f: 1175, to: 1760 }], glide: 0.05, filter: { type: "highpass", f: 600, to: 2200 }, sweep: 0.09, atk: 0.002, hold: 0.02, rel: 0.12, gain: 0.16 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
-  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5 },
+  SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5, mimic: 1.4, mimicShot: 1.8 },
 
   // ---- Overdrive (GDD 14) -------------------------------------------------
   // ⛔ THE TOKENS (GDD 14.1; CS013 P1, T1–T6, T10; 10-powerups.js). ⚠ Every

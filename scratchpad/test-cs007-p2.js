@@ -473,13 +473,13 @@ for (const [name, fn] of OWNED) {
 // constants and are MULTIPLIED by climbMult(), because GDD §8 says "climb
 // speed", singular. So the claim is not "named in one place" but "never named
 // without the multiplier".
-// ⛔ CS013 P3 appended WARDEN_CLIMB in place (R6; GDD §8's "climb speed",
-// singular): the Warden's climb takes the same one multiplier every other
-// entity climb takes, so the count below rose with the list rather than the
-// claim changing. It is NOT a contact climb — its killDepth is null the whole
-// way up — so §1's CONTACT_CLIMBS and C.CLIMB_MAX_BASE did not move.
+// ⛔ CS013 P3 appended WARDEN_CLIMB and P4 MIMIC_CLIMB, both in place (R6;
+// GDD §8's "climb speed", singular): each takes the same one multiplier every
+// other entity climb takes, so the count below rose with the list rather than
+// the claim changing. NEITHER is a contact climb — both killDepths are null the
+// whole way up — so §1's CONTACT_CLIMBS and C.CLIMB_MAX_BASE did not move.
 const CLIMBS = ["VAULT_CLIMB", "CARRIER_CLIMB", "WEAVER_CLIMB", "DRIFT_CLIMB", "SURGE_CLIMB",
-                "WARDEN_CLIMB"];
+                "WARDEN_CLIMB", "MIMIC_CLIMB"];
 const climbBody = bodyOf(X.climbMult);
 const entities = code.split(climbBody).join("");   // climbMult() itself names none of them
 for (const k of CLIMBS) {
