@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.11 · Changeset: **CS014 closed 2026-09-20** · next: **CS015 planning** ·
+Version: 0.0.11 · Changeset: **CS015 planned 2026-09-20** · next: **CS015 P1** ·
 Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 · Tokens: 5/5 effects
 
 ## Phase ledger
@@ -109,6 +109,17 @@ them is in `log/CS0##.md`, not here.
 - ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP**; a settings save runs inside
   `update()` on a menu step, and `levelRecord(mode)` reads storage on every
   call. An achievement evaluator that reads or writes per step is the same trap.
+- ⛔ **A DEFECT IN GDD §0: THERE IS NO ROW FOR AN ACHIEVEMENTS SCREEN** (found
+  by CS015 planning, 2026-09-20; recorded rather than worked around, per
+  `CLAUDE.md`'s own rule). MEASURED at `b92da55`: **§10.5's screen table has no
+  ACHIEVEMENTS row**, §0's §10.5 row enumerates every screen by name — title,
+  mode, Start Depth, scores, profiles and name entry, options, credits, controls
+  and rebinding, game over, pause — and names none, and **§15.5, the section §0
+  DOES point at for achievements, is entirely storage and evaluation and specs
+  no surface at all.** ⛔ So a CS015 phase that builds a screen has no §0 row
+  telling it what to read. ⛔ **The row is not invented here**: where an
+  achievement is seen is `PLANNED-FEATURES-CS015.md` §0's call A1, unanswered,
+  and the phase that builds the answer edits §10.5, §15.5 and §0's row together.
 - ⛔ **THE MENU SHAPES A SCREEN HAS TO FIT INTO**: the title has **four rows**,
   game over **three lines**, and ⛔ **OPTIONS HAS TEN ROWS WITH A SEVEN-ROW
   WINDOW** — a row is added before BACK, never above TELEMETRY. ⛔ **SCORES' rows
@@ -184,8 +195,15 @@ them is in `log/CS0##.md`, not here.
 - ⚠ **Unowned, none reachable by the suite's drivers:** a second Purge prefers a
   bolt or a reflection above 0.95 and pays 0 (PREDICTED); a run STARTING past 99
   gets the modulo well and no band roll (unreachable at `START_DEPTH_CAP` 81);
-  no played board reaches `C.LIVES_MAX`; a rim Vaulter — ⚠ and an aloft Warden —
-  hunts the CONTINUOUS lane.
+  a rim Vaulter — ⚠ and an aloft Warden — hunts the CONTINUOUS lane.
+  ⚠ **`C.LIVES_MAX` LEAVES THIS LIST — it IS reachable** (CS015 planning,
+  MEASURED at `b92da55`): the twelfth soak's four-clause driver, run 40,000–60,000
+  steps at Start Depths 1–81, held **6** lives in five of seven probe sessions,
+  from `START_LIVES` 3 and up to **15** extra-life awards. ⛔ **The difference
+  is LENGTH, not the driver** — the closed soaks run a few thousand steps — so
+  the claim was true of the soaks and false of the driver. ⚠ **A biggest-Purge
+  of SIX is the thing that is genuinely unreachable**: best of 289 uses across
+  three sessions is **4** (Classic Start Depth 81), 2 in the other two.
 
 ### Test hazards
 
@@ -329,14 +347,30 @@ them is in `log/CS0##.md`, not here.
   ✅ **The Dive's visual leaves this list** — it was the oldest thing on it, open
   since CS006.
 
-## Next up — CS015 planning
+## Next up — CS015 P1, and ⛔ TWELVE CALLS ARE OPEN
 
-⛔ **A PLANNING session**, writing no code (`CLAUDE.md` rule 3a) and ending in
-`PLANNED-FEATURES-CS015.md` and `IMPLEMENTATION-PHASES-CS015.md`, committed. The
-row is **achievements: the id table written once against the whole game, local
-only, monotonic tiers and UTC ISO weeks** (GDD §15.5, §17 item 10; ROADMAP §21
-#4's "the evaluator returns a payload-shaped object from day one"). ⛔ Read
-"What CS015 must act on" first — ⛔ **an `id` is SAVE DATA and is never
-renamed**, so the table is written against a FINISHED game, which is why Paul
-moved it here (M4). ⛔ **Measure anything measurable**, and ⛔ **every claim is
-marked MEASURED or PREDICTED.**
+✅ **CS015 IS PLANNED** (2026-09-20, `PLANNED-FEATURES-CS015.md` +
+`IMPLEMENTATION-PHASES-CS015.md`, four phases). ⛔ **§0 IS NOT ANSWERED: A1–A12
+each carry a measurement and one recommendation, and an empty answer cell.**
+⛔ **P1 needs A2, A5, A6, A7, A11 and A12 before it starts**; a build phase that
+reaches a blank cell STOPS.
+
+⚠ **This is the first changeset since CS008 whose main risk is a decision that
+cannot be revised, rather than a mechanism that can** — ⛔ **an achievement `id`
+is SAVE DATA and is never renamed**, so A8's table is written once, against a
+finished game, which is why Paul moved it out of CS011 (M4).
+
+⚠ **Two calls collide with shipped invariants and the plan names both rather
+than picking:** A12 — the definition table has tunables in it and belongs to a
+module that may not read `C` (`createScores` is the shipped way through); and
+A8's `mimic_kill` rides on a probation only CS017 can close.
+
+⛔ **Two rows of §9's proposed table are flagged rather than quietly kept:**
+`purge_wide` is MEASURED UNREACHABLE (best of 289 Purge uses is 4, not 6) and
+`purge_saver` MEASURED borderline (0, 0, 1 clears with the charge unspent).
+⚠ An unreachable predicate is a test that passes on zero.
+
+⛔ **The vocabulary scan cannot see through an underscore** (MEASURED, four
+mutants): a banned word hyphenated or spaced is red, the same word joined by
+`_` is GREEN. ⛔ **Every id and displayed name is checked BY EYE in P3**, and
+P3's test asserts both forms so a future row cannot slip either.
