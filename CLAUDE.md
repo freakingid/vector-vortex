@@ -525,9 +525,18 @@ ring is resolved ONCE** (`taken`: `null` → `true`/`false`, for good), and "you
 stop earning" is that `false`: the ABSENCE of a call, with no counter, no
 streak and no full-set bonus.
 
+⛔ **THE DIVE'S VISUAL IS DRAW-TIME ONLY, AND `diveDrawDepth()` IS THE
+RENDERER'S WHOLE KNOWLEDGE OF THE DIVE** (CS014 P2, GDD §5, §14.5). The descent
+is `C.DIVE_RUNGS` cross-sections of the well sweeping past, on `layRings()`' own
+lattice and drawn in **BOTH** modes; a ring is the ARC the take pass reads,
+unresolved ones only; the z-order is a token's. ⛔ **No camera, no canvas
+transform, no new projection and no new parameter on `drawWell()`** —
+`13-render-well.js` is UNTOUCHED, and a world zoom is MEASURED unavailable
+(×1.10 on the widest well). ⛔ **It moves no state and no hash in either mode.**
+
 ⛔ **CLASSIC IS A TOTAL NO-OP** — nothing laid, nothing taken, no draw spent,
 `C.DIVE_TIME` long — proved as a step-by-step hash against `layRings()` and
-`takeRings()` stubbed out (`test-cs014-p1.js`).
+`takeRings()` stubbed out (`test-cs014-p1.js`, `-p3.js`).
 
 ⛔ **ALL FIVE OF GDD §4.5's DEATH CONDITIONS STAY LIVE IN BOTH MODES.**
 

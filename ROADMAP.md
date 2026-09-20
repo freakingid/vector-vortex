@@ -26,7 +26,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS011** | ✅ **Shipped 2026-09-16.** Meta: kit-names, kit-storage and kit-profile inlined at build, a silent ANONYMOUS first profile, settings / the Start Depth record / telemetry saved per profile, the local top 10 per mode with the bench flag, kit-leaderboard 0.2.1 and one `Leaderboard` over the bridge, SCORES (LOCAL / ONLINE), PROFILE with NAME entry (kit-input 0.8.0's text mode), and the ninth soak (working store and blocked, one hash). Six phases, as planned. ⚠ Achievements moved to CS015 (Paul's M4) | §4.6, §10.5, §15.1–15.4, §15.6 |
 | **CS012** | ✅ **Shipped 2026-09-17.** Overdrive's core: the `drive` track (138 BPM, 36 bars A→B→C, Overdrive's AUTO), `C.MODE_FLAGS` and `modeHas()`, the Reaver in a new `07-enemies-overdrive.js` behind a second schedule table, OVERDRIVE on MODE with its own online board, SCORES per mode and a per-mode Start Depth record, the Jump (airborne as a phase, the lift, the shadow and kit-audio 0.4.0's high-pass), the combo multiplier at the kill sites with its readout, `comboLost`, the director's fifth input and `max_combo`'s real source, and the tenth soak. Six phases, as planned | §11.4, §11.7, §13, §14.2, §14.4, §14.6, §15.3, §15.4, §19 |
 | **CS013** | ✅ **Shipped 2026-09-20.** Overdrive's tokens and its remaining enemies: five tokens in their own array behind one `dropToken()` (one draw per Overdrive kill, a total no-op in Classic), Bounty and Recharge instant, Lance / Spread / Ward with their readers, the two GDD §14.1 tables kept apart, `collect` and `wardBreak`; the **Warden** — aloft as a PHASE, the ninth contract field, and the **jump strike**, the build's fourth kill site; the **Mimic** on probation with `MimicShot extends WeaverBolt`, cutting in one schedule row; and the eleventh soak. Five phases, as planned | §14.1, §14.6, §6.4, §6.5, §7, §8.1, §17, §19 |
-| **CS014** | The ring-flight Dive, hard-capped at 4 s / 6 rings | §14.5 |
+| **CS014** | ✅ **Shipped 2026-09-20.** The ring-flight Dive, hard-capped at 4 s / 6 rings: a fourth mode flag `rings` that is the whole gate AND the whole cut, `diveTime()` over `C.DIVE_TIME_OD`, six rings laid rim-first on a lattice of the well and constants alone, a take pass that is a lane match inside a depth crossing, `C.RING_POINTS` unmultiplied — and **the Dive's visual, in BOTH modes**, plus `ringTake` / `ringMiss` and the twelfth soak. Three phases, as planned | §5, §7, §13, §14.5, §19 |
 | **CS015** | Achievements: the id table (save data, never renamed) written once against the whole game, local-only, monotonic tiers and UTC ISO weeks. Planned once Overdrive exists (Paul's M4) | §15.5, §17 item 10 |
 | **CS016** | Onboarding: first-run prompts, attract mode, the teach-in-four-seconds pass on level 1 | §12 |
 | **CS017** | Ship: performance budget on both targets, device matrix, 100-run soak, legal sweep, acceptance-criteria sweep | §17, §18, §19 |
@@ -376,6 +376,59 @@ allocates on every call; both are CS017's to measure. F1 and F2 are recorded and
 not fixed. Still unowned: the Dive's visual, the pad-only silence, the VOICE bus,
 the Surger tone's 1.106 peak, and the whole palette.
 
+**CS014 held as ONE changeset of three phases and shipped its row.** The flight
+(P1), the visual and the two seats (P2), the twelfth soak, the review and the
+close (P3) — the order and the seams the plan named. Paul answered RF1–RF9 in
+the planning session and took **every recommendation**, the third changeset
+running for which that is true, and for the reason CS012 and CS013 both had: the
+plan priced each call with a measurement rather than an argument.
+
+**What CS014 shipped against the row.** ⛔ **Overdrive's Dive is a ring flight
+and it is the SAME dive** — one module, one beat, one strike, one termination
+guarantee, and `modeHas("rings")` decides only how long the beat runs and
+whether there is anything in it. `diveTime()` returns `C.DIVE_TIME_OD` 4.0 or
+`C.DIVE_TIME` 2.6 and ⛔ **each is the WHOLE dive, grace included**, so the cut
+takes the length with it. ⛔ **A ring is not an enemy and not a token either**:
+it is a field on `state.dive`, `layRings()` is its one way in and `resetDive()`
+empties it, so the set inherits the beat's whole lifecycle with no second reset
+caller — and the plan MEASURED why, that only 5 of `state.enemies`' 20 readers
+run inside a dive and both a ring would meet are wrong by default (§4.4's push
+collapses 3 of 6 rings onto 0.55; `startDive()`'s `anchored` filter drops them
+on the repeat). ⛔ **The lattice is a function of the WELL and of constants and
+of nothing else** — no draw, no heat, no level, not the craft's lane — so a dive
+still spends **zero** RNG draws in both modes. ⛔ **Each ring is resolved ONCE
+and "you stop earning" is the ABSENCE of a call**: no miss counter, no streak,
+no full-set bonus. ⛔ **A ring pays through `addScore()`, unmultiplied, building
+nothing and rolling nothing** — the Bounty's row — so the four kill sites and
+five kill lines are unmoved and `09-collision.js` was never opened. ⛔ **The
+Dive you can see, in both modes**, and "not a second renderer" honoured
+literally: `C.DIVE_RUNGS` cross-sections of the well sweeping past through one
+function of two numbers, no camera, no canvas transform, `13-render-well.js`
+untouched, and both alphas at 0 leaving the hash identical. ⚠ A world ZOOM was
+priced first and is **MEASURED unavailable** — the widest well caps it at ×1.10,
+and past that the craft leaves the frame. ⛔ **The twelfth soak is five
+front-door sessions**: Classic bit-identical against the ring calls stubbed and
+the flag cut, Overdrive with music against Overdrive without, and ⛔ **the
+one-line cut played end to end**, with Overdrive's invariants on every step and
+non-vacuity for each. ⛔ **No baseline moved in any phase.** GDD §19's Overdrive
+row closes here, met.
+
+⚠ **What CS014 deliberately left.** **Achievements are CS015's**, onboarding
+CS016's, ship CS017's — and GDD §12's four-second promise now has a third thing
+to teach: an Overdrive dive is something you **steer**, and nothing on screen
+says a ring is worth going to. **Nothing was tuned**: `RING_POINTS` 100,
+`RING_ARC_LANES` 1.5, `RING_LANE_STEP` 0.25 and the five visual values are all
+⚠ provisional and MEASURED on bots, and every ask is in `SKIPPED-PLAYTESTS.md` —
+⚠ including plan K7's, **whether a 4.0 s dive still feels like a breath** when it
+takes the Dive's share of a run from 13.8 % to 19.8 %. **No telemetry column, no
+`tally` field, no HUD item, no spawn row, no heat accessor, no kill site, no
+`sfxVoice`, no `ENEMY_KINDS` row and no kit edited.** ⚠ **The sweep still does
+not open end to end**: the twelfth soak measured **0.6539** with the flight live,
+below CS013's 0.6860, which stands — the row keeps its ✗ and nothing was
+rescaled (Paul's D6). ✅ **The Dive's visual leaves the unowned list**, where it
+had sat since CS006. Still unowned: the pad-only silence, the VOICE bus, the
+Surger tone's 1.106 peak, the whole palette and the HUD sizes, F1 and F2.
+
 ---
 
 ## Why this order
@@ -463,6 +516,13 @@ cuttable in one commit.
 falls back to the Classic thorn-dodge), then the Mimic in CS013, then CS012's
 `drive` track — `title` plus `pulse` is a shippable floor. None of these three
 cuts touches another changeset's code.
+
+⚠ **Two of the three cuts are now BUILT AS ONE LINE and PROVED as one line**:
+`rings: false` in `C.MODE_FLAGS`' Overdrive row (CS014, `test-cs014-p1.js` on a
+driven board and `test-cs014-p3.js` from the boot title) and
+`{ level: 16, kind: "mimic" }` out of `C.SPAWN_SCHEDULE_OVERDRIVE` (CS013 MI3).
+⚠ **The DESCENT is deliberately not inside CS014's cut**: it is drawn in both
+modes, so cutting the rings leaves a Classic dive that still reads as a flight.
 
 ---
 

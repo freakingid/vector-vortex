@@ -707,6 +707,46 @@ about a run rather than a rule.**
   never opens is *audible as a sweep at all* is an ear question, and it has now
   been recorded four times without being asked.
 
+## CS014 P1 — the flight itself: is 4.0 s still a breath, and is a full set worth 600?
+
+⚠ **Written at the CS014 close, not at P1.** ⛔ The review found that P1 shipped
+two numbers only a person can judge and appended nothing here, which
+`CLAUDE.md` requires of any phase that does. The asks are P1's; the date is the
+close's.
+
+- **Changeset / phase:** CS014 P1 (the ring flight's simulation half).
+- **Would have done:** two sittings, both in Overdrive from START DEPTH 13, ten
+  wells each. (1) **The beat.** Play ten wells and say, after each dive, whether
+  it felt like a breath or like a job — GDD §1.1 P4's word is *release*, and
+  §14.5's own stated concern is that the ring flight "can break P4 by turning
+  the breath into more work". ⚠ MEASURED: a 4.0 s dive is **62 % longer** than
+  Classic's 2.6 and takes the Dive's share of a run from **13.82 % to 19.80 %**,
+  against a mean well of 16.2 s — so one frame in five of an Overdrive run is
+  now this beat. (2) **The price.** Play ten wells reading the score after each
+  clear and each dive, and say whether six rings felt like a bonus or like
+  loose change. ⚠ MEASURED over 108 scored wells: a median well pays **7,200**
+  and clear bonuses average 2,951, so a full set at 100 a ring is **600** —
+  **8.3 % of a median well**, about a fifth of what the clear bonuses pay, and
+  near `PTS_NO_DEATH_WELL` 1,000 in weight.
+- **What we were trying to learn:** ⛔ **Whether the cap the GDD wrote as a
+  ceiling is the right number to have SHIPPED at.** `C.DIVE_TIME_OD` 4.0 and
+  `C.DIVE_RINGS_MAX` 6 are §14.5's hard caps, and ⛔ **both are inside the cap
+  at any smaller value** — the plan's RF9-C and RF3-C say so explicitly. The
+  suite proves the beat is 4.0 s to the tick, that six rings are laid and
+  resolved once each, and that 207 of them were taken and 6 missed on a played
+  board. It cannot say whether the fifth second of a still well is a rest or a
+  wait, and it cannot say whether a payout is satisfying. ⚠ And the two
+  questions interact: a shorter dive makes the same six rings harder to reach,
+  which is RF2's skill test getting sharper rather than the flight getting
+  cheaper.
+- **Knobs:** `C.DIVE_TIME_OD` (4.0 ⚠ — ⛔ **a ceiling, so it may only come
+  DOWN**; `C.DIVE_GRACE` 0.35 is a slice off its front and is a §1.1 P2
+  requirement, not a knob), `C.DIVE_RINGS_MAX` (6 ⚠ — the same, a ceiling),
+  `C.RING_POINTS` (100 ⚠), and the two that set how hard a ring is to reach,
+  `C.RING_LANE_STEP` (0.25 ⚠) and `C.RING_ARC_LANES` (1.5 ⚠). ⛔ **No Classic
+  constant is on this list**: `C.DIVE_TIME` 2.6 and `C.DIVE_GRACE` 0.35 did not
+  move and are not CS014's to move (plan R1).
+
 ## CS014 P2 — the Dive you can see: does the descent READ as a flight, and is a miss audible?
 
 - **Changeset / phase:** CS014 P2 (the Dive's visual and the two audio seats).
@@ -752,3 +792,36 @@ about a run rather than a rule.**
   ⚠ And if the answer to (2) is "luck", ⛔ **the honest lever is
   `C.RING_LANE_STEP` (0.25 ⚠) or `C.RING_ARC_LANES` (1.5 ⚠), which are
   simulation and P1's**, not a visual constant.
+
+## CS014 P3 — the twelfth soak's asks: does the flight survive a whole run?
+
+- **Changeset / phase:** CS014 P3 (the twelfth soak, the review and the close).
+- **Would have done:** one long sitting, Overdrive, START DEPTH 1, played until
+  the lives run out — the thing the soak does 26 times and Paul does none of.
+  Then the same run in Classic, watching only the dives. The three questions a
+  bot cannot answer on its own board: (1) **does the flight stay interesting by
+  the tenth well**, or does a beat that pays the same 600 every time become a
+  thing you stop steering for; (2) ⛔ **does the ring flight ever collide with
+  the Thorn dodge in a way that reads as unfair** — a dive board is empty three
+  times in four, but when it is not, the driver that chases rings ignores Thorns
+  and the suite counted **11 Thorn deaths, 9 of them repeating the dive**;
+  (3) **is the repeat generous or exploitable** — a repeated dive RE-LAYS the
+  set, so a life lost buys the rings back (RF3-A), and MEASURED it is worth
+  about one set per 19,000 steps rather than a farm.
+- **What we were trying to learn:** ⛔ **Whether the three systems CS012–CS014
+  added read as one game over a full run.** CS013 P5 asked this of the board;
+  this asks it of the beat between boards. The twelfth soak proves the flight is
+  correct on every step of 81,278 front-door frames and that nothing in it moves
+  a hash, a draw or a baseline — it cannot say whether a player who has just
+  cleared a hard well wants a four-second steering task or a rest. ⚠ **And one
+  measurement that would settle by ear:** the director's maximum with the flight
+  live is **0.6539**, *below* CS013's 0.6860, because a longer release beat
+  reads less danger — so the sweep opens even less of its 18 kHz than the four
+  times it has already been recorded not opening. ⛔ GDD §19 keeps its ✗ and
+  nothing is rescaled (Paul's D6).
+- **Knobs:** everything in the two CS014 entries above, and ⛔ **nothing new**:
+  the soak added no constant. ⚠ If the answer to (1) is "it goes flat",
+  ⛔ **the honest lever is `C.RING_LANE_STEP`, not `C.RING_POINTS`** — a bonus
+  that is hard to take stays interesting at a fixed price, and a price that
+  rises with nothing behind it is the combo's job (§14.4), which deliberately
+  does not multiply a ring.
