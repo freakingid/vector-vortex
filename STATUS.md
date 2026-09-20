@@ -394,7 +394,7 @@ lowered.
 ⛔ **A threshold is NOT save data; only the `id` is.** A later changeset may
 retune any tier.
 
-⛔ **The vocabulary scan cannot see through an underscore** (MEASURED, four
-mutants): a banned word hyphenated or spaced is red, the same word joined by
-`_` is GREEN. ⛔ **Every id and displayed name is checked BY EYE in P3**, and
-P3's test asserts both forms so a future row cannot slip either.
+✅ **THE VOCABULARY SCAN IS NOW A SUBSTRING SCAN** (Paul, 2026-09-20, after P1):
+`test-cs008-p6.js` catches a banned word glued on by `_` or camelCase, and only
+`webkit` is excepted from "web". ⛔ **The close indexes this call in
+`DECISIONS.md`.** P3 still eyes every id and displayed name.

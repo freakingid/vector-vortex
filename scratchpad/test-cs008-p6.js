@@ -424,13 +424,25 @@ const credits = drawnTexts().map(t => t.str);
 for (const line of C.CREDITS_LINES) H.assert(credits.includes(line), `the credits draw "${line}"`);
 H.assert(credits.includes("VERSION " + C.GAME_VERSION), "the credits draw C.GAME_VERSION");
 const WORDS = ["tempest", "flipper", "fuseball", "pulsar", "tanker", "spiker", "superzapper", "blaster", "web"];
+// ⛔ A SUBSTRING SCAN, NOT A WHOLE-WORD ONE (Paul, 2026-09-20, before CS015 P3's
+// ids). `\b` let a banned word through when glued on by `_` or camelCase —
+// "<word>_kill" and "<word>Kill" were both green. The claim is unchanged; the
+// scan now sees what it always meant to. ⚠ "web" alone excludes "webkit", the
+// browser's webkitAudioContext, which is the only hit in the build (MEASURED).
+const banned = w => new RegExp(w === "web" ? "web(?!kit)" : w, "i");
+// Probes are built from the list, so this file names no banned word beyond it.
+const W1 = WORDS[1];
+for (const probe of [W1 + "_kill", W1 + "Kill", "THE " + W1.toUpperCase(), WORDS[8] + "_lane", "cob" + WORDS[8]]) {
+  H.assert(WORDS.some(w => banned(w).test(probe)), `non-vacuity: the scan catches "${probe}"`);
+}
+H.assert(!banned("web").test("window.webkitAudioContext"), "non-vacuity: webkitAudioContext is not a hit");
 const creditText = credits.join("\n");
 for (const w of WORDS.concat("atari")) {
-  H.assert(!new RegExp(`\\b${w}\\b`, "i").test(creditText), `⛔ the credits never say "${w}"`);
+  H.assert(!banned(w).test(creditText), `⛔ the credits never say "${w}"`);
 }
 // "atari" too (GDD 18 item 1: no Atari marks in code or comments — Paul, 2026-09-13).
 for (const w of WORDS.concat("atari")) {
-  H.assert(!new RegExp(`\\b${w}\\b`, "i").test(script), `⛔ the built file never says "${w}" (CLAUDE.md vocabulary; GDD 18)`);
+  H.assert(!banned(w).test(script), `⛔ the built file never says "${w}", even inside a longer word (CLAUDE.md vocabulary; GDD 18)`);
 }
 H.assert(!/\bT-\d{4}\b/.test(script), "⛔ no T-#### name in the built file");
 
