@@ -10,11 +10,12 @@ phase.**
 claim names what was run (§1 lists the probes) and was run at commit `144825e`.
 A PREDICTED one says so.
 
-⛔ **§0 IS UNANSWERED. Nine design calls are Paul's, and NOTHING BELOW ASSUMES
-AN ANSWER.** §2's phase shape, §9's wiring table, §10's ledger and §11's
-closed-file table each say which rows depend on which call. A phase prompt that
-names a call builds the answer in §0's answer column and does not re-open it.
-⛔ **No phase may start until §0's answer column is filled.**
+✅ **§0 IS ANSWERED: Paul took every recommendation (2026-09-20)**, RF1–RF9.
+A phase prompt that names a call builds the recommendation written beside it and
+does not re-open it. ⛔ §2's phase shape, §9's wiring table, §10's ledger and
+§11's closed-file table each say which rows depended on which call; every one now
+reads its RF-A branch, and the RF-B / RF-C branches are kept only as the record
+of what was priced.
 
 **Baseline for every measurement: commit `144825e`** (CS013 P5, the close).
 - `node build.js` → 25 modules + 3 inlined kit, `dist/vector-vortex.html`
@@ -42,24 +43,27 @@ names. From `archive/`, only `PLANNED-FEATURES-CS013.md` §0, §8–§12 and
 
 ---
 
-## ⛔ 0. PAUL'S CALLS — UNANSWERED
+## ⛔ 0. PAUL'S CALLS — ✅ ALL ANSWERED 2026-09-20: EVERY RECOMMENDATION
 
 Each is a design call the GDD does not settle, with the measurement that prices
-it, the alternatives, and one recommendation. ⚠ Every number marked ⚠ is
-provisional in the sense CS012 O16 used: owned by an art, audio or tuning pass,
-like the Classic palette.
+it, the alternatives, and one recommendation. ✅ **Paul took every
+recommendation**, as he did in CS012 and CS013 — the third changeset running.
+RF2, RF4, RF5, RF7, RF3 and RF8 were put to him as questions; RF1, RF6 and RF9
+he took as recommended, each being forced by a measurement or an existing rule
+rather than open. ⚠ Every number marked ⚠ is provisional in the sense CS012 O16
+used: owned by an art, audio or tuning pass, like the Classic palette.
 
 | # | The call | Recommendation | Answer |
 |---|---|---|---|
-| RF1 | Where a ring LIVES | A field on `state.dive` — `state.dive.rings` — laid by `startDive()` and reset by `resetDive()`. Not `state.enemies`, not a third array | |
-| RF2 | Is a ring lane-bound, and what makes taking one a skill | **Lane-bound**: each ring is an ARC covering a contiguous run of lanes, taken by being inside it at its depth. The rim axis stays the only control (§1.1 P1) and GDD §14.5's "lane-less tube" is read as *the corridor has no lanes to climb*, not *the craft has no lane* | |
-| RF3 | The ring set: how many, at what depths, and what a repeat does | Six, evenly spaced at `(i + 0.5) / 6` in `dive.depth`; laid once per `startDive()`, so ⛔ **a repeated dive re-lays the set and can be earned again** | |
-| RF4 | What a ring PAYS | `C.RING_POINTS` ⚠ through `addScore()`, ⛔ **unmultiplied, building nothing and rolling nothing** — the Bounty's rule (GDD §7, CS013 T6). A ring is not a kill and the Dive is not a kill site | |
-| RF5 | Death condition 5 in Overdrive | ⛔ **It stays live.** "No failure state" is read as *no new one*: the Thorn strike, the respawn and the termination guarantee are unchanged in both modes. All five conditions live is a shipped guarantee (GDD §4.5, §19) | |
-| RF6 | How it is gated, and the cut | A `rings` field in each `C.MODE_FLAGS` row, read by `modeHas("rings")`. ⛔ **The cut is `rings: true` → `false` in the Overdrive row** — one line, MI3's shape | |
-| RF7 | Scope: does the Dive's VISUAL belong here | **Both modes.** P2 draws the descent — the well travelling — in Classic and Overdrive, and the rings on top of it in Overdrive. CS014 is the only changeset that touches the Dive | |
-| RF8 | Audio | Two new seats, `ringTake` and `ringMiss` ⚠, in `tools/sfx-lab.html` first. ⛔ **No new track and no director change** — GDD §5's release stands and the combo clock still HOLDS (O5) | |
-| RF9 | The flight's length and its grace beat | `C.DIVE_TIME_OD` 4.0 read exactly as `C.DIVE_TIME` is — ⛔ **the WHOLE dive, grace included** — with `C.DIVE_GRACE` 0.35 unchanged, giving a 3.65 s descent | |
+| RF1 | Where a ring LIVES | A field on `state.dive` — `state.dive.rings` — laid by `startDive()` and reset by `resetDive()`. Not `state.enemies`, not a third array | ✅ As recommended |
+| RF2 | Is a ring lane-bound, and what makes taking one a skill | **Lane-bound**: each ring is an ARC covering a contiguous run of lanes, taken by being inside it at its depth. The rim axis stays the only control (§1.1 P1) and GDD §14.5's "lane-less tube" is read as *the corridor has no lanes to climb*, not *the craft has no lane* | ✅ As recommended |
+| RF3 | The ring set: how many, at what depths, and what a repeat does | Six, evenly spaced at `(i + 0.5) / 6` in `dive.depth`; laid once per `startDive()`, so ⛔ **a repeated dive re-lays the set and can be earned again** | ✅ As recommended |
+| RF4 | What a ring PAYS | `C.RING_POINTS` ⚠ through `addScore()`, ⛔ **unmultiplied, building nothing and rolling nothing** — the Bounty's rule (GDD §7, CS013 T6). A ring is not a kill and the Dive is not a kill site | ✅ As recommended |
+| RF5 | Death condition 5 in Overdrive | ⛔ **It stays live.** "No failure state" is read as *no new one*: the Thorn strike, the respawn and the termination guarantee are unchanged in both modes. All five conditions live is a shipped guarantee (GDD §4.5, §19) | ✅ As recommended |
+| RF6 | How it is gated, and the cut | A `rings` field in each `C.MODE_FLAGS` row, read by `modeHas("rings")`. ⛔ **The cut is `rings: true` → `false` in the Overdrive row** — one line, MI3's shape | ✅ As recommended |
+| RF7 | Scope: does the Dive's VISUAL belong here | **Both modes.** P2 draws the descent — the well travelling — in Classic and Overdrive, and the rings on top of it in Overdrive. CS014 is the only changeset that touches the Dive | ✅ As recommended |
+| RF8 | Audio | Two new seats, `ringTake` and `ringMiss` ⚠, in `tools/sfx-lab.html` first. ⛔ **No new track and no director change** — GDD §5's release stands and the combo clock still HOLDS (O5) | ✅ As recommended |
+| RF9 | The flight's length and its grace beat | `C.DIVE_TIME_OD` 4.0 read exactly as `C.DIVE_TIME` is — ⛔ **the WHOLE dive, grace included** — with `C.DIVE_GRACE` 0.35 unchanged, giving a 3.65 s descent | ✅ As recommended |
 
 ### RF1 — where a ring LIVES
 
@@ -890,8 +894,8 @@ and the row's criterion is **"ring-flight inside its 4 s / 6 ring cap"**.
 
 ## 15. ASSUMPTIONS
 
-- **A1 — §0 is answered before P1 starts.** ⛔ Nine calls, and the plan assumes
-  none of them. A phase prompt reads the answer column.
+- **A1 — ✅ Met: Paul answered §0 on 2026-09-20**, taking every recommendation
+  (RF1–RF9), in this document's answer column, as CS012's and CS013's were.
 - **A2 — ✅ MEASURED: `../coinless-kit` is present beside this repo at
   `e2efed5`** (§1.1), which the close needs — two closed files read its registry
   and SKIP without it, and ⛔ no closing phase can close with a skip.

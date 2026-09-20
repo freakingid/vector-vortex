@@ -9,13 +9,11 @@ and `STATUS.md` automatically, and nothing else unless the prompt names it.
 ⛔ **`ultrathink` appears inside the prompt text where it is wanted.** It is a
 per-turn lever, so it has to be in the pasted message.
 
-⛔ **§0 IS UNANSWERED. NO PHASE MAY START UNTIL IT IS.**
-`PLANNED-FEATURES-CS014.md` §0 carries **nine design calls (RF1–RF9)**, each with
-its measurement, its alternatives and one recommendation, and an empty answer
-column. A prompt below that says "RF3's answer" means *the answer written in that
-column*, not the recommendation beside it. ⛔ **A phase that finds a call
-unanswered stops and says so** — it does not take the recommendation on its own
-authority (`CLAUDE.md` rule 3).
+✅ **Every call is answered: Paul took every recommendation in
+`PLANNED-FEATURES-CS014.md` §0 (RF1–RF9), 2026-09-20.** A prompt below that says
+"RF3's answer" means RF3's recommendation. No phase's shape changed.
+⛔ **The RF-B and RF-C branches in the prompts below are dead** — they are the
+record of what was priced, not a choice left open. Build the A branch.
 
 **Baseline:** CS013 closed at `144825e`, and CS014 is planned on top of it.
 - `node build.js` → 25 modules + 3 inlined kit, **754,849 bytes** (737.2 KB).
@@ -60,8 +58,8 @@ Plan §2 has the argument. In short:
 
 | Before | What | Whose |
 |---|---|---|
-| **P1** | ⛔ **§0's answer column filled for RF1–RF9** in `PLANNED-FEATURES-CS014.md` | **Paul — OPEN** |
-| P2 | RF7 and RF8 answered (they are §0 rows; the same gate) | **Paul — OPEN** |
+| **P1** | §0's answer column filled for RF1–RF9 in `PLANNED-FEATURES-CS014.md` | ✅ Done 2026-09-20 |
+| P2 | RF7 and RF8 answered (they are §0 rows; the same gate) | ✅ Done 2026-09-20 |
 | P2 | `tools/sfx-lab.html` carries RF8's briefs and candidates before a recipe is ported | P2's own first act |
 | P3 | `../coinless-kit` present beside this repo (two closed files read its registry and SKIP without it; ⛔ a close cannot skip) | ✅ MEASURED present at `e2efed5`, 2026-09-20 |
 
@@ -72,8 +70,8 @@ Plan §2 has the argument. In short:
 | P1–P3 | `P1_DETERMINISM_HASH` 1229033515 | ⛔ **No.** Every change is Overdrive-gated; plan §1.2 MEASURED it green under both stand-ins. A move is a defect |
 | P1–P3 | `GOLDEN_LANES` | ⛔ **No** |
 | P1–P3 | the eleven closed soaks' paired hashes | ⛔ **No** |
-| P1 | `STATE_FIELDS` | ⛔ **No** under RF1-A (MEASURED green). `+ CS014: ["rings"]` under RF1-B only |
-| P1 | `COUNTS.enemies` / `enemyKinds` | ⛔ **No** under RF1-A or RF1-B. 9 → 10 / 13 → 14 under RF1-C only |
+| P1 | `STATE_FIELDS` | ⛔ **No** — RF1-A, MEASURED green under the stand-in |
+| P1 | `COUNTS.enemies` / `enemyKinds` | ⛔ **No** — RF1-A: a ring is not an enemy and has no `ENEMY_KINDS` row |
 | P2 | `COUNTS.tracks` | ⛔ **No** — RF8 adds seats, never a track |
 
 ### ⛔ Closed-file edits — in place (plan §11)
@@ -88,7 +86,7 @@ Plan §2 has the argument. In short:
 | P1 | `test-cs013-p2.js:380`, `:436` | the same, with Lance live | **MEASURED** |
 | P1 | `test-cs013-p5.js:438`, `:440`, `:724–726` | the same, plus "and rolls nothing" — unchanged under RF4-A | **MEASURED** |
 | P1 | `test-cs012-p4.js:628`, `:1114` | ⛔ **FIXTURES**: restore the mutation window and the reached-multiplier preconditions. ⚠ Seed-fragile (`STATUS.md`) | **MEASURED** |
-| P1 | `test-cs012-p2.js:204`, `test-registry.js` | ⛔ **none** under RF1-A (MEASURED green); both under RF1-C | MEASURED / PREDICTED |
+| P1 | `test-cs012-p2.js:204`, `test-registry.js` | ⛔ **none** — RF1-A, MEASURED green under both stand-ins | **MEASURED** |
 | P2 | `test-cs009-p4.js:37–40`, `test-cs009-p5.js:26` | `EVENTS` + RF8's seats | PREDICTED |
 | — | `test-cs010-p2.js:346–364`, `test-cs006-p5.js:555–580`, `test-cs008-p2.js`, `test-cs008-p8.js` | ⛔ **none** — MEASURED green under both stand-ins | **MEASURED** |
 | — | `test-cs013-p3.js:737`, `test-cs011-p3.js:176–196` | ⛔ **none** predicted; read both before writing the take pass | PREDICTED |
@@ -240,10 +238,9 @@ precondition, never relaxed to let a broken one pass.**
 > combo clock still HOLDS (O5). Tell Paul the lab is ready and what to hand
 > back.
 >
-> **5. ⛔ CLASSIC.** Under RF7-A the descent is drawn in Classic too, and
-> ⛔ **that must not move a Classic hash either** — it is presentation. Under
-> RF7-B or RF7-C, Classic's draw is untouched and plan §13's "the Classic Dive's
-> visual stays unowned" goes into `STATUS.md` as a carried item.
+> **5. ⛔ CLASSIC.** RF7-A: the descent IS drawn in Classic too, and ⛔ **that
+> must not move a Classic hash either** — it is presentation, and the proof is
+> item 3's.
 >
 > **6. `scratchpad/test-cs014-p2.js`**, plus `test-cs009-p4.js`'s and
 > `test-cs009-p5.js`'s `EVENTS` repaired in place.
