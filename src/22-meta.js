@@ -10,8 +10,9 @@
 //
 // WHAT A PROFILE KEEPS (CS011 P2): `settings` (23-main.js's CONTROLS, KEYBOARD,
 // GAMEPAD and sound rows), `progress` (the Start Depth record, ⛔ v2 and PER MODE
-// since CS012 P3) and `telemetry` (the ring's rows). ⛔ The telemetry capture
-// switch is never stored.
+// since CS012 P3), `telemetry` (the ring's rows) and, since CS015 P1,
+// `achievements` (the unlock store, GDD 15.5). ⛔ The telemetry capture switch is
+// never stored.
 //
 // THE RUN AND THE LOCAL TOP 10 (CS011 P3): `scores` (root), written through
 // createScores() below, the future kit-scores (src/22-meta.NOTES.md).
@@ -27,13 +28,17 @@
 // ⛔ BOTH ARE MADE IN Meta.boot(), never at evaluation, so evaluating the script
 // touches no storage. Before boot `Store` is null.
 //
-// ⛔ `achievements` IS NOT DECLARED until CS015 (plan R5). kit-profile declares
-// its own root `profiles` key.
+// ⛔ `achievements` IS DECLARED SINCE CS015 P1, v1 and per profile (GDD 15.5).
+// kit-profile declares its own root `profiles` key.
 let Store = null;
 
 // The local top 10 (GDD 15.3), made in Meta.boot() over the ROOT store: one
 // table on the machine, every row stamped with the profile that set it.
 let Scores = null;
+
+// The unlock store (GDD 15.5), made in Meta.boot() over the ACTIVE PROFILE's
+// scope, read through callbacks so a profile switch needs no hook. CS015 P1.
+let Achievements = null;
 
 // The game's wrapper over kit-profile: the active profile and its store (P1), and
 // the roster operations the PROFILE screens call (CS011 P4).
@@ -41,8 +46,9 @@ const Profiles = (function () {
   let kit = null;
   // ⛔ THE DECLARED PER-PROFILE KEYS, which a delete removes BY NAME (plan R12).
   // Never `scores` or `profiles`: those are root keys, and `p0`'s scope IS the
-  // root store. `achievements` joins this list at CS015.
-  const OWN_KEYS = ["settings", "progress", "telemetry"];
+  // root store. ⛔ `achievements` joined at CS015 P1 — a profile's unlocks go
+  // with the profile.
+  const OWN_KEYS = ["settings", "progress", "telemetry", "achievements"];
   return {
     // kit-profile's rename notice and kit-names' length, for NAME (R13, R14).
     NAME_CHANGE_NOTICE: KitProfile.NAME_CHANGE_NOTICE,
@@ -371,12 +377,30 @@ const Meta = (function () {
         // arrays in that order, and an envelope of another version reads empty.
         telemetry: { version: 1 },
         scores:    { version: 1 },
+        // ⛔ v1, AND A NEW KEY NEEDS NO migrate (CS015 P1, A6): there is no
+        // origin version to read, and 20-achievements.js loads
+        // known-value-else-default per field. ⛔ A later SHAPE change bumps
+        // this version and supplies one — never a new key name.
+        achievements: { version: 1 },
       },
     });
     // ⛔ `modes` are state.mode's two values. Both lists are shown from CS012 P3,
     // where SCORES gained its MODE row; `overdrive` was already kept apart here.
     Scores = createScores({ store: Store, key: "scores", perMode: C.SCORES_PER_MODE,
                             modes: ["classic", "overdrive"] });
+    // ⛔ THE BOUNDARY, AND createScores' SEAM (CS015 P1, A12): the definition
+    // table crosses as DATA and the store as two callbacks, so
+    // 20-achievements.js names no config, no game object and no global. ⛔ The
+    // callbacks read Profiles.scope() AT CALL TIME and the module caches
+    // nothing, so a profile switch is picked up with no hook. ⛔ `now` is the
+    // injected clock: the module never reads the platform's, which is what lets
+    // a test drive a week roll (plan A7, §1.5).
+    Achievements = createAchievements({
+      defs: C.ACHIEVEMENTS,
+      load: () => Profiles.scope().get("achievements", null),
+      save: value => Profiles.scope().set("achievements", value),
+      now: () => Date.now(),
+    });
     // ⛔ legacyRosterKey is `null`, NEVER '': kit-profile reads an empty string
     // as "use the default" and imports Orbital Overhaul's roster (plan R4).
     const kit = KitProfile.create({

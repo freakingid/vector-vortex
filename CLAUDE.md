@@ -590,7 +590,7 @@ over storage in game code.** `22-meta.js` is the only file that calls storage.
 |---|---|
 | `settings` | Per-profile |
 | `progress` | Per-profile — **v2**, `{ classic, overdrive }`: the Start Depth record PER MODE (CS012 P3), migrated from v1's `{ highestCleared }` into `classic` |
-| `achievements` | Per-profile — ⛔ **not declared until CS015** |
+| `achievements` | Per-profile — **v1** (CS015 P1), `{ lifetimeUnlocked, lifetimeTiers, weeklyUnlocked, weekKey }`, arrays not Sets, ⛔ **no `migrate`** |
 | `scores` | Root, shared across profiles |
 | `telemetry` | Per-profile, lazy |
 
@@ -818,7 +818,11 @@ src/00-config.js       C — every tunable + THE HEAT CLOCK (heat, 7 accessors)
                        (23), which writes no state (test-cs010-p5.js)
     19-sfx.js          AudioSys / MusicSys / Sfx built from C; sfx(), the ONE
                        seat call; the Surger tone; musicStateFor()
-    20-achievements.js
+    20-achievements.js  createAchievements({ defs, load, save, now }) —
+                       kit-achievements' draft. ⛔ Names no `state`, no `C` and no
+                       game global; the definition table is C.ACHIEVEMENTS, handed
+                       over as DATA, and the clock is INJECTED. Two tables kept
+                       apart: `lifetime` and the weekly POOL. ⛔ No seat yet
   lib/kit-names, kit-storage, kit-profile — INLINED here by build.js, unedited
                        but for import/export lines, as KitNames / KitStorage /
                        KitProfile (KIT_INLINE, wrapKitModule()); a dash-rule

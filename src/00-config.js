@@ -1110,6 +1110,50 @@ const C = {
   // boot so the ONLINE view's hint (M9) reads the same name the kit wrote.
   PROFILE_ANONYMOUS_NAME: "ANONYMOUS",
 
+  // ---- Achievements (GDD 15.5) — CS015 P1 ----------------------------------
+  // ⛔ THE DEFINITION TABLE, AND IT IS HERE BECAUSE A THRESHOLD IS A TUNABLE
+  // (plan A12). 20-achievements.js is kit-achievements' draft and may read no
+  // config at all, so Meta.boot() hands it this object as an option — exactly
+  // createScores' seam for SCORES_PER_MODE. Both invariants hold with no
+  // exception written anywhere: every number a tuning pass would turn is here,
+  // and the module reads nothing.
+  //
+  // ⛔ TWO TABLES, KEPT APART (plan §7). `lifetime` is which achievements exist
+  // and what each reads; `weekly` is the POOL that rotates, `perWeek` of it live
+  // in any one week. ⛔ Neither names the other's numbers, and nothing derives a
+  // pool index from a lifetime row's tier.
+  //
+  // A ROW is { id, mode, fact } plus EXACTLY ONE OF:
+  //   tiers: [t1, t2, t3]   ascending thresholds; the unlock's `tier` is the
+  //                         1-based index reached, and it only ever rises
+  //   at: n                 one threshold; the unlock's `tier` is 0
+  // `mode` is a mode name or null for either (plan A5) — the tag belongs to the
+  // achievement, so MODE_FLAGS gains no field. `fact` names the field the run's
+  // facts object carries; ⛔ P2 builds those fields, and P1 seats no evaluation.
+  //
+  // ⚠ EVERY ROW BELOW IS A PLACEHOLDER AND P3 REPLACES THE CONTENTS WHOLE
+  // (plan §3, A8). ⛔ AN ID THAT REACHES A PLAYER'S STORE IS SAVE DATA FROM THAT
+  // MOMENT ON and is never renamed, so none of these is an id CS015 will ship:
+  // each starts `_`, which no row in plan §9 does, and P1 builds no seat, so the
+  // shipped build has no caller of evaluate() and cannot write one to storage.
+  // ⛔ A threshold is NOT save data — only the id is — so P3 and any later
+  // changeset may retune any number here.
+  ACHIEVEMENTS: {
+    perWeek: 5,           // ⛔ the rotation's width (GDD 15.5's "5 weekly")
+    lifetime: [
+      { id: "_placeholder_tiered", mode: null,        fact: "placeholder", tiers: [1, 2, 3] },
+      { id: "_placeholder_flat",   mode: null,        fact: "placeholder", at: 1 },
+      { id: "_placeholder_mode",   mode: "overdrive", fact: "placeholder", at: 1 },
+    ],
+    weekly: [             // ⚠ P3 lands twenty here, measured row by row
+      { id: "_placeholder_week_1", mode: null, fact: "placeholder", at: 1 },
+      { id: "_placeholder_week_2", mode: null, fact: "placeholder", at: 2 },
+      { id: "_placeholder_week_3", mode: null, fact: "placeholder", at: 3 },
+      { id: "_placeholder_week_4", mode: null, fact: "placeholder", at: 4 },
+      { id: "_placeholder_week_5", mode: null, fact: "placeholder", at: 5 },
+    ],
+  },
+
   // ---- Build / debug ------------------------------------------------------
   GAME_VERSION:         "0.0.10",  // ⚠ 0.0.2 was never written here — see log/CS006.md
   // ⛔ THE SAVE KEYSPACE, AND NOTHING ELSE (kit-storage: coinless.<GAME_ID>.<key>).

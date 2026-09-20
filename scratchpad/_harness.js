@@ -337,6 +337,11 @@ function buildGame(opts = {}) {
     "KitNames", "KitStorage", "KitProfile", "Store", "Profiles", "Meta",
     // the local top 10 (22-meta.js, CS011 P3)
     "Scores", "createScores",
+    // the unlock store (20-achievements.js, 22-meta.js, CS015 P1). ⛔ Two names,
+    // not three: the ISO week key and the rotation are reachable through the
+    // factory's own instance (weekKey(), weeklyFor(key)), so a test drives the
+    // real code without a third top-level export.
+    "createAchievements", "Achievements",
     // the online board's one surface (22-meta.js, CS011 P5)
     "Leaderboard",
   ];

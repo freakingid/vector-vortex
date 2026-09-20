@@ -1705,7 +1705,7 @@ reads an empty string as "use the default" and imports `afd_profiles_v1`.
 |---|---|---|
 | `settings` | Per-profile, via `Profiles.scope()` | Options, bindings, track choice |
 | `progress` | Per-profile | ⛔ **v2 since CS012 P3** (O12): `{ classic, overdrive }`, the Start Depth record PER MODE (§4.6; Paul's M8). v1 was one `{ highestCleared }`; its `migrate` moves that value to `classic` and starts `overdrive` at 0, because Overdrive was not choosable before the bump. ⛔ The key NAME did not change |
-| `achievements` | Per-profile | Lifetime + weekly + tiers. ⛔ **Not declared until CS015** |
+| `achievements` | Per-profile | Lifetime + weekly + tiers. ⛔ **v1 since CS015 P1**, `{ lifetimeUnlocked, lifetimeTiers, weeklyUnlocked, weekKey }` — arrays, never Sets, because a Set does not survive `JSON.stringify`. ⛔ **No `migrate`**: a new key has no origin version to read, and loading is known-value-else-default PER FIELD |
 | `scores` | Root store, shared across profiles | Records stamped `profileId`/`profileName` |
 | `telemetry` | Per-profile | ⛔ Lazy — untouched unless capture is on |
 
@@ -1737,7 +1737,7 @@ field needs no migration — a saved value for a deleted field orphans harmlessl
 ⛔ **Shipped, CS011.** The roster screens are §10.5's PROFILE, a profile's page, DELETE and NAME (CS011 P4).
 - **`Profiles` in `22-meta.js` wraps kit-profile:** `scope()`, `current()`, `list()`, `select(id)`, `create(name)`, `rename(id, name)`, `remove(id)`, and `player()` for the leaderboard (P5). Only `select()` switches, apart from a `remove()` of the active profile, which switches inside the kit. Both run Meta's reset-then-load (P2).
 - **A new profile and SELECT are activations.** RENAME keeps the `id` and the `playerId`, and a score row keeps the name it was stamped with (§15.3).
-- ⛔ **Deleting a profile is kit-profile's `remove(id)`, then that profile's scope's `remove(key)` for each of `settings`, `progress` and `telemetry`.** ⛔ **Never `clear()`:** it enumerates storage, and on `p0`, whose scope is the root store, it would take `scores` and `profiles` too. `achievements` joins the list at CS015.
+- ⛔ **Deleting a profile is kit-profile's `remove(id)`, then that profile's scope's `remove(key)` for each of `settings`, `progress`, `telemetry` and, since CS015 P1, `achievements`.** ⛔ **Never `clear()`:** it enumerates storage, and on `p0`, whose scope is the root store, it would take `scores` and `profiles` too. ⛔ **`achievements` joined at CS015 P1**, and `OWN_KEYS` still names neither root key.
 - ⚠ **The kit goes first, the reverse of plan R12's wording** (MEASURED, `test-cs011-p4.js`'s mutation). The kit refuses the last profile (`last_profile`), and a refused delete must delete nothing; with the keys removed first, the refusal wiped the profile's settings and progress. Deleting the active profile switches inside the kit, where `beforeChange` writes the outgoing telemetry rows; with the keys first, that write outlived the delete. The kit's `scope(id)` still answers for a removed id.
 - **Deleting the active profile activates `roster[0]`** (the kit's rule), and the last profile cannot be deleted.
 
@@ -1812,6 +1812,14 @@ Structure follows Orbital Overhaul's proven v2 shape:
 ~24 lifetime plus 5 weekly, rotated deterministically by week number so every player sees the same five.
 
 **⚠ SETTLED 2026-08-30** — local-only. The evaluator emits a payload-shaped object from day one so server-backing later is wiring, not a rewrite. See §21 and `DECISIONS.md`.
+
+⛔ **Shipped, CS015 P1 — the module, the store and the week.** `createAchievements({ defs, load, save, now })` in `20-achievements.js` is kit-achievements' draft (§15.7) and ⛔ **names no game object, no game global and no config entry**, asserted by a text scan of its slice of the built file (`test-cs015-p1.js`). The `achievements` key is declared v1 and is in `Profiles.remove()`'s `OWN_KEYS`.
+- ⛔ **The definition table is `C.ACHIEVEMENTS`, handed over as the `defs` option** — `createScores`' seam (§15.3): every tier threshold stays where a tuning pass finds it and the module reads no config. ⛔ **Two tables kept apart:** `lifetime` is what exists and what each row reads, `weekly` is the POOL that rotates, `perWeek` of it a week; neither names the other's numbers and nothing derives a pool index from a tier. ⚠ **CS015 P1's rows are PLACEHOLDERS** and P3 replaces them whole.
+- A row is `{ id, mode, fact }` plus ⛔ **exactly one of** `tiers` (ascending; the unlock's `tier` is the 1-based index reached) and `at` (one threshold; `tier` is 0). ⛔ **`mode` tags the ACHIEVEMENT**, `"classic"` / `"overdrive"` / `null` for either, so `C.MODE_FLAGS` gains no field.
+- ⛔ **The clock is INJECTED** (`now`), never read inside the module: a per-step read would advance a soak's faked clock 9.2 days and roll the ISO week mid-session. ⛔ **The rotation is a function of the week and of nothing else** — a stride walk in integer arithmetic on the key, no draw, no board, no clock beyond the key.
+- The payload is ⛔ **`{ id, tier, weekKey, at }`**, one clock reading per call; `weekKey` is `null` for a lifetime unlock.
+- ⛔ **A week roll empties `weeklyUnlocked` ALONE** — the lifetime stores are not week-scoped.
+- ⛔ **There is no evaluation seat yet**: nothing in the shipped build calls `evaluate()`. CS015 P2 seats it at the clear edge and at `Meta.runEnded()`.
 
 ### 15.6 Telemetry
 

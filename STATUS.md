@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.11 · Changeset: **CS015 planned + answered 2026-09-20** · next: **CS015 P1** ·
+Version: 0.0.11 · Changeset: **CS015 P1 shipped 2026-09-20** · next: **CS015 P2** ·
 Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 · Tokens: 5/5 effects
 
 ## Phase ledger
@@ -9,12 +9,31 @@ Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 · Tokens: 5/
 phase must act on. ⛔ `log/` is not session context: pull one file in only when a
 question genuinely needs project history, and say that you did.
 
+| Phase | Landed |
+|---|---|
+| **CS015 P1** | the achievements module, the store, the week — `createAchievements()`, `C.ACHIEVEMENTS`, `achievements` v1 declared and in `OWN_KEYS`, the UTC ISO week and the rotation |
+
+**P1.** `20-achievements.js` is now `createAchievements({ defs, load, save, now })`,
+kit-achievements' draft, with `src/20-achievements.NOTES.md` beside it. ⛔ **It
+names no `state`, no `C` and no game global**, proved by a comment-stripped scan
+of its slice of the built file — ⛔ **cut at the first kit banner, because the kit
+banner is a rule of DASHES and the equals-signs module scan runs 20's slice
+straight through the three inlined bodies** (55 KB of it). `C.ACHIEVEMENTS` is
+`{ perWeek, lifetime, weekly }`, handed over as the `defs` option —
+`createScores`' seam, and A12's answer to the config invariant meeting the
+boundary contract. ⚠ **Its rows are PLACEHOLDERS, every id prefixed `_`, and P3
+replaces them whole.** The `achievements` key is declared v1 with ⛔ **no
+`migrate`**, and is in `OWN_KEYS`. ⛔ **No evaluation seat exists**: nothing in
+the build calls `evaluate()`, which is why P1 writes the key only from its own
+test. MEASURED: **75 files green, zero skips**, and ⛔ **no baseline moved**.
+Reasoning, the eight week boundaries and the mutation records: `log/CS015.md`.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
-  **762.9 KB**, 781,198 bytes); the manifest is checked both directions against
+  **780.3 KB**, 799,033 bytes); the manifest is checked both directions against
   `src/`, and a missing `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **74 files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **75 files, all green, zero skips.**
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
   ⛔ A timeout is not a red — re-run the file alone before treating it as one.
 - **CS001–CS014 are closed; each has a `log/CS0##.md`.** ⛔ **The Classic roster
@@ -85,17 +104,11 @@ question genuinely needs project history, and say that you did.
 hazards below are the ones that block, in that order. ⛔ Reasoning for any of
 them is in `log/CS0##.md`, not here.
 
-- ⛔ **`src/20-achievements.js` IS A ONE-LINE PLACEHOLDER** and is already in
-  `MANIFEST` and in `CLAUDE.md`'s code map as a future kit module
-  (`kit-achievements`). ⛔ **It obeys the boundary contract from its first
-  commit** — explicit params and callbacks, no game reach — and owes a
-  `src/20-achievements.NOTES.md` from the start.
-- ⛔ **`achievements` IS NOT A DECLARED KEY YET** (`CLAUDE.md`, Save data).
-  CS015 adds it to `22-meta.js`'s one `Store` **and** to `Profiles.remove()`'s
-  `OWN_KEYS`, which today is `["settings", "progress", "telemetry"]` — ⛔ never
-  `scores` and never `profiles`, which are ROOT. ⛔ **`get`/`set` on an
-  undeclared key throws**, and ⛔ **the game never enumerates storage and never
-  builds a key string**; `22-meta.js` is the only file that calls storage.
+- ✅ **THE MODULE AND THE STORE ARE SHIPPED (P1)** — see the ledger. ⛔ **What P2
+  inherits:** `Achievements.evaluate(facts)` takes ONE flat object, reading
+  `facts.mode` and each row's `fact` name, and ⛔ **a fact that is not a finite
+  number is a SKIP** — a counter P2 forgets to build silently unlocks nothing
+  rather than throwing. ⛔ **It writes only when something unlocked.**
 - ⛔ **Achievement `id` values are SAVE DATA and are never renamed** (GDD §15.5;
   `CLAUDE.md`). ⛔ **A row-shape change bumps that key's version and supplies a
   `migrate`** — pure, never calling back into the store, returning `undefined`
@@ -109,17 +122,13 @@ them is in `log/CS0##.md`, not here.
 - ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP**; a settings save runs inside
   `update()` on a menu step, and `levelRecord(mode)` reads storage on every
   call. An achievement evaluator that reads or writes per step is the same trap.
-- ⛔ **A DEFECT IN GDD §0: THERE IS NO ROW FOR AN ACHIEVEMENTS SCREEN** (found
-  by CS015 planning, 2026-09-20; recorded rather than worked around, per
-  `CLAUDE.md`'s own rule). MEASURED at `b92da55`: **§10.5's screen table has no
-  ACHIEVEMENTS row**, §0's §10.5 row enumerates every screen by name — title,
-  mode, Start Depth, scores, profiles and name entry, options, credits, controls
-  and rebinding, game over, pause — and names none, and **§15.5, the section §0
-  DOES point at for achievements, is entirely storage and evaluation and specs
-  no surface at all.** ⛔ So a CS015 phase that builds a screen has no §0 row
-  telling it what to read. ⛔ **The row is not invented here**: where an
-  achievement is seen is `PLANNED-FEATURES-CS015.md` §0's call A1, unanswered,
-  and the phase that builds the answer edits §10.5, §15.5 and §0's row together.
+- ⛔ **A DEFECT IN GDD §0: THERE IS NO ROW FOR AN ACHIEVEMENTS SCREEN** (CS015
+  planning, 2026-09-20; recorded rather than worked around, per `CLAUDE.md`).
+  MEASURED at `b92da55`: §10.5's screen table has no ACHIEVEMENTS row, §0's §10.5
+  row enumerates every screen by name and names none, and §15.5 — the section §0
+  DOES point at — specs no surface at all. ⚠ **A1 is ANSWERED (a screen off the
+  title, no toast)**, so ⛔ **P3 edits §10.5, §15.5 and §0's §10.5 row together**;
+  the row is written there, not invented by whichever phase notices the gap.
 - ⛔ **THE MENU SHAPES A SCREEN HAS TO FIT INTO**: the title has **four rows**,
   game over **three lines**, and ⛔ **OPTIONS HAS TEN ROWS WITH A SEVEN-ROW
   WINDOW** — a row is added before BACK, never above TELEMETRY. ⛔ **SCORES' rows
@@ -350,13 +359,14 @@ them is in `log/CS0##.md`, not here.
   ✅ **The Dive's visual leaves this list** — it was the oldest thing on it, open
   since CS006.
 
-## Next up — CS015 P1
+## Next up — CS015 P2
 
 ✅ **CS015 IS PLANNED AND ANSWERED** (2026-09-20,
 `PLANNED-FEATURES-CS015.md` + `IMPLEMENTATION-PHASES-CS015.md`, four phases).
 ✅ **Paul answered all twelve calls (A1–A12) and took EVERY recommendation**, with
 one qualification on A8. ⛔ **A build phase builds the answer in §0's column and
-does not re-open it**; the B and C branches are dead.
+does not re-open it**; the B and C branches are dead. ✅ **A6, A7, A11 and A12 are
+BUILT** — their shape is GDD §15.5's, not this file's, from here on.
 
 ⚠ **This is the first changeset since CS008 whose main risk is a decision that
 cannot be revised, rather than a mechanism that can** — ⛔ **an achievement `id`
@@ -364,17 +374,13 @@ is SAVE DATA and is never renamed**, so A8's table is written once, which is why
 Paul moved it out of CS011 (M4). ⛔ **P3 is alone in its session for that
 reason.**
 
-⛔ **THE ANSWERS, in one line each.** A1 a SCREEN off the title, no toast (so
-CS015 is four phases, not five). A2 new `tally` fields into one flat `facts`
-object. A3 two seats, the clear edge and `Meta.runEnded()`. A4 `Meta.eligible()`
-extended — a bench run earns nothing. A5 one shared store, rows MODE-TAGGED.
-A6 `achievements` v1, §15.5's four stores, arrays not Sets, no `migrate`.
-A7 a weekly-only pool of 20, stride-walked, `weekKey` UTC from an injected
-`now()`. A8 ⛔ **23 lifetime rows.** A9 an unlock is worth NOTHING — no
-`addScore()` call. A10 one new `C.SFX` event, `unlock` (27 → 28). A11
-`{ id, tier, weekKey, at }`. A12 `C.ACHIEVEMENTS` as data, handed over as an
-option — ⛔ the answer to where the config invariant and the boundary contract
-collide, and `createScores`' shipped precedent.
+⛔ **THE ANSWERS STILL TO BUILD, in one line each.** A1 a SCREEN off the title,
+no toast (so CS015 is four phases, not five). A2 new `tally` fields into one flat
+`facts` object. A3 two seats, the clear edge and `Meta.runEnded()`. A4
+`Meta.eligible()` extended — a bench run earns nothing. A5 rows MODE-TAGGED, one
+shared store (P1 built the store; the tags are the TABLE's, so they land with
+it). A8 ⛔ **23 lifetime rows plus the twenty weekly.** A9 an unlock is worth
+NOTHING — no `addScore()` call. A10 one new `C.SFX` event, `unlock` (27 → 28).
 
 ⛔ **A8's qualification: `purge_wide` IS DROPPED** — MEASURED unreachable (best
 of 289 Purge uses is **4**, not six), and lowering it would set a threshold from
