@@ -52,7 +52,7 @@ function addScore(n) {
   state.score += n;
   while (state.score >= state.nextLife) {
     if (state.screen !== "gameover") {
-      if (state.lives < C.LIVES_MAX) { state.lives += 1; sfx("extraLife"); }
+      if (state.lives < C.LIVES_MAX) { state.lives += 1; state.tally.extraLives++; sfx("extraLife"); }
       else sfx("lifeLost");
     }
     state.nextLife += C.EXTRA_LIFE_EVERY;

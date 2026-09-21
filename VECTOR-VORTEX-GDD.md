@@ -1819,7 +1819,12 @@ Structure follows Orbital Overhaul's proven v2 shape:
 - ⛔ **The clock is INJECTED** (`now`), never read inside the module: a per-step read would advance a soak's faked clock 9.2 days and roll the ISO week mid-session. ⛔ **The rotation is a function of the week and of nothing else** — a stride walk in integer arithmetic on the key, no draw, no board, no clock beyond the key.
 - The payload is ⛔ **`{ id, tier, weekKey, at }`**, one clock reading per call; `weekKey` is `null` for a lifetime unlock.
 - ⛔ **A week roll empties `weeklyUnlocked` ALONE** — the lifetime stores are not week-scoped.
-- ⛔ **There is no evaluation seat yet**: nothing in the shipped build calls `evaluate()`. CS015 P2 seats it at the clear edge and at `Meta.runEnded()`.
+⛔ **Shipped, CS015 P2 — the facts, the seats and the gate.**
+- ⛔ **TWO SEATS AND NO THIRD** (plan A3): the CLEAR EDGE in `Game.update()`, through `Meta.clearEdge()` after the bonuses and `levelRecord().noteCleared()`, and `Meta.runEnded()`. ⛔ **Never per step** — 1.74 M predicate calls a session, and a week key read there advances a faked clock 9.2 days. The clear edge is a PLAY step and that is legal: the shipped ban is on a TELEMETRY write from one (§15.6), and a fully-unlocked envelope is 681 bytes against a ring's 890,000 characters.
+- ⛔ **THE RUN-END SEAT READS `ok`, THE LOCAL, NEVER `eligible()`**: `runEnded()` closes the run first, so the gate reads false inside it and a seat written the other way makes every run ineligible with nothing to say so.
+- ⛔ **`Meta.eligible()` IS THE ONE GATE AND IT GAINED A CALLER, NOT A CHANGE** (§15.3, §15.4; plan A4): the local top 10, both boards and now the unlocks. ⛔ **A bench run earns nothing.**
+- ⛔ **THE FACTS ARE ONE FLAT OBJECT THE GAME BUILDS AT THE SEAT** (plan A2), from `state` plus `state.tally`, which is **21 counters** since P2's thirteen. ⛔ **Each is written where its event happens and NOTHING IN THE SIMULATION BRANCHES ON ONE** — that is what keeps the determinism hash identical. ⚠ Two are bitmasks (`wellsSeenMask`, `tokenKindsMask`), handed over as bit counts, because "distinct wells" and "all five kinds" need a memory. ⛔ **The five kill lines are NOT edited**: `tallyKill()` is called on its own line above each one, and a Carrier's two children share one `brood` so a split counts on the second destroyed.
+- ⛔ **AN UNLOCK IS WORTH NOTHING** (§7; plan A9): no points, no life, no `addScore()` call, no kill site and no draw.
 
 ### 15.6 Telemetry
 

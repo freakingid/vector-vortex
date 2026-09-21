@@ -193,7 +193,7 @@ function takeRings(state, well) {
     if (r.taken !== null) continue;
     if (state.dive.depth > r.depth) continue;
     r.taken = Math.abs(laneDelta(well, r.lane, sk.lane)) <= C.RING_ARC_LANES;
-    if (r.taken) { addScore(C.RING_POINTS); sfx("ringTake"); }
+    if (r.taken) { addScore(C.RING_POINTS); state.tally.ringsTaken++; sfx("ringTake"); }
     else sfx("ringMiss");
   }
 }
@@ -479,5 +479,11 @@ function updateDive(state, well, dt) {
   // rather than "divesSurvived": a diver who loses a life to a Thorn respawns
   // and finishes the dive, so this counts dives that REACHED C.DIVE_TIME. The
   // lives lost inside them are `thornDeaths`, beside it.
-  if (d.timer >= total) { state.tally.divesCompleted++; nextWell(); }
+  // ⛔ AND `ringSetsTaken` (CS015 P2): the set in force at completion — a
+  // repeated dive re-laid it — laid and every ring of it taken. Write-only.
+  if (d.timer >= total) {
+    state.tally.divesCompleted++;
+    if (d.rings.length > 0 && d.rings.every(r => r.taken === true)) state.tally.ringSetsTaken++;
+    nextWell();
+  }
 }

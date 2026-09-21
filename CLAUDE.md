@@ -499,6 +499,18 @@ field needs no migration.
 
 ⛔ **Achievement `id` values are save data and are never renamed.**
 
+⛔ **ACHIEVEMENTS EVALUATE AT TWO SEATS AND NO THIRD** (GDD §15.5): the clear
+edge (`Meta.clearEdge()`) and `Meta.runEnded()`, which reads `ok`, its local —
+`run` is already null there. ⛔ **Never per step**, and ⛔ **the facts are one
+flat object the game builds at the seat** from `state` and `state.tally`;
+`20-achievements.js` reads neither. ⛔ **An unlock pays nothing.**
+
+⛔ **A `tally` COUNTER IS WRITE-ONLY AND NOTHING IN THE SIMULATION BRANCHES ON
+ONE** (`02-state.js`), which is what keeps a counter free of the determinism
+hash. ⛔ **It is written where its event happens**, and ⛔ **a counter that needs
+what DIED goes in `tallyKill()`, on its own line beside a kill line, never in
+one** (`test-cs012-p4.js`, `test-cs014-p1.js` pin all five).
+
 ⛔ **`Profiles.scope()` is the active profile's store; the game never builds a key
 string.** ⛔ **Profile `p0`'s scope is the ROOT store**, so a per-profile
 `remove(key)` never names a root key.
@@ -523,8 +535,9 @@ module, Classic first; a throwing `create()` is not retried, per client.
 `beginRun()` and `submit()` route by `state.mode`; `load(mode, done)` answers under
 one stale-answer token; `queueLength()` **sums both**.
 
-⛔ **`Meta.eligible()` is the ONE gate** — every `submit()`, both boards and the
-local top-10 check. Extend them together or not at all.
+⛔ **`Meta.eligible()` is the ONE gate** — every `submit()`, both boards, the
+local top-10 check and every achievement evaluation. Extend them together or not
+at all.
 
 ⚠ **SETTLED — `'completed'` has no call site.** Only `'died'` and `'quit'` are
 submitted; do not invent a trigger to fill the enum.
@@ -630,7 +643,8 @@ src/00-config.js       C — every tunable; THE HEAT CLOCK (heat, 7 accessors);
                        sfx("reflect") seat)
     08-spawner.js      spawnEnemy() — the ONE way in — cadence, quota, clear,
                        eligibleKinds()
-    09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge, jumpStrike()
+    09-collision.js    the ONE 1-D pass, killSkimmer(), the Purge, jumpStrike();
+                       tallyKill() — what DIED, beside the kill lines
     10-powerups.js     tokens: dropToken() (the ONE way in), updateTokens(), the
                        pickup, resetTokens()
     11-dive.js         the Dive and the ring flight: diveTime(), layRings() (the
@@ -653,8 +667,9 @@ src/00-config.js       C — every tunable; THE HEAT CLOCK (heat, 7 accessors);
     21-telemetry.js    TELEMETRY_FIELDS + the ring. Capture is a SESSION switch,
                        OFF at launch; sampled from update(), never draw()
     22-meta.js         THE ONE ROUTE TO STORAGE: Store, Profiles, Leaderboard,
-                       Meta (eligible() — the ONE gate), createScores,
-                       levelRecord(), startDepthOptions()
+                       Meta (eligible() — the ONE gate; the achievement facts
+                       and both seats), createScores, levelRecord(),
+                       startDepthOptions()
     23-main.js         loop, state machine, well lifecycle, respawn
 ```
 

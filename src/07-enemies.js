@@ -533,8 +533,14 @@ class Carrier extends Enemy {
 
     const well = WELLS[state.wellIndex];
     const lanes = splitLanes(well, this.lane);
-    spawnEnemy(row.kind, lanes[0], this.depth);
-    spawnEnemy(row.kind, lanes[1], this.depth);
+    const a = spawnEnemy(row.kind, lanes[0], this.depth);
+    const b = spawnEnemy(row.kind, lanes[1], this.depth);
+    // ⛔ THE BROOD (CS015 P2): one shared counter the two children carry, so
+    // tallyKill() (09-collision.js) can see the SECOND of them destroyed —
+    // `tally.carrierSplits`. ⛔ WRITE-ONLY: nothing in the simulation reads it,
+    // and it is not a contract field. Only when BOTH were spawned: a child
+    // refused at C.ENEMY_CAP means there is no pair to finish.
+    if (a && b) a.brood = b.brood = { left: 2 };
     sfx("split");
     return true;
   }
@@ -947,6 +953,8 @@ class Thorn extends Enemy {
   // the array for the rest of the step is a number no other system can produce.
   chip() {
     addScore(C.PTS_THORN);
+    // ⛔ WRITE-ONLY (02-state.js's `tally`; CS015 P2): one per chip of length.
+    state.tally.thornChips++;
     this.depth -= C.THORN_CHIP;
     if (this.depth <= 0) {
       this.depth = 0;

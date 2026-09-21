@@ -281,7 +281,8 @@ const Meta = (function () {
   //
   // ⛔ NOT IN `state` (R6): startGame() rewrites it, and the record of a run has
   // to outlive exactly that. ⛔ META WRITES NO `state`, SPENDS NO DRAW AND DRAWS
-  // NOTHING; it reads `state` at the run's end and nowhere else.
+  // NOTHING; it reads `state` at the run's end and, since CS015 P2, at the
+  // clear edge's achievement seat, and nowhere else.
   //
   // `run` is null when no run is open, else { bench } — whether a debug bench
   // action reached it in play. `placed` is the rank the last ended run took in
@@ -302,13 +303,56 @@ const Meta = (function () {
     if (run !== null) run.bench = true;
   }
 
-  // ⛔ THE ONE GATE (CLAUDE.md, Leaderboard): the local table's check, and from
-  // P5 every submit. Extend both together or neither.
+  // ⛔ THE ONE GATE (CLAUDE.md, Leaderboard): the local table's check, from P5
+  // every submit, and from CS015 P2 every achievement evaluation. Extend all
+  // three together or none.
   function eligible() {
     return run !== null && !run.bench;
   }
 
   function runOpen() { return run !== null; }
+
+  // ---- the achievement facts and seats (CS015 P2; plan A2, A3, A4, A9) ----
+  //
+  // ⛔ ONE FLAT OBJECT, BUILT AT THE SEAT (A2-A): `state`'s readable facts plus
+  // the run's `tally`, by name — what C.ACHIEVEMENTS' rows name as `fact`. The
+  // module reads no `state`; this is where the game hands it over. ⛔ Every
+  // value is the RUN's: `tally` is re-minted by startGame(). A fact a row names
+  // that is not here is a SKIP in evaluate(), never a throw.
+  // ⚠ The two masks go over as bit COUNTS: distinct wells seen, token kinds.
+  function bitCount(n) {
+    let c = 0;
+    for (let v = n >>> 0; v !== 0; v >>>= 1) c += v & 1;
+    return c;
+  }
+  function facts() {
+    const t = state.tally;
+    return {
+      mode: state.mode,
+      level: state.level, score: state.score, startDepth: state.startDepth,
+      lives: state.lives, comboPeak: state.combo.peak,
+      wellsCleared: t.wellsCleared, kills: t.kills, deaths: t.deaths,
+      divesCompleted: t.divesCompleted, thornDeaths: t.thornDeaths,
+      purgesSpent: t.purgesSpent, shotsFired: t.shotsFired,
+      thornChips: t.thornChips, deathlessWells: t.deathlessWells,
+      purgeSavedClears: t.purgeSavedClears, openWellsCleared: t.openWellsCleared,
+      wellsSeen: bitCount(t.wellsSeenMask), extraLives: t.extraLives,
+      rimSweepKills: t.rimSweepKills, jumpKills: t.jumpKills,
+      mimicKills: t.mimicKills, carrierSplits: t.carrierSplits,
+      ringsTaken: t.ringsTaken, ringSetsTaken: t.ringSetsTaken,
+      tokenKinds: bitCount(t.tokenKindsMask),
+    };
+  }
+
+  // ⛔ THE CLEAR-EDGE SEAT (A3-A), from Game.update()'s edge, after the bonuses
+  // and noteCleared(). A PLAY step: evaluate() reads the store and writes it
+  // ONLY when something unlocked. ⛔ THE ONE GATE (A4-A) — a bench run earns
+  // nothing. ⛔ AN UNLOCK IS WORTH NOTHING (A9-A): no addScore(), no life.
+  // Returns the payload (A11), which nothing posts (GDD 15.5, local-only).
+  function clearEdge() {
+    if (!booted || !eligible()) return null;
+    return Achievements.evaluate(facts());
+  }
 
   // R9's local row. The profile's name is the one it has NOW, stamped, so a
   // later rename or delete leaves the row as it was set.
@@ -328,7 +372,8 @@ const Meta = (function () {
   // life pays after it returns (GDD 7), and a Dive death returns from update()
   // early, so only the frame knows the final score. It closes the run first, so
   // a second call records nothing; then the row, if eligible and placed; the
-  // submit, if eligible (P5); then the telemetry write (P2's).
+  // submit, if eligible (P5); the achievements, if eligible (CS015 P2); then the
+  // telemetry write (P2's).
   function runEnded(outcome) {
     if (run === null) return;
     const ok = eligible();
@@ -339,6 +384,9 @@ const Meta = (function () {
     // ⛔ THE SAME GATE, READ ONCE (CLAUDE.md, Leaderboard): every eligible run end
     // submits, 'died' and 'quit' (Paul's M6), placed locally or not.
     if (ok) Leaderboard.submit(outcome);
+    // ⛔ THE RUN-END SEAT (CS015 P2, A3-A): `ok`, THE LOCAL, never eligible() —
+    // `run` is already null here, so eligible() reads false for every run.
+    if (booted && ok) Achievements.evaluate(facts());
     saveTelemetry();
   }
 
@@ -428,6 +476,7 @@ const Meta = (function () {
   return {
     boot, saveSettings, saveTelemetry, loadTelemetry,
     runStarted, benchUsed, eligible, runOpen, runEnded, scores, lastPlace,
+    clearEdge,
   };
 })();
 

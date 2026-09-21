@@ -71,6 +71,11 @@ function enterWell() {
   // this is where it stops counting against anything (12-scoring.js).
   state.diedThisWell = false;
 
+  // ⛔ WRITE-ONLY (02-state.js's `tally`; CS015 P2): this well has been SEEN.
+  // Here, so the run's first well, every nextWell() and the `w` cycler all
+  // count — a bench cycle makes the run ineligible, so it can earn nothing.
+  state.tally.wellsSeenMask |= 1 << state.wellIndex;
+
   resetSpawner(state);
 
   // ⛔ Where CS003 P2's one-line hold reset sat, and for the same reason: a
@@ -1621,11 +1626,20 @@ const Game = (function () {
     // and almost nowhere else: a run is live, so levelRecord()'s default IS this
     // run's mode. Off play state.mode names the LAST run's, which is why MODE's
     // START DEPTH passes pendingMode instead.
+    // ⛔ AND THE ACHIEVEMENTS SEAT (CS015 P2, plan A3-A): the clear edge is a
+    // PLAY step and already a storage seat — noteCleared()'s 39 bytes. ⛔ The
+    // shipped ban is a TELEMETRY write from a play step; an unlock writes only
+    // when something unlocked, and only on an eligible run (Meta.eligible()).
+    // Its three counters sit beside `wellsCleared`, read before the bonuses.
     if (wellCleared(state)) {
       state.tally.wellsCleared++;
+      if (!state.diedThisWell) state.tally.deathlessWells++;
+      if (state.purgeUses === 0) state.tally.purgeSavedClears++;
+      if (!well.closed) state.tally.openWellsCleared++;
       sfx("wellClear");
       clearBonuses(state);
       levelRecord().noteCleared(state.level);
+      Meta.clearEdge();
       startDive(state);
     }
   }

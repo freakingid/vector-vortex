@@ -156,6 +156,7 @@ function collideShots(state, well) {
       // splits dies. `e.dead` was false above, so this IS the false -> true
       // transition: the telemetry count (02-state.js's `tally`) and the points
       // (12-scoring.js), and nothing here branches on either.
+      if (e.dead) tallyKill(state, e);
       if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice); }
       break;
     }
@@ -281,6 +282,7 @@ function collideSkimmer(state, well) {
     // ⛔ The rim sweep — the header above, and the four decisions in it.
     if (state.input.fire && e.depth >= 1 - C.RIM_CONTACT_DEPTH) {
       e.onShot(null);
+      if (e.dead) { state.tally.rimSweepKills++; tallyKill(state, e); }
       if (e.dead) { state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice); continue; }
     }
     killSkimmer(state);
@@ -492,6 +494,7 @@ function updatePurge(state) {
     sfx("purge");
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
+      if (!e.dead && e.purgeable) tallyKill(state, e);
       if (!e.dead && e.purgeable) { e.dead = true; state.tally.kills++; addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice); }
     }
     return;
@@ -505,6 +508,7 @@ function updatePurge(state) {
     // the weak use by firing it into an empty well.
     // ⛔ `kills` is "the player destroyed it", by shot or by Purge, so both
     // branches of the panic button count here (02-state.js's `tally`).
+    if (victim) tallyKill(state, victim);
     if (victim) { victim.dead = true; state.tally.kills++; addScore(victim.points() * comboMult()); comboKill(state); dropToken(state, victim); sfx("kill", victim.sfxVoice); }
   }
   // Third and later: nothing. The counter keeps rising so a HUD (CS008) can
@@ -557,8 +561,22 @@ function jumpStrike(state, well) {
     if (!laneHit(well, e.lane, sk.lane)) continue;
     e.dead = true;
     state.tally.kills++;
+    state.tally.jumpKills++;
     addScore(e.points() * comboMult()); comboKill(state); dropToken(state, e); sfx("kill", e.sfxVoice);
   }
+}
+
+// ⛔ THE ACHIEVEMENT COUNTERS A KILL MOVES BY WHAT DIED (CS015 P2, plan A2-A;
+// 02-state.js's `tally`). Called on its OWN LINE beside the kill line at the
+// shot site, the rim sweep and both Purge uses — never inside one: ⛔ THE FIVE
+// KILL LINES ARE NOT EDITED, and test-cs012-p4.js / test-cs014-p1.js pin their
+// text. The jump strike needs no call: only an aloft entity dies there, which
+// is neither a Mimic nor a Carrier's child. ⛔ WRITE-ONLY — no points, no
+// combo, no draw, no sound, and nothing in the simulation reads either count.
+// ⛔ `instanceof`, never a kind string: the MimicShot is not a Mimic.
+function tallyKill(state, e) {
+  if (e instanceof Mimic) state.tally.mimicKills++;
+  if (e.brood && --e.brood.left === 0) state.tally.carrierSplits++;
 }
 
 // The whole pass, in its fixed order. Called once per simulation step from

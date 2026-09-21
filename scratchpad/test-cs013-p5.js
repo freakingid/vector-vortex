@@ -160,7 +160,7 @@ function drive(Z, i) {
   inp.keyUp("ArrowRight"); inp.keyUp("ArrowLeft");
   if (!sk || sk.dead) { inp.keyUp("arrowup"); return; }
 
-  let dodge = null, token = null, best = null;
+  let dodge = null, token = null, best = null, contact = null;
   for (let n = 0; n < st.enemies.length; n++) {
     const e = st.enemies[n];
     if (e.dead) continue;
@@ -176,6 +176,10 @@ function drive(Z, i) {
     // its lane. Only worth going to with a Lance on (see the header).
     if (e.anchored && !st.powers.lance) continue;
     if (best === null || e.depth > best.depth) best = e;
+    // ⛔ SHELLED, A CONTACT KILLER IS A TARGET RATHER THAN A THREAT (T9), and
+    // the deepest is the one that will reach the rim first.
+    if (e.killDepth !== null && e.killDepth !== undefined && !e.aloft &&
+        (contact === null || e.depth > contact.depth)) contact = e;
   }
   for (let n = 0; n < st.tokens.length; n++) {
     const t = st.tokens[n];
@@ -184,10 +188,23 @@ function drive(Z, i) {
     if (token === null || Math.abs(dd) < Math.abs(token)) token = dd;
   }
 
+  // ⛔ SHELLED, IT SPENDS THE SHELL, AND IT STOPS FIRING TO DO IT (T9: a Ward
+  // is one free hit). ⚠ REPAIRED IN PLACE, CS015 P2: this driver only stopped
+  // DODGING while shelled, and the Ward break below was then a coincidence —
+  // 2 in 101,330 frames. CS015's achievement seats read the clock once per
+  // evaluation, which moves this file's faked per-call Date.now and with it the
+  // seed every RESTART takes; the coincidence did not survive, at twelve seeds
+  // and six clock ticks. ⛔ THE PRECONDITION IS RESTORED, NOT RELAXED, and the
+  // fire release is what restores it: a firing hunter's RIM SWEEP takes the
+  // contact killer first (GDD 4.5), so a held trigger is why a shell almost
+  // never got spent — 3,446 shelled frames, 0 breaks. Released: 11.
+  const spendShell = st.powers.ward && contact !== null;
+  if (i < HOLD_TICKS) { if (spendShell) inp.keyUp(" "); else inp.keyDown(" "); }
   // A dodge is a FULL push away rather than a delta, so a shot in the craft's
   // own lane (delta 0, and -0 is still 0) still moves it.
   let d;
   if (dodge !== null) d = (dodge > 0 ? -RIGHT : RIGHT);
+  else if (spendShell) d = Z.laneDelta(well, sk.lane, contact.lane) * RIGHT;
   else if (token !== null) d = token * RIGHT;
   else if (best !== null) d = Z.laneDelta(well, sk.lane, best.lane) * RIGHT;
   else d = 0;

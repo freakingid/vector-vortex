@@ -317,9 +317,11 @@ function newState() {
 
     // ⛔ THE RUN'S CUMULATIVE COUNTERS (GDD 15.6; 21-telemetry.js). CS007 P4.
     //
-    // ⛔ WRITE-ONLY AS FAR AS THE SIMULATION IS CONCERNED. Eight numbers, each
-    // incremented at the ONE place its event actually happens, and read by
-    // exactly one consumer: Telemetry's row builder. ⛔ NOTHING IN THE
+    // ⛔ WRITE-ONLY AS FAR AS THE SIMULATION IS CONCERNED. Twenty-one numbers, each
+    // incremented at the ONE place its event actually happens, and read only
+    // OUTSIDE the simulation: Telemetry's row builder (the first eight), the
+    // leaderboard payload and, since CS015 P2, Meta's achievement facts (all of
+    // them, at the clear edge and the run's end, 22-meta.js). ⛔ NOTHING IN THE
     // SIMULATION BRANCHES ON ONE — that is what makes CS007 P4's headline
     // assertion true, that the 10,000-tick determinism hash is identical with
     // capture ON and OFF. A future reader that wants to gate behaviour on one
@@ -355,9 +357,37 @@ function newState() {
     //                      spawner had quota left and its timer at the interval
     //                      and still released nothing — the release budget
     //                      (CS007 P1) or C.ENEMY_CAP
+    //
+    // ⛔ CS015 P2's THIRTEEN (plan A2-A), for the achievement table's facts and
+    // for nothing else — ⛔ NOT telemetry columns (TELEMETRY_FIELDS stays 29).
+    // Where each is counted, beside the counter or the event already there:
+    //   thornChips         Thorn.chip() — per chip of LENGTH, beside its 5 points
+    //   deathlessWells     the clear edge, unless diedThisWell (23-main.js)
+    //   purgeSavedClears   the clear edge, when purgeUses is 0
+    //   openWellsCleared   the clear edge, on an open well
+    //   wellsSeenMask      enterWell() — ⚠ a BITMASK of wellIndex, not a count:
+    //                      "distinct wells this run" needs a memory, and the
+    //                      fact Meta hands over is its bit count
+    //   extraLives         addScore(), a life actually AWARDED (not one lost at
+    //                      C.LIVES_MAX)
+    //   rimSweepKills      the rim sweep's kill (09-collision.js)
+    //   jumpKills          the jump strike's kill — an aloft entity, the Warden
+    //   mimicKills         tallyKill(), at every kill line a Mimic can reach
+    //   carrierSplits      tallyKill(): the second of a Carrier's two children
+    //                      destroyed by the player (the `brood` both carry,
+    //                      07-enemies.js). ⛔ Both must have been spawned
+    //   ringsTaken         takeRings(), beside the ring's payout (11-dive.js)
+    //   ringSetsTaken      a dive that COMPLETED with every ring of its set
+    //                      taken, beside `divesCompleted`
+    //   tokenKindsMask     collectToken() — ⚠ a BITMASK over C.TOKEN_WEIGHTS'
+    //                      key order; the fact is its bit count
     tally: {
       deaths: 0, wellsCleared: 0, purgesSpent: 0, divesCompleted: 0,
       thornDeaths: 0, shotsFired: 0, kills: 0, spawnBlockedTicks: 0,
+      thornChips: 0, deathlessWells: 0, purgeSavedClears: 0, openWellsCleared: 0,
+      wellsSeenMask: 0, extraLives: 0, rimSweepKills: 0, jumpKills: 0,
+      mimicKills: 0, carrierSplits: 0, ringsTaken: 0, ringSetsTaken: 0,
+      tokenKindsMask: 0,
     },
   };
 }

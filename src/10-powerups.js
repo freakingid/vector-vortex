@@ -149,6 +149,10 @@ function updateTokens(state, well, dt) {
     t.age += dt;
     if (t.age >= C.TOKEN_LIFE) { t.dead = true; gone++; continue; }
     if (live && t.depth >= C.TOKEN_HOVER_DEPTH && laneHit(well, t.lane, sk.lane)) {
+      // ⛔ WRITE-ONLY (02-state.js's `tally`; CS015 P2): which KINDS this run
+      // has taken, one bit per key of C.TOKEN_WEIGHTS in its ORDER — at the
+      // pickup, never in collectToken(): the effect side names no weight.
+      state.tally.tokenKindsMask |= 1 << Object.keys(C.TOKEN_WEIGHTS).indexOf(t.kind);
       collectToken(state, t);
       gone++;
     }
