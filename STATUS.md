@@ -120,12 +120,16 @@ files were edited — three predicted, two not** — see Test hazards. `log/CS01
   NOT save data and any changeset may move one. `achievements` stays **v1** —
   "lifetime" is one run banked, because `lifetimeTiers` is monotonic. ⚠ Real
   totals stay possible later as an ADDITIVE v2, new ids beside these.
-- ⛔ **TWO OF PLAN §9's TWENTY WEEKLY ROWS ARE REPORTED, NOT SHIPPED, AND THEY
-  ARE PAUL'S CALL**: *collect three tokens in one well* and *chip a Thorn to
-  nothing in one pass*. ⛔ **Neither has a fact** — `tally` counts token KINDS in
+- ✅ **PLAN §9's TWO UNSHIPPABLE WEEKLY ROWS GO IN BEFORE SHIP** (Paul,
+  2026-09-20, after P3): *collect three tokens in one well* and *chip a Thorn to
+  nothing in one pass*. ⛔ **Neither had a fact** — `tally` counts token KINDS in
   a bitmask and chips of LENGTH, not tokens collected or Thorns destroyed — so
-  each needs ONE counter, which P3 was barred from adding. ⚠ **Adding either
-  later reshuffles which five rows a week shows** (the walk reads the length).
+  each owes ONE new `tally` counter (tokens collected; Thorns destroyed) and one
+  pool row, in CS016 or CS017. ⛔ **NOT CS015 P4**, which is the soak and the
+  close. ⚠ **Adding them reshuffles which five rows a week shows** (the walk
+  reads the pool's LENGTH), which is why it happens while no player has a save —
+  ⛔ **after ship it is not free.** ⚠ A counter added at a kill line owes
+  `tallyKill()`'s rule and the five pinned kill-line strings.
 - ⚠ **`C.ACHIEVEMENTS.wellShotPar` 120 is P3's one invented number**, MEASURED
   over 579 cleared wells (fewest 106, p10 ~121, median ~185). It is a tunable,
   not save data.
@@ -135,14 +139,12 @@ files were edited — three predicted, two not** — see Test hazards. `log/CS01
   row** — `deaths`, `purgesSpent`, `shotsFired`, `thornDeaths`, CS007's own —
   and `test-cs015-p3.js` pins that exact set.
 - ⛔ **A row-shape change bumps that key's version and supplies a `migrate`** —
-  pure, never calling back into the store, returning `undefined` for an origin
-  version it cannot read. `progress` v2's `migrateProgress` is the worked
-  example.
+  pure, never calling back into the store. `progress` v2's `migrateProgress` is
+  the worked example.
 - ⛔ **THE BOOT BLOCK RUNS INSIDE THE HARNESS**: `Meta.boot()` writes `profiles`
-  in every build, so a storage test starts from a booted store.
-  ⚠ **A `Store.set` spy sees only `p0`'s writes**, and ⛔ **profile `p0`'s scope
-  IS the root store**, so a per-profile `remove(key)` on `p0` must never name a
-  root key.
+  in every build. ⚠ **A `Store.set` spy sees only `p0`'s writes**, and ⛔ **`p0`'s
+  scope IS the root store**, so a per-profile `remove(key)` there must never name
+  a root key.
 - ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP**; a settings save runs inside
   `update()` on a menu step, and `levelRecord(mode)` reads storage on every call.
 - ✅ **THE GDD §0 DEFECT IS REPAIRED (P3)** — §10.5, §15.5 and §0's §10.5 row.
@@ -340,16 +342,18 @@ files were edited — three predicted, two not** — see Test hazards. `log/CS01
   changeset's calls indexed AT THE CLOSE, ⛔ **a pointer, never the writeup.**
 - ✅ **`DECISIONS.md`'S INDEX IS COMPLETE** through CS014 (Paul, `4bfd169`).
   ⛔ **CS015's row is the CLOSE's.**
-- ⛔ **Paul, when he wants it: `drive`'s lab session** (PASS marks, tiers, gains,
-  tempo). Its own commit; it rewrites `test-cs012-p1.js`'s "no tier" and "no
-  audition mark" assertions in place. ⚠ `drive` is untiered and unheard, and
-  ⚠ `ringTake` / `ringMiss`, the Surger tone and the Warden's fuse have no lab
-  audition over it. Nothing waits on it.
+- ⛔ **ONE LAB SESSION COVERS ALL OF IT, when Paul wants it** (his call,
+  2026-09-20, after P3): `drive`'s tiers, gains and tempo (PASS marks) **and the
+  FIVE unauditioned cues** — `ringTake`, `ringMiss`, the Surger tone, the
+  Warden's fuse and ⚠ **CS015 P3's `unlock`**, which ships as candidate A with
+  two alternates in the lab ("square bell pair", "triangle step up"). Its own
+  commit; it rewrites `test-cs012-p1.js`'s "no tier" and "no audition mark"
+  assertions in place. ⛔ **Nothing waits on it**, and ⛔ **a re-pick is ported
+  verbatim from the lab, never hand-tuned in `C`.**
 - ⚠ **Paul replaces `C.CREDITS_LINES` before ship.**
 - ✅ **Both boards are registered and deployed** (coinless-kit `e2efed5`; ⛔ never
   pin `f8d34f3`), same seven `statsFields`. ⛔ **Read the Worker's registered
-  `statsFields` before sending a stats key**; ⛔ `C.GAME_ID` is the SAVE keyspace,
-  never a board id.
+  `statsFields` before sending a stats key**; `C.GAME_ID` is the SAVE keyspace.
 - ⛔ **CS017 owes three measurements**: the Mimic's probation verdict (GDD §21
   #6 — ⚠ and `mimic_kill` is now a shipped id, unearnable for new players if the
   Mimic is cut), GDD §17's budget naming "8 shots" where Spread's cap is **24**,
