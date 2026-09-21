@@ -43,8 +43,8 @@ file was repaired — see Test hazards.** `log/CS015.md`.
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
-  **787.8 KB**, 806,711 bytes); the manifest is checked both directions against
-  `src/`, and a missing `KIT_INLINE` file fails the build.
+  **787.8 KB**, 806,711 bytes); `MANIFEST` is checked both ways and a missing
+  `KIT_INLINE` file fails the build.
 - `node scratchpad/run-all.js`: **76 files, all green, zero skips.**
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
   ⛔ A timeout is not a red — re-run the file alone before treating it as one.
@@ -111,6 +111,28 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
   each row's `fact` name, ⛔ **skips a fact that is not a finite number** — a row
   naming a fact nobody builds silently unlocks nothing rather than throwing —
   and ⛔ **writes only when something unlocked.**
+- ✅ **A "LIFETIME" ROW MEANS ONE RUN, AND `achievements` STAYS v1** (Paul,
+  2026-09-20, after P2). ⛔ **No totals, no v2, no `migrate`**: `lifetimeTiers`
+  is monotonic, so a per-run threshold over that store already IS "your best run,
+  banked" — GDD §15.5's *lifetime* is the store that never resets, against
+  *weekly*. ⛔ **P3 retunes the nine tiered rows to PER-RUN readings**, and
+  ⚠ **tier 3 sits near 50–60 % of what a probe reached, never AT it**: a top tier
+  set at a bot's best is what dropped `purge_wide`. ✅ **Displayed names may be
+  reworded to read true** ("MOST WELLS IN A RUN"); ⛔ **the 23 ids are A8's,
+  unchanged.** ⚠ Real totals stay possible later as an ADDITIVE v2 — new
+  cumulative ids, these keeping their meaning.
+- ✅ **THE TWENTY WEEKLY ROWS LAND IN P3, THEIR FACTS BUILT IN `facts()`** (Paul,
+  same): ⛔ **no new `tally` field, no module change, and P3 is still alone in its
+  session.** Three shapes, all arithmetic in `22-meta.js`: a PER-WELL window is
+  ⛔ **the delta since the last clear edge** — `tally` is monotonic within a run
+  and the edge fires once per well; a CONJUNCTION ("level 20 from Start Depth 1")
+  and an AT-MOST or WITHOUT row ("one life left", "no Thorn death") are ⛔ **0/1
+  facts with `at: 1`**, because a row is ONE fact `>=` ONE threshold. ⛔ **The
+  run-end seat OMITS the per-well facts** — a non-finite fact is a skip, so a
+  stale window cannot unlock anything. ⚠ **"Take four rings in one dive" is the
+  one row with no fact**: reword it to the full set (`ringSetsTaken`) or report
+  it. ⚠ **Adding weekly rows LATER reshuffles which five a week shows** (the walk
+  reads the pool's length), which is why all twenty land at once.
 - ⛔ **Achievement `id` values are SAVE DATA and are never renamed** (GDD §15.5;
   `CLAUDE.md`). ⛔ **A row-shape change bumps that key's version and supplies a
   `migrate`** — pure, never calling back into the store, returning `undefined`
@@ -122,8 +144,7 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
   IS the root store**, so a per-profile `remove(key)` on `p0` must never name a
   root key.
 - ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP**; a settings save runs inside
-  `update()` on a menu step, and `levelRecord(mode)` reads storage on every
-  call. An achievement evaluator that reads or writes per step is the same trap.
+  `update()` on a menu step, and `levelRecord(mode)` reads storage on every call.
 - ⛔ **A DEFECT IN GDD §0: THERE IS NO ROW FOR AN ACHIEVEMENTS SCREEN** (CS015
   planning; recorded rather than worked around). MEASURED at `b92da55`: §10.5's
   screen table has no ACHIEVEMENTS row, §0's §10.5 row names every screen and
@@ -143,10 +164,10 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
 - ⛔ **`Game.reset()` restores the controls and the sound rows, writes nothing,
   and leaves the screen on play**; a RELOAD test builds again over the same
   `Map`. ⛔ **A chosen level is reached from START DEPTH**, never `w`.
-- ⛔ **`progress` IS v2 AND PER MODE**: `readProgress()` returns both modes so
-  `noteCleared()` writes the pair, and `levelRecord(mode)` defaults to
-  `state.mode`. `Object.keys(C.MODE_FLAGS)` is where the mode list comes from,
-  so ⛔ **a feature is a FIELD IN THE ROWS, never a new top-level mode key.**
+- ⛔ **`progress` IS v2 AND PER MODE**: `noteCleared()` writes the pair and
+  `levelRecord(mode)` defaults to `state.mode`; the mode list is
+  `Object.keys(C.MODE_FLAGS)`, so ⛔ **a feature is a FIELD IN THE ROWS, never a
+  new top-level mode key.**
 
 ### The Dive, the ring flight and the entities, as shipped
 
@@ -156,15 +177,13 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
   and `layRings()`, ⛔ the set's ONE way in, BELOW the other four. ⛔ **A Warden
   and a `MimicShot` are NEVER Dive survivors**, and ⛔ **a REPEATED DIVE RE-LAYS
   THE SET.**
-- ⛔ **BOTH DIVE CAPS HAVE EXACTLY ONE READER EACH, AND `test-cs006-p3.js`
-  COUNTS THEM ON CODE LINES ONLY** — `C.DIVE_TIME_OD` in `diveTime()`,
-  `C.DIVE_RINGS_MAX` in `layRings()`. ⛔ **`diveTime()` reads the FLAG, never
-  `state.mode`** — the cut has to take the length with it.
+- ⛔ **BOTH DIVE CAPS HAVE ONE READER EACH, COUNTED ON CODE LINES ONLY**
+  (`test-cs006-p3.js`): `C.DIVE_TIME_OD` in `diveTime()`, `C.DIVE_RINGS_MAX` in
+  `layRings()`. ⛔ **`diveTime()` reads the FLAG, never `state.mode`.**
 - ⛔ **A DIVE PAYS EXACTLY ONE THING AND IT IS A RING**, asserted per step in
   FIVE files (`-cs012-p4`, `-p6`, `-cs013-p2`, `-p5`, `-cs014-p3`), each reading
-  `C.RING_POINTS` off the build. A dive builds nothing, rolls nothing and spends
-  **zero draws**; the termination kill pays nothing. ⛔ **ITEM 8 ALSO PRICES A
-  BOUNTY PER STEP** in three of those files.
+  `C.RING_POINTS` off the build; it builds nothing, rolls nothing and spends
+  **zero draws**. ⛔ **ITEM 8 ALSO PRICES A BOUNTY PER STEP** in three of them.
 - ⛔ **`diveDrawDepth()` IS THE RENDERER'S WHOLE KNOWLEDGE OF THE DIVE** and the
   rest of that rule is `CLAUDE.md`'s. ⛔ **A soak that hashes must call
   `frame()`, not `update()`.**
@@ -193,9 +212,8 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
   THREE ROWS** (6, 11, 16), and ⛔ `C.MIMIC_APEX` is BOUNDED, not tuned (≤ 0.4308
   against the shipped 0.40).
 - ⛔ **`test-registry.js`: `enemies` 9, `enemyKinds` 13**, `state` **28** keys —
-  they differ by more than one because `mimicShot` and `weaverBolt` are kinds
-  with no roster row and the three Carrier variants are three rows behind one
-  roster entry.
+  `mimicShot` and `weaverBolt` are kinds with no roster row, and the three
+  Carrier variants are three rows behind one roster entry.
 - ⚠ **Unowned, none reachable by the suite's drivers:** a second Purge prefers a
   bolt or a reflection above 0.95 and pays 0 (PREDICTED); a run STARTING past 99
   gets the modulo well and no band roll (unreachable at `START_DEPTH_CAP` 81);
@@ -220,9 +238,8 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
   ⛔ **`state.tally` is re-minted by `startGame()`** — a multi-run session
   accumulates per step or reads the last run's tally alone.
 - ⛔ **A KILL SITE'S OWN READING IS READ AT THE CALL, NOT AFTER THE STEP**, and
-  ⛔ **the same trap bites `state.dive`**: the dive's END is `nextWell()` →
-  `enterWell()` → `resetDive()` on one step, so rings and timer are snapshot
-  BEFORE the step.
+  ⛔ **`state.dive` the same**: the dive's END is `nextWell()` → `enterWell()` →
+  `resetDive()` on ONE step, so rings and timer are snapshot BEFORE it.
 - ⛔ **A CLOCK READ IS NOW A MOVER, AND CS015 P2 SPENT THAT MOVE** (MEASURED,
   and ⛔ **the one closed-file edit of P2**, which plan §11 did not predict):
   `Achievements.evaluate()` reads the injected clock once per call and the
@@ -250,7 +267,7 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
   BEFORE asserting red. ⚠ **A closed test may pin the literal text of a line a
   later phase changes** — ⛔ **pin only the ARGUMENT the claim is about.**
 - ⛔ **A TEST THAT BOUNDS `state.shots` READS THE CAP IN FORCE off
-  `state.powers`** (GDD §17 item 4). MEASURED: 24 IS reached.
+  `state.powers`** (GDD §17 item 4); MEASURED, 24 IS reached.
 - ⛔ **A STAGED DEATH IN AN OVERDRIVE FIXTURE MUST CLEAR `state.powers.ward` OR
   SET UP TWO HITS** — every death path meets `killSkimmer()`'s second return.
 - ⛔ **`state.shots.push` CANNOT BE INTERCEPTED to see a new shot** (MEASURED):
@@ -298,26 +315,9 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
 
 ## Open questions (blocking)
 
-⛔ **BOTH ARE P3's, AND NEITHER IS A BUILD PHASE'S TO ANSWER** (CS015 P2 found
-them building A2's facts; `CLAUDE.md` rule 3).
-
-- ⛔ **DOES A "LIFETIME" ROW MEAN THE RUN OR EVERY RUN?** Plan §9 calls rows 1–8
-  *lifetime* and tiers them ⚠ 200 wells, 5,000 kills, 1,000 rings — but ⛔ **the
-  facts are the RUN's** (`state.tally` is re-minted by `startGame()`) and ⛔ **the
-  `achievements` envelope holds no totals** (GDD §15.5: four stores, no counter).
-  So as shipped every threshold reads "in ONE run", and §9's own reach column is
-  per session: 91 wells, 1,658 kills. ⚠ **Tier 3 of those rows is then
-  unreachable**, which is the thing dropping `purge_wide` established must not
-  ship. ⛔ **Summing across runs needs a stored total, which is an `achievements`
-  SHAPE change: v2 plus a `migrate`** — a phase may not invent one. Paul's call:
-  per-run thresholds retuned to §1.3's readings, or v2 with totals.
-- ⛔ **THE TWENTY WEEKLY ROWS NEED FACTS NOBODY HAS BUILT.** Most are per-WELL or
-  per-DIVE windows — "clear a well without firing more than N shots", "collect
-  three tokens in one well", "take four rings in one dive", "clear three wells in
-  a row without dying" — and ⛔ **no shipped fact is scoped smaller than the run.**
-  P2 built A8's thirteen and no more (plan §4's scope). Either P3 lands only rows
-  the shipped facts reach, or ⛔ **P3 becomes a SECOND phase that touches the
-  simulation**, against plan §2's seam and its "one cause for one hash" argument.
+- None. ✅ **P2's two — what "lifetime" means, and where the weekly rows' facts
+  come from — were put to Paul and answered the same day**; both answers are in
+  "What CS015 must act on" above, and the reasoning is in `log/CS015.md`.
 
 ## Carried tasks
 
@@ -345,8 +345,8 @@ them building A2's facts; `CLAUDE.md` rule 3).
   `drawShot()` allocating per call (F4). ⛔ **The seven debug spawn actions ship
   until CS017** (Paul's H5).
 - Backport kit-input (0.8.0), kit-menu (0.1.0), kit-fx, kit-audio (**0.4.0**) and
-  kit-leaderboard (0.2.1, `lib/`) to coinless-kit — each a separate manual step.
-  `createScores` (`src/22-meta.NOTES.md`) is kit-scores' draft.
+  kit-leaderboard (0.2.1, `lib/`) — each a separate manual step. `createScores`
+  is kit-scores' draft, `createAchievements` kit-achievements'.
 - ⚠ **`CLAUDE.md` carries no telemetry rule**; whether it earns one is Paul's.
   ⛔ **`TELEMETRY_FIELDS` is frozen at 29 columns and `telemetry` at v1**, and it,
   `TELEMETRY_KINDS`, `telemetryRow()` and the version move together.
