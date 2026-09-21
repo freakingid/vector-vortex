@@ -120,16 +120,17 @@ files were edited — three predicted, two not** — see Test hazards. `log/CS01
   NOT save data and any changeset may move one. `achievements` stays **v1** —
   "lifetime" is one run banked, because `lifetimeTiers` is monotonic. ⚠ Real
   totals stay possible later as an ADDITIVE v2, new ids beside these.
-- ✅ **PLAN §9's TWO UNSHIPPABLE WEEKLY ROWS GO IN BEFORE SHIP** (Paul,
-  2026-09-20, after P3): *collect three tokens in one well* and *chip a Thorn to
-  nothing in one pass*. ⛔ **Neither had a fact** — `tally` counts token KINDS in
-  a bitmask and chips of LENGTH, not tokens collected or Thorns destroyed — so
-  each owes ONE new `tally` counter (tokens collected; Thorns destroyed) and one
-  pool row, in CS016 or CS017. ⛔ **NOT CS015 P4**, which is the soak and the
-  close. ⚠ **Adding them reshuffles which five rows a week shows** (the walk
-  reads the pool's LENGTH), which is why it happens while no player has a save —
-  ⛔ **after ship it is not free.** ⚠ A counter added at a kill line owes
-  `tallyKill()`'s rule and the five pinned kill-line strings.
+- ✅ **A PRE-SHIP ACHIEVEMENT PASS IS OWED, AND IT IS SPECIFIED IN
+  `NEXT-STEPS.md`** (Paul, 2026-09-20, after P3). ⛔ **CS016 or CS017, NEVER
+  CS015 P4**, which is the soak and the close. Four items, ⛔ **no `id` moved**:
+  plan §9's two unshippable weekly rows (*three tokens in one well*, *chip a
+  Thorn to nothing*) each owe ONE new `tally` counter and one pool row;
+  `depth_reached`'s top tier collides with `dim_band`; `dives_done` is MEASURED
+  `wells_cleared - 1` with the same tiers; and `wellShotPar` 120 came from a
+  trigger-holding driver. ⚠ **Every threshold call in it is Paul's.**
+  ⛔ **All of it is free only while no player has a save** — a pool-length change
+  reshuffles the rotation and an id never moves at all. ⚠ A counter added at a
+  kill line owes `tallyKill()`'s rule and the five pinned kill-line strings.
 - ⚠ **`C.ACHIEVEMENTS.wellShotPar` 120 is P3's one invented number**, MEASURED
   over 579 cleared wells (fewest 106, p10 ~121, median ~185). It is a tunable,
   not save data.
@@ -145,8 +146,8 @@ files were edited — three predicted, two not** — see Test hazards. `log/CS01
   in every build. ⚠ **A `Store.set` spy sees only `p0`'s writes**, and ⛔ **`p0`'s
   scope IS the root store**, so a per-profile `remove(key)` there must never name
   a root key.
-- ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP**; a settings save runs inside
-  `update()` on a menu step, and `levelRecord(mode)` reads storage on every call.
+- ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP**; a settings save runs in `update()`
+  on a menu step, and `levelRecord(mode)` reads storage on every call.
 - ✅ **THE GDD §0 DEFECT IS REPAIRED (P3)** — §10.5, §15.5 and §0's §10.5 row.
   ⛔ **The surface is a SCREEN and there is no toast**, off the TITLE (after
   PROFILE) and off OPTIONS (before BACK), ⛔ **no seventh HUD rectangle.**
@@ -162,11 +163,10 @@ files were edited — three predicted, two not** — see Test hazards. `log/CS01
   model**; ⚠ there Space, Z and X type.
 - ⛔ **NINE TEXTS IN `22-meta.js`, `23-main.js` AND `lib/kit-leaderboard/` ARE
   PINNED BY A CLOSED CS011 `mutate`** — grep `test-cs011-*.js` for `mutate:`
-  before editing a line in those three files. ⛔ **kit-leaderboard cannot be
-  inlined** (`test-cs009-p1.js:508`, `test-cs002-p1.js`).
+  before editing those files. ⛔ **kit-leaderboard cannot be inlined.**
 - ⛔ **`Game.reset()` restores the controls and the sound rows, writes nothing,
-  and leaves the screen on play**; a RELOAD test builds again over the same
-  `Map`. ⛔ **A chosen level is reached from START DEPTH**, never `w`.
+  and leaves the screen on play**; a RELOAD test builds again over the same `Map`.
+  ⛔ **A chosen level is reached from START DEPTH**, never `w`.
 - ⛔ **`progress` IS v2 AND PER MODE**: `noteCleared()` writes the pair and
   `levelRecord(mode)` defaults to `state.mode`; the mode list is
   `Object.keys(C.MODE_FLAGS)`, so ⛔ **a feature is a FIELD IN THE ROWS, never a
@@ -324,8 +324,8 @@ files were edited — three predicted, two not** — see Test hazards. `log/CS01
   function inside `Game`'s closure cannot be reached this way**, `Game.update`
   included. ⚠ **An added `EXPORTS` row is a real decision and a plan's §11 owes
   it a line** — CS014 added ten across two phases and predicted neither.
-- ⚠ **TWO TESTS READ coinless-kit's `registry.js`** and each SKIPS LOUDLY
-  without it: `-cs011-p5`, `-cs012-p3`. ⛔ **No close can carry a skip.**
+- ⚠ **TWO TESTS READ coinless-kit's `registry.js`** and each SKIPS LOUDLY without
+  it: `-cs011-p5`, `-cs012-p3`. ⛔ **No close can carry a skip.**
 
 ## Open questions (blocking)
 
