@@ -141,6 +141,12 @@ Phase 2
 Phase 3
 Phase 4
 
+=====
+Now is CS016 planning
+* Then they said:
+What you need to do next: answer the thirteen calls in the plan's §0 (N1–N13), each with a recommendation beside it. N1 (restate §12 vs. touch the spawner) and N12 (the achievement pass in CS016 or CS017, plus its three threshold numbers) shape the changeset; N2's five candidate prompt rows are yours to accept or drop. Also yours: C.GAME_VERSION reads 0.0.10 against STATUS's 0.0.11.
+
+
 
 
 
