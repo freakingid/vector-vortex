@@ -10,9 +10,11 @@
 //  3. Each seat fires once per event, on an eligible run only; ⛔ a bench run
 //     reaches neither seat's write. 4. ⛔ No storage write on a play step that
 //     is not the clear edge (plan §1.4's shape: a Store.set spy with the screen).
-// ⛔ TRAPS. 1. C.ACHIEVEMENTS is P1's placeholder table and names no real fact,
-//     so nothing would EVER unlock: every build here swaps in TABLE (one
-//     mutate per row) or the seats' writes are vacuous.
+// ⛔ TRAPS. 1. ⛔ REWRITTEN IN PLACE AT CS015 P3. P1's table was placeholders
+//     naming no real fact, so nothing would ever unlock and every build here
+//     swapped in TABLE, one mutate per row. ⛔ P3 landed the real table, which
+//     names real facts, so TABLE is EMPTY and the non-vacuity lines below are
+//     what keeps the claim honest — never a weakened assertion.
 //  2. Meta.runEnded() nulls `run` first, so eligible() is false inside it.
 //  3. A Store.set spy sees only p0's writes (p0's scope IS the root store).
 //  4. The dive's end empties state.dive.rings IN PLACE: capture before a step.
@@ -29,21 +31,17 @@ installSeed(SEED);                          // ⛔ above the first buildGame()
 const J = JSON.stringify;
 const NS = "coinless.vector-vortex.";
 
-// ⛔ TRAP 1: P1's rows pointed at real facts, one mutate per row line.
-const TABLE = [
-  ['{ id: "_placeholder_tiered", mode: null,        fact: "placeholder", tiers: [1, 2, 3] },',
-   '{ id: "_placeholder_tiered", mode: null,        fact: "wellsCleared", tiers: [1, 2, 3] },'],
-  ['{ id: "_placeholder_flat",   mode: null,        fact: "placeholder", at: 1 },',
-   '{ id: "_placeholder_flat",   mode: null,        fact: "kills", at: 1 },'],
-  ['{ id: "_placeholder_mode",   mode: "overdrive", fact: "placeholder", at: 1 },',
-   '{ id: "_placeholder_mode",   mode: "overdrive", fact: "ringsTaken", at: 1 },'],
-  ['{ id: "_placeholder_week_1", mode: null, fact: "placeholder", at: 1 },',
-   '{ id: "_placeholder_week_1", mode: null, fact: "deaths", at: 1 },'],
-];
+// ⛔ TRAP 1, AS CS015 P3 LEFT IT: the shipped table is real, so no mutate is
+// needed to make an unlock possible. The array stays because it is the seam
+// every build here goes through, and emptying it is the whole repair.
+const TABLE = [];
 
 // The two seats, each in the build exactly once (buildGame() throws otherwise).
 const SEAT_EDGE = ["      Meta.clearEdge();\n", "\n"];
-const SEAT_END = ["    if (booted && ok) Achievements.evaluate(facts());\n", "\n"];
+// ⛔ REWRITTEN IN PLACE AT CS015 P3: the run-end seat gained the run's own
+// closing facts and the unlock sound. Its CLAIM is the one it always made —
+// mutate this line out and no run's end evaluates.
+const SEAT_END = ["    if (booted && ok) sounded(Achievements.evaluate(facts(runEndFacts())));\n", "\n"];
 const GATE = "return run !== null && !run.bench;";
 
 // Every counter line P2 added, out — plus tallyKill() stubbed.
@@ -399,9 +397,19 @@ console.log(`  observed: ${J(real.want)}`);
   const edgeUnlocks = real.S.obs.evals.filter(e => e.seat === "edge").flatMap(e => e.out);
   const endUnlocks = real.S.obs.evals.filter(e => e.seat === "end").flatMap(e => e.out);
   H.assert(edgeUnlocks.length > 0 && endUnlocks.length > 0, `non-vacuity: both seats unlocked (${edgeUnlocks.length}, ${endUnlocks.length})`);
-  H.assert(B.evals.some(e => e.out.some(u => u.id === "_placeholder_mode")) &&
-           !A.evals.concat(C3.evals).some(e => e.out.some(u => u.id === "_placeholder_mode")),
-           "⛔ the mode tag holds at the seat: the Overdrive row unlocked in the Overdrive run only");
+  // ⛔ REWRITTEN IN PLACE AT CS015 P3: the claim is unchanged and it is now
+  // made against the SHIPPED tags rather than one planted row — a Classic run
+  // unlocks nothing tagged `overdrive`, and the Overdrive run unlocks at least
+  // one row that is.
+  const tagOf = (() => {
+    const m = {};
+    for (const r of real.S.C.ACHIEVEMENTS.lifetime.concat(real.S.C.ACHIEVEMENTS.weekly)) m[r.id] = r.mode;
+    return id => m[id];
+  })();
+  H.assert(B.evals.some(e => e.out.some(u => tagOf(u.id) === "overdrive")),
+           "non-vacuity: the Overdrive run unlocked a row tagged `overdrive`");
+  H.assert(!A.evals.concat(C3.evals).some(e => e.out.some(u => tagOf(u.id) === "overdrive")),
+           "⛔ the mode tag holds at the seat: a Classic run unlocks no `overdrive` row");
 
   // the facts object
   const f = B.evals[B.evals.length - 1].facts;
@@ -549,7 +557,7 @@ function seatProbe(mutate) {
   H.eq(J([p.edge, p.end, p.bench]), "[1,1,0]", "the probe: one clear-edge evaluation, one run-end, none for the bench run");
   H.assert(p.benchCleared > 0, "fixture: the probe's bench run cleared");
   H.eq(seatProbe([SEAT_EDGE]).edge, 0, "⛔ mutation: the clear-edge seat out is seen (the count above is red)");
-  H.eq(seatProbe([["    if (booted && ok) Achievements.evaluate(facts());", "    if (booted && eligible()) Achievements.evaluate(facts());"]]).end, 0,
+  H.eq(seatProbe([["    if (booted && ok) sounded(Achievements.evaluate(facts(runEndFacts())));", "    if (booted && eligible()) sounded(Achievements.evaluate(facts(runEndFacts())));"]]).end, 0,
        "⛔ mutation: eligible() in place of `ok` evaluates NO run's end — every run silently ineligible (red)");
   H.eq(seatProbe([["    if (!booted || !eligible()) return null;", "    if (!booted) return null;"]]).bench, 1,
        "⛔ mutation: the gate dropped from the clear edge lets the bench run evaluate (red)");

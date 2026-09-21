@@ -381,7 +381,10 @@ for (const k of ["1", "2", "3", "4", "5", "6", "0", "w"]) {
   S.boot();
   let v = S.draw();
   // CS011 P4 appended PROFILE (plan R16): rewritten in place, SCORES still third.
-  H.eq(J(v.items.map(r => r.label)), J(["PLAY", "OPTIONS", "SCORES", "PROFILE"]), "⛔ the title's rows: SCORES after OPTIONS");
+  // ⛔ CS015 P3 appended ACHIEVEMENTS, in place and for the same reason (A1-A):
+  // a row goes AFTER the ones the closed tests navigate by index, so the claim
+  // — SCORES after OPTIONS, and the title's rows are exactly these — stands.
+  H.eq(J(v.items.map(r => r.label)), J(["PLAY", "OPTIONS", "SCORES", "PROFILE", "ACHIEVEMENTS"]), "⛔ the title's rows: SCORES after OPTIONS");
   S.right(2); S.ok();
   H.eq(state.screen, "scores", "fixture: SCORES");
   v = S.draw();

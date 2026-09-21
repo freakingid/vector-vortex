@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.11 · Changeset: **CS015 P2 shipped 2026-09-20** · next: **CS015 P3** ·
+Version: 0.0.11 · Changeset: **CS015 P3 shipped 2026-09-20** · next: **CS015 P4** ·
 Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 · Tokens: 5/5 effects
 
 ## Phase ledger
@@ -13,6 +13,7 @@ question genuinely needs project history, and say that you did.
 |---|---|
 | **CS015 P1** | the achievements module, the store, the week — `createAchievements()`, `C.ACHIEVEMENTS`, `achievements` v1 declared and in `OWN_KEYS`, the UTC ISO week and the rotation |
 | **CS015 P2** | the facts, the seats and the gate — thirteen `tally` counters, `tallyKill()` and the Carrier `brood`, `Meta.clearEdge()` and the run-end seat, `Meta.eligible()`'s third caller |
+| **CS015 P3** | the id table and the surface — 23 lifetime + **18** weekly rows, the per-well window and the seats' split facts, the ACHIEVEMENTS screen, the `unlock` sound |
 
 **P1.** `20-achievements.js` is `createAchievements({ defs, load, save, now })`,
 kit-achievements' draft, with `src/20-achievements.NOTES.md` beside it. ⛔ **It
@@ -20,32 +21,39 @@ names no `state`, no `C` and no game global**, proved by a comment-stripped scan
 of its slice of the built file — ⛔ **cut at the first kit banner, because that
 banner is a rule of DASHES and the equals-signs module scan runs 20's slice
 straight through the three inlined bodies** (55 KB). `C.ACHIEVEMENTS` is
-`{ perWeek, lifetime, weekly }`, handed over as `defs` — `createScores`' seam.
-⚠ **Its rows are PLACEHOLDERS, every id prefixed `_`, and P3 replaces them
-whole.** `achievements` is declared v1 with ⛔ **no `migrate`**, and is in
-`OWN_KEYS`. The eight week boundaries and the mutation records: `log/CS015.md`.
+`{ perWeek, wellShotPar, lifetime, weekly }`, handed over as `defs` —
+`createScores`' seam. `achievements` is declared v1 with ⛔ **no `migrate`**, and
+is in `OWN_KEYS`. The eight week boundaries: `log/CS015.md`.
 
 **P2.** `state.tally` is **21 fields**: P2 added THIRTEEN, each beside the
 counter or event already at its place, ⛔ **write-only, and nothing branches on
-one.** Two are BITMASKS — `wellsSeenMask`, `tokenKindsMask` — because "distinct
-wells" and "all five kinds" need a memory; Meta hands them over as bit COUNTS.
-⛔ **`tallyKill(state, e)` is called on its OWN LINE above four kill lines**, so
-the five kill lines' pinned text is untouched; the jump strike takes its counter
-beside `tally.kills++`. ⛔ **A Carrier's two children share one `brood`** and the
-split counts on the second destroyed, only when both were spawned. The seats are
+one.** Two are BITMASKS — `wellsSeenMask`, `tokenKindsMask` — handed over as bit
+COUNTS. ⛔ **`tallyKill(state, e)` is called on its OWN LINE above four kill
+lines**, so the five kill lines' pinned text is untouched; the jump strike takes
+its counter beside `tally.kills++`. ⛔ **A Carrier's two children share one
+`brood`** and the split counts on the second destroyed. The seats are
 `Meta.clearEdge()` (after the bonuses and `noteCleared()`) and `Meta.runEnded()`,
-which ⛔ **reads `ok`, the local — `run` is already null there**; `Meta.eligible()`
-gained a third caller and no change. MEASURED: **76 files green, zero skips**, no
+which ⛔ **reads `ok`, the local — `run` is already null there**. MEASURED: no
 baseline moved, and a four-run played session hashes identically against both
-seats mutated out and against all thirteen counters written out. ⛔ **One closed
-file was repaired — see Test hazards.** `log/CS015.md`.
+seats mutated out and against all thirteen counters written out. `log/CS015.md`.
+
+**P3.** ⛔ **THE IDS ARE SAVE DATA FROM THIS COMMIT.** `C.ACHIEVEMENTS` is A8's
+**23 lifetime rows** (nine tiered) and an **18-row weekly pool**, `perWeek` 5.
+⛔ **Every row is MEASURED reachable PER ROW** (`test-cs015-p3.js`'s `REACH`:
+four front-door passes, 40,000 steps each, seven mode/Start-Depth pairs);
+`carrier_split` reaches **259**. ⛔ **Two of plan §9's twenty weekly rows have NO
+FACT and were REPORTED, not shipped** (below). ⛔ **No new `tally` field, no
+module change.** The surface is a SCREEN off the title and off OPTIONS, SCORES'
+shape, ⛔ **no HUD rectangle**; one new SFX event, `unlock` (27 → 28), one seat.
+MEASURED: **77 files green, zero skips**, no baseline moved. ⛔ **Five closed
+files were edited — three predicted, two not** — see Test hazards. `log/CS015.md`.
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
-  **787.8 KB**, 806,711 bytes); `MANIFEST` is checked both ways and a missing
-  `KIT_INLINE` file fails the build.
-- `node scratchpad/run-all.js`: **76 files, all green, zero skips.**
+  **808.0 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
+  fails the build.
+- `node scratchpad/run-all.js`: **77 files, all green, zero skips.**
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
   ⛔ A timeout is not a red — re-run the file alone before treating it as one.
 - **CS001–CS014 are closed; each has a `log/CS0##.md`.** ⛔ **The Classic roster
@@ -61,9 +69,8 @@ file was repaired — see Test hazards.** `log/CS015.md`.
   the highest reading ever measured is **0.6860** (CS013 P5), and a longer
   release beat reads *less* danger, not more.
 - ⛔ **TWELVE SOAKS, EACH PROVING A DIFFERENT THING** — `-cs003-p5` …
-  `-cs007-p5`, then the front-door pairs `-cs008-p8`, `-cs009-p6`, `-cs010-p5`,
-  `-cs011-p6`, `-cs012-p6`, `-cs013-p5`, `-cs014-p3`. ⛔ **CS015's is a
-  THIRTEENTH file, never a widened closed one.**
+  `-cs007-p5`, then `-cs008-p8`, `-cs009-p6`, `-cs010-p5`, `-cs011-p6`,
+  `-cs012-p6`, `-cs013-p5`, `-cs014-p3`. ⛔ **CS015's is a THIRTEENTH file.**
 - ⛔ **`test-cs006-p5.js` carries the count-based no-draw rule**, a function of
   the LEVEL: `spawnEnemy`'s 1 plus `pickSpawnLane`'s `[1, C.SPAWN_LANE_TRIES]`.
 - ⛔ **`GOLDEN_LANES`' first SIXTEEN entries are the ORIGINAL `9ebd27b`
@@ -71,7 +78,7 @@ file was repaired — see Test hazards.** `log/CS015.md`.
   appended `2, 5`. ⛔ **Any other move is a defect, not a baseline.**
 - ⛔ **`P1_DETERMINISM_HASH` is the one baseline that moves, and it is
   CROSS-FILE** (`test-cs006-p2.js` runs `test-cs005-p5.js` in a child process).
-  It stands at **1229033515**, unmoved through CS009–CS015 P2. ⛔ Re-record once
+  It stands at **1229033515**, unmoved through CS009–CS015 P3. ⛔ Re-record once
   per change, one named cause at the assertion.
 - ⛔ **On a boundary rider the LATTICE is where §17 item 3 stands, not the speed
   bound** (`RATIONALE.md#boundary-lattice`).
@@ -83,9 +90,8 @@ file was repaired — see Test hazards.** `log/CS015.md`.
   (`test-cs009-p5.js`, ⚠ provisional) is D16's limiter-curve model — 0.450
   against `pulse` 0.3512, `title` 0.3408, `drive` 0.3505 — and holds only at the
   rendered settings, so `test-cs010-p1.js` pins `C.MUSIC_LIMIT` to D2's literals.
-- ⚠ **SETTLED — MUSIC IS STRUCK, NEVER SWELLED** (Paul, 2026-09-16; `CLAUDE.md`
-  Audio, GDD §11.3). ✅ Paul's lab picks are ported for `title` and `pulse`;
-  ⚠ **`pulse` loops at 72 s** and `drive` at 62.6 s.
+- ⚠ **SETTLED — MUSIC IS STRUCK, NEVER SWELLED** (Paul, 2026-09-16). ✅ The lab
+  picks are ported for `title` and `pulse`; ⚠ `pulse` loops at 72 s, `drive` 62.6.
 - ⛔ **Read GDD §6.5 before adding an entity.** NINE contract fields (plus
   `points()`), the wiring points, the Dive — and ⛔ **neither a token nor a RING
   is on that table** (GDD §14.1's T1, §14.5's RF1): no contract field, no
@@ -94,7 +100,8 @@ file was repaired — see Test hazards.** `log/CS015.md`.
   `17-audio-tracks.js` and `C.SFX`, bound to the build by text identity;
   `well-lab` (⛔ the visual audition has not happened) and `feel-lab` complete
   the set. ⛔ **A new `SFX_KILL_PITCH` voice is a THREE-file edit**: `C`, BLOCK
-  SFX and the `PITCH_*` tables. ⛔ **`C.SFX` is 27 events, `C.SFX_KILL_PITCH` 11
+  SFX and the `PITCH_*` tables. ⛔ **`C.SFX` is 28 events (CS015 P3's `unlock`),
+  `C.SFX_KILL_PITCH` 11
   voices**; a new event owes the lab a brief, an A label, 1–2 alternates and an
   in-context sequence, and is ONE line starting `    name:`. **Four** lab copies
   of `C` are pinned to the build (`test-cs010-p3.js`, `-cs014-p2.js`'s `LAB.dive`).
@@ -103,41 +110,34 @@ file was repaired — see Test hazards.** `log/CS015.md`.
 
 ### What CS015 must act on
 
-⛔ **CS015 is ACHIEVEMENTS (Paul's M4), so it is the STORE and a SCREEN.** The
-hazards below block, in that order; reasoning is in `log/CS0##.md`.
+⛔ **CS015 is ACHIEVEMENTS (Paul's M4).** Reasoning is in `log/CS015.md`.
 
-- ✅ **THE MODULE, THE STORE AND THE SEATS ARE SHIPPED (P1, P2).** ⛔ **What P3
-  inherits:** `evaluate(facts)` takes ONE flat object, reads `facts.mode` and
-  each row's `fact` name, ⛔ **skips a fact that is not a finite number** — a row
-  naming a fact nobody builds silently unlocks nothing rather than throwing —
-  and ⛔ **writes only when something unlocked.**
-- ✅ **A "LIFETIME" ROW MEANS ONE RUN, AND `achievements` STAYS v1** (Paul,
-  2026-09-20, after P2). ⛔ **No totals, no v2, no `migrate`**: `lifetimeTiers`
-  is monotonic, so a per-run threshold over that store already IS "your best run,
-  banked" — GDD §15.5's *lifetime* is the store that never resets, against
-  *weekly*. ⛔ **P3 retunes the nine tiered rows to PER-RUN readings**, and
-  ⚠ **tier 3 sits near 50–60 % of what a probe reached, never AT it**: a top tier
-  set at a bot's best is what dropped `purge_wide`. ✅ **Displayed names may be
-  reworded to read true** ("MOST WELLS IN A RUN"); ⛔ **the 23 ids are A8's,
-  unchanged.** ⚠ Real totals stay possible later as an ADDITIVE v2 — new
-  cumulative ids, these keeping their meaning.
-- ✅ **THE TWENTY WEEKLY ROWS LAND IN P3, THEIR FACTS BUILT IN `facts()`** (Paul,
-  same): ⛔ **no new `tally` field, no module change, and P3 is still alone in its
-  session.** Three shapes, all arithmetic in `22-meta.js`: a PER-WELL window is
-  ⛔ **the delta since the last clear edge** — `tally` is monotonic within a run
-  and the edge fires once per well; a CONJUNCTION ("level 20 from Start Depth 1")
-  and an AT-MOST or WITHOUT row ("one life left", "no Thorn death") are ⛔ **0/1
-  facts with `at: 1`**, because a row is ONE fact `>=` ONE threshold. ⛔ **The
-  run-end seat OMITS the per-well facts** — a non-finite fact is a skip, so a
-  stale window cannot unlock anything. ⚠ **"Take four rings in one dive" is the
-  one row with no fact**: reword it to the full set (`ringSetsTaken`) or report
-  it. ⚠ **Adding weekly rows LATER reshuffles which five a week shows** (the walk
-  reads the pool's length), which is why all twenty land at once.
-- ⛔ **Achievement `id` values are SAVE DATA and are never renamed** (GDD §15.5;
-  `CLAUDE.md`). ⛔ **A row-shape change bumps that key's version and supplies a
-  `migrate`** — pure, never calling back into the store, returning `undefined`
-  for an origin version it cannot read. `progress` v2's `migrateProgress` is the
-  worked example.
+- ✅ **THE MODULE, THE STORE, THE SEATS AND THE TABLE ARE ALL SHIPPED.**
+  `evaluate(facts)` takes ONE flat object, ⛔ **skips a fact that is not a finite
+  number** and ⛔ **writes only when something unlocked.**
+- ✅ **THE ID TABLE IS LANDED AND IS SAVE DATA (P3).** ⛔ **23 lifetime ids and
+  18 weekly ones are never renamed**; a threshold, a `name` and a `note` are
+  NOT save data and any changeset may move one. `achievements` stays **v1** —
+  "lifetime" is one run banked, because `lifetimeTiers` is monotonic. ⚠ Real
+  totals stay possible later as an ADDITIVE v2, new ids beside these.
+- ⛔ **TWO OF PLAN §9's TWENTY WEEKLY ROWS ARE REPORTED, NOT SHIPPED, AND THEY
+  ARE PAUL'S CALL**: *collect three tokens in one well* and *chip a Thorn to
+  nothing in one pass*. ⛔ **Neither has a fact** — `tally` counts token KINDS in
+  a bitmask and chips of LENGTH, not tokens collected or Thorns destroyed — so
+  each needs ONE counter, which P3 was barred from adding. ⚠ **Adding either
+  later reshuffles which five rows a week shows** (the walk reads the length).
+- ⚠ **`C.ACHIEVEMENTS.wellShotPar` 120 is P3's one invented number**, MEASURED
+  over 579 cleared wells (fewest 106, p10 ~121, median ~185). It is a tunable,
+  not save data.
+- ✅ **THE WEEKLY FACTS ARE BUILT (P3)**, the three shapes in GDD §15.5 and
+  `CLAUDE.md`. ⛔ **The window and the streak move ABOVE the eligibility gate**,
+  or a bench run hands the next well a doubled delta. ⚠ **Four facts have no
+  row** — `deaths`, `purgesSpent`, `shotsFired`, `thornDeaths`, CS007's own —
+  and `test-cs015-p3.js` pins that exact set.
+- ⛔ **A row-shape change bumps that key's version and supplies a `migrate`** —
+  pure, never calling back into the store, returning `undefined` for an origin
+  version it cannot read. `progress` v2's `migrateProgress` is the worked
+  example.
 - ⛔ **THE BOOT BLOCK RUNS INSIDE THE HARNESS**: `Meta.boot()` writes `profiles`
   in every build, so a storage test starts from a booted store.
   ⚠ **A `Store.set` spy sees only `p0`'s writes**, and ⛔ **profile `p0`'s scope
@@ -145,14 +145,15 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
   root key.
 - ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP**; a settings save runs inside
   `update()` on a menu step, and `levelRecord(mode)` reads storage on every call.
-- ⛔ **A DEFECT IN GDD §0: THERE IS NO ROW FOR AN ACHIEVEMENTS SCREEN** (CS015
-  planning; recorded rather than worked around). MEASURED at `b92da55`: §10.5's
-  screen table has no ACHIEVEMENTS row, §0's §10.5 row names every screen and
-  names none, and §15.5 specs no surface. ⚠ **A1 is ANSWERED (a screen off the
-  title, no toast)**, so ⛔ **P3 edits §10.5, §15.5 and §0's §10.5 row together.**
-- ⛔ **THE MENU SHAPES A SCREEN HAS TO FIT INTO**: the title has **four rows**,
-  game over **three lines**, and ⛔ **OPTIONS HAS TEN ROWS WITH A SEVEN-ROW
-  WINDOW** — a row goes before BACK, never above TELEMETRY. ⛔ **SCORES' rows are
+- ✅ **THE GDD §0 DEFECT IS REPAIRED (P3)** — §10.5, §15.5 and §0's §10.5 row.
+  ⛔ **The surface is a SCREEN and there is no toast**, off the TITLE (after
+  PROFILE) and off OPTIONS (before BACK), ⛔ **no seventh HUD rectangle.**
+- ⛔ **THE MENU SHAPES A SCREEN HAS TO FIT INTO**: the title has **five rows**
+  (P3's ACHIEVEMENTS is the fifth, after PROFILE), game over **three lines**, and
+  ⛔ **OPTIONS HAS ELEVEN ROWS WITH A SEVEN-ROW WINDOW** — a row goes before
+  BACK, never above TELEMETRY. ⛔ **A LABEL IS ≤ 20 CHARACTERS BESIDE A
+  FOUR-CHARACTER DETAIL AND A SCREEN GETS TWO INFO LINES** (MEASURED, P3).
+  ⛔ **SCORES' rows are
   MODE, VIEW (module only), the entries, BACK**, rebuilt on entry / MODE / VIEW /
   a board's answer and never in `draw()`; ⛔ **the entry mode is the last run
   STARTED this session** (`lastRunMode`). ⛔ **NAME steps in place of the menu
@@ -217,11 +218,10 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
 - ⚠ **Unowned, none reachable by the suite's drivers:** a second Purge prefers a
   bolt or a reflection above 0.95 and pays 0 (PREDICTED); a run STARTING past 99
   gets the modulo well and no band roll (unreachable at `START_DEPTH_CAP` 81);
-  a rim Vaulter — ⚠ and an aloft Warden — hunts the CONTINUOUS lane.
-  ⚠ **`C.LIVES_MAX` LEAVES THIS LIST — it IS reachable** (MEASURED, CS015
-  planning): a long probe held **6** lives in five of seven sessions. ⛔ **The
-  difference is run LENGTH, not the driver.** ⚠ **A biggest-Purge of SIX is
-  genuinely unreachable**: best of 289 uses is **4**.
+  a rim Vaulter — ⚠ and an aloft Warden — hunts the CONTINUOUS lane; and a
+  biggest-Purge of SIX (best of 289 uses is **4**). ⚠ **`C.LIVES_MAX` LEFT this
+  list** — MEASURED reachable; ⛔ **the difference is run LENGTH, not the
+  driver**, which is the same trap CS015 P3 hit from the other side.
 
 ### Test hazards
 
@@ -235,11 +235,23 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
 - ⛔ **A DIVE'S LENGTH IS A PROPERTY, NEVER A STEP COUNT** (`1/60` is not
   binary). ⛔ **A run that ends inside a dive leaves `dive.active` TRUE until the
   RESTART press**, so a "the dive ended" detector gates on the PRE-STEP screen.
-  ⛔ **`state.tally` is re-minted by `startGame()`** — a multi-run session
-  accumulates per step or reads the last run's tally alone.
+  ⛔ **`state.tally` is re-minted by `startGame()`**, and ⛔ **so are CS015 P3's
+  per-well window and clean streak** (`runStarted()`).
 - ⛔ **A KILL SITE'S OWN READING IS READ AT THE CALL, NOT AFTER THE STEP**, and
   ⛔ **`state.dive` the same**: the dive's END is `nextWell()` → `enterWell()` →
   `resetDive()` on ONE step, so rings and timer are snapshot BEFORE it.
+- ⛔ **CS015 P3 EDITED FIVE CLOSED FILES — THREE PREDICTED, TWO NOT.** Predicted
+  (plan §11): `test-cs009-p4.js`'s `EVENTS` + `unlock`, `test-cs011-p3.js:384`
+  and `test-cs011-p5.js:375`'s title label lists; ⛔ **the OPTIONS row reddened
+  nothing.** ⛔ **Not predicted, and both are CS015's OWN earlier phases
+  asserting the PLACEHOLDER table P1 shipped**: `test-cs015-p1.js`'s "every id
+  starts `_`" is inverted in place (no id carries the prefix), and
+  `test-cs015-p2.js`'s `TABLE` is EMPTIED — the real table names real facts, so
+  no mutate is needed to make an unlock possible — with its `SEAT_END` string
+  following the seat's new text and its mode-tag assertion restated against the
+  SHIPPED tags. ⛔ **A PHASE THAT EDITS EITHER SEAT MOVES `test-cs015-p2.js`'s
+  `SEAT_EDGE` / `SEAT_END` AND `test-cs015-p3.js`'s `SEAT_CLEAR` / `SEAT_END`** —
+  four mutate strings, and each must be in the build exactly once.
 - ⛔ **A CLOCK READ IS NOW A MOVER, AND CS015 P2 SPENT THAT MOVE** (MEASURED,
   and ⛔ **the one closed-file edit of P2**, which plan §11 did not predict):
   `Achievements.evaluate()` reads the injected clock once per call and the
@@ -321,15 +333,13 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
 
 ## Carried tasks
 
-- ✅ **`CLAUDE.md` WAS COMPACTED, 47,919 → ~34.6 KB** (Paul, 2026-09-20, its own
-  commit), ⛔ **with no rule deleted** — reasons to `RATIONALE.md`, history to
-  `log/`, a fact stated once. ⚠ The valve and the ban on standing sweeps stand.
-- ✅ **A CLOSE PHASE NOW WRITES `DECISIONS.md` TOO** (Paul, 2026-09-20). ⛔ **The
-  changeset's calls are indexed AT THE CLOSE**, one line each — ⛔ **a pointer,
-  never the writeup**; `DECISIONS.md`'s header states the form.
-- ✅ **`DECISIONS.md`'S INDEX IS COMPLETE** — Paul backfilled CS012's O1–O16 and
-  CS014's RF1–RF9 (`4bfd169`), and an audit found CS007–CS014 all indexed;
-  ⚠ CS001–CS006 owe no row. ⛔ **CS015's row is the CLOSE's.**
+- ✅ **`CLAUDE.md` WAS COMPACTED, 47,919 → 34.6 KB** (Paul, 2026-09-20), ⛔ **no
+  rule deleted**; it stands at **36,926** bytes after P3. ⚠ The valve and the ban
+  on standing sweeps stand.
+- ✅ **A CLOSE PHASE NOW WRITES `DECISIONS.md` TOO** (Paul, 2026-09-20): the
+  changeset's calls indexed AT THE CLOSE, ⛔ **a pointer, never the writeup.**
+- ✅ **`DECISIONS.md`'S INDEX IS COMPLETE** through CS014 (Paul, `4bfd169`).
+  ⛔ **CS015's row is the CLOSE's.**
 - ⛔ **Paul, when he wants it: `drive`'s lab session** (PASS marks, tiers, gains,
   tempo). Its own commit; it rewrites `test-cs012-p1.js`'s "no tier" and "no
   audition mark" assertions in place. ⚠ `drive` is untiered and unheard, and
@@ -341,60 +351,54 @@ hazards below block, in that order; reasoning is in `log/CS0##.md`.
   `statsFields` before sending a stats key**; ⛔ `C.GAME_ID` is the SAVE keyspace,
   never a board id.
 - ⛔ **CS017 owes three measurements**: the Mimic's probation verdict (GDD §21
-  #6), GDD §17's budget naming "8 shots" where Spread's cap is **24**, and
-  `drawShot()` allocating per call (F4). ⛔ **The seven debug spawn actions ship
-  until CS017** (Paul's H5).
+  #6 — ⚠ and `mimic_kill` is now a shipped id, unearnable for new players if the
+  Mimic is cut), GDD §17's budget naming "8 shots" where Spread's cap is **24**,
+  and `drawShot()` allocating per call (F4). ⛔ **The seven debug spawn actions
+  ship until CS017** (Paul's H5).
 - Backport kit-input (0.8.0), kit-menu (0.1.0), kit-fx, kit-audio (**0.4.0**) and
   kit-leaderboard (0.2.1, `lib/`) — each a separate manual step. `createScores`
-  is kit-scores' draft, `createAchievements` kit-achievements'.
+  is kit-scores' draft, `createAchievements` kit-achievements' (⚠ and its screen
+  is the game's wrapper, not the module's).
 - ⚠ **`CLAUDE.md` carries no telemetry rule**; whether it earns one is Paul's.
-  ⛔ **`TELEMETRY_FIELDS` is frozen at 29 columns and `telemetry` at v1**, and it,
+  ⛔ **`TELEMETRY_FIELDS` is frozen at 29 and `telemetry` at v1**, and it,
   `TELEMETRY_KINDS`, `telemetryRow()` and the version move together.
 - ⚠ **Unowned, and CS015 has moved none of them:** the pad-only silence, the
   VOICE bus, the Surger tone's 1.106 sample peak, the enemy / menu palette and
   the HUD sizes, `tools/glow-lab.html`'s visual audition, F1 and F2, and whether
   the headroom gate should bound the limiter's INPUT (Paul's call).
 
-## Next up — CS015 P3
+## Next up — CS015 P4
 
-✅ **CS015 IS PLANNED AND ANSWERED** (2026-09-20,
-`PLANNED-FEATURES-CS015.md` + `IMPLEMENTATION-PHASES-CS015.md`, four phases).
-✅ **Paul answered all twelve calls (A1–A12) and took EVERY recommendation**, with
-one qualification on A8. ⛔ **A build phase builds the answer in §0's column and
-does not re-open it**; the B and C branches are dead. ✅ **A6, A7, A11 and A12 are
-BUILT** — their shape is GDD §15.5's, not this file's, from here on.
+✅ **CS015 IS PLANNED AND ANSWERED** (2026-09-20, four phases), ✅ **Paul answered
+all twelve calls (A1–A12) taking every recommendation**, and ✅ **ALL TWELVE ARE
+NOW BUILT** — their shape is GDD §15.5's and §10.5's, not this file's, from here
+on. ⛔ **P4 is the thirteenth soak, the review and the close.**
 
-⚠ **This is the first changeset since CS008 whose main risk is a decision that
-cannot be revised, rather than a mechanism that can** — ⛔ **an achievement `id`
-is SAVE DATA and is never renamed**, so A8's table is written once, which is why
-Paul moved it out of CS011 (M4). ⛔ **P3 is alone in its session for that
-reason.**
+⛔ **P4 IS A THIRTEENTH SOAK FILE, never a widened closed one** (plan §6): a
+front-door session in each mode over a working store and a RELOAD with every
+unlock still there; ⛔ **the same session with the seats stubbed out hashing
+identically, step by step**; a week roll emptying `weeklyUnlocked` alone;
+⛔ **no enumeration read** (`_env.storageReads` 0); zero skips.
 
-⛔ **THE ANSWERS STILL TO BUILD.** A1 a SCREEN off the title, no toast. A5 rows
-MODE-TAGGED (the tags are the TABLE's, so they land with it). A8 ⛔ **23 lifetime
-rows plus the twenty weekly.** A10 one new `C.SFX` event, `unlock` (27 → 28).
-✅ **A2, A3, A4 and A9 are BUILT** — the facts, the seats, the gate; an unlock
-pays nothing.
+⛔ **THE SOAK'S OWN NEW HAZARD (P3): THE SHIPPED TABLE UNLOCKS DURING PLAY.** A
+front-door session now writes `achievements` at clear edges and sounds
+`sfx("unlock")` there. MEASURED: all twelve closed soaks stayed green, so the
+write and the sound move no hash and no audio count — ⛔ **but a soak that spies
+storage or counts sounds must expect both.**
 
-⛔ **P3 BUILDS ITS ROWS AGAINST THE SHIPPED FACTS**, which are `mode`, `level`,
-`score`, `startDepth`, `lives`, `comboPeak` and every `tally` counter, the two
-masks as `wellsSeen` and `tokenKinds` (`facts()`, `22-meta.js`). ⛔ **A fact that
-is not there is a SKIP, so a row naming one silently unlocks nothing** — assert
-per row, as the prompt already says.
+⛔ **P4's DRIVER IS `STATUS.md`'s FOUR-CLAUSE L11+ DRIVER**, unchanged, and
+⚠ **a driver that HOLDS FIRE and SPENDS THE PURGE cannot reach three rows** —
+`week_lean_well`, `week_purge_held` and `purge_saver`'s upper tiers. That is a
+property of the driver, not of the rows (`test-cs015-p3.js`'s `REACH` measures
+all four passes), so ⛔ **a P4 non-vacuity line about those three needs its own
+pass or must not be written.**
 
-⛔ **A8's qualification: `purge_wide` IS DROPPED** — MEASURED unreachable (best
-of 289 Purge uses is **4**, not six), and lowering it would set a threshold from
-what a bot reached. ⚠ **`mimic_kill` STAYS** and its probation risk is accepted:
-if CS017 cuts the Mimic, one id is unearnable for new players and nothing else
-breaks. ⚠ **`carrier_split` is the one lifetime row with NO measurement behind
-it**, and ⛔ **the twenty weekly rows are a STARTING list that P3 settles,
-MEASURED** — a row no board reaches is reported, never shipped and never quietly
-lowered.
+⛔ **THE CLOSE:** compresses `log/CS015.md`, resets this file, updates
+`ROADMAP.md` and `SKIPPED-PLAYTESTS.md`, flips ⛔ **GDD §19's Meta row off its
+last ✗**, and ⛔ **indexes CS015's twelve calls in `DECISIONS.md`, one line
+each** — a pointer, never the writeup, ⛔ **the two reported weekly rows too.**
 
-⛔ **A threshold is NOT save data; only the `id` is.** A later changeset may
-retune any tier.
-
-✅ **THE VOCABULARY SCAN IS NOW A SUBSTRING SCAN** (Paul, 2026-09-20, after P1):
-`test-cs008-p6.js` catches a banned word glued on by `_` or camelCase, and only
-`webkit` is excepted from "web"; indexed in `DECISIONS.md`. P3 still eyes
-every id and displayed name.
+✅ **THE VOCABULARY SCAN IS A SUBSTRING SCAN** (Paul, 2026-09-20; only `webkit`
+is excepted from "web"), and ✅ **P3 checked every id, name and note BY EYE and
+wrote that check into `test-cs015-p3.js` as an assertion over the table**, in
+both the substring and the `\b` form.

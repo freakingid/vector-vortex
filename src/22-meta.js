@@ -292,9 +292,14 @@ const Meta = (function () {
 
   // startGame()'s last line. ⛔ A run still open is DROPPED, unrecorded: a
   // second startGame() over a live run (the soaks' restarts) ends nothing.
+  // ⛔ AND THE PER-WELL WINDOW GOES WITH THE RUN (CS015 P3): `state.tally` is
+  // re-minted here, so a window carried across a restart would read a delta
+  // against another run's counters.
   function runStarted() {
     run = { bench: false };
     placed = 0;
+    windowAt = null;
+    cleanStreak = 0;
     Leaderboard.beginRun();
   }
 
@@ -325,9 +330,64 @@ const Meta = (function () {
     for (let v = n >>> 0; v !== 0; v >>>= 1) c += v & 1;
     return c;
   }
-  function facts() {
-    const t = state.tally;
+
+  // ---- the per-well window and the run's end (CS015 P3; Paul, 2026-09-20) ----
+  //
+  // ⛔ A WEEKLY ROW IS SCOPED TO ONE RUN AND OFTEN TO ONE WELL, AND NEITHER
+  // COSTS A `tally` FIELD. `tally` is monotonic within a run and the clear edge
+  // fires exactly once per well, so ⛔ A PER-WELL WINDOW IS THE DELTA SINCE THE
+  // LAST CLEAR EDGE — kept here, in Meta's closure, beside `run`, because it
+  // belongs to the record of a run rather than to the simulation. Nothing in
+  // the simulation can read it, which is the same guarantee `tally` itself has.
+  //
+  // ⛔ AND A ROW IS ONE FACT `>=` ONE THRESHOLD, so the two shapes a row cannot
+  // state are computed HERE and handed over already decided:
+  //   a CONJUNCTION is a quantity gated to 0 by its other half — `lowStartLevel`
+  //     is the level reached on a Start Depth 1 run and 0 on any other, so the
+  //     TABLE still owns the 20 it is compared against;
+  //   an AT-MOST or a WITHOUT is a 0/1 fact with `at: 1`, because "fewer than"
+  //     has no `>=` form. Each is structural — the last life, a charge unspent,
+  //     a well with no death — never a tuned number, with one exception named
+  //     at `leanClear` below.
+  //
+  // ⛔ THE TWO SEATS SEE DIFFERENT FACTS, AND THE MODULE'S SKIP IS THE GUARD:
+  // a fact that is not a finite number is skipped rather than compared, so the
+  // run-end seat simply OMITS the per-well block and a stale window cannot
+  // unlock anything. The run's own closing facts are omitted at the clear edge
+  // for the same reason — a run that is still going has not ended with its
+  // Purge unspent.
+  let windowAt = null;     // `tally` as the last clear edge left it; null = the run's start
+  let cleanStreak = 0;     // consecutive clears with no death (GDD 15.5's weekly pool)
+
+  // The window's deltas, plus the clear-edge readings a row needs. Every
+  // counter here is a clear-edge counter or a play counter, so a delta of 1 on
+  // a clear-edge counter means "this clear".
+  function wellWindow() {
+    const t = state.tally, p = windowAt;
+    const d = k => t[k] - (p === null ? 0 : p[k]);
+    const deathless = d("deathlessWells") >= 1;
     return {
+      // ⛔ EVERY FACT HERE HAS A ROW. A fact nobody names is a skip the table
+      // can never spend, so it is dead weight rather than a spare part.
+      wellRings: d("ringsTaken"), wellCarrierSplits: d("carrierSplits"),
+      // ⚠ THE ONE WEEKLY ROW WITH A FREE PARAMETER (GDD 15.5's "without firing
+      // more than N shots"): N is C.ACHIEVEMENTS.wellShotPar, a tunable like any
+      // other and ⛔ not save data.
+      leanClear: d("shotsFired") <= C.ACHIEVEMENTS.wellShotPar ? 1 : 0,
+      openCleanClear: d("openWellsCleared") >= 1 && deathless ? 1 : 0,
+      quietClear: d("purgeSavedClears") >= 1 && deathless ? 1 : 0,
+      wardenCleanWell: d("jumpKills") >= 1 && deathless ? 1 : 0,
+      clearOnLastLife: state.lives === 1 ? 1 : 0,
+      cleanStreak,
+      // The starting well of a deep run: the Start Depth itself while this is
+      // the run's FIRST clear, 0 after, so the table owns the 33.
+      deepFirstClear: t.wellsCleared === 1 ? state.startDepth : 0,
+    };
+  }
+
+  function facts(extra) {
+    const t = state.tally;
+    return Object.assign({
       mode: state.mode,
       level: state.level, score: state.score, startDepth: state.startDepth,
       lives: state.lives, comboPeak: state.combo.peak,
@@ -341,7 +401,27 @@ const Meta = (function () {
       mimicKills: t.mimicKills, carrierSplits: t.carrierSplits,
       ringsTaken: t.ringsTaken, ringSetsTaken: t.ringSetsTaken,
       tokenKinds: bitCount(t.tokenKindsMask),
+      // A conjunction, gated to 0 by its other half (above).
+      lowStartLevel: state.startDepth === 1 ? state.level : 0,
+    }, extra);
+  }
+
+  // The run's own closing facts, the run-end seat's half of the same split.
+  // ⛔ Both are WITHOUT rows, so both are 0/1 (above), and both are structural.
+  function runEndFacts() {
+    return {
+      purgeHeldRun: state.tally.purgesSpent === 0 ? 1 : 0,
+      noThornDeathRun: state.tally.thornDeaths === 0 ? 1 : 0,
     };
+  }
+
+  // ⛔ THE ONE `sfx("unlock")` SEAT (CS015 P3, A10-A), and it is HERE rather
+  // than at either caller because an unlock sounds wherever an unlock happens.
+  // ⛔ Silent when nothing unlocked, which is the same test `evaluate()` makes
+  // before it writes.
+  function sounded(list) {
+    if (list !== null && list.length > 0) sfx("unlock");
+    return list;
   }
 
   // ⛔ THE CLEAR-EDGE SEAT (A3-A), from Game.update()'s edge, after the bonuses
@@ -349,9 +429,18 @@ const Meta = (function () {
   // ONLY when something unlocked. ⛔ THE ONE GATE (A4-A) — a bench run earns
   // nothing. ⛔ AN UNLOCK IS WORTH NOTHING (A9-A): no addScore(), no life.
   // Returns the payload (A11), which nothing posts (GDD 15.5, local-only).
+  // ⛔ THE STREAK MOVES BEFORE THE FACTS ARE BUILT and the window closes AFTER
+  // they are read: this clear is inside its own window, not the next one.
+  // ⛔ AND BOTH MOVE WHETHER OR NOT THE RUN IS ELIGIBLE, above the gate — a
+  // bench run earns nothing, and a window that stopped tracking on one would
+  // hand the next well a delta covering two.
   function clearEdge() {
+    const deathless = state.tally.deathlessWells - (windowAt === null ? 0 : windowAt.deathlessWells) >= 1;
+    cleanStreak = deathless ? cleanStreak + 1 : 0;
+    const win = wellWindow();
+    windowAt = Object.assign({}, state.tally);
     if (!booted || !eligible()) return null;
-    return Achievements.evaluate(facts());
+    return sounded(Achievements.evaluate(facts(win)));
   }
 
   // R9's local row. The profile's name is the one it has NOW, stamped, so a
@@ -386,12 +475,29 @@ const Meta = (function () {
     if (ok) Leaderboard.submit(outcome);
     // ⛔ THE RUN-END SEAT (CS015 P2, A3-A): `ok`, THE LOCAL, never eligible() —
     // `run` is already null here, so eligible() reads false for every run.
-    if (booted && ok) Achievements.evaluate(facts());
+    // ⛔ AND IT OMITS THE PER-WELL BLOCK (CS015 P3): the window belongs to a
+    // well that was cleared, and the module skips a fact it is not handed. Its
+    // own two facts are the run's closing ones, which mean nothing mid-run.
+    if (booted && ok) sounded(Achievements.evaluate(facts(runEndFacts())));
     saveTelemetry();
   }
 
   // What the SCORES screen lists; [] before boot.
   function scores(mode) { return booted ? Scores.list(mode) : []; }
+
+  // What the ACHIEVEMENTS screen lists (CS015 P3, A1-A), and the SAME shape
+  // `scores()` is: the screen reads the STORE here and the rows from
+  // C.ACHIEVEMENTS, exactly as SCORES reads the table here and its shape from
+  // the menu. ⛔ ONE CLOCK READING: snapshot() takes it, and the week's ids come
+  // from that key through weeklyFor() rather than from a second read.
+  // ⛔ Null before boot, so a screen opened over a blocked store draws nothing
+  // rather than throwing.
+  function achievements() {
+    if (!booted) return null;
+    const snap = Achievements.snapshot();
+    snap.weekly = Achievements.weeklyFor(snap.weekKey);
+    return snap;
+  }
   function lastPlace() { return placed; }
 
   // kit-profile's events. `beforeChange` still names the OUTGOING profile, so its
@@ -476,7 +582,7 @@ const Meta = (function () {
   return {
     boot, saveSettings, saveTelemetry, loadTelemetry,
     runStarted, benchUsed, eligible, runOpen, runEnded, scores, lastPlace,
-    clearEdge,
+    clearEdge, achievements,
   };
 })();
 

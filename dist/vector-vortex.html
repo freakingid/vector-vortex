@@ -869,6 +869,7 @@ const C = {
     reflect:        { osc: [{ type: "square", f: 1760, to: 2640 }, { type: "triangle", f: 1175, to: 1760 }], glide: 0.05, filter: { type: "highpass", f: 600, to: 2200 }, sweep: 0.09, atk: 0.002, hold: 0.02, rel: 0.12, gain: 0.16 },
     ringTake:       { osc: [{ type: "sine", f: 1568 }, { type: "sine", f: 2349 }], filter: { type: "highpass", f: 700 }, atk: 0.002, hold: 0.03, rel: 0.16, gain: 0.14 },
     ringMiss:       { osc: [{ type: "triangle", f: 660, to: 440 }], glide: 0.07, filter: { type: "lowpass", f: 2200 }, atk: 0.002, hold: 0.02, rel: 0.09, gain: 0.07 },
+    unlock:         { osc: [{ type: "triangle", f: 1047 }, { type: "square", f: 1568 }], filter: { type: "highpass", f: 500 }, atk: 0.002, hold: 0.05, rel: 0.22, gain: 0.12 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5, mimic: 1.4, mimicShot: 1.8 },
@@ -1159,7 +1160,7 @@ const C = {
   // boot so the ONLINE view's hint (M9) reads the same name the kit wrote.
   PROFILE_ANONYMOUS_NAME: "ANONYMOUS",
 
-  // ---- Achievements (GDD 15.5) — CS015 P1 ----------------------------------
+  // ---- Achievements (GDD 15.5) — CS015 P1, the table landed at P3 ----------
   // ⛔ THE DEFINITION TABLE, AND IT IS HERE BECAUSE A THRESHOLD IS A TUNABLE
   // (plan A12). 20-achievements.js is kit-achievements' draft and may read no
   // config at all, so Meta.boot() hands it this object as an option — exactly
@@ -1172,34 +1173,133 @@ const C = {
   // in any one week. ⛔ Neither names the other's numbers, and nothing derives a
   // pool index from a lifetime row's tier.
   //
-  // A ROW is { id, mode, fact } plus EXACTLY ONE OF:
+  // A ROW is { id, name, note, mode, fact } plus EXACTLY ONE OF:
   //   tiers: [t1, t2, t3]   ascending thresholds; the unlock's `tier` is the
   //                         1-based index reached, and it only ever rises
   //   at: n                 one threshold; the unlock's `tier` is 0
   // `mode` is a mode name or null for either (plan A5) — the tag belongs to the
   // achievement, so MODE_FLAGS gains no field. `fact` names the field the run's
-  // facts object carries; ⛔ P2 builds those fields, and P1 seats no evaluation.
+  // facts object carries (facts(), 22-meta.js). `name` is the screen's ROW —
+  // ⚠ at most 20 characters, MEASURED: a row's label starts at x 410 and its
+  // detail is right-aligned at x 870 at TEXT_CHAR_W x MENU_TEXT_SIZE = 18.6 px
+  // a character, so a longer name runs under a four-character detail. `note` is
+  // the one-line description the screen writes above the rows for the CURSOR
+  // row, ⚠ at most 60 characters, NOTICE_WRAP's own budget. ⛔ The module reads
+  // neither, which is why a reword costs nothing and is not save data.
   //
-  // ⚠ EVERY ROW BELOW IS A PLACEHOLDER AND P3 REPLACES THE CONTENTS WHOLE
-  // (plan §3, A8). ⛔ AN ID THAT REACHES A PLAYER'S STORE IS SAVE DATA FROM THAT
-  // MOMENT ON and is never renamed, so none of these is an id CS015 will ship:
-  // each starts `_`, which no row in plan §9 does, and P1 builds no seat, so the
-  // shipped build has no caller of evaluate() and cannot write one to storage.
-  // ⛔ A threshold is NOT save data — only the id is — so P3 and any later
-  // changeset may retune any number here.
+  // ⛔ AN `id` IS SAVE DATA FROM THE MOMENT IT REACHES A PLAYER'S STORE AND IS
+  // NEVER RENAMED (GDD 15.5): renaming one drops that unlock for every player
+  // who had it, and deleting one orphans it. ⛔ A THRESHOLD IS NOT SAVE DATA and
+  // neither is a `name` — a later changeset may retune or reword either, and
+  // every number below is ⚠ provisional in exactly that sense.
+  //
+  // ⛔ A "LIFETIME" ROW IS ONE RUN, BANKED (Paul, 2026-09-20). `lifetimeTiers`
+  // only ever rises, so a PER-RUN threshold over a store that never resets is
+  // already "your best run, kept" — GDD 15.5's *lifetime* is the store's scope,
+  // against *weekly*, and never a cumulative counter. ⚠ Real totals stay
+  // possible later as an ADDITIVE v2, new ids beside these.
+  // ⚠ Tier 3 sits near half of what a front-door probe reached and never AT it:
+  // a top tier set at a bot's ceiling is what dropped `purge_wide` (plan A8).
   ACHIEVEMENTS: {
     perWeek: 5,           // ⛔ the rotation's width (GDD 15.5's "5 weekly")
+    // ⚠ The ONE weekly row with a free parameter, and it is a tunable rather
+    // than a threshold the table can own: `leanClear` is 0/1 because "no more
+    // than N" has no `>=` form (22-meta.js). MEASURED over 579 cleared wells in
+    // three front-door probe passes: the fewest shots any well was cleared on
+    // is 106 and the median is ~185, so 120 is about the leanest tenth.
+    wellShotPar: 120,
     lifetime: [
-      { id: "_placeholder_tiered", mode: null,        fact: "placeholder", tiers: [1, 2, 3] },
-      { id: "_placeholder_flat",   mode: null,        fact: "placeholder", at: 1 },
-      { id: "_placeholder_mode",   mode: "overdrive", fact: "placeholder", at: 1 },
+      // -- the nine tiered rows: a run's best, banked ------------------------
+      { id: "wells_cleared",   name: "WELLS CLEARED",     mode: null,        fact: "wellsCleared",     tiers: [5, 20, 50],
+        note: "WELLS CLEARED IN ONE RUN" },
+      { id: "kills_total",     name: "ENEMIES DESTROYED", mode: null,        fact: "kills",            tiers: [50, 300, 900],
+        note: "ENEMIES DESTROYED IN ONE RUN" },
+      { id: "depth_reached",   name: "DEEPEST LEVEL",     mode: null,        fact: "level",            tiers: [10, 25, 65],
+        note: "THE DEEPEST LEVEL ONE RUN REACHED" },
+      { id: "score_run",       name: "BEST RUN SCORE",    mode: null,        fact: "score",            tiers: [25000, 200000, 1200000],
+        note: "THE HIGHEST SCORE ONE RUN REACHED" },
+      { id: "thorn_chips",     name: "THORN SEGMENTS",    mode: null,        fact: "thornChips",       tiers: [10, 40, 90],
+        note: "THORN SEGMENTS CHIPPED AWAY IN ONE RUN" },
+      { id: "deathless_wells", name: "DEATHLESS WELLS",   mode: null,        fact: "deathlessWells",   tiers: [5, 20, 48],
+        note: "WELLS CLEARED WITHOUT DYING, IN ONE RUN" },
+      { id: "dives_done",      name: "DIVES COMPLETED",   mode: null,        fact: "divesCompleted",   tiers: [5, 20, 50],
+        note: "DIVES FLOWN TO THE END, IN ONE RUN" },
+      { id: "rings_taken",     name: "RINGS TAKEN",       mode: "overdrive", fact: "ringsTaken",       tiers: [10, 40, 100],
+        note: "RINGS TAKEN IN ONE RUN" },
+      { id: "purge_saver",     name: "PURGE UNSPENT",     mode: null,        fact: "purgeSavedClears", tiers: [1, 5, 25],
+        note: "WELLS CLEARED WITH THE PURGE UNSPENT, IN ONE RUN" },
+      // -- the fourteen untiered rows: a thing done, once --------------------
+      { id: "first_well",      name: "FIRST WELL",        mode: null,        fact: "wellsCleared",     at: 1,
+        note: "CLEAR YOUR FIRST WELL" },
+      { id: "open_well",       name: "AN OPEN WELL",      mode: null,        fact: "openWellsCleared", at: 1,
+        note: "CLEAR A WELL THAT DOES NOT CLOSE ON ITSELF" },
+      { id: "all_wells",       name: "ALL SIXTEEN WELLS", mode: null,        fact: "wellsSeen",        at: 16,
+        note: "SEE ALL SIXTEEN WELLS IN ONE RUN" },
+      { id: "start_deep",      name: "THE DEEPEST START", mode: null,        fact: "startDepth",       at: 81,   // START_DEPTH_CAP
+        note: "BEGIN A RUN AT THE DEEPEST START DEPTH" },
+      { id: "dim_band",        name: "THE DIM BAND",      mode: null,        fact: "level",            at: 65,   // DIM_BAND_LO
+        note: "REACH LEVEL 65, WHERE THE WELL GOES DARK" },
+      { id: "extra_life",      name: "AN EXTRA LIFE",     mode: null,        fact: "extraLives",       at: 1,
+        note: "SCORE YOUR WAY TO A SPARE CRAFT" },
+      { id: "lives_full",      name: "A FULL RESERVE",    mode: null,        fact: "lives",            at: 6,    // LIVES_MAX
+        note: "HOLD SIX CRAFT AT ONCE" },
+      { id: "carrier_split",   name: "CARRIER AND BROOD", mode: null,        fact: "carrierSplits",    at: 1,
+        note: "DESTROY A CARRIER AND BOTH OF ITS CHILDREN" },
+      { id: "rim_sweep",       name: "A RIM SWEEP KILL",  mode: null,        fact: "rimSweepKills",    at: 1,
+        note: "KILL SOMETHING THE INSTANT IT REACHES THE RIM" },
+      { id: "combo_max",       name: "THE TOP MULTIPLIER", mode: "overdrive", fact: "comboPeak",       at: 8,    // COMBO_MAX
+        note: "DRIVE THE COMBO ALL THE WAY UP" },
+      { id: "token_set",       name: "ALL FIVE TOKENS",   mode: "overdrive", fact: "tokenKinds",       at: 5,
+        note: "COLLECT ALL FIVE KINDS OF TOKEN IN ONE RUN" },
+      { id: "ring_full",       name: "A FULL RING SET",   mode: "overdrive", fact: "ringSetsTaken",    at: 1,
+        note: "TAKE EVERY RING OF ONE DIVE" },
+      { id: "jump_kill",       name: "A JUMP STRIKE KILL", mode: "overdrive", fact: "jumpKills",       at: 1,
+        note: "LEAVE THE WELL AND KILL A WARDEN ABOVE IT" },
+      { id: "mimic_kill",      name: "A MIMIC DESTROYED", mode: "overdrive", fact: "mimicKills",       at: 1,
+        note: "OPEN A MIMIC AND FINISH IT" },
     ],
-    weekly: [             // ⚠ P3 lands twenty here, measured row by row
-      { id: "_placeholder_week_1", mode: null, fact: "placeholder", at: 1 },
-      { id: "_placeholder_week_2", mode: null, fact: "placeholder", at: 2 },
-      { id: "_placeholder_week_3", mode: null, fact: "placeholder", at: 3 },
-      { id: "_placeholder_week_4", mode: null, fact: "placeholder", at: 4 },
-      { id: "_placeholder_week_5", mode: null, fact: "placeholder", at: 5 },
+    // ⛔ THE POOL THAT ROTATES, AND EVERY ROW IS SCOPED TO ONE RUN, often to
+    // one WELL, so a week's five are all finishable in a sitting. ⛔ A weekly
+    // row is never tiered (20-achievements.js refuses one). The per-well and
+    // the 0/1 facts are built in 22-meta.js, which is where the shapes a row
+    // cannot state — a conjunction, an at-most, a without — are decided.
+    weekly: [
+      { id: "week_five_wells",     name: "FIVE WELLS IN A RUN", mode: null,        fact: "wellsCleared",      at: 5,
+        note: "CLEAR FIVE WELLS IN ONE RUN" },
+      { id: "week_lean_well",      name: "A LEAN CLEAR",        mode: null,        fact: "leanClear",         at: 1,
+        note: "CLEAR A WELL WITHOUT WASTING SHOTS" },
+      { id: "week_low_start_deep", name: "DEEP FROM DEPTH 1",   mode: null,        fact: "lowStartLevel",     at: 20,
+        note: "REACH LEVEL 20 ON A RUN STARTED AT DEPTH 1" },
+      { id: "week_clean_streak",   name: "THREE CLEAN WELLS",   mode: null,        fact: "cleanStreak",       at: 3,
+        note: "CLEAR THREE WELLS IN A ROW WITHOUT DYING" },
+      { id: "week_four_rings",     name: "FOUR RINGS ON A TRIP", mode: "overdrive", fact: "wellRings",        at: 4,
+        note: "TAKE FOUR RINGS ON THE WAY TO THE NEXT WELL" },
+      { id: "week_combo_four",     name: "\u00D74 IN ONE RUN",   mode: "overdrive", fact: "comboPeak",         at: 4,
+        note: "DRIVE THE COMBO TO FOUR IN ONE RUN" },
+      { id: "week_brood",          name: "A WHOLE BROOD",       mode: null,        fact: "wellCarrierSplits", at: 1,
+        note: "TAKE A CARRIER AND BOTH CHILDREN IN ONE WELL" },
+      { id: "week_open_clean",     name: "A CLEAN OPEN WELL",   mode: null,        fact: "openCleanClear",    at: 1,
+        note: "CLEAR AN OPEN WELL WITHOUT DYING" },
+      { id: "week_purge_held",     name: "A RUN, NEVER PURGED", mode: null,        fact: "purgeHeldRun",      at: 1,
+        note: "END A RUN HAVING NEVER SPENT THE PURGE" },
+      { id: "week_warden_clean",   name: "A WARDEN, NO DEATH",  mode: "overdrive", fact: "wardenCleanWell",   at: 1,
+        note: "KILL A WARDEN AND CLEAR THAT WELL WITHOUT DYING" },
+      { id: "week_two_sets",       name: "TWO FULL RING SETS",  mode: "overdrive", fact: "ringSetsTaken",     at: 2,
+        note: "TAKE EVERY RING OF TWO DIVES IN ONE RUN" },
+      { id: "week_last_life",      name: "ON YOUR LAST LIFE",   mode: null,        fact: "clearOnLastLife",   at: 1,
+        note: "CLEAR A WELL WITH ONE CRAFT LEFT" },
+      { id: "week_score_50k",      name: "50,000 IN ONE RUN",   mode: null,        fact: "score",             at: 50000,
+        note: "SCORE FIFTY THOUSAND IN ONE RUN" },
+      { id: "week_forty_kills",    name: "40 ENEMIES IN A RUN", mode: null,        fact: "kills",             at: 40,
+        note: "DESTROY FORTY ENEMIES IN ONE RUN" },
+      { id: "week_full_set",       name: "NO RING MISSED",      mode: "overdrive", fact: "ringSetsTaken",     at: 1,
+        note: "FINISH A DIVE HAVING MISSED NO RING" },
+      { id: "week_deep_first",     name: "A DEEP FIRST WELL",   mode: null,        fact: "deepFirstClear",    at: 33,
+        note: "CLEAR THE FIRST WELL OF A RUN STARTED AT DEPTH 33" },
+      { id: "week_quiet_well",     name: "A QUIET WELL",        mode: null,        fact: "quietClear",        at: 1,
+        note: "CLEAR A WELL WITH NO PURGE SPENT AND NO DEATH" },
+      { id: "week_no_thorn_death", name: "NO THORN DEATH",      mode: null,        fact: "noThornDeathRun",   at: 1,
+        note: "END A RUN WITHOUT LOSING A CRAFT TO A THORN" },
     ],
   },
 
@@ -13272,9 +13372,14 @@ const Meta = (function () {
 
   // startGame()'s last line. ⛔ A run still open is DROPPED, unrecorded: a
   // second startGame() over a live run (the soaks' restarts) ends nothing.
+  // ⛔ AND THE PER-WELL WINDOW GOES WITH THE RUN (CS015 P3): `state.tally` is
+  // re-minted here, so a window carried across a restart would read a delta
+  // against another run's counters.
   function runStarted() {
     run = { bench: false };
     placed = 0;
+    windowAt = null;
+    cleanStreak = 0;
     Leaderboard.beginRun();
   }
 
@@ -13305,9 +13410,64 @@ const Meta = (function () {
     for (let v = n >>> 0; v !== 0; v >>>= 1) c += v & 1;
     return c;
   }
-  function facts() {
-    const t = state.tally;
+
+  // ---- the per-well window and the run's end (CS015 P3; Paul, 2026-09-20) ----
+  //
+  // ⛔ A WEEKLY ROW IS SCOPED TO ONE RUN AND OFTEN TO ONE WELL, AND NEITHER
+  // COSTS A `tally` FIELD. `tally` is monotonic within a run and the clear edge
+  // fires exactly once per well, so ⛔ A PER-WELL WINDOW IS THE DELTA SINCE THE
+  // LAST CLEAR EDGE — kept here, in Meta's closure, beside `run`, because it
+  // belongs to the record of a run rather than to the simulation. Nothing in
+  // the simulation can read it, which is the same guarantee `tally` itself has.
+  //
+  // ⛔ AND A ROW IS ONE FACT `>=` ONE THRESHOLD, so the two shapes a row cannot
+  // state are computed HERE and handed over already decided:
+  //   a CONJUNCTION is a quantity gated to 0 by its other half — `lowStartLevel`
+  //     is the level reached on a Start Depth 1 run and 0 on any other, so the
+  //     TABLE still owns the 20 it is compared against;
+  //   an AT-MOST or a WITHOUT is a 0/1 fact with `at: 1`, because "fewer than"
+  //     has no `>=` form. Each is structural — the last life, a charge unspent,
+  //     a well with no death — never a tuned number, with one exception named
+  //     at `leanClear` below.
+  //
+  // ⛔ THE TWO SEATS SEE DIFFERENT FACTS, AND THE MODULE'S SKIP IS THE GUARD:
+  // a fact that is not a finite number is skipped rather than compared, so the
+  // run-end seat simply OMITS the per-well block and a stale window cannot
+  // unlock anything. The run's own closing facts are omitted at the clear edge
+  // for the same reason — a run that is still going has not ended with its
+  // Purge unspent.
+  let windowAt = null;     // `tally` as the last clear edge left it; null = the run's start
+  let cleanStreak = 0;     // consecutive clears with no death (GDD 15.5's weekly pool)
+
+  // The window's deltas, plus the clear-edge readings a row needs. Every
+  // counter here is a clear-edge counter or a play counter, so a delta of 1 on
+  // a clear-edge counter means "this clear".
+  function wellWindow() {
+    const t = state.tally, p = windowAt;
+    const d = k => t[k] - (p === null ? 0 : p[k]);
+    const deathless = d("deathlessWells") >= 1;
     return {
+      // ⛔ EVERY FACT HERE HAS A ROW. A fact nobody names is a skip the table
+      // can never spend, so it is dead weight rather than a spare part.
+      wellRings: d("ringsTaken"), wellCarrierSplits: d("carrierSplits"),
+      // ⚠ THE ONE WEEKLY ROW WITH A FREE PARAMETER (GDD 15.5's "without firing
+      // more than N shots"): N is C.ACHIEVEMENTS.wellShotPar, a tunable like any
+      // other and ⛔ not save data.
+      leanClear: d("shotsFired") <= C.ACHIEVEMENTS.wellShotPar ? 1 : 0,
+      openCleanClear: d("openWellsCleared") >= 1 && deathless ? 1 : 0,
+      quietClear: d("purgeSavedClears") >= 1 && deathless ? 1 : 0,
+      wardenCleanWell: d("jumpKills") >= 1 && deathless ? 1 : 0,
+      clearOnLastLife: state.lives === 1 ? 1 : 0,
+      cleanStreak,
+      // The starting well of a deep run: the Start Depth itself while this is
+      // the run's FIRST clear, 0 after, so the table owns the 33.
+      deepFirstClear: t.wellsCleared === 1 ? state.startDepth : 0,
+    };
+  }
+
+  function facts(extra) {
+    const t = state.tally;
+    return Object.assign({
       mode: state.mode,
       level: state.level, score: state.score, startDepth: state.startDepth,
       lives: state.lives, comboPeak: state.combo.peak,
@@ -13321,7 +13481,27 @@ const Meta = (function () {
       mimicKills: t.mimicKills, carrierSplits: t.carrierSplits,
       ringsTaken: t.ringsTaken, ringSetsTaken: t.ringSetsTaken,
       tokenKinds: bitCount(t.tokenKindsMask),
+      // A conjunction, gated to 0 by its other half (above).
+      lowStartLevel: state.startDepth === 1 ? state.level : 0,
+    }, extra);
+  }
+
+  // The run's own closing facts, the run-end seat's half of the same split.
+  // ⛔ Both are WITHOUT rows, so both are 0/1 (above), and both are structural.
+  function runEndFacts() {
+    return {
+      purgeHeldRun: state.tally.purgesSpent === 0 ? 1 : 0,
+      noThornDeathRun: state.tally.thornDeaths === 0 ? 1 : 0,
     };
+  }
+
+  // ⛔ THE ONE `sfx("unlock")` SEAT (CS015 P3, A10-A), and it is HERE rather
+  // than at either caller because an unlock sounds wherever an unlock happens.
+  // ⛔ Silent when nothing unlocked, which is the same test `evaluate()` makes
+  // before it writes.
+  function sounded(list) {
+    if (list !== null && list.length > 0) sfx("unlock");
+    return list;
   }
 
   // ⛔ THE CLEAR-EDGE SEAT (A3-A), from Game.update()'s edge, after the bonuses
@@ -13329,9 +13509,18 @@ const Meta = (function () {
   // ONLY when something unlocked. ⛔ THE ONE GATE (A4-A) — a bench run earns
   // nothing. ⛔ AN UNLOCK IS WORTH NOTHING (A9-A): no addScore(), no life.
   // Returns the payload (A11), which nothing posts (GDD 15.5, local-only).
+  // ⛔ THE STREAK MOVES BEFORE THE FACTS ARE BUILT and the window closes AFTER
+  // they are read: this clear is inside its own window, not the next one.
+  // ⛔ AND BOTH MOVE WHETHER OR NOT THE RUN IS ELIGIBLE, above the gate — a
+  // bench run earns nothing, and a window that stopped tracking on one would
+  // hand the next well a delta covering two.
   function clearEdge() {
+    const deathless = state.tally.deathlessWells - (windowAt === null ? 0 : windowAt.deathlessWells) >= 1;
+    cleanStreak = deathless ? cleanStreak + 1 : 0;
+    const win = wellWindow();
+    windowAt = Object.assign({}, state.tally);
     if (!booted || !eligible()) return null;
-    return Achievements.evaluate(facts());
+    return sounded(Achievements.evaluate(facts(win)));
   }
 
   // R9's local row. The profile's name is the one it has NOW, stamped, so a
@@ -13366,12 +13555,29 @@ const Meta = (function () {
     if (ok) Leaderboard.submit(outcome);
     // ⛔ THE RUN-END SEAT (CS015 P2, A3-A): `ok`, THE LOCAL, never eligible() —
     // `run` is already null here, so eligible() reads false for every run.
-    if (booted && ok) Achievements.evaluate(facts());
+    // ⛔ AND IT OMITS THE PER-WELL BLOCK (CS015 P3): the window belongs to a
+    // well that was cleared, and the module skips a fact it is not handed. Its
+    // own two facts are the run's closing ones, which mean nothing mid-run.
+    if (booted && ok) sounded(Achievements.evaluate(facts(runEndFacts())));
     saveTelemetry();
   }
 
   // What the SCORES screen lists; [] before boot.
   function scores(mode) { return booted ? Scores.list(mode) : []; }
+
+  // What the ACHIEVEMENTS screen lists (CS015 P3, A1-A), and the SAME shape
+  // `scores()` is: the screen reads the STORE here and the rows from
+  // C.ACHIEVEMENTS, exactly as SCORES reads the table here and its shape from
+  // the menu. ⛔ ONE CLOCK READING: snapshot() takes it, and the week's ids come
+  // from that key through weeklyFor() rather than from a second read.
+  // ⛔ Null before boot, so a screen opened over a blocked store draws nothing
+  // rather than throwing.
+  function achievements() {
+    if (!booted) return null;
+    const snap = Achievements.snapshot();
+    snap.weekly = Achievements.weeklyFor(snap.weekKey);
+    return snap;
+  }
   function lastPlace() { return placed; }
 
   // kit-profile's events. `beforeChange` still names the OUTGOING profile, so its
@@ -13456,7 +13662,7 @@ const Meta = (function () {
   return {
     boot, saveSettings, saveTelemetry, loadTelemetry,
     runStarted, benchUsed, eligible, runOpen, runEnded, scores, lastPlace,
-    clearEdge,
+    clearEdge, achievements,
   };
 })();
 
@@ -14316,6 +14522,10 @@ const Game = (function () {
       // title by index.
       { label: "SCORES",  detail: "", enabled: true, action: "toScores" },
       TITLE_PROFILE,
+      // ⛔ AND CS015's GOES AFTER PROFILE, for the same reason and one more:
+      // MEASURED (plan §1.2, V1) a row appended here costs exactly two closed
+      // repairs, both label LISTS, and moves no navigation-by-index.
+      { label: "ACHIEVEMENTS", detail: "", enabled: true, action: "toAchievementsFromTitle" },
     ] },
     // ⛔ OVERDRIVE IS THE DEFAULT HIGHLIGHT (GDD 13; CS012 P3, O9), and it is
     // the row ORDER that says so: the menu model puts the cursor on the first
@@ -14346,6 +14556,10 @@ const Game = (function () {
       { label: "CONTROLS", detail: "\u203A",     enabled: true, action: "toControls" },
       { label: "CREDITS",  detail: "\u203A",     enabled: true, action: "toCredits" },
       SOUND_ROWS.master, SOUND_ROWS.music, SOUND_ROWS.sfx, SOUND_ROWS.voice, SOUND_ROWS.track,
+      // ⛔ CS015 P3's row goes BEFORE BACK and never above TELEMETRY, the same
+      // rule the sound rows obey: MEASURED (plan §1.2, V1) it reddens nothing,
+      // because no closed test navigates OPTIONS past the sound rows by index.
+      { label: "ACHIEVEMENTS", detail: "›", enabled: true, action: "toAchievementsFromOptions" },
       { label: "BACK",     detail: "",           enabled: true, action: "optionsBack" },
     ] },
     // U7 (CS008 P7). Every detail is written by refreshControlRows(), in update().
@@ -14367,6 +14581,12 @@ const Game = (function () {
     // buildScoreRows(), ⛔ never in draw(). A row is enabled so rotate scrolls,
     // and has no action.
     scores: { title: "SCORES", lines: [], back: "toTitle", items: [] },
+    // CS015 P3 (plan A1-A, R9). SCORES' shape exactly: rows rebuilt on entry by
+    // buildAchievementRows(), ⛔ never in draw(); the window is
+    // MENU_VISIBLE_ROWS over however many rows there are; BACK last. ⛔ Reached
+    // from the TITLE and from OPTIONS, so its back is a variable like OPTIONS'
+    // own — `achievementsFrom`, written by the two rows that open it.
+    achievements: { title: "ACHIEVEMENTS", lines: [], back: "achievementsBack", items: [] },
     // CS011 P4 (plan R12, R13, R16). PROFILE's rows are rebuilt on entry by
     // openProfiles(): one per profile, NEW PROFILE, BACK.
     profile: { title: "PROFILE", lines: [], back: "toTitle", items: [] },
@@ -14412,8 +14632,12 @@ const Game = (function () {
   function runOnScreen() {
     const s = state.screen;
     if (s === "play" || s === "pause" || s === "gameover") return true;
+    // ⛔ CS015 P3: ACHIEVEMENTS is an OPTIONS SUB-PAGE when it was opened from
+    // one, so H4 covers it exactly as it covers CREDITS. Opened from the TITLE
+    // no run exists, and the same screen then draws no HUD.
     return optionsFrom === "pause" && (s === "options" || s === "controls" || s === "credits" ||
-                                       s === "keyboard" || s === "gamepad");
+                                       s === "keyboard" || s === "gamepad" ||
+                                       (s === "achievements" && achievementsFrom === "options"));
   }
 
   // ---- the CONTROLS page (GDD 9, 10.5; CS008 P7) ----------------------------
@@ -14773,6 +14997,86 @@ const Game = (function () {
     scr.items.push({ label: "BACK", detail: "", enabled: true, action: "toTitle" });
   }
 
+  // ---- ACHIEVEMENTS (GDD 10.5, 15.5; CS015 P3, plan A1-A, R9) ---------------
+  //
+  // ⛔ SCORES' SHAPE, and deliberately: rows rebuilt on ENTRY and never in
+  // draw(), every string through drawText(), the chevron through drawPoly, a
+  // window of MENU_VISIBLE_ROWS over however many rows there are, BACK last.
+  // ⛔ THE ROWS COME FROM C.ACHIEVEMENTS AND THE STATE FROM Meta.achievements()
+  // — the definition table is config (A12) and the store is 22-meta.js's, the
+  // same split SCORES makes between the menu's shape and Meta.scores().
+  // ⛔ NO HUD RECTANGLE AND NO TOAST (A1): a seventh rectangle would want the
+  // band Overdrive's combo readout holds, and this screen is the whole surface.
+  //
+  // Two rows are headers — ⛔ `enabled: false`, so the menu model SKIPS them
+  // with the cursor and draws them in MENU_LOCKED_COLOR. That is the whole
+  // mechanism; a header is not a new row kind.
+  let achievementsFrom = "title";
+  // ⛔ A DETAIL OF AT MOST FOUR CHARACTERS, and that is a layout fact, not a
+  // style: a row's label starts at x 410 and its detail is right-aligned at
+  // x 870, so 20 label characters plus 4 detail characters is exactly the
+  // MENU_COL_W 460 budget at TEXT_CHAR_W 0.62 x MENU_TEXT_SIZE 30 (18.6 px).
+  // A locked row's detail is EMPTY — drawMenu() skips a falsy detail — so the
+  // column reads as a list of what has been done rather than a wall of LOCKED.
+  const ACH_DONE = "DONE";
+  // A LIFETIME row's standing: its tier as `n/total`, or DONE, or nothing.
+  // ⛔ Which store answers is the row's own shape — tiered rows live in
+  // lifetimeTiers and untiered ones in lifetimeUnlocked (20-achievements.js).
+  function achievementDetail(row, held) {
+    if (Array.isArray(row.tiers)) {
+      const n = held.lifetimeTiers[row.id] || 0;
+      return n === 0 ? "" : n + "/" + row.tiers.length;
+    }
+    return held.lifetimeUnlocked.indexOf(row.id) >= 0 ? ACH_DONE : "";
+  }
+  function buildAchievementRows() {
+    const scr = SCREENS.achievements;
+    const held = Meta.achievements();
+    scr.lines.length = 0;
+    scr.items.length = 0;
+    // ⛔ Null before boot (a blocked store): the screen still opens, says so,
+    // and offers BACK rather than throwing on the first row.
+    if (held === null) {
+      scr.lines.push("NO PROFILE STORE", "");
+    } else {
+      const life = C.ACHIEVEMENTS.lifetime;
+      let got = 0;
+      scr.items.push({ label: "LIFETIME", detail: "", enabled: false, action: null, note: "" });
+      for (const row of life) {
+        const detail = achievementDetail(row, held);
+        if (detail !== "") got++;
+        scr.items.push({ label: row.name, detail, enabled: true, action: null, note: row.note });
+      }
+      // ⛔ TWO INFO LINES AND NO THIRD, MEASURED: MENU_TOP_Y 240 plus two lines
+      // and the gap at MENU_ROW_H 46 puts the seventh row's baseline at 654 of
+      // WORLD_H 720; a third line pushes it off the canvas.
+      scr.lines.push(got + " OF " + life.length + " \u00B7 WEEK " + held.weekKey, "");
+      scr.items.push({ label: "THIS WEEK", detail: "", enabled: false, action: null, note: "" });
+      // ⛔ The week's own ids, in the rotation's order, looked up in the POOL.
+      // Nothing here derives a pool index from a lifetime row (plan §7).
+      for (const id of held.weekly) {
+        const row = C.ACHIEVEMENTS.weekly.find(r => r.id === id);
+        if (!row) continue;
+        const done = held.weeklyUnlocked.indexOf(id) >= 0;
+        scr.items.push({ label: row.name, detail: done ? ACH_DONE : "", enabled: true,
+                         action: null, note: row.note });
+      }
+    }
+    scr.items.push({ label: "BACK", detail: "", enabled: true, action: "achievementsBack", note: "" });
+  }
+
+  // ⛔ THE SECOND INFO LINE IS THE CURSOR ROW'S NOTE, and it is written in
+  // update() on every ACHIEVEMENTS step, never in draw() — the same seat every
+  // other live detail uses (OPTIONS' ON/OFF, the title's profile name). A
+  // cursor move returns no action, so rebuilding the rows on it would be a
+  // rebuild per step; only this one line moves.
+  function refreshAchievementNote() {
+    const scr = SCREENS.achievements;
+    if (scr.lines.length < 2) return;
+    const row = scr.items[menu.cursor];
+    scr.lines[1] = row && row.note ? row.note : "";
+  }
+
   // The board's answer (Leaderboard.load(), which drops a stale one). It is
   // ignored once the player has left the ONLINE view. ⛔ A MODE step re-loads,
   // so the token drops the outgoing mode's answer exactly as it drops a stale one.
@@ -15010,6 +15314,15 @@ const Game = (function () {
       scoresMode = SCORES_MODES[(SCORES_MODES.indexOf(scoresMode) + 1) % SCORES_MODES.length];
       loadScoresView();
     }
+    // ⛔ CS015 P3: rebuilt on ENTRY, from either door, and BACK returns to the
+    // door it came through — OPTIONS' own shape, because OPTIONS itself is
+    // reached from the title and from pause.
+    if (name === "toAchievementsFromTitle" || name === "toAchievementsFromOptions") {
+      achievementsFrom = name === "toAchievementsFromOptions" ? "options" : "title";
+      buildAchievementRows();
+      state.screen = "achievements";
+    }
+    if (name === "achievementsBack") state.screen = achievementsFrom;
     if (name === "toggleScoresView") {
       scoresView = scoresView === "local" ? "online" : "local";
       loadScoresView();
@@ -15130,6 +15443,7 @@ const Game = (function () {
       if (state.screen === "controls" || state.screen === "keyboard" || state.screen === "gamepad") refreshControlRows();
       if (state.screen === "title") { const p = Profiles.current(); TITLE_PROFILE.detail = p ? p.name : ""; }
       if (state.screen === "title") refreshTitleLine();
+      if (state.screen === "achievements") refreshAchievementNote();
       if (state.screen === "profileName") refreshNameLines();
       return;
     }

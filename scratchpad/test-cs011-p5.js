@@ -371,8 +371,11 @@ const board = entries => ({ gameId: "vector-vortex", window: "all", entries });
   H.eq(J(S.draw().lines), "[]", "⛔ the line is written in update(), never in draw()");
   S.steps(1);
   const v = S.draw();
-  H.eq(J([v.lines, v.items.map(r => r.label)]), J([["3 SCORES QUEUED"], ["PLAY", "OPTIONS", "SCORES", "PROFILE"]]),
-       "⛔ three queued: \"3 SCORES QUEUED\", the four rows unchanged");
+  // ⛔ CS015 P3 appended ACHIEVEMENTS to the title, in place (A1-A). The claim
+  // is the queued LINE; the row list is here so a line written into the rows
+  // would be caught, and it grew by exactly the appended row.
+  H.eq(J([v.lines, v.items.map(r => r.label)]), J([["3 SCORES QUEUED"], ["PLAY", "OPTIONS", "SCORES", "PROFILE", "ACHIEVEMENTS"]]),
+       "⛔ three queued: \"3 SCORES QUEUED\", the title's rows unchanged");
   rec.queues[C.LEADERBOARD_GAME_IDS.classic] = 1;
   S.steps(1);
   H.eq(J(S.draw().lines), J(["1 SCORE QUEUED"]), "one queued: singular");

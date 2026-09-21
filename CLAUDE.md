@@ -505,6 +505,25 @@ edge (`Meta.clearEdge()`) and `Meta.runEnded()`, which reads `ok`, its local —
 flat object the game builds at the seat** from `state` and `state.tally`;
 `20-achievements.js` reads neither. ⛔ **An unlock pays nothing.**
 
+⛔ **AN ACHIEVEMENT `id` IS SAVE DATA; ITS THRESHOLD, `name` AND `note` ARE NOT**
+(GDD §15.5). The table is `C.ACHIEVEMENTS` — 23 lifetime rows, an 18-row weekly
+POOL, `perWeek` 5 — and ⛔ **a row is ONE fact `>=` ONE threshold**, so a
+CONJUNCTION is a quantity gated to 0 by its other half and an AT-MOST or a
+WITHOUT is a 0/1 fact with `at: 1`, both built in `facts()`. ⛔ **A per-well
+window is the DELTA SINCE THE LAST CLEAR EDGE**, in Meta's closure, and costs no
+`tally` field. ⛔ **The two seats see different facts** — the run's end omits the
+per-well block, the clear edge omits the run's closing facts — and the module's
+skip of a non-finite fact is what makes that safe. ⛔ **Every row is MEASURED
+reachable, PER ROW** (`test-cs015-p3.js`'s `REACH`); a row no board reaches is
+reported to Paul, never shipped and never quietly lowered.
+
+⛔ **THE ACHIEVEMENTS SCREEN IS SCORES' SHAPE AND THERE IS NO TOAST** (GDD
+§10.5): rows rebuilt on entry, never in `draw()`; a row on the TITLE after
+PROFILE and one on OPTIONS before BACK; BACK returns to whichever door;
+⛔ **no seventh HUD rectangle.** ⛔ **A name is ≤ 20 characters and a note ≤ 60**,
+and ⛔ **TWO info lines and no third** — MEASURED, a third pushes the seventh row
+off the canvas.
+
 ⛔ **A `tally` COUNTER IS WRITE-ONLY AND NOTHING IN THE SIMULATION BRANCHES ON
 ONE** (`02-state.js`), which is what keeps a counter free of the determinism
 hash. ⛔ **It is written where its event happens**, and ⛔ **a counter that needs
@@ -667,9 +686,10 @@ src/00-config.js       C — every tunable; THE HEAT CLOCK (heat, 7 accessors);
     21-telemetry.js    TELEMETRY_FIELDS + the ring. Capture is a SESSION switch,
                        OFF at launch; sampled from update(), never draw()
     22-meta.js         THE ONE ROUTE TO STORAGE: Store, Profiles, Leaderboard,
-                       Meta (eligible() — the ONE gate; the achievement facts
-                       and both seats), createScores, levelRecord(),
-                       startDepthOptions()
+                       Meta (eligible() — the ONE gate; the achievement facts,
+                       the per-well window, both seats, the ONE sfx("unlock")
+                       seat and achievements(), the screen's reader),
+                       createScores, levelRecord(), startDepthOptions()
     23-main.js         loop, state machine, well lifecycle, respawn
 ```
 

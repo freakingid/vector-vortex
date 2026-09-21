@@ -694,6 +694,10 @@ const Game = (function () {
       // title by index.
       { label: "SCORES",  detail: "", enabled: true, action: "toScores" },
       TITLE_PROFILE,
+      // ⛔ AND CS015's GOES AFTER PROFILE, for the same reason and one more:
+      // MEASURED (plan §1.2, V1) a row appended here costs exactly two closed
+      // repairs, both label LISTS, and moves no navigation-by-index.
+      { label: "ACHIEVEMENTS", detail: "", enabled: true, action: "toAchievementsFromTitle" },
     ] },
     // ⛔ OVERDRIVE IS THE DEFAULT HIGHLIGHT (GDD 13; CS012 P3, O9), and it is
     // the row ORDER that says so: the menu model puts the cursor on the first
@@ -724,6 +728,10 @@ const Game = (function () {
       { label: "CONTROLS", detail: "\u203A",     enabled: true, action: "toControls" },
       { label: "CREDITS",  detail: "\u203A",     enabled: true, action: "toCredits" },
       SOUND_ROWS.master, SOUND_ROWS.music, SOUND_ROWS.sfx, SOUND_ROWS.voice, SOUND_ROWS.track,
+      // ⛔ CS015 P3's row goes BEFORE BACK and never above TELEMETRY, the same
+      // rule the sound rows obey: MEASURED (plan §1.2, V1) it reddens nothing,
+      // because no closed test navigates OPTIONS past the sound rows by index.
+      { label: "ACHIEVEMENTS", detail: "›", enabled: true, action: "toAchievementsFromOptions" },
       { label: "BACK",     detail: "",           enabled: true, action: "optionsBack" },
     ] },
     // U7 (CS008 P7). Every detail is written by refreshControlRows(), in update().
@@ -745,6 +753,12 @@ const Game = (function () {
     // buildScoreRows(), ⛔ never in draw(). A row is enabled so rotate scrolls,
     // and has no action.
     scores: { title: "SCORES", lines: [], back: "toTitle", items: [] },
+    // CS015 P3 (plan A1-A, R9). SCORES' shape exactly: rows rebuilt on entry by
+    // buildAchievementRows(), ⛔ never in draw(); the window is
+    // MENU_VISIBLE_ROWS over however many rows there are; BACK last. ⛔ Reached
+    // from the TITLE and from OPTIONS, so its back is a variable like OPTIONS'
+    // own — `achievementsFrom`, written by the two rows that open it.
+    achievements: { title: "ACHIEVEMENTS", lines: [], back: "achievementsBack", items: [] },
     // CS011 P4 (plan R12, R13, R16). PROFILE's rows are rebuilt on entry by
     // openProfiles(): one per profile, NEW PROFILE, BACK.
     profile: { title: "PROFILE", lines: [], back: "toTitle", items: [] },
@@ -790,8 +804,12 @@ const Game = (function () {
   function runOnScreen() {
     const s = state.screen;
     if (s === "play" || s === "pause" || s === "gameover") return true;
+    // ⛔ CS015 P3: ACHIEVEMENTS is an OPTIONS SUB-PAGE when it was opened from
+    // one, so H4 covers it exactly as it covers CREDITS. Opened from the TITLE
+    // no run exists, and the same screen then draws no HUD.
     return optionsFrom === "pause" && (s === "options" || s === "controls" || s === "credits" ||
-                                       s === "keyboard" || s === "gamepad");
+                                       s === "keyboard" || s === "gamepad" ||
+                                       (s === "achievements" && achievementsFrom === "options"));
   }
 
   // ---- the CONTROLS page (GDD 9, 10.5; CS008 P7) ----------------------------
@@ -1151,6 +1169,86 @@ const Game = (function () {
     scr.items.push({ label: "BACK", detail: "", enabled: true, action: "toTitle" });
   }
 
+  // ---- ACHIEVEMENTS (GDD 10.5, 15.5; CS015 P3, plan A1-A, R9) ---------------
+  //
+  // ⛔ SCORES' SHAPE, and deliberately: rows rebuilt on ENTRY and never in
+  // draw(), every string through drawText(), the chevron through drawPoly, a
+  // window of MENU_VISIBLE_ROWS over however many rows there are, BACK last.
+  // ⛔ THE ROWS COME FROM C.ACHIEVEMENTS AND THE STATE FROM Meta.achievements()
+  // — the definition table is config (A12) and the store is 22-meta.js's, the
+  // same split SCORES makes between the menu's shape and Meta.scores().
+  // ⛔ NO HUD RECTANGLE AND NO TOAST (A1): a seventh rectangle would want the
+  // band Overdrive's combo readout holds, and this screen is the whole surface.
+  //
+  // Two rows are headers — ⛔ `enabled: false`, so the menu model SKIPS them
+  // with the cursor and draws them in MENU_LOCKED_COLOR. That is the whole
+  // mechanism; a header is not a new row kind.
+  let achievementsFrom = "title";
+  // ⛔ A DETAIL OF AT MOST FOUR CHARACTERS, and that is a layout fact, not a
+  // style: a row's label starts at x 410 and its detail is right-aligned at
+  // x 870, so 20 label characters plus 4 detail characters is exactly the
+  // MENU_COL_W 460 budget at TEXT_CHAR_W 0.62 x MENU_TEXT_SIZE 30 (18.6 px).
+  // A locked row's detail is EMPTY — drawMenu() skips a falsy detail — so the
+  // column reads as a list of what has been done rather than a wall of LOCKED.
+  const ACH_DONE = "DONE";
+  // A LIFETIME row's standing: its tier as `n/total`, or DONE, or nothing.
+  // ⛔ Which store answers is the row's own shape — tiered rows live in
+  // lifetimeTiers and untiered ones in lifetimeUnlocked (20-achievements.js).
+  function achievementDetail(row, held) {
+    if (Array.isArray(row.tiers)) {
+      const n = held.lifetimeTiers[row.id] || 0;
+      return n === 0 ? "" : n + "/" + row.tiers.length;
+    }
+    return held.lifetimeUnlocked.indexOf(row.id) >= 0 ? ACH_DONE : "";
+  }
+  function buildAchievementRows() {
+    const scr = SCREENS.achievements;
+    const held = Meta.achievements();
+    scr.lines.length = 0;
+    scr.items.length = 0;
+    // ⛔ Null before boot (a blocked store): the screen still opens, says so,
+    // and offers BACK rather than throwing on the first row.
+    if (held === null) {
+      scr.lines.push("NO PROFILE STORE", "");
+    } else {
+      const life = C.ACHIEVEMENTS.lifetime;
+      let got = 0;
+      scr.items.push({ label: "LIFETIME", detail: "", enabled: false, action: null, note: "" });
+      for (const row of life) {
+        const detail = achievementDetail(row, held);
+        if (detail !== "") got++;
+        scr.items.push({ label: row.name, detail, enabled: true, action: null, note: row.note });
+      }
+      // ⛔ TWO INFO LINES AND NO THIRD, MEASURED: MENU_TOP_Y 240 plus two lines
+      // and the gap at MENU_ROW_H 46 puts the seventh row's baseline at 654 of
+      // WORLD_H 720; a third line pushes it off the canvas.
+      scr.lines.push(got + " OF " + life.length + " \u00B7 WEEK " + held.weekKey, "");
+      scr.items.push({ label: "THIS WEEK", detail: "", enabled: false, action: null, note: "" });
+      // ⛔ The week's own ids, in the rotation's order, looked up in the POOL.
+      // Nothing here derives a pool index from a lifetime row (plan §7).
+      for (const id of held.weekly) {
+        const row = C.ACHIEVEMENTS.weekly.find(r => r.id === id);
+        if (!row) continue;
+        const done = held.weeklyUnlocked.indexOf(id) >= 0;
+        scr.items.push({ label: row.name, detail: done ? ACH_DONE : "", enabled: true,
+                         action: null, note: row.note });
+      }
+    }
+    scr.items.push({ label: "BACK", detail: "", enabled: true, action: "achievementsBack", note: "" });
+  }
+
+  // ⛔ THE SECOND INFO LINE IS THE CURSOR ROW'S NOTE, and it is written in
+  // update() on every ACHIEVEMENTS step, never in draw() — the same seat every
+  // other live detail uses (OPTIONS' ON/OFF, the title's profile name). A
+  // cursor move returns no action, so rebuilding the rows on it would be a
+  // rebuild per step; only this one line moves.
+  function refreshAchievementNote() {
+    const scr = SCREENS.achievements;
+    if (scr.lines.length < 2) return;
+    const row = scr.items[menu.cursor];
+    scr.lines[1] = row && row.note ? row.note : "";
+  }
+
   // The board's answer (Leaderboard.load(), which drops a stale one). It is
   // ignored once the player has left the ONLINE view. ⛔ A MODE step re-loads,
   // so the token drops the outgoing mode's answer exactly as it drops a stale one.
@@ -1388,6 +1486,15 @@ const Game = (function () {
       scoresMode = SCORES_MODES[(SCORES_MODES.indexOf(scoresMode) + 1) % SCORES_MODES.length];
       loadScoresView();
     }
+    // ⛔ CS015 P3: rebuilt on ENTRY, from either door, and BACK returns to the
+    // door it came through — OPTIONS' own shape, because OPTIONS itself is
+    // reached from the title and from pause.
+    if (name === "toAchievementsFromTitle" || name === "toAchievementsFromOptions") {
+      achievementsFrom = name === "toAchievementsFromOptions" ? "options" : "title";
+      buildAchievementRows();
+      state.screen = "achievements";
+    }
+    if (name === "achievementsBack") state.screen = achievementsFrom;
     if (name === "toggleScoresView") {
       scoresView = scoresView === "local" ? "online" : "local";
       loadScoresView();
@@ -1508,6 +1615,7 @@ const Game = (function () {
       if (state.screen === "controls" || state.screen === "keyboard" || state.screen === "gamepad") refreshControlRows();
       if (state.screen === "title") { const p = Profiles.current(); TITLE_PROFILE.detail = p ? p.name : ""; }
       if (state.screen === "title") refreshTitleLine();
+      if (state.screen === "achievements") refreshAchievementNote();
       if (state.screen === "profileName") refreshNameLines();
       return;
     }

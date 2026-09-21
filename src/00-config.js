@@ -820,6 +820,7 @@ const C = {
     reflect:        { osc: [{ type: "square", f: 1760, to: 2640 }, { type: "triangle", f: 1175, to: 1760 }], glide: 0.05, filter: { type: "highpass", f: 600, to: 2200 }, sweep: 0.09, atk: 0.002, hold: 0.02, rel: 0.12, gain: 0.16 },
     ringTake:       { osc: [{ type: "sine", f: 1568 }, { type: "sine", f: 2349 }], filter: { type: "highpass", f: 700 }, atk: 0.002, hold: 0.03, rel: 0.16, gain: 0.14 },
     ringMiss:       { osc: [{ type: "triangle", f: 660, to: 440 }], glide: 0.07, filter: { type: "lowpass", f: 2200 }, atk: 0.002, hold: 0.02, rel: 0.09, gain: 0.07 },
+    unlock:         { osc: [{ type: "triangle", f: 1047 }, { type: "square", f: 1568 }], filter: { type: "highpass", f: 500 }, atk: 0.002, hold: 0.05, rel: 0.22, gain: 0.12 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5, mimic: 1.4, mimicShot: 1.8 },
@@ -1110,7 +1111,7 @@ const C = {
   // boot so the ONLINE view's hint (M9) reads the same name the kit wrote.
   PROFILE_ANONYMOUS_NAME: "ANONYMOUS",
 
-  // ---- Achievements (GDD 15.5) — CS015 P1 ----------------------------------
+  // ---- Achievements (GDD 15.5) — CS015 P1, the table landed at P3 ----------
   // ⛔ THE DEFINITION TABLE, AND IT IS HERE BECAUSE A THRESHOLD IS A TUNABLE
   // (plan A12). 20-achievements.js is kit-achievements' draft and may read no
   // config at all, so Meta.boot() hands it this object as an option — exactly
@@ -1123,34 +1124,133 @@ const C = {
   // in any one week. ⛔ Neither names the other's numbers, and nothing derives a
   // pool index from a lifetime row's tier.
   //
-  // A ROW is { id, mode, fact } plus EXACTLY ONE OF:
+  // A ROW is { id, name, note, mode, fact } plus EXACTLY ONE OF:
   //   tiers: [t1, t2, t3]   ascending thresholds; the unlock's `tier` is the
   //                         1-based index reached, and it only ever rises
   //   at: n                 one threshold; the unlock's `tier` is 0
   // `mode` is a mode name or null for either (plan A5) — the tag belongs to the
   // achievement, so MODE_FLAGS gains no field. `fact` names the field the run's
-  // facts object carries; ⛔ P2 builds those fields, and P1 seats no evaluation.
+  // facts object carries (facts(), 22-meta.js). `name` is the screen's ROW —
+  // ⚠ at most 20 characters, MEASURED: a row's label starts at x 410 and its
+  // detail is right-aligned at x 870 at TEXT_CHAR_W x MENU_TEXT_SIZE = 18.6 px
+  // a character, so a longer name runs under a four-character detail. `note` is
+  // the one-line description the screen writes above the rows for the CURSOR
+  // row, ⚠ at most 60 characters, NOTICE_WRAP's own budget. ⛔ The module reads
+  // neither, which is why a reword costs nothing and is not save data.
   //
-  // ⚠ EVERY ROW BELOW IS A PLACEHOLDER AND P3 REPLACES THE CONTENTS WHOLE
-  // (plan §3, A8). ⛔ AN ID THAT REACHES A PLAYER'S STORE IS SAVE DATA FROM THAT
-  // MOMENT ON and is never renamed, so none of these is an id CS015 will ship:
-  // each starts `_`, which no row in plan §9 does, and P1 builds no seat, so the
-  // shipped build has no caller of evaluate() and cannot write one to storage.
-  // ⛔ A threshold is NOT save data — only the id is — so P3 and any later
-  // changeset may retune any number here.
+  // ⛔ AN `id` IS SAVE DATA FROM THE MOMENT IT REACHES A PLAYER'S STORE AND IS
+  // NEVER RENAMED (GDD 15.5): renaming one drops that unlock for every player
+  // who had it, and deleting one orphans it. ⛔ A THRESHOLD IS NOT SAVE DATA and
+  // neither is a `name` — a later changeset may retune or reword either, and
+  // every number below is ⚠ provisional in exactly that sense.
+  //
+  // ⛔ A "LIFETIME" ROW IS ONE RUN, BANKED (Paul, 2026-09-20). `lifetimeTiers`
+  // only ever rises, so a PER-RUN threshold over a store that never resets is
+  // already "your best run, kept" — GDD 15.5's *lifetime* is the store's scope,
+  // against *weekly*, and never a cumulative counter. ⚠ Real totals stay
+  // possible later as an ADDITIVE v2, new ids beside these.
+  // ⚠ Tier 3 sits near half of what a front-door probe reached and never AT it:
+  // a top tier set at a bot's ceiling is what dropped `purge_wide` (plan A8).
   ACHIEVEMENTS: {
     perWeek: 5,           // ⛔ the rotation's width (GDD 15.5's "5 weekly")
+    // ⚠ The ONE weekly row with a free parameter, and it is a tunable rather
+    // than a threshold the table can own: `leanClear` is 0/1 because "no more
+    // than N" has no `>=` form (22-meta.js). MEASURED over 579 cleared wells in
+    // three front-door probe passes: the fewest shots any well was cleared on
+    // is 106 and the median is ~185, so 120 is about the leanest tenth.
+    wellShotPar: 120,
     lifetime: [
-      { id: "_placeholder_tiered", mode: null,        fact: "placeholder", tiers: [1, 2, 3] },
-      { id: "_placeholder_flat",   mode: null,        fact: "placeholder", at: 1 },
-      { id: "_placeholder_mode",   mode: "overdrive", fact: "placeholder", at: 1 },
+      // -- the nine tiered rows: a run's best, banked ------------------------
+      { id: "wells_cleared",   name: "WELLS CLEARED",     mode: null,        fact: "wellsCleared",     tiers: [5, 20, 50],
+        note: "WELLS CLEARED IN ONE RUN" },
+      { id: "kills_total",     name: "ENEMIES DESTROYED", mode: null,        fact: "kills",            tiers: [50, 300, 900],
+        note: "ENEMIES DESTROYED IN ONE RUN" },
+      { id: "depth_reached",   name: "DEEPEST LEVEL",     mode: null,        fact: "level",            tiers: [10, 25, 65],
+        note: "THE DEEPEST LEVEL ONE RUN REACHED" },
+      { id: "score_run",       name: "BEST RUN SCORE",    mode: null,        fact: "score",            tiers: [25000, 200000, 1200000],
+        note: "THE HIGHEST SCORE ONE RUN REACHED" },
+      { id: "thorn_chips",     name: "THORN SEGMENTS",    mode: null,        fact: "thornChips",       tiers: [10, 40, 90],
+        note: "THORN SEGMENTS CHIPPED AWAY IN ONE RUN" },
+      { id: "deathless_wells", name: "DEATHLESS WELLS",   mode: null,        fact: "deathlessWells",   tiers: [5, 20, 48],
+        note: "WELLS CLEARED WITHOUT DYING, IN ONE RUN" },
+      { id: "dives_done",      name: "DIVES COMPLETED",   mode: null,        fact: "divesCompleted",   tiers: [5, 20, 50],
+        note: "DIVES FLOWN TO THE END, IN ONE RUN" },
+      { id: "rings_taken",     name: "RINGS TAKEN",       mode: "overdrive", fact: "ringsTaken",       tiers: [10, 40, 100],
+        note: "RINGS TAKEN IN ONE RUN" },
+      { id: "purge_saver",     name: "PURGE UNSPENT",     mode: null,        fact: "purgeSavedClears", tiers: [1, 5, 25],
+        note: "WELLS CLEARED WITH THE PURGE UNSPENT, IN ONE RUN" },
+      // -- the fourteen untiered rows: a thing done, once --------------------
+      { id: "first_well",      name: "FIRST WELL",        mode: null,        fact: "wellsCleared",     at: 1,
+        note: "CLEAR YOUR FIRST WELL" },
+      { id: "open_well",       name: "AN OPEN WELL",      mode: null,        fact: "openWellsCleared", at: 1,
+        note: "CLEAR A WELL THAT DOES NOT CLOSE ON ITSELF" },
+      { id: "all_wells",       name: "ALL SIXTEEN WELLS", mode: null,        fact: "wellsSeen",        at: 16,
+        note: "SEE ALL SIXTEEN WELLS IN ONE RUN" },
+      { id: "start_deep",      name: "THE DEEPEST START", mode: null,        fact: "startDepth",       at: 81,   // START_DEPTH_CAP
+        note: "BEGIN A RUN AT THE DEEPEST START DEPTH" },
+      { id: "dim_band",        name: "THE DIM BAND",      mode: null,        fact: "level",            at: 65,   // DIM_BAND_LO
+        note: "REACH LEVEL 65, WHERE THE WELL GOES DARK" },
+      { id: "extra_life",      name: "AN EXTRA LIFE",     mode: null,        fact: "extraLives",       at: 1,
+        note: "SCORE YOUR WAY TO A SPARE CRAFT" },
+      { id: "lives_full",      name: "A FULL RESERVE",    mode: null,        fact: "lives",            at: 6,    // LIVES_MAX
+        note: "HOLD SIX CRAFT AT ONCE" },
+      { id: "carrier_split",   name: "CARRIER AND BROOD", mode: null,        fact: "carrierSplits",    at: 1,
+        note: "DESTROY A CARRIER AND BOTH OF ITS CHILDREN" },
+      { id: "rim_sweep",       name: "A RIM SWEEP KILL",  mode: null,        fact: "rimSweepKills",    at: 1,
+        note: "KILL SOMETHING THE INSTANT IT REACHES THE RIM" },
+      { id: "combo_max",       name: "THE TOP MULTIPLIER", mode: "overdrive", fact: "comboPeak",       at: 8,    // COMBO_MAX
+        note: "DRIVE THE COMBO ALL THE WAY UP" },
+      { id: "token_set",       name: "ALL FIVE TOKENS",   mode: "overdrive", fact: "tokenKinds",       at: 5,
+        note: "COLLECT ALL FIVE KINDS OF TOKEN IN ONE RUN" },
+      { id: "ring_full",       name: "A FULL RING SET",   mode: "overdrive", fact: "ringSetsTaken",    at: 1,
+        note: "TAKE EVERY RING OF ONE DIVE" },
+      { id: "jump_kill",       name: "A JUMP STRIKE KILL", mode: "overdrive", fact: "jumpKills",       at: 1,
+        note: "LEAVE THE WELL AND KILL A WARDEN ABOVE IT" },
+      { id: "mimic_kill",      name: "A MIMIC DESTROYED", mode: "overdrive", fact: "mimicKills",       at: 1,
+        note: "OPEN A MIMIC AND FINISH IT" },
     ],
-    weekly: [             // ⚠ P3 lands twenty here, measured row by row
-      { id: "_placeholder_week_1", mode: null, fact: "placeholder", at: 1 },
-      { id: "_placeholder_week_2", mode: null, fact: "placeholder", at: 2 },
-      { id: "_placeholder_week_3", mode: null, fact: "placeholder", at: 3 },
-      { id: "_placeholder_week_4", mode: null, fact: "placeholder", at: 4 },
-      { id: "_placeholder_week_5", mode: null, fact: "placeholder", at: 5 },
+    // ⛔ THE POOL THAT ROTATES, AND EVERY ROW IS SCOPED TO ONE RUN, often to
+    // one WELL, so a week's five are all finishable in a sitting. ⛔ A weekly
+    // row is never tiered (20-achievements.js refuses one). The per-well and
+    // the 0/1 facts are built in 22-meta.js, which is where the shapes a row
+    // cannot state — a conjunction, an at-most, a without — are decided.
+    weekly: [
+      { id: "week_five_wells",     name: "FIVE WELLS IN A RUN", mode: null,        fact: "wellsCleared",      at: 5,
+        note: "CLEAR FIVE WELLS IN ONE RUN" },
+      { id: "week_lean_well",      name: "A LEAN CLEAR",        mode: null,        fact: "leanClear",         at: 1,
+        note: "CLEAR A WELL WITHOUT WASTING SHOTS" },
+      { id: "week_low_start_deep", name: "DEEP FROM DEPTH 1",   mode: null,        fact: "lowStartLevel",     at: 20,
+        note: "REACH LEVEL 20 ON A RUN STARTED AT DEPTH 1" },
+      { id: "week_clean_streak",   name: "THREE CLEAN WELLS",   mode: null,        fact: "cleanStreak",       at: 3,
+        note: "CLEAR THREE WELLS IN A ROW WITHOUT DYING" },
+      { id: "week_four_rings",     name: "FOUR RINGS ON A TRIP", mode: "overdrive", fact: "wellRings",        at: 4,
+        note: "TAKE FOUR RINGS ON THE WAY TO THE NEXT WELL" },
+      { id: "week_combo_four",     name: "\u00D74 IN ONE RUN",   mode: "overdrive", fact: "comboPeak",         at: 4,
+        note: "DRIVE THE COMBO TO FOUR IN ONE RUN" },
+      { id: "week_brood",          name: "A WHOLE BROOD",       mode: null,        fact: "wellCarrierSplits", at: 1,
+        note: "TAKE A CARRIER AND BOTH CHILDREN IN ONE WELL" },
+      { id: "week_open_clean",     name: "A CLEAN OPEN WELL",   mode: null,        fact: "openCleanClear",    at: 1,
+        note: "CLEAR AN OPEN WELL WITHOUT DYING" },
+      { id: "week_purge_held",     name: "A RUN, NEVER PURGED", mode: null,        fact: "purgeHeldRun",      at: 1,
+        note: "END A RUN HAVING NEVER SPENT THE PURGE" },
+      { id: "week_warden_clean",   name: "A WARDEN, NO DEATH",  mode: "overdrive", fact: "wardenCleanWell",   at: 1,
+        note: "KILL A WARDEN AND CLEAR THAT WELL WITHOUT DYING" },
+      { id: "week_two_sets",       name: "TWO FULL RING SETS",  mode: "overdrive", fact: "ringSetsTaken",     at: 2,
+        note: "TAKE EVERY RING OF TWO DIVES IN ONE RUN" },
+      { id: "week_last_life",      name: "ON YOUR LAST LIFE",   mode: null,        fact: "clearOnLastLife",   at: 1,
+        note: "CLEAR A WELL WITH ONE CRAFT LEFT" },
+      { id: "week_score_50k",      name: "50,000 IN ONE RUN",   mode: null,        fact: "score",             at: 50000,
+        note: "SCORE FIFTY THOUSAND IN ONE RUN" },
+      { id: "week_forty_kills",    name: "40 ENEMIES IN A RUN", mode: null,        fact: "kills",             at: 40,
+        note: "DESTROY FORTY ENEMIES IN ONE RUN" },
+      { id: "week_full_set",       name: "NO RING MISSED",      mode: "overdrive", fact: "ringSetsTaken",     at: 1,
+        note: "FINISH A DIVE HAVING MISSED NO RING" },
+      { id: "week_deep_first",     name: "A DEEP FIRST WELL",   mode: null,        fact: "deepFirstClear",    at: 33,
+        note: "CLEAR THE FIRST WELL OF A RUN STARTED AT DEPTH 33" },
+      { id: "week_quiet_well",     name: "A QUIET WELL",        mode: null,        fact: "quietClear",        at: 1,
+        note: "CLEAR A WELL WITH NO PURGE SPENT AND NO DEATH" },
+      { id: "week_no_thorn_death", name: "NO THORN DEATH",      mode: null,        fact: "noThornDeathRun",   at: 1,
+        note: "END A RUN WITHOUT LOSING A CRAFT TO A THORN" },
     ],
   },
 

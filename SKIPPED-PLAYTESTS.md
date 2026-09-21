@@ -825,3 +825,34 @@ close's.
   that is hard to take stays interesting at a fixed price, and a price that
   rises with nothing behind it is the combo's job (§14.4), which deliberately
   does not multiply a ring.
+
+---
+
+## CS015 P3 — the ACHIEVEMENTS screen, and the `unlock` sound
+
+- **What Paul would have done:** open ACHIEVEMENTS from the title with nothing
+  unlocked and again after a run or two, read down the list with the cursor, and
+  then play one well with the sound on to hear the unlock land.
+- **What we were trying to learn:** three things a measurement cannot answer.
+  (1) **Does the list read as goals or as a wall?** 23 lifetime rows plus a
+  week's five, with a 7-row window, means a player scrolls; the screen leans on
+  a short `name` beside a `n/3` or DONE detail and a one-line `note` for the
+  cursor row, and whether that pairing tells you what a row WANTS at a glance is
+  a legibility question. ⛔ **A locked row's detail is EMPTY rather than the word
+  LOCKED**, deliberately, so the column reads as what has been done — that is
+  the specific choice a look would confirm or overturn.
+  (2) **Is the `note` line in the right place?** It sits above the rows, so the
+  eye travels up from the cursor to read it. Two info lines is the MEASURED
+  ceiling (a third pushes the seventh row off the canvas), so the alternative is
+  not "more lines" but a different pairing.
+  (3) **Does `unlock` land, and does it stay out of `extraLife`'s way?** It is
+  candidate A, unauditioned, and it fires on the same step as `wellClear` with
+  `dive` 0.3 s behind. ⛔ It PAYS NOTHING, so mistaking it for `extraLife` —
+  which does — is the failure mode the recipe is shaped against: a level struck
+  fifth where `extraLife` lifts.
+- **Knobs:** every `name` and `note` in `C.ACHIEVEMENTS` (⛔ **never an `id`** —
+  those are save data), `C.MENU_COL_W`, `C.MENU_VISIBLE_ROWS`, `C.MENU_ROW_H`
+  and `C.MENU_TOP_Y` (⚠ the last three are every menu's, not this screen's), the
+  DONE / `n/3` detail strings in `23-main.js`, and `C.SFX.unlock` — ⛔ **which is
+  re-picked in `tools/sfx-lab.html` and ported verbatim, never hand-tuned here.**
+  Its two alternates are in the lab: "square bell pair" and "triangle step up".

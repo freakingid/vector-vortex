@@ -27,7 +27,7 @@ Modelled on Orbital Overhaul's §0 read contract. A future session reads §0 + �
 | 8 | Difficulty | The heat clock, introduction schedule |
 | 9 | Controls | Any input path; runtime settings and rebinding (9.5) |
 | 10 | Visual design | Rendering, glow, HUD, readability |
-| 10.5 | Screens and menus | Title, mode, Start Depth, scores, profiles and name entry, options, credits, controls and rebinding, game over, pause and its five sources; the screen state machine; the menu model; menu input on any device |
+| 10.5 | Screens and menus | Title, mode, Start Depth, scores, **achievements**, profiles and name entry, options, credits, controls and rebinding, game over, pause and its five sources; the screen state machine; the menu model; menu input on any device |
 | 11 | **Audio** | Music, SFX, the intensity director |
 | 12 | Onboarding | Prompts, attract mode, first-run |
 | 13 | Modes | Classic vs Overdrive gating |
@@ -1151,7 +1151,7 @@ Score top-left, lives bottom-left, level and band top-right, Purge charge bottom
 
 ### 10.5 Screens and menus
 
-**Shipped, CS008 P5, P6 and P7.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"play"`, `"pause"`, `"gameover"`, `"options"`, `"controls"`, `"keyboard"`, `"gamepad"`, `"credits"`, since CS011 P3 `"scores"`, and since CS011 P4 `"profile"`, `"profilePage"`, `"profileDelete"` and `"profileName"`.
+**Shipped, CS008 P5, P6 and P7.** `state.screen` is one of `"title"`, `"mode"`, `"depth"`, `"play"`, `"pause"`, `"gameover"`, `"options"`, `"controls"`, `"keyboard"`, `"gamepad"`, `"credits"`, since CS011 P3 `"scores"`, since CS011 P4 `"profile"`, `"profilePage"`, `"profileDelete"` and `"profileName"`, and since CS015 P3 `"achievements"`.
 
 ```
 boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH ──row──► PLAY ──last life──► GAME OVER
@@ -1160,6 +1160,9 @@ boot ─► TITLE ──PLAY──► MODE ──CLASSIC──► START DEPTH �
                           │ ◄─back                    TITLE ◄──QUIT TO TITLE / back────┘
 
 TITLE ──SCORES──► SCORES ──back──► TITLE                                        (CS011 P3)
+
+TITLE ──ACHIEVEMENTS──► ACHIEVEMENTS ──back──► TITLE                            (CS015 P3)
+OPTIONS ──ACHIEVEMENTS──► ACHIEVEMENTS ──back──► OPTIONS                        (the same screen)
 
 TITLE ──PROFILE──► PROFILE ──back──► TITLE                                      (CS011 P4)
                      ├──a profile──► PAGE ──SELECT (activates) / back──► PROFILE
@@ -1179,15 +1182,16 @@ PLAY ──pause source──► PAUSE ──RESUME / back──► PLAY
 
 | Screen | Rows | Back |
 |---|---|---|
-| Title | PLAY, OPTIONS, SCORES (CS011 P3), PROFILE (CS011 P4), whose detail is the active profile's name, written on every title step. ⛔ CS011's rows go after OPTIONS: the closed tests navigate the title by index. One info line, `n SCORES QUEUED` (`1 SCORE QUEUED`), only while kit-leaderboard's offline queue is not empty, written on every title step (CS011 P5), never in `draw()` | — |
+| Title | PLAY, OPTIONS, SCORES (CS011 P3), PROFILE (CS011 P4), whose detail is the active profile's name, written on every title step, ACHIEVEMENTS (CS015 P3). ⛔ CS011's and CS015's rows go after OPTIONS: the closed tests navigate the title by index. One info line, `n SCORES QUEUED` (`1 SCORE QUEUED`), only while kit-leaderboard's offline queue is not empty, written on every title step (CS011 P5), never in `draw()` | — |
 | Mode | ⛔ **OVERDRIVE, then CLASSIC** (CS012 P3, O9). Both enabled. ⛔ **The row ORDER is the default highlight** — the menu model puts the cursor on the first enabled row, so §13's "Overdrive is the default highlight" needs no mark, no colour and no flag. CLASSIC is the purist option, one row down, in the same colour. The row chosen is carried as `pendingMode`, and START DEPTH is built for it (§4.6) | Title |
 | Start Depth | `startDepthOptions()` (§4.6), each row with its `startBonus()`. ⛔ No countdown | Mode |
 | Pause | RESUME, OPTIONS, QUIT TO TITLE (U4), over the frozen board | RESUME |
-| Options | TELEMETRY (ON/OFF), EXPORT (TO CONSOLE), CONTROLS ›, CREDITS ›, MASTER VOLUME, MUSIC VOLUME, SFX VOLUME, VOICE VOLUME, MUSIC TRACK, BACK (U5; CS009's A1) | Title or pause — wherever it was opened from |
+| Options | TELEMETRY (ON/OFF), EXPORT (TO CONSOLE), CONTROLS ›, CREDITS ›, MASTER VOLUME, MUSIC VOLUME, SFX VOLUME, VOICE VOLUME, MUSIC TRACK, ACHIEVEMENTS › (CS015 P3), BACK (U5; CS009's A1). ⛔ A row goes before BACK and never above TELEMETRY | Title or pause — wherever it was opened from |
 | Controls | MOUSE SENSITIVITY, TOUCH SENSITIVITY, LEFT-HANDED TOUCH, TOUCH AUTO-FIRE, KEYBOARD ›, GAMEPAD ›, RESET TO DEFAULTS, BACK (U7) | Options |
 | Keyboard, Gamepad | LEFT, RIGHT, FIRE, PURGE and JUMP, two slots each, then BACK. One line above the rows shows a refusal's reason | Controls |
 | Credits | `C.CREDITS_LINES`, then `VERSION` + `C.GAME_VERSION` (U6). ⚠ Placeholder copy; Paul replaces it before ship. ⛔ §18: no mention of the original game or its publisher | Options |
 | Scores | CS011 P3 (plan R15); CS012 P3 (O10). ⛔ **A first row MODE**, always, module or not: its detail is the mode shown, and confirming it cycles MODE's rows in MODE's order. Then **VIEW** (CS011 P5, Paul's M5), only while kit-leaderboard is present, switching LOCAL / ONLINE. Then the entries, then BACK. The info line is `<MODE> · LOCAL` or `<MODE> · ONLINE`, plus `NO SCORES YET` when that mode's table is empty. A LOCAL entry's label is `n NAME`, its detail the score in plain digits, and it has no action, so rotate only scrolls. ⛔ **Every entry opens on LOCAL, and on the mode of the last run STARTED this session, else MODE's first row** — with no run yet that is OVERDRIVE. ONLINE shows `LOADING…`, `COULD NOT REACH THE BOARD` or `NO SCORES YET`; its rows are `rank NAME` / the score, and a flagged row's score ends in `*`. While the active profile is named ANONYMOUS a last line reads `NAME YOUR PROFILE TO POST UNDER YOUR NAME` (M9). ⛔ **ONLINE loads the SHOWN mode's board** (§15.4), and a MODE step on ONLINE re-loads: the stale-answer token drops the outgoing mode's answer exactly as it drops an older load's. ⛔ **The rows are rebuilt on entry, on MODE, on VIEW and when a board answers, never in `draw()`** | Title |
+| Achievements | CS015 P3 (plan A1-A, R9). ⛔ **SCORES' shape**: rows rebuilt **on entry**, never in `draw()`; every string through `drawText()`; the window is `MENU_VISIBLE_ROWS`; BACK last. Reached from the **TITLE** and from **OPTIONS**, and BACK returns to whichever — OPTIONS' own shape, so opened through OPTIONS-from-pause the HUD draws (H4). Rows: a disabled **LIFETIME** header, `C.ACHIEVEMENTS.lifetime` in table order, a disabled **THIS WEEK** header, the week's `perWeek` ids in the rotation's order, BACK. A row's label is its `name` and its detail is its standing — `n/3` for a tiered row, DONE for an untiered one, **empty when locked**. ⛔ **TWO info lines and no third**, MEASURED: `n OF 23 · WEEK YYYY-Www`, then the **cursor row's `note`**, written in `update()` on every step and never in `draw()`; a third line pushes the seventh row off the canvas. ⛔ **No HUD rectangle and no toast** (A1) | Title or options — wherever it was opened from |
 | Profile | CS011 P4 (plan R16). One row per profile, labelled with its name, with detail ACTIVE on the active one; NEW PROFILE, disabled at `C.PROFILE_MAX`; BACK. ⛔ Rebuilt on entry (`openProfiles()`), never in `draw()`. A profile's row opens its page | Title |
 | A profile's page | Titled with the profile's name. SELECT activates it through `Profiles.select()` (§15.2) and returns to PROFILE; RENAME opens NAME; DELETE; BACK | Profile |
 | Delete | Titled DELETE. Its lines are the profile's name and a refusal's reason. ⛔ NO first, then YES. YES deletes (§15.2) and returns to PROFILE; a refusal stays here, and kit-profile's `last_profile` reads LAST PROFILE | The page |
@@ -1825,6 +1829,14 @@ Structure follows Orbital Overhaul's proven v2 shape:
 - ⛔ **`Meta.eligible()` IS THE ONE GATE AND IT GAINED A CALLER, NOT A CHANGE** (§15.3, §15.4; plan A4): the local top 10, both boards and now the unlocks. ⛔ **A bench run earns nothing.**
 - ⛔ **THE FACTS ARE ONE FLAT OBJECT THE GAME BUILDS AT THE SEAT** (plan A2), from `state` plus `state.tally`, which is **21 counters** since P2's thirteen. ⛔ **Each is written where its event happens and NOTHING IN THE SIMULATION BRANCHES ON ONE** — that is what keeps the determinism hash identical. ⚠ Two are bitmasks (`wellsSeenMask`, `tokenKindsMask`), handed over as bit counts, because "distinct wells" and "all five kinds" need a memory. ⛔ **The five kill lines are NOT edited**: `tallyKill()` is called on its own line above each one, and a Carrier's two children share one `brood` so a split counts on the second destroyed.
 - ⛔ **AN UNLOCK IS WORTH NOTHING** (§7; plan A9): no points, no life, no `addScore()` call, no kill site and no draw.
+⛔ **Shipped, CS015 P3 — the id table and the surface.** ⛔ **An `id` below is SAVE DATA and is never renamed**; a threshold, a `name` and a `note` are not, and every number is ⚠ provisional.
+- ⛔ **TWENTY-THREE LIFETIME ROWS, NINE OF THEM TIERED** (plan A8; Paul, 2026-09-20). `purge_wide` was MEASURED unreachable and is **dropped**; ⚠ `mimic_kill` **stays** and rides on the Mimic's probation (§21 #6) — if CS017 cuts the Mimic one id becomes unearnable for new players and nothing else breaks.
+- ⛔ **EIGHTEEN WEEKLY ROWS, AND THE POOL IS SETTLED HERE, MEASURED** (plan §9's twenty, less two). ⚠ **Two of the plan's starting rows have NO FACT and are NOT shipped** — "collect three tokens in one well" and "chip a Thorn to nothing in one pass": each needs a `tally` counter the game does not keep (tokens collected; Thorns destroyed), and P3 was barred from adding one. ⛔ **They were reported, not reworded and not quietly lowered.** ⚠ The pool's LENGTH is what the rotation walks, so adding them later reshuffles which five a given week shows.
+- ⛔ **EVERY ROW IS MEASURED REACHABLE, PER ROW**, against four front-door probe passes (`test-cs015-p3.js`'s `REACH`). ⚠ Three rows are unreachable under the soaks' own driver, which holds the trigger and spends the Purge on every well, and are reachable under a driver that does neither: `week_lean_well`, `week_purge_held` and `purge_saver`'s upper tiers.
+- ⛔ **A ROW IS ONE FACT `>=` ONE THRESHOLD, so the two shapes it cannot state are decided GAME-SIDE, in `facts()`** (`22-meta.js`): a **conjunction** is a quantity gated to 0 by its other half, so the table still owns the number (`lowStartLevel` is the level reached on a Start Depth 1 run, 0 on any other); an **at-most** or a **without** is a **0/1 fact with `at: 1`**, each structural — the last life, a charge unspent, a well with no death — with ⚠ one exception, `C.ACHIEVEMENTS.wellShotPar`, the shot par "clear a well without firing more than N" needs.
+- ⛔ **A PER-WELL WINDOW IS THE DELTA SINCE THE LAST CLEAR EDGE**, kept in Meta's closure and reset by `runStarted()`. ⛔ It costs **no `tally` field**. ⛔ **THE TWO SEATS SEE DIFFERENT FACTS**: the run-end seat omits the per-well block and the clear edge omits the run's closing facts, and the module's skip of a non-finite fact is the guard that makes that safe.
+- ⛔ **THE SURFACE IS A SCREEN AND THERE IS NO TOAST** (A1-A; §10.5's ACHIEVEMENTS row): one row on the TITLE after PROFILE, one on OPTIONS before BACK, and ⛔ **no seventh HUD rectangle** — the band a toast wants, centre-top, is the Overdrive combo readout's.
+- ⛔ **ONE NEW SFX EVENT, `unlock`** (A10-A), `C.SFX` 27 → 28, ported from `tools/sfx-lab.html`'s candidate A. ⛔ **One seat, in `22-meta.js`, silent when nothing unlocked**, and ⛔ **no `SFX_KILL_PITCH` voice and no `C.MUSIC_DIP_EVENTS` row**: an unlock is not a kill.
 
 ### 15.6 Telemetry
 

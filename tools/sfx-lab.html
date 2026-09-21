@@ -1309,6 +1309,7 @@ const MUSIC_TRACKS = {
     reflect:        { osc: [{ type: "square", f: 1760, to: 2640 }, { type: "triangle", f: 1175, to: 1760 }], glide: 0.05, filter: { type: "highpass", f: 600, to: 2200 }, sweep: 0.09, atk: 0.002, hold: 0.02, rel: 0.12, gain: 0.16 },
     ringTake:       { osc: [{ type: "sine", f: 1568 }, { type: "sine", f: 2349 }], filter: { type: "highpass", f: 700 }, atk: 0.002, hold: 0.03, rel: 0.16, gain: 0.14 },
     ringMiss:       { osc: [{ type: "triangle", f: 660, to: 440 }], glide: 0.07, filter: { type: "lowpass", f: 2200 }, atk: 0.002, hold: 0.02, rel: 0.09, gain: 0.07 },
+    unlock:         { osc: [{ type: "triangle", f: 1047 }, { type: "square", f: 1568 }], filter: { type: "highpass", f: 500 }, atk: 0.002, hold: 0.05, rel: 0.22, gain: 0.12 },
   },
   // The kill recipe's pitch multiplier, keyed by an entity's sfxVoice (A9).
   SFX_KILL_PITCH:       { vaulter: 1, carrier: 0.75, weaver: 1.25, weaverBolt: 1.6, thorn: 2, drifter: 0.9, surger: 0.6, reaver: 1.15, warden: 0.5, mimic: 1.4, mimicShot: 1.8 },
@@ -1349,6 +1350,7 @@ const SFX_BRIEFS = {
   collect: "An Overdrive token taken (GDD 14.1; CS013 T11) — ONE recipe for all five. A gift, not a kill and not a life: brighter and far shorter than `extraLife` (0.18), and it can land on the step of a `kill`. There is no drop cue — a drop happens on a kill, which already sounds.",
   ringTake: "A ring taken in Overdrive's Dive (GDD 5, 14.5; CS014 RF8) — it pays C.RING_POINTS, unmultiplied. It sounds up to six times in one 3.65 s flight, over `dive`'s long rising sweep (0.22, 110→880 Hz), so it has to sit ABOVE that sweep and be short enough not to blur into the next one 0.61 s later. ⛔ It can be followed at once by `extraLife` (0.18) and must not be mistaken for it: struck and flat, where extraLife lifts.",
   ringMiss: "A ring the craft was not inside as the descent crossed it (CS014 RF8) — GDD 14.5's \"you stop earning\", which is otherwise invisible (GDD 1.1 P2). ⛔ Disappointment, not alarm: it must never be mistaken for `diveStrike` (0.30), which costs a life on the same beat. Quieter and shorter than every other cue in a dive, dry, and falling where `ringTake` is level.",
+  unlock: "An achievement unlocks (GDD 15.5; CS015 A10). It lands at one of two seats and nowhere else: the CLEAR EDGE, on the same step as `wellClear` (0.14) and 0.3 s before `dive` (0.22), or the run's end, under `gameOver` (0.28). \u26d4 An unlock PAYS NOTHING (A9), so it must not be mistaken for `extraLife` (0.18), which does: level and struck where extraLife lifts, and over in half the time. It sounds ONCE per seat however many rows unlocked, so it never repeats on itself.",
 };
 
 // Candidate A's label. Its recipe is C.SFX, read from BLOCK SFX.
@@ -1380,6 +1382,7 @@ const SFX_A_LABELS = {
   wardBreak: "noise shatter",
   ringTake: "sine fifth chime",
   ringMiss: "triangle dip",
+  unlock: "flat fifth report",
 };
 
 // Candidates B and C, in the recipe format of createSfxPlayer.
@@ -1475,6 +1478,10 @@ const SFX_ALTS = {
   ringMiss: [
     { label: "square thud", recipe: { osc: [{ type: "square", f: 330, to: 247 }], glide: 0.06, filter: { type: "lowpass", f: 1800 }, atk: 0.002, hold: 0.02, rel: 0.1, gain: 0.08 } },
     { label: "noise brush", recipe: { noise: true, filter: { type: "lowpass", f: 2000, to: 600 }, sweep: 0.1, atk: 0.002, hold: 0.02, rel: 0.12, gain: 0.09 } },
+  ],
+  unlock: [
+    { label: "square bell pair", recipe: { osc: [{ type: "square", f: 1319 }, { type: "square", f: 1760 }], filter: { type: "lowpass", f: 6000 }, atk: 0.001, hold: 0.03, rel: 0.18, gain: 0.1 } },
+    { label: "triangle step up", recipe: { osc: [{ type: "triangle", f: 880, to: 1320 }], glide: 0.03, filter: { type: "highpass", f: 400 }, atk: 0.002, hold: 0.04, rel: 0.2, gain: 0.12 } },
   ],
 };
 
@@ -1740,6 +1747,7 @@ const CONTEXT = {
   reflect:        ["held fire → a reflection → the next shot kills the Mimic", k => { at(0, "fire"); at(0.07, "reflect", k); at(0.14, "fire"); at(0.21, "fire"); at(0.28, "kill", undefined, SHIPPED.SFX_KILL_PITCH.mimic); }],
   ringTake:       ["⛔ dive → four rings taken, at the flight's own 0.6083 s", k => { at(0, "dive"); RING_BEATS.slice(0, 4).forEach(t => at(t, "ringTake", k)); }],
   ringMiss:       ["⛔ dive → take, take, MISS, take — the pair side by side", k => { at(0, "dive"); at(RING_BEATS[0], "ringTake"); at(RING_BEATS[1], "ringTake"); at(RING_BEATS[2], "ringMiss", k); at(RING_BEATS[3], "ringTake"); }],
+  unlock:         ["\u26d4 the clear edge: wellClear \u2192 the unlock \u2192 the dive", k => { at(0, "wellClear"); at(0.02, "unlock", k); at(0.35, "dive"); }],
 };
 
 function flash(id) {

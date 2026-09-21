@@ -484,17 +484,27 @@ for (const name of ["load", "save", "now"]) {
 }
 
 // ---------------------------------------------------------------------------
-// 10. the shipped table is placeholders, and P3 replaces them
+// 10. the shipped table's shape — ⛔ REWRITTEN IN PLACE AT CS015 P3
 // ---------------------------------------------------------------------------
+//
+// ⛔ P1 shipped PLACEHOLDER rows, every id prefixed "_", and said in its own
+// header that P3 replaces them whole. P3 did, so the one assertion that read
+// "every id starts _" is rewritten to the claim it was always making: ⛔ NO
+// SHIPPED ID CAN BECOME SAVE DATA BY ACCIDENT. Under P1 that meant a marker
+// prefix no real row would use; under P3 it means the opposite marker — no id
+// carries it, because every id here IS save data now. The other four
+// assertions are untouched: they are about the table's SHAPE, which did not
+// move. ⛔ Nothing is weakened and no new coverage is added here; the id
+// table's own coverage is test-cs015-p3.js's.
 
 {
   const defs = X.C.ACHIEVEMENTS;
   H.assert(defs && Array.isArray(defs.lifetime) && Array.isArray(defs.weekly), "⛔ C.ACHIEVEMENTS is two tables plus perWeek");
   H.assert(Number.isInteger(defs.perWeek) && defs.perWeek >= 1, "⛔ perWeek is a whole number");
   const ids = defs.lifetime.concat(defs.weekly).map(r => r.id);
-  H.assert(ids.length > 0 && ids.every(id => id.charAt(0) === "_"),
-           `⚠ every shipped id is a placeholder P3 replaces — each starts "_" so none can become save data (${J(ids)})`);
-  H.eq(new Set(ids).size, ids.length, "the placeholder ids are distinct");
+  H.assert(ids.length > 0 && ids.every(id => id.charAt(0) !== "_"),
+           `⛔ every shipped id is a real one (CS015 P3) — none carries P1's placeholder "_" (${J(ids)})`);
+  H.eq(new Set(ids).size, ids.length, "the ids are distinct");
   // ⛔ Every threshold is in the config and none is inlined in the module.
   H.assert(defs.lifetime.concat(defs.weekly).every(r => Array.isArray(r.tiers) || Number.isFinite(r.at)),
            "⛔ every row carries its threshold, in C (A12)");

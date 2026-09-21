@@ -35,11 +35,14 @@ const trimEnd = s => s.replace(/\s+$/, "");
 // CS013 P2 `wardBreak` (GDD 14.1's Ward; T9) and CS013 P4 `reflect` (GDD 14.6's
 // Mimic; MI3 — a hostile shot coming up your lane must be heard). CS014 P2
 // appended `ringTake` and `ringMiss` (GDD 5, 14.5; RF8-A — a ring's payout and
-// GDD 14.5's "you stop earning", which is otherwise invisible).
+// GDD 14.5's "you stop earning", which is otherwise invisible). CS015 P3
+// appended `unlock` in place (GDD 15.5; A10-A — an achievement unlocks at the
+// clear edge or at the run's end, and nothing else says so). ⛔ It takes NO
+// SFX_KILL_PITCH voice, as a ring took neither: it is not a kill.
 const EVENTS = ["fire", "kill", "split", "chip", "bolt", "cross", "surgeCharge", "surgeDischarge",
   "death", "gameOver", "respawn", "purge", "purgeWeak", "extraLife", "lifeLost", "wellClear",
   "dive", "diveStrike", "menuMove", "menuConfirm", "menuBack", "comboLost", "collect", "wardBreak",
-  "reflect", "ringTake", "ringMiss"];
+  "reflect", "ringTake", "ringMiss", "unlock"];
 const VOICES = ["vaulter", "carrier", "weaver", "weaverBolt", "thorn", "drifter", "surger", "reaver",
   "warden", "mimic", "mimicShot"];   // CS012 P2: + reaver; CS013 P3: + warden;
                                      // P4: + mimic and mimicShot — all in place
@@ -116,7 +119,7 @@ H.assert(/createSfxPlayer\(AudioSys, \{\s*noise: mulberry32\(C\.AUDIO_NOISE_SEED
     "⛔ the player reads no config, names no game instance, and draws no platform noise");
 }
 
-H.eq(JSON.stringify(Object.keys(C.SFX)), JSON.stringify(EVENTS), "⛔ C.SFX holds exactly the event list above, in its order (plan §7's, + CS012 P4's comboLost, + CS013 P1's collect, + P2's wardBreak, + P4's reflect)");
+H.eq(JSON.stringify(Object.keys(C.SFX)), JSON.stringify(EVENTS), "⛔ C.SFX holds exactly the event list above, in its order (plan §7's, + CS012 P4's comboLost, + CS013 P1's collect, + P2's wardBreak, + P4's reflect, + CS015 P3's unlock)");
 for (const name of EVENTS) {
   let err = null;
   try { sfxCheckRecipe(C.SFX[name]); } catch (e) { err = e.message; }
