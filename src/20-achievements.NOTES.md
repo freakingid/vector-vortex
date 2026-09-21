@@ -144,6 +144,5 @@ built oracle rather than over `src/`. The same test drives the module over a
 plain `Map`-backed store, separate from the game's instance.
 
 **Backport status.** `not yet`. No kit-achievements module exists in
-coinless-kit, and the definition table's contents are still placeholders here —
-Vector Vortex lands its real ids at CS015 P3. The module's contract is not
-expected to move with them.
+coinless-kit. Vector Vortex landed its real ids at CS015 P3 and the module's
+contract did not move with them.

@@ -27,7 +27,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS012** | ✅ **Shipped 2026-09-17.** Overdrive's core: the `drive` track (138 BPM, 36 bars A→B→C, Overdrive's AUTO), `C.MODE_FLAGS` and `modeHas()`, the Reaver in a new `07-enemies-overdrive.js` behind a second schedule table, OVERDRIVE on MODE with its own online board, SCORES per mode and a per-mode Start Depth record, the Jump (airborne as a phase, the lift, the shadow and kit-audio 0.4.0's high-pass), the combo multiplier at the kill sites with its readout, `comboLost`, the director's fifth input and `max_combo`'s real source, and the tenth soak. Six phases, as planned | §11.4, §11.7, §13, §14.2, §14.4, §14.6, §15.3, §15.4, §19 |
 | **CS013** | ✅ **Shipped 2026-09-20.** Overdrive's tokens and its remaining enemies: five tokens in their own array behind one `dropToken()` (one draw per Overdrive kill, a total no-op in Classic), Bounty and Recharge instant, Lance / Spread / Ward with their readers, the two GDD §14.1 tables kept apart, `collect` and `wardBreak`; the **Warden** — aloft as a PHASE, the ninth contract field, and the **jump strike**, the build's fourth kill site; the **Mimic** on probation with `MimicShot extends WeaverBolt`, cutting in one schedule row; and the eleventh soak. Five phases, as planned | §14.1, §14.6, §6.4, §6.5, §7, §8.1, §17, §19 |
 | **CS014** | ✅ **Shipped 2026-09-20.** The ring-flight Dive, hard-capped at 4 s / 6 rings: a fourth mode flag `rings` that is the whole gate AND the whole cut, `diveTime()` over `C.DIVE_TIME_OD`, six rings laid rim-first on a lattice of the well and constants alone, a take pass that is a lane match inside a depth crossing, `C.RING_POINTS` unmultiplied — and **the Dive's visual, in BOTH modes**, plus `ringTake` / `ringMiss` and the twelfth soak. Three phases, as planned | §5, §7, §13, §14.5, §19 |
-| **CS015** | Achievements: the id table (save data, never renamed) written once against the whole game, local-only, monotonic tiers and UTC ISO weeks. Planned once Overdrive exists (Paul's M4) | §15.5, §17 item 10 |
+| **CS015** | ✅ **Shipped 2026-09-20.** Achievements, local-only: `createAchievements()` in `20-achievements.js` as kit-achievements' draft (the table handed over as data, the clock injected), the `achievements` key v1 per profile, the UTC ISO week and a stride-walk rotation, thirteen write-only `tally` counters and two seats (the clear edge and the run's end) behind the one gate, **the id table — 23 lifetime ids and 18 weekly, save data from P3 on and every row MEASURED reachable** — the ACHIEVEMENTS screen off the title and OPTIONS, the `unlock` sound, and the thirteenth soak. Four phases, as planned | §10.5, §15.5, §17 items 10 and 12, §19 |
 | **CS016** | Onboarding: first-run prompts, attract mode, the teach-in-four-seconds pass on level 1 | §12 |
 | **CS017** | Ship: performance budget on both targets, device matrix, 100-run soak, legal sweep, acceptance-criteria sweep | §17, §18, §19 |
 
@@ -428,6 +428,46 @@ below CS013's 0.6860, which stands — the row keeps its ✗ and nothing was
 rescaled (Paul's D6). ✅ **The Dive's visual leaves the unowned list**, where it
 had sat since CS006. Still unowned: the pad-only silence, the VOICE bus, the
 Surger tone's 1.106 peak, the whole palette and the HUD sizes, F1 and F2.
+
+**CS015 held as ONE changeset of four phases and shipped its row.** The module
+and the store (P1), the facts and the seats (P2), the id table and the surface
+(P3), the thirteenth soak, the review and the close (P4). Paul answered A1–A12
+in the planning session and took **every recommendation**, the fourth
+changeset running, with one qualification (A8: `purge_wide` dropped) — and
+answered two gaps after P2 and three questions after P3 the same day.
+
+**What CS015 shipped against the row.** ⛔ **The ids are save data and were
+written ONCE, against the finished game**: 23 lifetime rows (nine tiered) and an
+18-row weekly pool, five a week, ⛔ **every row MEASURED reachable per row**
+against four front-door probe passes — and a row no board reached was cut or
+reported, never lowered. ⛔ **"Lifetime" is one run, banked**: `lifetimeTiers` is
+monotonic, so a per-run threshold over a store that never resets is "your best
+run, kept", and `achievements` stays v1 with no bookkeeping written at every
+clear. ⛔ **The evaluator reads one flat facts object at two seats and no
+third**, behind the gate the boards already use; a per-well window is the delta
+since the last clear edge, in Meta's closure, and costs no `tally` field. ⛔ **An
+unlock is worth nothing** — no points, no life — so the five item-8 price
+decoders needed no term and no kill line moved. ⛔ **The thirteenth soak plays
+both modes through the front door and hashes identically on every frame against
+both seats mutated out**; a reload holds every unlock, and a week roll empties
+the weekly list alone. ⛔ **No baseline moved in any phase.** GDD §19's Meta row
+closes here, its last ✗ met.
+
+⚠ **What CS015 deliberately left.** **A pre-ship achievement pass is owed, in
+CS016 or CS017** (`NEXT-STEPS.md`, Paul's, after P3): plan §9's two weekly rows
+that had no fact — three tokens in one well, a Thorn chipped to nothing — each
+owe one `tally` counter and one pool row, and three threshold calls
+(`depth_reached`'s top tier collides with `dim_band`; `dives_done` fires one well
+behind `wells_cleared`; `wellShotPar` 120 came from a trigger-holding driver).
+⛔ **Adding a pool row reshuffles which five a week shows, so it is free only
+before ship.** ⚠ `mimic_kill` rides on the Mimic's probation (CS017). **No toast
+and no onboarding**: an unlock is heard and never seen until the player opens
+the screen, which is CS016's to teach. **Nothing was tuned**: every threshold,
+name and note is ⚠ provisional and MEASURED on bots, and every ask is in
+`SKIPPED-PLAYTESTS.md`; `unlock` is candidate A, batched into `drive`'s lab
+session. ⚠ The vocabulary scan became a substring scan along the way (Paul's
+call, before P3). Still unowned: the pad-only silence, the VOICE bus, the Surger
+tone's 1.106 peak, the whole palette and the HUD sizes, F1 and F2.
 
 ---
 

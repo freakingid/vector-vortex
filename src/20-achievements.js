@@ -14,9 +14,9 @@
 // key read on a hot path would roll the ISO week inside one session
 // (PLANNED-FEATURES-CS015.md §1.5: 9.2 faked days over 100,008 steps).
 //
-// ⛔ NO EVALUATION SEAT EXISTS YET. evaluate() is the module and P2 seats it, at
-// the clear edge and at the run's end. Nothing in the shipped build calls it, so
-// nothing writes the store.
+// ⛔ TWO SEATS CALL evaluate(), BOTH IN THE CALLER: the clear edge and the run's
+// end (22-meta.js, since CS015 P2). The store is written only when something
+// unlocked.
 //
 // THE STORED VALUE (GDD 15.5, A6), one object under one declared key:
 //   { lifetimeUnlocked: [id, …],        untiered lifetime rows

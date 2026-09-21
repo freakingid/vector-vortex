@@ -856,3 +856,35 @@ close's.
   DONE / `n/3` detail strings in `23-main.js`, and `C.SFX.unlock` — ⛔ **which is
   re-picked in `tools/sfx-lab.html` and ported verbatim, never hand-tuned here.**
   Its two alternates are in the lab: "square bell pair" and "triangle step up".
+
+---
+
+## CS015 P4 — the thirteenth soak's asks: are the achievements worth chasing?
+
+- **What Paul would have done:** play a normal week of sessions in both modes
+  with a fresh profile — no bench keys, the fire button tapped rather than held
+  — and open ACHIEVEMENTS at the start and the end of each sitting.
+- **What we were trying to learn:** three things every CS015 measurement was
+  taken on a BOT to stand in for.
+  (1) **Do the week's five feel WEEKLY?** The pool is 18 rows and a week shows
+  five; the thirteenth soak's one bot session (eight runs) earned **three of
+  W39's five** — `week_forty_kills` and `week_score_50k` in Classic,
+  `week_full_set` in Overdrive. If most weeks'
+  five fall in a sitting, the rotation is a checklist rather than a reason to
+  come back; if some week's five are all Overdrive-only or all hard, a Classic
+  player has nothing that week.
+  (2) **Are the tiers reachable by a HUMAN, not a hunter?** Every threshold was
+  set near half of what a four-clause bot reached in 40,000 steps (GDD §15.5,
+  Paul's rule after P2), and ⚠ `C.ACHIEVEMENTS.wellShotPar` 120 came from a
+  driver that HOLDS THE TRIGGER — a person who taps may find `week_lean_well`
+  free, and a person who dies more may never see `deathless_wells`' top tier.
+  (3) **Does the screen tell a player anything?** It is the only surface — no
+  toast, by A1 — so an unlock is heard (`unlock`) and never seen until the
+  player goes looking. Whether a player ever opens the screen, and whether the
+  count line ("N OF 23 · WEEK …") means anything without onboarding, is
+  CS016's question as much as this one's.
+- **Knobs:** every `tiers` / `at` threshold and `wellShotPar` in
+  `C.ACHIEVEMENTS`, `perWeek`, and every `name` and `note` — ⛔ **never an `id`,
+  and never the pool's LENGTH after ship** (the rotation walks it by length).
+  ⚠ The pre-ship pass in `NEXT-STEPS.md` already owns three threshold calls and
+  the two unshipped weekly rows; this ask would inform it, not replace it.

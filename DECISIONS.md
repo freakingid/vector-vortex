@@ -741,3 +741,18 @@ more bars of music at 120 BPM, or deciding the mix call in CS010.
 - ⚠ **Backfilled 2026-09-20**, for a call made after the CS014 close. **`CLAUDE.md`'s ceiling valve was fired on `### Math and lifecycle` at Paul's direction**, in its own commit rather than waiting for a phase to edit the section: it stood at **7.0 KB** against the rule's ~4 KB line and the file had 476 bytes of headroom. The reasoning behind the Jump's phase, `aloft`, the Mimic's two-state budget and `MimicShot`'s `speed()` moved to a new `RATIONALE.md#entity-phases`; ⛔ **no rule was deleted** and each block names the anchor. `CLAUDE.md` 49,524 → 47,903 bytes. ⚠ This is the one time the valve has fired as a directed act rather than on an edit, and ⛔ **the ⚠ SETTLED rule against a standing cleanup sweep is unchanged.**
 - **`CLAUDE.md` compacted, 47,919 → ~34.6 KB**, Paul, 2026-09-20, after CS015 P1, in its own commit: reasons moved to `RATIONALE.md` (`#compaction` and the anchors it lists), history and plan-letter codes dropped, repeated facts stated once; ⛔ **no rule deleted**. The ceiling rule now also states the FORM a rule takes. ⚠ The valve and the ban on standing sweeps are unchanged: this was one directed pass.
 - **The vocabulary scan is a substring scan**, Paul, 2026-09-20, before CS015 P3's ids (`d773715`; `RATIONALE.md#vocabulary`).
+- CS015's achievement calls (A1–A12), Paul, 2026-09-20: every recommendation, ⚠ A8 with one qualification, `archive/PLANNED-FEATURES-CS015.md` §0, answered in the planning session; the built answers are GDD §15.5's and §10.5's. One line each:
+  - A1 — a SCREEN off the title (after PROFILE) and off OPTIONS (before BACK), and ⛔ no toast.
+  - A2 — one flat `facts` object built at the seat, from `state` and new `tally` counters.
+  - A3 — two seats, the clear edge and `Meta.runEnded()`, ⛔ never per step.
+  - A4 — a bench run earns nothing: `Meta.eligible()` gains a third caller, not a second gate.
+  - A5 — one shared store, each row MODE-TAGGED (`classic` / `overdrive` / `null`), ⛔ no `C.MODE_FLAGS` field.
+  - A6 — `achievements` v1, GDD §15.5's four stores as arrays, ⛔ no `migrate`.
+  - A7 — a stride walk over a weekly-only pool, `weekKey` an ISO year-week in UTC from an injected `now()`.
+  - A8 — the id table: ⚠ **23 lifetime rows, `purge_wide` DROPPED** (MEASURED unreachable), `mimic_kill` KEPT on the Mimic's probation; the weekly pool settled by P3, MEASURED.
+  - A9 — an unlock is worth NOTHING: no points, no life, no `addScore()` call.
+  - A10 — one new SFX event, `unlock`, candidate A, ⛔ no kill-pitch voice.
+  - A11 — the payload is `{ id, tier, weekKey, at }`, returned as an array.
+  - A12 — the table is `C.ACHIEVEMENTS`, handed to the module as `defs` (`createScores`' seam).
+  - ⚠ After P2, Paul, 2026-09-20: a "lifetime" row is ONE RUN, BANKED (`lifetimeTiers` is monotonic), so `achievements` stays v1; the weekly facts are built in `facts()` with no new `tally` field: `log/CS015.md`, P2.
+  - ⚠ After P3, Paul, 2026-09-20: the 41-row table STANDS; ⛔ plan §9's two REPORTED weekly rows (three tokens in one well; a Thorn chipped to nothing) had no fact and go in BEFORE SHIP, CS016 or CS017, one `tally` counter and one pool row each (`NEXT-STEPS.md`); `unlock`'s audition is batched into `drive`'s lab session: `log/CS015.md`, P3.
