@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.11 · Changeset: **CS015 closed 2026-09-20** · next: **CS016 planning**
+Version: 0.0.11 · Changeset: **CS016 planned 2026-09-20, §0 open** · next: **CS016 P1**
 (onboarding) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 ·
 Tokens: 5/5 effects · Achievements: 23 lifetime + 18 weekly
 
@@ -13,7 +13,7 @@ did.
 
 | Phase | Landed |
 |---|---|
-| — | CS016 is not yet planned |
+| Planning | 2026-09-20 — `PLANNED-FEATURES-CS016.md` and `IMPLEMENTATION-PHASES-CS016.md` written at `bea33c8`; ⛔ **§0's thirteen calls (N1–N13) await Paul** |
 
 ## Working / verified
 
@@ -75,8 +75,25 @@ did.
 
 ### What CS016 must act on
 
-⛔ **CS016 is ONBOARDING (GDD §12) and is not yet planned.** Its planning session
-reads GDD §12 and the menu shapes below.
+⛔ **CS016 is ONBOARDING (GDD §12), PLANNED 2026-09-20 at `bea33c8`.** A build
+phase reads the plan's §0 answers, not this block.
+
+- ⛔ **GDD §12's four-second promise is MEASURED FALSE in one half** (plan
+  §1.3, 64 front-door runs): the first Vaulter leaves the throat at 1.600 s
+  and reaches the kill band at 6.883 s on every seed, so no passive player
+  dies under 6.883 s (p50 8.5–8.7, max 11.4). The active half is met: a mover
+  kills at 2.38 s median, 2.68 s worst, 64/64. ⛔ Both floors are heat-clock
+  bases — a phase does not make the sentence true; N1 decides the sentence.
+  ⚠ **§12's "half speed" names nothing in the build** (`climbMult(1)` is 1).
+- ⛔ **`test-cs015-p2.js:431` PINS "no storage write on a play step that is
+  not the clear edge", any key** (MEASURED red under a stand-in that wrote a
+  new key at `startGame()`). A prompt's seen-flag is therefore MARKED on its
+  trigger step and WRITTEN at `saveTelemetry()`'s four seats, never on a bare
+  play step.
+- ⚠ **`C.GAME_VERSION` is `"0.0.10"` against this file's 0.0.11** — Paul's.
+  ⚠ `_harness.js`'s `EXPORTS` counts **211** quoted names, not 212.
+- ✅ `C.ATTRACT_IDLE` is in `C` (20) and read by nothing; ✅ no closed test
+  idles 20 s on the title (a throwing timer left the suite green).
 
 - ⛔ **GDD §12's four-second promise has four things to teach beyond the
   basics**: CS013's tokens and the Jump, CS014's steerable dive (nothing on
@@ -268,10 +285,9 @@ reads GDD §12 and the menu shapes below.
 - ✅ **`CLAUDE.md` is 36,926 bytes** against its 50 KB ceiling. ⚠ The valve and
   the ban on standing sweeps stand.
 
-## Next up — CS016 planning
+## Next up — CS016 P1, once §0 is answered
 
-⛔ **CS016 is ONBOARDING (GDD §12): first-run prompts, attract mode, the
-teach-in-four-seconds pass on level 1** (`ROADMAP.md`). A planning session
-writes `PLANNED-FEATURES-CS016.md` and `IMPLEMENTATION-PHASES-CS016.md` and no
-code. ⛔ **The pre-ship achievement pass (`NEXT-STEPS.md`) may land in CS016 or
-CS017** — the planning session names which, and Paul decides.
+⛔ **`PLANNED-FEATURES-CS016.md` §0 carries thirteen calls (N1–N13), each with
+one recommendation; Paul answers them before P1.** N12 recommends the pre-ship
+achievement pass (`NEXT-STEPS.md`) lands in CS016 as P3; if Paul says CS017 the
+changeset is three phases. `IMPLEMENTATION-PHASES-CS016.md` has the prompts.
