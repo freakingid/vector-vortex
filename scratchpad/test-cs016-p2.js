@@ -214,9 +214,6 @@ function frontDoor(S, mode) {
     ["a held Jump", key("arrowup")],
     ["Escape", key("Escape")],
     ["p", key("p")],
-    ["the digit 1", key("1")],
-    ["the digit 0", key("0")],
-    ["w", key("w")],
     ["t", key("t")],
     ["e", key("e")],
     ["the page going hidden", { down: () => G.input.pageHidden(), up: () => {} }],
@@ -224,6 +221,31 @@ function frontDoor(S, mode) {
                         up: () => { pad.buttons[C.GAMEPAD_PAUSE_BUTTON].pressed = false; } }],
     ["the top touch target", { down: () => G.input.touchStart(9, C.WORLD_W / 2, topY), up: () => G.input.touchEnd(9) }],
   ];
+  // ⛔ CS017 P2 (plan S7-B): `1`, `0` and `w` were enders here as NAMED ACTIONS.
+  // The shipped build binds none of the eight bench keys, and an UNBOUND key
+  // reaches neither the struct nor a named action (GDD 12), so each leaves the
+  // demo running and does nothing: no bench mark, toggle, save or byte.
+  for (const [label, k] of [["the digit 1", "1"], ["the digit 0", "0"], ["w", "w"]]) {
+    G.quitToTitle(); S.liveStep(); S.liveStep();
+    const n = S.idleToDemo();
+    S.steps(90);
+    H.assert(n > 0 && state.screen === "play" && state.level >= C.ATTRACT_DEPTH,
+             `${label}: fixture: a demo is running (${n}, ${state.screen})`);
+    H.eq(G.input.isBound(k), false, `⛔ ${label} is not bound in the shipped build`);
+    const bytes = S.bytes(), c0 = S.counts(), t0 = S.screens.length;
+    G.input.keyDown(k); S.liveStep();
+    H.eq(state.screen, "play", `⛔ ${label}: unbound, it does not end the demo`);
+    for (let i = 0; i < 12; i++) S.liveStep();
+    G.input.keyUp(k);
+    S.steps(6);
+    const c1 = S.counts();
+    H.eq(state.screen, "play", `⛔ ${label}: the demo is still running after the release`);
+    H.eq(c1.benchUsed - c0.benchUsed, 0, `${label}: no bench mark`);
+    H.eq(c1.toggle - c0.toggle + c1.saveTelemetry - c0.saveTelemetry + c1.savePrompts - c0.savePrompts, 0,
+         `${label}: no telemetry toggle, saveTelemetry() or savePrompts()`);
+    H.assert(!S.screens.slice(t0).includes("pause"), `⛔ ${label}: no pause at any frame`);
+    H.eq(S.bytes(), bytes, `${label}: the store's bytes do not move`);
+  }
   const logs = [];
   const log0 = console.log;
   console.log = (...a) => logs.push(a.join(" "));                // `e` would export to the console

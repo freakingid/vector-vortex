@@ -20,7 +20,9 @@ const { installSeed } = require("./_seeded-random.js");
 const { hasKnob } = require("./test-registry.js");
 
 installSeed(20260917);
-const X = H.buildGame({ spy: ["drawHud"] });
+// ⛔ CS017 P2 (plan S7-B): `w` is a named action, and so REFUSED, only in a
+// C.DEBUG_KEYS build; the refusal list presses it, so this file builds one.
+const X = H.buildGame({ spy: ["drawHud"], mutate: [["  DEBUG_KEYS:           false,", "  DEBUG_KEYS:           true,"]] });
 const { C, state } = X;
 const G = X.Game;
 const MS = C.FIXED_DT * 1000;

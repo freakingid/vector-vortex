@@ -1314,6 +1314,15 @@ const C = {
   // ⚠ 0.0.2 was never written here (log/CS006.md), and 0.0.11 never was either:
   // CS015 is 0.0.12 (Paul, 2026-09-23; log/CS016.md, P1), CS016 0.0.13.
   GAME_VERSION:         "0.0.13",
+  // ⛔ THE DEBUG BENCH'S ONE SWITCH (CS017 P2; plan S7-B, Paul 2026-09-23). It
+  // gates the EIGHT bench bindings in 23-main.js's ACTION_KEYS — the six spawn
+  // digits `1`–`6`, `0` (spawnRow) and `w` (cycleWell) — and nothing else.
+  // FALSE SHIPS, because in play each of the eight calls Meta.benchUsed(): a
+  // stray digit silently voids the run's local row, its submit and its
+  // achievements, and nothing on screen says so (plan S7). True is a dev
+  // build's bench. ⛔ `t`, `e`, `p` and Escape are NOT bench keys and are bound
+  // either way; the bench's functions and its flag stay in the build.
+  DEBUG_KEYS:           false,
   // ⛔ THE SAVE KEYSPACE, AND NOTHING ELSE (kit-storage: coinless.<GAME_ID>.<key>).
   // ⛔ Never change it: every stored key would be orphaned. The online boards are
   // LEADERBOARD_GAME_IDS above, one per mode (CS012 P3).

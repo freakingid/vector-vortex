@@ -31,7 +31,9 @@ const { installSeed } = require("./_seeded-random.js");
 const SEED = 20260830;
 
 installSeed(SEED);
-const X = H.buildGame();
+// ⛔ CS017 P2 (plan S7-B): `w` is bound only in a C.DEBUG_KEYS build, and trap 4
+// cycles with it, so this file builds one: the precondition "a bench exists".
+const X = H.buildGame({ mutate: [["  DEBUG_KEYS:           false,", "  DEBUG_KEYS:           true,"]] });
 const C = X.C;
 const G = X.Game;
 const state = X.state;

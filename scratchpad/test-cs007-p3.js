@@ -39,7 +39,9 @@ const SEED = 20260830;
 const DT_TICKS = 1200;      // 20 s of a pinned well, enough for a full quota
 
 installSeed(SEED);
-const X = H.buildGame();
+// ⛔ CS017 P2 (plan S7-B): the bench is bound only in a C.DEBUG_KEYS build, and
+// this file stages with it, so it builds one: the precondition "a bench exists".
+const X = H.buildGame({ mutate: [["  DEBUG_KEYS:           false,", "  DEBUG_KEYS:           true,"]] });
 const C = X.C;
 const G = X.Game;
 const state = X.state;

@@ -443,14 +443,6 @@ const Game = (function () {
     // menu. `pause` and `autoPause` are what must NOT back out of a menu —
     // above all the page going hidden on the START DEPTH screen.
     pause:        ["p"],
-    cycleWell:    ["w"],
-    spawnVaulter: ["1"],
-    spawnCarrier: ["2"],
-    spawnWeaver:  ["3"],
-    spawnThorn:   ["4"],
-    spawnDrifter: ["5"],
-    spawnSurger:  ["6"],
-    spawnRow:     ["0"],
     // ⛔ THE TELEMETRY BENCH (GDD 15.6; 21-telemetry.js). CS007 P4. Two
     // actions, because there is no HUD and no Options screen until CS008 and
     // the debug bench is the only surface there is.
@@ -465,6 +457,23 @@ const Game = (function () {
     telemetryToggle: ["t"],
     telemetryExport: ["e"],
   };
+  // ⛔ THE EIGHT BENCH BINDINGS, BOUND ONLY WHEN C.DEBUG_KEYS IS TRUE (CS017 P2;
+  // plan S7-B), and false ships: in play each makes the run ineligible (see
+  // runAction()), silently. Unbound, a key reaches neither the struct nor a
+  // named action. ⛔ Only the BINDINGS are gated: runAction(), the spawn table
+  // and Meta.benchUsed() are unchanged, and a flagged build is the one the
+  // bench's closed tests build.
+  const BENCH_ACTION_KEYS = {
+    cycleWell:    ["w"],
+    spawnVaulter: ["1"],
+    spawnCarrier: ["2"],
+    spawnWeaver:  ["3"],
+    spawnThorn:   ["4"],
+    spawnDrifter: ["5"],
+    spawnSurger:  ["6"],
+    spawnRow:     ["0"],
+  };
+  if (C.DEBUG_KEYS) Object.assign(ACTION_KEYS, BENCH_ACTION_KEYS);
 
   // ⛔ The kit boundary: 04-input.js reads no game global, so every tunable it
   // needs is handed over here, from C. Verbose on purpose — it is the one
@@ -525,7 +534,8 @@ const Game = (function () {
   //
   // ⛔ The six enemy colours are still ⚠ provisional (GDD 6.1), SKIPPED-PLAYTESTS.md
   // names these keys, and `0` is the only way to see the palette
-  // together. They ship until CS017 decides whether debug keys ship at all.
+  // together. ⛔ CS017 P2 (plan S7-B): they are BOUND only in a C.DEBUG_KEYS
+  // build (BENCH_ACTION_KEYS above); the shipped build reaches none of this.
   //
   // ⛔ A kind that is not in ENEMY_KINDS yet is a NO-OP, not a throw:
   // spawnEnemy() returns null for an unknown kind, so a later phase lit one up

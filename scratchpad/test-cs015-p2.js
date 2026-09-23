@@ -74,7 +74,9 @@ function build(o) {
   Date.now = () => (now += 7919);
   const X = H.buildGame({
     store: new Map(),
-    mutate: TABLE.concat(o.mutate || []),
+    // ⛔ CS017 P2 (plan S7-B): the bench is bound only in a C.DEBUG_KEYS build,
+    // and the bench flag's proofs press `1`, so every build flips it.
+    mutate: [["  DEBUG_KEYS:           false,", "  DEBUG_KEYS:           true,"]].concat(TABLE, o.mutate || []),
     stub: o.stub || [],
     spy: ["clearBonuses", "dropToken", "collectToken", "jumpStrike", "collideSkimmer", "addScore"],
   });

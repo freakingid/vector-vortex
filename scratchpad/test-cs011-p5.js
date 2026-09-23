@@ -77,8 +77,14 @@ function fakeKit() {
   return rec;
 }
 
+// ⛔ CS017 P2 (plan S7-B): the bench is bound only in a C.DEBUG_KEYS build, and
+// this file's claim is what a bench run earns, so every build here flips it —
+// the precondition "a bench exists". A caller's own `mutate` rides after it.
+const BENCH_ON = [["  DEBUG_KEYS:           false,", "  DEBUG_KEYS:           true,"]];
+
 function build(opts) {
-  const X = H.buildGame(Object.assign({ spy: ["drawMenu"] }, opts || {}));
+  const X = H.buildGame(Object.assign({ spy: ["drawMenu"] }, opts || {},
+                                      { mutate: BENCH_ON.concat((opts && opts.mutate) || []) }));
   X.view = null;
   X.drawMenu.before = (ctx, v) => {
     X.view = { title: v.title, lines: v.lines.slice(), cursor: v.cursor,

@@ -1094,6 +1094,8 @@ state.input = { rotate: 0, fire: false, purge: false, jump: false }
 - ⛔ **A capture and a text mode never arm together.** Arming either ends the other.
 - ⚠ **So on NAME the keyboard's default Fire and Purge keys (Space, Z, Shift, X) type or do nothing.** A keyboard player types; the wheel is rotate and fire on the other devices, or on a keyboard with a Fire key outside that set (MEASURED, `test-cs011-p4.js`).
 
+**The debug bench is a dev build's (CS017 P2; `PLANNED-FEATURES-CS017.md` S7-B, Paul).** Its eight bindings — the spawn digits `1`–`6`, `0` (`spawnRow`) and `w` (`cycleWell`) — are named actions only when `C.DEBUG_KEYS` is true, and ⛔ **it ships false**: in play each of the eight makes the run ineligible (§15.3), and a stray digit would silently void the run's row, submit and achievements. In the shipped build those keys are unbound, so they reach neither the struct nor a named action. `runAction()`, the spawn table, `spawnRow()`, the bench flag and `Meta.benchUsed()` stay in the build; ⛔ `t`, `e`, `p` and Escape are not bench keys and are bound in both (`test-cs017-p2.js`).
+
 See `src/04-input.NOTES.md`.
 
 ---
@@ -1239,7 +1241,7 @@ Pause rules:
 - **Fire on a sensitivity row arms it** (Paul, 2026-09-13), and the detail shows `‹×1.2›`. Rotate then changes the value live, one step per whole `MENU_ROTATE_STEP`, clamped at both ends. ⛔ Fire, Purge or Escape leaves the row **and keeps the value**, and never leaves the page.
 - **LEFT-HANDED TOUCH** flips kit-input's mirror at once. **TOUCH AUTO-FIRE** is the setting `syncScreen()` applies on entering play; ⛔ on every menu, auto-fire stays off.
 - **Fire on a slot arms a capture**, and the slot reads PRESS A KEY or PRESS A BUTTON. The next key (KEYBOARD) or pad button (GAMEPAD) is the new binding. ⛔ **A clash swaps** (U8): the slot that held the key takes this slot's old one.
-- ⛔ **Refused, with the reason on the page, and the refusal ENDS the capture** (Paul, 2026-09-13), so Escape and Start double as cancel. Refused keys are every named-action key (Escape, `p`, `w`, the bench digits, `t`, `e`) and every digit. On a pad, Start is refused. A pad button on KEYBOARD, or a key on GAMEPAD, is refused too. A mouse click or a touch cancels a capture without a reason.
+- ⛔ **Refused, with the reason on the page, and the refusal ENDS the capture** (Paul, 2026-09-13), so Escape and Start double as cancel. Refused keys are every named-action key in force — Escape, `p`, `t`, `e`, and in a `C.DEBUG_KEYS` build `w` and the bench digits (§9.5; the bench is a dev build's) — and every digit. ⚠ So in the shipped build `w` is bindable (CS017 P2, MEASURED by `test-cs008-p7.js`'s refusal list, which now builds with the bench on); whether it should stay refused is Paul's call (`STATUS.md`). On a pad, Start is refused. A pad button on KEYBOARD, or a key on GAMEPAD, is refused too. A mouse click or a touch cancels a capture without a reason.
 - ⛔ **A swap that would leave an action with no binding is refused** ("FIRE NEEDS A BUTTON"; Paul, 2026-09-13). Gamepad fire, left and right ship with one button each, so a pad-only player cannot lock themselves out of the menus.
 - **RESET TO DEFAULTS** restores `INPUT_KEYS_DEFAULT`, the gamepad defaults and the `C` values of both sensitivities, the mirror and auto-fire.
 - ⛔ **While a row owns the input, the menu model still steps**, on a snapshot with no rotate and the real Fire and Purge levels, and its answer is ignored. That keeps its edges current, so a Purge held past a row's exit does not back out of the page. OPTIONS' sound rows use the same mode (CS009 P3).
@@ -2074,7 +2076,7 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 
 ## 19. Acceptance criteria
 
-**Core** — all 16 wells render and play, open clamps and closed wraps for player *and* enemies; rim movement proportional on mouse, gamepad, touch, with keyboard tap/hold working; traverse-and-stop verified on every device; six Classic enemies and three Carrier variants correct; Purge including the weak second use; Thorns block the Dive and survive the Purge; in-flight shots clear at dive start; Start Depth selects, expands, and pays; playable title → mode → depth → play → death → game over → restart.
+**Core** — all 16 wells render and play, open clamps and closed wraps for player *and* enemies; rim movement proportional on mouse, gamepad, touch, with keyboard tap/hold working; traverse-and-stop verified on every device (headless, per device path — mouse, keyboard hold, keyboard taps, touch drag, gamepad stick — on a closed and an open well: `test-cs017-p2.js`; the hardware half is a skipped playtest); six Classic enemies and three Carrier variants correct; Purge including the weak second use; Thorns block the Dive and survive the Purge; in-flight shots clear at dive start; Start Depth selects, expands, and pays; playable title → mode → depth → play → death → game over → restart.
 
 **Overdrive** — five tokens, max two on screen; Jump with cooldown and unmistakable airborne state on three channels; combo builds, decays, displays, feeds the director; Reaver and Warden correct; Mimic present and flagged for playtest; ring-flight inside its 4 s / 6 ring cap.
 

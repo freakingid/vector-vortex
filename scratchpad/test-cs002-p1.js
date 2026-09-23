@@ -64,9 +64,14 @@ function replay(input, i) {
   if (i % 401 === 3) input.keyUp("w");
 }
 
+// ⛔ CS017 P2 (plan S7-B): `w` is bound only in a C.DEBUG_KEYS build, and the
+// list above presses it every 401 ticks, so both builds here flip the switch —
+// the list is NOT edited, and the hash must not move.
+const BENCH_ON = [["  DEBUG_KEYS:           false,", "  DEBUG_KEYS:           true,"]];
+
 function hashRun(seed) {
   installSeed(seed);
-  const X = H.buildGame();
+  const X = H.buildGame({ mutate: BENCH_ON });
   const G = X.Game;
   const st = X.state;
   G.reset();
@@ -106,7 +111,7 @@ H.assert(hashRun(SEED + 1) !== hashA, "a different seed produces a different has
 // ---------------------------------------------------------------------------
 
 installSeed(SEED);
-const X = H.buildGame();
+const X = H.buildGame({ mutate: BENCH_ON });
 const C = X.C;
 const G = X.Game;
 const input = G.input;

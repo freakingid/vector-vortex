@@ -106,7 +106,9 @@ function session(storage) {
   let now = 0;
   Date.now = () => (now += 7919);
   const store = new Map();
-  const X = H.buildGame({ store, storage });
+  // ⛔ CS017 P2 (plan S7-B): the bench is bound only in a C.DEBUG_KEYS build, and
+  // BENCH_CASE presses `1`, so the session flips it: "a bench exists".
+  const X = H.buildGame({ store, storage, mutate: [["  DEBUG_KEYS:           false,", "  DEBUG_KEYS:           true,"]] });
   const { C, state } = X;
   const G = X.Game, MS = C.FIXED_DT * 1000;
   const lb = fakeKit();

@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.13 · Changeset: **CS017 P1 landed 2026-09-23** · next: **P2** (§0 answered) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
+Version: 0.0.13 · Changeset: **CS017 P2 landed 2026-09-23** · next: **P3** (§0 answered) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
 Tracks: 3/5 · Tokens: 5/5 effects · Achievements: 23 lifetime + 19 weekly ·
 Prompts: 12
 
@@ -15,6 +15,7 @@ did.
 |---|---|
 | Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14; ✅ **§0 answered 2026-09-23 — every recommendation**; S9 keeps the current credits |
 | P1 | ✅ 2026-09-23 — the budget, measured: `tools/perf-probe.js`; the four draw-path allocators cached (+`C.PROMPT_FADE_STEPS`); `test-cs017-p1.js` (counter gate 156 strokes / 8 text calls, five sites mutation-checked, played-session hash); GDD §17's budget restated; ⚠ three more draw-path allocators found — `wellBandColor()`'s loop rewritten (Paul's S3 addendum), the HUD text and game-over lines still Paul's call |
+| P2 | ✅ 2026-09-23 — the bench behind `C.DEBUG_KEYS` (`false` ships; the eight bindings only in a flagged build, the bench's functions kept); V3's 17 closed repairs, exactly; `test-cs017-p2.js` (the eight unbound and inert in the shipped build, bound in a flagged one; traverse-and-stop per device on a closed and an open well); GDD §9.5, §10.5, §19 Core; ⚠ `w` is now bindable — Paul's call |
 
 **Planning (2026-09-23).** Measured at `867ebd1`: suite 82 green, 0 skips, 282 s
 (slowest file 37.6 s). The shipped file boots and plays from `file://` in
@@ -40,12 +41,25 @@ the indexed loop for `wellBandColor()` (S3 addendum, done), and the HUD's text
 and the game-over lines are still his call (below). Reasoning, the before/after and mutation records:
 `log/CS017.md`.
 
+**P2 (2026-09-23).** S7-B and S1 (c) built as answered. ⛔ **The bench is no
+longer a shipped surface**: `C.DEBUG_KEYS` `false` leaves the eight bench keys
+unbound (they reach neither the struct nor a named action), so no key a player
+can press voids a run's eligibility; `t`, `e`, `p`, Escape are bound in both
+builds. Flag off, **17 closed files red — V3's set exactly**; each repaired by
+a `mutate` flipping the flag (13 files) or, in `test-cs016-p2.js`, the three
+bench enders rewritten in place as "unbound, the demo runs on".
+`test-cs002-p1.js`'s list still presses `w`; its hash reads **1764508517**
+before and after. `test-cs008-p7.js`'s unread red was the flag, through
+`reservedKey()` — and a finding (below). `test-cs017-p2.js`, 125 assertions,
+~0.1 s, eight mutants red. `EXPORTS` 218, no harness edit. Reasoning, the red
+set and the mutants: `log/CS017.md`.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (26 modules + 3 inlined kit,
-  **834.3 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
+  **835.5 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
   fails the build.
-- `node scratchpad/run-all.js`: **83 files, all green, zero skips** (288 s, P1).
+- `node scratchpad/run-all.js`: **84 files, all green, zero skips** (288 s, P2).
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
   ⛔ A timeout is not a red — re-run the file alone before treating it as one.
 - **CS001–CS016 are closed; each has a `log/CS0##.md`.** ⛔ **The Classic roster
@@ -113,8 +127,7 @@ has a §0 call or a note in the plan:
   are clean (S10).
 - ⚠ **`package-for-itch.sh` fails on this machine: `zip` is absent** (line 33;
   `python3` is present). S12.
-- ⚠ **A stray bench digit silently voids a run's eligibility** — no row, no
-  submit, no achievement, nothing on screen (S7).
+- ✅ ~~A stray bench digit silently voids a run's eligibility~~ — P2 (S7-B).
 - ⚠ **GDD §17's budget names "full particles"** (the build has none) **and "no
   per-frame allocation"**, which the ⛔ end-of-frame `.filter()` invariant
   contradicts on the step path (S2, S3).
@@ -122,18 +135,29 @@ has a §0 call or a note in the plan:
   WORSE than no dodge for a bot** (0.274 against 0.125 kills per reflection).
   No call; recorded.
 - ⚠ **`package.json` says `"0.0.1"`**; §19's Core and Quality rows have never had
-  a verdict block; no test asserts GDD §9's traverse-and-stop.
+  a verdict block (✅ traverse-and-stop asserted, P2).
 - ⚠ **Start Depth options are odd** (1, 3 … 29): a driver asking for an even
   depth silently gets row −1, i.e. level 1.
 
+- ⚠ **FOUND BY P2 — `w` IS BINDABLE IN THE SHIPPED BUILD; PAUL'S CALL.**
+  CONTROLS' `reservedKey()` refuses every digit (its own regex) and every key
+  of `ACTION_KEYS`; with the bench unbound `w` is neither, so KEYBOARD takes it
+  as a binding (and kit-input's `setBindings()` accepts it). Keep that, or
+  refuse `w` explicitly (one term in `reservedKey()`). GDD §10.5 marks it ⚠.
+  ⚠ A profile that binds `w` in the shipped build loads its KEYBOARD page as
+  defaults in a flagged build (a reserved key fails the whole-page load).
+- ⛔ **A FLAGGED BUILD IS A MUTATE** of `  DEBUG_KEYS:           false,`, by
+  literal, in 14 files: re-spacing that line rewrites all fourteen in place.
+- ⚠ **For the close's doc pass**: GDD §15.6 still says the `t`/`e` keys "stay
+  until CS017's debug-key decision" (decided: they stay bound).
 - ⛔ **CS017 OWES FOUR MEASUREMENTS AND ONE VERDICT**: the Mimic's probation
   verdict (GDD §21 #6) — ⚠ prompt row 11 (`mimic`) and the shipped id
   `mimic_kill` ride it: a cut leaves the row unfireable (harmless) and the id
   unearnable for new players; GDD §17's budget naming "8 shots" where Spread's
   cap is **24**; `drawShot()` allocating per call (F4); and ⚠ `drawPrompt()`
   building one `rgba()` string per frame of a prompt's last `PROMPT_FADE`
-  (`drawText()` owns `globalAlpha`). ⛔ **The seven debug spawn actions ship
-  until CS017** (Paul's H5). ✅ **P1 closed the budget's three** (§17 restated
+  (`drawText()` owns `globalAlpha`). ✅ **The bench is decided (P2, S7-B)**:
+  bound only when `C.DEBUG_KEYS`, which ships false. ✅ **P1 closed the budget's three** (§17 restated
   to 24 shots; `drawShot()` and `drawPrompt()` cached).
 - ⚠ **FOUND BY P1 — S3's "no allocating expression on the draw path" is NOT
   met whole; what is left is PAUL'S CALL** (GDD §17 says so): the HUD's
@@ -366,12 +390,14 @@ has a §0 call or a note in the plan:
 - ✅ **`CLAUDE.md` is 38,311 bytes** against its 50 KB ceiling. ⚠ The valve and
   the ban on standing sweeps stand.
 
-## Next up — CS017 P2 (the bench and the devices)
+## Next up — CS017 P3 (the verdicts and the sweeps)
 
 ✅ **§0 is answered** (Paul, 2026-09-23, every recommendation; S9 keeps the
-current two credits lines). Paste `IMPLEMENTATION-PHASES-CS017.md`'s P2 prompt.
-⚠ **What is left of P1's allocation finding (the HUD text, the game-over
-lines) is open for Paul** (above); P2 does not depend on it.
+current two credits lines). Paste `IMPLEMENTATION-PHASES-CS017.md`'s P3 prompt.
+⚠ **Open for Paul, neither blocking P3**: what is left of P1's allocation
+finding (the HUD text, the game-over lines) and P2's `w` (above). ⚠ P3's §19
+sweep writes the Core row's hardware half (traverse-and-stop "on hardware") as
+a `SKIPPED-PLAYTESTS.md` entry; the headless half is `test-cs017-p2.js`.
 ⚠ **S10 is Paul's action, outside the repo**: the GitHub repository goes private
 before the itch page goes live. ⛔ `../coinless-kit` must be present for the
 close (zero skips); `tools/perf-probe.js` needs Chromium (Playwright's cache holds one here).

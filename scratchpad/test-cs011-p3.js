@@ -59,8 +59,14 @@ function makeHasher(X) {
   return () => { h = 2166136261; seen = new Map(); walk(X.state); return h; };
 }
 
+// ⛔ CS017 P2 (plan S7-B): the bench is bound only in a C.DEBUG_KEYS build, and
+// this file's claim is what a bench run earns, so every build here flips it —
+// the precondition "a bench exists". A caller's own `mutate` rides after it.
+const BENCH_ON = [["  DEBUG_KEYS:           false,", "  DEBUG_KEYS:           true,"]];
+
 function build(opts) {
-  const X = H.buildGame(Object.assign({ spy: ["drawMenu"] }, opts || {}));
+  const X = H.buildGame(Object.assign({ spy: ["drawMenu"] }, opts || {},
+                                      { mutate: BENCH_ON.concat((opts && opts.mutate) || []) }));
   builds.push(X);
   const hash = makeHasher(X);
   for (const name of Object.keys(X.Meta)) {
