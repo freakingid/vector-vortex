@@ -78,15 +78,29 @@ const _ringPts = [];
 const _comboRingPts = [];
 const _iconPts = [];
 
-function hudScoreText(view) { return String(view.score); }
-function hudLevelText(view) { return "LEVEL " + view.level; }
+// ⛔ EACH HUD STRING IS BUILT ONCE PER VALUE, NEVER PER FRAME (CS017 P1's S3
+// addendum; GDD 17): the value shown is the cache's key, compared by identity,
+// which allocates nothing, so a steady HUD frame builds no string at all.
+let _scoreKey = null, _scoreText = "";
+let _levelKey = null, _levelText = "";
+let _comboKey = null, _comboText = "";
+
+function hudScoreText(view) {
+  if (view.score !== _scoreKey) { _scoreKey = view.score; _scoreText = String(view.score); }
+  return _scoreText;
+}
+function hudLevelText(view) {
+  if (view.level !== _levelKey) { _levelKey = view.level; _levelText = "LEVEL " + view.level; }
+  return _levelText;
+}
 
 // GDD 14.4's multiplier, on C.COMBO_STEP's half-step lattice: "×4", "×3.5".
 // ⛔ A whole number carries NO decimal, so the widest reading is four
 // characters and C.HUD_COMBO_CHARS is a constant rather than a measurement.
 function hudComboText(view) {
   const m = view.combo;
-  return "×" + (m % 1 === 0 ? String(m) : m.toFixed(1));
+  if (m !== _comboKey) { _comboKey = m; _comboText = "×" + (m % 1 === 0 ? String(m) : m.toFixed(1)); }
+  return _comboText;
 }
 
 // O8's two conditions, and they are deliberately two: ⛔ OVERDRIVE ONLY, and

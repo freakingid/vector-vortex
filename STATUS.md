@@ -14,8 +14,8 @@ did.
 | Phase | Landed |
 |---|---|
 | Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14; ✅ **§0 answered 2026-09-23 — every recommendation**; S9 keeps the current credits |
-| P1 | ✅ 2026-09-23 — the budget, measured: `tools/perf-probe.js`; the four draw-path allocators cached (+`C.PROMPT_FADE_STEPS`); `test-cs017-p1.js` (counter gate 156 strokes / 8 text calls, five sites mutation-checked, played-session hash); GDD §17's budget restated; ⚠ three more draw-path allocators found — `wellBandColor()`'s loop rewritten (Paul's S3 addendum), the HUD text and game-over lines still Paul's call |
-| P2 | ✅ 2026-09-23 — the bench behind `C.DEBUG_KEYS` (`false` ships; the eight bindings only in a flagged build, the bench's functions kept); V3's 17 closed repairs, exactly; `test-cs017-p2.js` (the eight unbound and inert in the shipped build, bound in a flagged one; traverse-and-stop per device on a closed and an open well); GDD §9.5, §10.5, §19 Core; ⚠ `w` is now bindable — Paul's call |
+| P1 | ✅ 2026-09-23 — the budget, measured: `tools/perf-probe.js`; the four draw-path allocators cached (+`C.PROMPT_FADE_STEPS`); `test-cs017-p1.js` (counter gate 156 strokes / 8 text calls, five sites mutation-checked, played-session hash); GDD §17's budget restated; ⚠ three more draw-path allocators found — `wellBandColor()`'s loop rewritten (Paul's S3 addendum), the HUD text and game-over lines cached (second addendum, after P2) |
+| P2 | ✅ 2026-09-23 — the bench behind `C.DEBUG_KEYS` (`false` ships; the eight bindings only in a flagged build, the bench's functions kept); V3's 17 closed repairs, exactly; `test-cs017-p2.js` (the eight unbound and inert in the shipped build, bound in a flagged one; traverse-and-stop per device on a closed and an open well); GDD §9.5, §10.5, §19 Core; `w` stays bindable (S7 addendum, Paul) |
 
 **Planning (2026-09-23).** Measured at `867ebd1`: suite 82 green, 0 skips, 282 s
 (slowest file 37.6 s). The shipped file boots and plays from `file://` in
@@ -38,7 +38,7 @@ gate (156 strokes, 8 text calls) was read off `ed8474d` before the fixes and
 did not move; a played Overdrive session hashes identically against the four
 old lines. ⚠ **Finding**: S3's restated rule was not met whole; Paul chose
 the indexed loop for `wellBandColor()` (S3 addendum, done), and the HUD's text
-and the game-over lines are still his call (below). Reasoning, the before/after and mutation records:
+and the game-over lines were cached after P2 (second addendum). Reasoning, the before/after and mutation records:
 `log/CS017.md`.
 
 **P2 (2026-09-23).** S7-B and S1 (c) built as answered. ⛔ **The bench is no
@@ -57,7 +57,7 @@ set and the mutants: `log/CS017.md`.
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (26 modules + 3 inlined kit,
-  **835.5 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
+  **836.5 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
   fails the build.
 - `node scratchpad/run-all.js`: **84 files, all green, zero skips** (288 s, P2).
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
@@ -139,13 +139,10 @@ has a §0 call or a note in the plan:
 - ⚠ **Start Depth options are odd** (1, 3 … 29): a driver asking for an even
   depth silently gets row −1, i.e. level 1.
 
-- ⚠ **FOUND BY P2 — `w` IS BINDABLE IN THE SHIPPED BUILD; PAUL'S CALL.**
-  CONTROLS' `reservedKey()` refuses every digit (its own regex) and every key
-  of `ACTION_KEYS`; with the bench unbound `w` is neither, so KEYBOARD takes it
-  as a binding (and kit-input's `setBindings()` accepts it). Keep that, or
-  refuse `w` explicitly (one term in `reservedKey()`). GDD §10.5 marks it ⚠.
-  ⚠ A profile that binds `w` in the shipped build loads its KEYBOARD page as
-  defaults in a flagged build (a reserved key fails the whole-page load).
+- ⚠ **SETTLED — `w` IS BINDABLE IN THE SHIPPED BUILD** (Paul, S7 addendum,
+  after P2): `reservedKey()` refuses every digit and every key in force, and
+  `w` is neither. ⚠ A profile that binds `w` loads its KEYBOARD page as
+  defaults in a flagged build (dev only).
 - ⛔ **A FLAGGED BUILD IS A MUTATE** of `  DEBUG_KEYS:           false,`, by
   literal, in 14 files: re-spacing that line rewrites all fourteen in place.
 - ⚠ **For the close's doc pass**: GDD §15.6 still says the `t`/`e` keys "stay
@@ -159,19 +156,18 @@ has a §0 call or a note in the plan:
   (`drawText()` owns `globalAlpha`). ✅ **The bench is decided (P2, S7-B)**:
   bound only when `C.DEBUG_KEYS`, which ships false. ✅ **P1 closed the budget's three** (§17 restated
   to 24 shots; `drawShot()` and `drawPrompt()` cached).
-- ⚠ **FOUND BY P1 — S3's "no allocating expression on the draw path" is NOT
-  met whole; what is left is PAUL'S CALL** (GDD §17 says so): the HUD's
-  `hudScoreText()` / `hudLevelText()` (twice a play frame) and
-  `hudComboText()`, ~70 B; `Game.draw()`'s three game-over lines, every
-  game-over frame. Cache them (a renderer edit) or narrow §17's wording to
-  the sites fixed. ✅ The third, `wellBandColor()`'s `for…of`, is an indexed
-  loop (Paul, S3 addendum in the plan; asserted in `test-cs017-p1.js`).
+- ✅ **S3's "no allocating expression on the draw path" IS MET WHOLE**: P1's
+  four caches, `wellBandColor()`'s indexed loop (S3 addendum) and, after P2,
+  the HUD's three strings and game over's lines built once per value (second
+  addendum, Paul). perf-probe: budget board **6,001 / 4,979** B, empty
+  **1,228 / 131** (after 300 draws / steady).
 - ⛔ **`test-cs017-p1.js` PINS S2's BOARD AT 156 STROKES AND 8 TEXT CALLS A
   `draw()`**: a renderer change that draws more on that board rewrites
-  `BUDGET_*` in place with the cause named — a counter, never a clock. Its five
+  `BUDGET_*` in place with the cause named — a counter, never a clock. Its NINE
   mutants pin `const out = points._screen;` …, `drawPoly(ctx, _shotPair,
-  false);`, `ctx.font = textFont(size);`, ` : promptFadeColor(a);` and
-  `wellBandColor()`'s indexed `for` line.
+  false);`, `ctx.font = textFont(size);`, ` : promptFadeColor(a);`,
+  `wellBandColor()`'s indexed `for` line, the three HUD cache lines and game
+  over's `if (screen === SCREENS.gameover &&` guard.
 - ⚠ **`tools/perf-probe.js`'s bytes are the JIT's as much as the source's**
   (8,196 B after 300 draws, 7,076 after 5,000, same board): quote a reading
   with its warm-up; each board needs its own page. ⚠ GDD §16.4's `tools/` line
@@ -394,8 +390,9 @@ has a §0 call or a note in the plan:
 
 ✅ **§0 is answered** (Paul, 2026-09-23, every recommendation; S9 keeps the
 current two credits lines). Paste `IMPLEMENTATION-PHASES-CS017.md`'s P3 prompt.
-⚠ **Open for Paul, neither blocking P3**: what is left of P1's allocation
-finding (the HUD text, the game-over lines) and P2's `w` (above). ⚠ P3's §19
+⛔ **Paul's standing rule (2026-09-23): a call that carries a recommendation
+is TAKEN and recorded for him to reverse; only a call with none stops.**
+⚠ It is not yet in `CLAUDE.md` rule 3 (offered, unanswered). ⚠ P3's §19
 sweep writes the Core row's hardware half (traverse-and-stop "on hardware") as
 a `SKIPPED-PLAYTESTS.md` entry; the headless half is `test-cs017-p2.js`.
 ⚠ **S10 is Paul's action, outside the repo**: the GitHub repository goes private

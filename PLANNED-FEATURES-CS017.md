@@ -225,9 +225,12 @@ more draw-path allocators S3 did not name (`STATUS.md`, `log/CS017.md`). ONE
 is decided: **`wellBandColor()`'s `for (const band of C.BAND_COLORS)` becomes
 an indexed loop — a rewrite, not a cache** (the function is pure, so no state
 and no hash moves), asserted as P1's four are, by an observable its old line
-fails (no array iterator is taken). ⚠ **Still open, Paul's**: the HUD's
-score / level / combo strings and the game-over screen's three lines — cache
-them, or narrow §17's rule to the sites fixed.
+fails (no array iterator is taken). ⛔ **Second addendum — ANSWERED (Paul,
+2026-09-23, after P2): CACHE the rest.** The HUD's score / level / combo
+strings and the game-over screen's three lines are built once per VALUE (the
+value is the cache's key, compared by identity), so §17's rule is met whole;
+asserted by a counting value object read on the first frame only, each old
+line mutation-checked red, and the played-session hash unmoved.
 
 ### S4 — the number that stands for "60 fps"
 
@@ -344,6 +347,12 @@ brushes `1` loses the run's row, its submit and its achievements, silently.
 ⚠ Under B the bench flag and `Meta.benchUsed()` become unreachable in the
 shipped build; they are kept, not deleted (`CLAUDE.md` rule 7: no unprompted
 refactor), and the closed tests still prove them in a flagged build.
+
+⛔ **S7 addendum — ANSWERED (Paul, 2026-09-23, after P2): `w` stays BINDABLE
+in the shipped build.** P2 found that CONTROLS refuses `w` only because it was
+a named action; unbound, it is a free key. No code moves: `reservedKey()`
+still refuses every digit and every key in force, and a profile that binds `w`
+loads its KEYBOARD page as defaults in a flagged dev build (dev only).
 
 ### S10 — the legal sweep's reach
 

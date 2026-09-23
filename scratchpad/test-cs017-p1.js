@@ -10,9 +10,11 @@
 //      size (a string has no identity, so the probe changes C.TEXT_FONT_FAMILY
 //      after the first build and the cached string must not move); a fade's
 //      colour is built once per 1/C.PROMPT_FADE_STEPS (no toFixed on a warm one);
-//      wellBandColor() takes no array iterator (S3 addendum, Paul).
+//      wellBandColor() takes no array iterator (S3 addendum, Paul); the HUD's
+//      three strings and game over's lines are built once per value (second
+//      addendum): a counting value object is read on the first frame only.
 //   3. THE DRAW PATH WRITES NO STATE: a played Overdrive session through
-//      Game.frame() hashes identically, frame by frame, with the five old lines.
+//      Game.frame() hashes identically, frame by frame, with every old line.
 // ⚠ Node cannot measure the BYTES (the harness canvas is a Proxy that boxes
 // every double it stores): tools/perf-probe.js does, in Chromium (plan §1.3).
 "use strict";
@@ -52,7 +54,25 @@ const OLD = {
   drawPrompt:  [" : promptFadeColor(a);", " : \"rgba(\" + _promptRgb + \",\" + a.toFixed(3) + \")\";"],
   wellBandColor: ["  for (let i = 0; i < bands.length; i++) {\n    if (level <= bands[i].hi) return bands[i].color;",
                   "  for (const band of bands) {\n    if (level <= band.hi) return band.color;"],
+  // ⛔ S3's second addendum (Paul, 2026-09-23, after P2): one per cached string.
+  hudScoreText: ["  if (view.score !== _scoreKey) { _scoreKey = view.score; _scoreText = String(view.score); }\n  return _scoreText;",
+                 "  return String(view.score);"],
+  hudLevelText: ["  if (view.level !== _levelKey) { _levelKey = view.level; _levelText = \"LEVEL \" + view.level; }\n  return _levelText;",
+                 "  return \"LEVEL \" + view.level;"],
+  hudComboText: ["  if (m !== _comboKey) { _comboKey = m; _comboText = \"×\" + (m % 1 === 0 ? String(m) : m.toFixed(1)); }\n  return _comboText;",
+                 "  return \"×\" + (m % 1 === 0 ? String(m) : m.toFixed(1));"],
+  gameOverLines: ["      if (screen === SCREENS.gameover &&\n" +
+                  "          (state.score !== _overScore || state.level !== _overLevel || place !== _overPlace)) {\n" +
+                  "        _overScore = state.score; _overLevel = state.level; _overPlace = place;\n",
+                  "      if (screen === SCREENS.gameover) {\n"],
 };
+
+// A value whose every conversion to text or number is counted: a cache keyed
+// by identity converts it once; a string built per frame converts it per frame.
+function counted(n) {
+  const c = { reads: 0, valueOf() { c.reads++; return n; }, toString() { c.reads++; return String(n); } };
+  return c;
+}
 
 // ---------------------------------------------------------------------------
 // S2's board, through startGame() and the real constructors. Every kind the two
@@ -105,7 +125,7 @@ function countDraw(X) {
 }
 
 // ---------------------------------------------------------------------------
-// The five probes. Each takes a build and returns { ok, why }; a mutant must
+// The probes. Each takes a build and returns { ok, why }; a mutant must
 // return ok false. ⛔ Every read is guarded: a probe that throws is a defect.
 // ---------------------------------------------------------------------------
 const PROBES = {
@@ -189,7 +209,50 @@ const PROBES = {
     const ok = calls === 0 && colors.every(c => typeof c === "string" && c.length > 0);
     return { ok, why: `${calls} array iterators over ${colors.length} levels`, colors };
   },
+  // hudLayout() reads score and level through their text only (the draw reads
+  // them the same way); the combo reading is called direct.
+  // The two HUD strings are not exported: their length is the rectangle's width.
+  hudScoreText(X) { return hudProbe(X, "score", v => X.hudLayout(v).score.w / (X.C.HUD_TEXT_SIZE * X.C.TEXT_CHAR_W), 1); },
+  hudLevelText(X) { return hudProbe(X, "level", v => X.hudLayout(v).level.w / (X.C.HUD_TEXT_SIZE * X.C.TEXT_CHAR_W), 7); },
+  hudComboText(X) { return hudProbe(X, "combo", v => X.hudComboText(v), "×7"); },
+  // Game over's three lines, drawn over the staged board: warm frames convert
+  // the score nothing more (the HUD's own read is cached too).
+  gameOverLines(X) {
+    stage(X);
+    const st = X.state, real = st.score;
+    const v = counted(7);
+    try {
+      st.score = v; st.screen = "gameover";
+      const texts = [];
+      X.drawText.before = (ctx, str) => { texts[texts.length - 1].push(String(str)); };
+      texts.push([]); X.Game.draw();
+      const warm = v.reads;
+      texts.push([]); X.Game.draw(); texts.push([]); X.Game.draw();
+      const onEvery = t => texts.every(f => f.includes(t));
+      const ok = warm > 0 && v.reads === warm && onEvery("SCORE 7") && onEvery("LEVEL " + st.level);
+      return { ok, why: `${v.reads - warm} score reads on two warm game-over frames (${warm} on the first); ` +
+                        `SCORE 7 on ${texts.filter(f => f.includes("SCORE 7")).length}/3 frames` };
+    } finally {
+      X.drawText.before = null;
+      st.score = real; st.screen = "play";
+    }
+  },
 };
+
+// `call` returns what the reading showed: the string, or its length in characters.
+function hudProbe(X, field, call, want) {
+  const v = counted(7);
+  const view = { score: 0, level: 1, lives: 3, icon: X.SKIMMER_POLY, purgeUses: 1, mirror: false,
+                 jump: null, combo: 1, comboFill: 1, mode: "classic" };
+  view[field] = v;
+  call(view);
+  const warm = v.reads;
+  let shown = null;
+  for (let i = 0; i < 3; i++) shown = call(view);
+  const shownOk = typeof want === "number" ? Math.abs(shown - want) < 1e-9 : shown === want;
+  const ok = warm > 0 && v.reads === warm && shownOk;
+  return { ok, why: `${v.reads - warm} reads of the ${field} on 3 warm calls (${warm} on the first); showed ${JSON.stringify(shown)}` };
+}
 
 // ---------------------------------------------------------------------------
 // 1. The frame-budget gate, on the fixed build

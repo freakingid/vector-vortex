@@ -1993,11 +1993,16 @@ const Game = (function () {
     // The menu over everything, on every screen but play.
     const screen = state.screen === "play" ? null : SCREENS[state.screen];
     if (screen) {
-      if (screen === SCREENS.gameover) {
+      // ⛔ REBUILT ONLY WHEN A VALUE MOVES, NEVER PER FRAME (CS017 P1's S3
+      // addendum; GDD 17): the three readings are the cache's key.
+      // Meta's closure, set at the 'died' seat before this frame's draw.
+      const place = screen === SCREENS.gameover ? Meta.lastPlace() : 0;
+      if (screen === SCREENS.gameover &&
+          (state.score !== _overScore || state.level !== _overLevel || place !== _overPlace)) {
+        _overScore = state.score; _overLevel = state.level; _overPlace = place;
         screen.lines[0] = "SCORE " + state.score;
         screen.lines[1] = "LEVEL " + state.level;
-        // Meta's closure, set at the 'died' seat before this frame's draw.
-        screen.lines[2] = Meta.lastPlace() > 0 ? "NEW HIGH SCORE #" + Meta.lastPlace() : "";
+        screen.lines[2] = place > 0 ? "NEW HIGH SCORE #" + place : "";
       }
       _menuView.title = screen.title;
       _menuView.lines = screen.lines;
@@ -2008,6 +2013,7 @@ const Game = (function () {
   }
 
   const _menuView = { title: "", lines: null, items: null, cursor: 0 };
+  let _overScore = null, _overLevel = null, _overPlace = null;   // game over's cache key
 
   const _hudView = {
     score: 0, lives: 0, level: 1, levelColor: "", purgeUses: 0,
