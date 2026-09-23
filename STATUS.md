@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.11 · Changeset: **CS016 planned 2026-09-20, §0 open** · next: **CS016 P1**
+Version: 0.0.12 · Changeset: **CS016 planned 2026-09-20, §0 answered 2026-09-23** · next: **CS016 P1**
 (onboarding) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 ·
 Tokens: 5/5 effects · Achievements: 23 lifetime + 18 weekly
 
@@ -13,7 +13,7 @@ did.
 
 | Phase | Landed |
 |---|---|
-| Planning | 2026-09-20 — `PLANNED-FEATURES-CS016.md` and `IMPLEMENTATION-PHASES-CS016.md` written at `bea33c8`; ⛔ **§0's thirteen calls (N1–N13) await Paul** |
+| Planning | 2026-09-20 — `PLANNED-FEATURES-CS016.md` and `IMPLEMENTATION-PHASES-CS016.md` written at `bea33c8`; §0 answered by Paul 2026-09-23: every recommendation, N2 rows 8–12 all in, N12 in CS016 (four phases) |
 
 ## Working / verified
 
@@ -90,7 +90,9 @@ phase reads the plan's §0 answers, not this block.
   new key at `startGame()`). A prompt's seen-flag is therefore MARKED on its
   trigger step and WRITTEN at `saveTelemetry()`'s four seats, never on a bare
   play step.
-- ⚠ **`C.GAME_VERSION` is `"0.0.10"` against this file's 0.0.11** — Paul's.
+- ⛔ **`C.GAME_VERSION` is `"0.0.10"`; P1 sets it to `"0.0.12"`** (Paul,
+  2026-09-23). `log/CS014.md` and `log/CS015.md` both recorded 0.0.11; CS015's
+  row is corrected to 0.0.12. The CS016 close bumps it to 0.0.13.
   ⚠ `_harness.js`'s `EXPORTS` counts **211** quoted names, not 212.
 - ✅ `C.ATTRACT_IDLE` is in `C` (20) and read by nothing; ✅ no closed test
   idles 20 s on the title (a throwing timer left the suite green).
@@ -285,9 +287,8 @@ phase reads the plan's §0 answers, not this block.
 - ✅ **`CLAUDE.md` is 36,926 bytes** against its 50 KB ceiling. ⚠ The valve and
   the ban on standing sweeps stand.
 
-## Next up — CS016 P1, once §0 is answered
+## Next up — CS016 P1
 
-⛔ **`PLANNED-FEATURES-CS016.md` §0 carries thirteen calls (N1–N13), each with
-one recommendation; Paul answers them before P1.** N12 recommends the pre-ship
-achievement pass (`NEXT-STEPS.md`) lands in CS016 as P3; if Paul says CS017 the
-changeset is three phases. `IMPLEMENTATION-PHASES-CS016.md` has the prompts.
+⛔ **`PLANNED-FEATURES-CS016.md` §0 is answered (Paul, 2026-09-23): every
+recommendation, as written.** The pre-ship achievement pass (`NEXT-STEPS.md`)
+lands in CS016 as P3, so the changeset is four phases. `IMPLEMENTATION-PHASES-CS016.md` has the prompts.

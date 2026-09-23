@@ -12,9 +12,11 @@ pass `NEXT-STEPS.md` carries. The fourteenth soak closes it (GDD §12, §10.2,
 claim names what was run (§1 lists the probes) and was run at commit
 **`bea33c8`**, the CS015 close. A PREDICTED one says so.
 
-⛔ **§0 IS NOT YET ANSWERED.** Each call carries one recommendation. A phase
-prompt that names a call builds the answer Paul writes beside it and does not
-re-open it; the B and C branches are the record of what was priced.
+⛔ **§0 IS ANSWERED (Paul, 2026-09-23): every recommendation, as written**,
+plus N12's three numbers, the two new rows' names and notes, and the version
+fix — all in §0's answer column. A phase prompt that names a call builds that
+answer and does not re-open it; the B and C branches are the record of what was
+priced.
 
 **Baseline for every measurement: commit `bea33c8`.**
 - `node build.js` → 25 modules + 3 inlined kit, `dist/vector-vortex.html`
@@ -98,21 +100,21 @@ respawn guarantee's binding rate. ⛔ **The other half of the promise is MET**: 
 player who moves and fires kills something at **2.38 s** median, **2.68 s**
 worst, 64 of 64 runs. N1 is the call that decides which sentence the GDD keeps.
 
-| # | The call | Recommendation |
-|---|---|---|
-| N1 | **The four-second promise against level 1** — MEASURED unreachable in one half, met in the other | **A — restate §12 to what ships** and teach with the first prompt; touch no spawn lane and no base. §1.3 |
-| N2 | **Which prompts ship** — §12's seven, and the rows CS013–CS015 left owing | **§12's seven as written**, plus ⚠ **five candidate rows surfaced for Paul, one recommendation each** (a token, the ring flight, the Warden, the Mimic, the first unlock). Each is a design call; none is answered here |
-| N3 | **Where a prompt draws** | **Centre-bottom, under every rim, in BOTH modes**: `C.PROMPT_Y` 636, `C.PROMPT_SIZE` 28, through `drawText()`, drawn after the well and before everything that moves. §1.4 MEASURED it is the one band both modes share |
-| N4 | **How long, and how two prompts share the band** | `C.PROMPT_TIME` 4.0 s ⚠, a draw-time fade over its last `C.PROMPT_FADE` 0.5 s ⚠, a FIFO of one line at a time, the clock counting UP on play steps only |
-| N5 | **Where "once per profile" lives** | **A new declared key, `onboarding` v1, `{ seen: [ids] }`**, per profile, in `OWN_KEYS`; loaded at activation, MARKED at the trigger and WRITTEN at `saveTelemetry()`'s four seats — never on a bare play step. §1.2 V2/V3 MEASURED the two shapes' costs and the pin that rules out a trigger-step write |
-| N6 | **What drives attract mode** | **A board-reading driver in the build**, the soaks' four-clause hunter ported as `attractDrive()`, writing the four-field struct AFTER `input.sample()` |
-| N7 | **Its seed, mode, Start Depth and length** | `C.ATTRACT_SEED` fixed, **Overdrive**, `C.ATTRACT_DEPTH` 5 ⚠, `C.ATTRACT_LENGTH` 45 s ⚠. It spends `state.rng` as any run does — the stream is its own and dies with it. §1.5 |
-| N8 | **How it is kept out of `Meta.eligible()` and out of storage** | **`run` stays null** (no `Meta.runStarted()`), so the ONE gate reads false for every seat; plus THREE explicit skips — `noteCleared()`, `Telemetry.sample()`, `Meta.clearEdge()` — and the demo's game over goes straight to the title. §1.5 MEASURED which writes a demo-length run makes today |
-| N9 | **What ends it, and what the player sees** | **Any device input or named action ends it and does nothing else**; so does its game over and `C.ATTRACT_LENGTH`. It draws the board, the HUD and one line, `C.ATTRACT_LINE` ⚠, in the prompt band. Music is the mode's track through the unchanged `musicStateFor()` |
-| N10 | **The idle timer and the title's live menu** | **Title only**, `C.ATTRACT_IDLE` 20 (MEASURED: already in `C`, read by nothing), counting simulation `dt` on title steps with the struct at rest and no named action. §1.2 V1 MEASURED: no closed test idles 20 s on the title |
-| N11 | **Where the code lives** | **One new module, `src/22-onboarding.js`, after `22-meta.js`** — top-level functions a soak can stub; `23-main.js` wires them. `22-meta.js` stays the only file that calls storage |
-| N12 | **The pre-ship achievement pass: CS016 or CS017** | **CS016, as its own phase (P3)** — the pool-length change is free only before ship and CS017 IS ship. Three threshold calls surfaced; ⛔ **every number is Paul's** |
-| N13 | **GDD §19 has no onboarding row** | **P1 adds one** under Core, from §12 of this plan, so the close has something to close |
+| # | The call | Recommendation | ⛔ Answer — Paul, 2026-09-23 |
+|---|---|---|---|
+| N1 | **The four-second promise against level 1** — MEASURED unreachable in one half, met in the other | **A — restate §12 to what ships** and teach with the first prompt; touch no spawn lane and no base. §1.3 | **A** — restate §12; no constant, lane or schedule moves |
+| N2 | **Which prompts ship** — §12's seven, and the rows CS013–CS015 left owing | **§12's seven as written**, plus ⚠ **five candidate rows surfaced for Paul, one recommendation each** (a token, the ring flight, the Warden, the Mimic, the first unlock). Each is a design call; none is answered here | **§12's seven + all five candidates, rows 8–12, with the recommended texts and triggers** |
+| N3 | **Where a prompt draws** | **Centre-bottom, under every rim, in BOTH modes**: `C.PROMPT_Y` 636, `C.PROMPT_SIZE` 28, through `drawText()`, drawn after the well and before everything that moves. §1.4 MEASURED it is the one band both modes share | **As recommended** |
+| N4 | **How long, and how two prompts share the band** | `C.PROMPT_TIME` 4.0 s ⚠, a draw-time fade over its last `C.PROMPT_FADE` 0.5 s ⚠, a FIFO of one line at a time, the clock counting UP on play steps only | **As recommended** |
+| N5 | **Where "once per profile" lives** | **A new declared key, `onboarding` v1, `{ seen: [ids] }`**, per profile, in `OWN_KEYS`; loaded at activation, MARKED at the trigger and WRITTEN at `saveTelemetry()`'s four seats — never on a bare play step. §1.2 V2/V3 MEASURED the two shapes' costs and the pin that rules out a trigger-step write | **A** — `onboarding` v1 |
+| N6 | **What drives attract mode** | **A board-reading driver in the build**, the soaks' four-clause hunter ported as `attractDrive()`, writing the four-field struct AFTER `input.sample()` | **A** |
+| N7 | **Its seed, mode, Start Depth and length** | `C.ATTRACT_SEED` fixed, **Overdrive**, `C.ATTRACT_DEPTH` 5 ⚠, `C.ATTRACT_LENGTH` 45 s ⚠. It spends `state.rng` as any run does — the stream is its own and dies with it. §1.5 | **As recommended** |
+| N8 | **How it is kept out of `Meta.eligible()` and out of storage** | **`run` stays null** (no `Meta.runStarted()`), so the ONE gate reads false for every seat; plus THREE explicit skips — `noteCleared()`, `Telemetry.sample()`, `Meta.clearEdge()` — and the demo's game over goes straight to the title. §1.5 MEASURED which writes a demo-length run makes today | **As recommended** |
+| N9 | **What ends it, and what the player sees** | **Any device input or named action ends it and does nothing else**; so does its game over and `C.ATTRACT_LENGTH`. It draws the board, the HUD and one line, `C.ATTRACT_LINE` ⚠, in the prompt band. Music is the mode's track through the unchanged `musicStateFor()` | **As recommended** |
+| N10 | **The idle timer and the title's live menu** | **Title only**, `C.ATTRACT_IDLE` 20 (MEASURED: already in `C`, read by nothing), counting simulation `dt` on title steps with the struct at rest and no named action. §1.2 V1 MEASURED: no closed test idles 20 s on the title | **Title only** |
+| N11 | **Where the code lives** | **One new module, `src/22-onboarding.js`, after `22-meta.js`** — top-level functions a soak can stub; `23-main.js` wires them. `22-meta.js` stays the only file that calls storage | **`src/22-onboarding.js`** |
+| N12 | **The pre-ship achievement pass: CS016 or CS017** | **CS016, as its own phase (P3)** — the pool-length change is free only before ship and CS017 IS ship. Three threshold calls surfaced; ⛔ **every number is Paul's** | **CS016, P3.** `depth_reached` tiers **[10, 25, 99]**; `dives_done` re-aimed to `cleanDives`, name `CLEAN DIVES`, tiers **[5, 20, 50]** kept; **`week_lean_well` cut** (pool 19); `week_token_trio` **`TOKEN TRIO`** / "TAKE THREE TOKENS IN ONE WELL", `week_thorn_gone` **`THORN CLEARED`** / "SHOOT A THORN DOWN TO NOTHING" |
+| N13 | **GDD §19 has no onboarding row** | **P1 adds one** under Core, from §12 of this plan, so the close has something to close | **Yes** — P1 adds the row |
 
 ### N1 — the four-second promise, measured
 
@@ -408,7 +410,9 @@ seat and the five pinned kill-line strings do not move). ⚠ Names and notes are
 Paul's within the ≤ 20 / ≤ 60 budgets.
 
 **The three threshold calls — ⛔ every number is Paul's; this plan names the
-shape only:**
+shape only.** ⛔ **ANSWERED 2026-09-23 (§0's table): `depth_reached` [10, 25,
+99]; `dives_done` → `cleanDives`, `CLEAN DIVES`, [5, 20, 50]; `week_lean_well`
+cut.**
 - **`depth_reached`'s top tier collides with `dim_band`** (both read `level`,
   both at 65; MEASURED reach 140). Recommend `dim_band` keeps 65 (a landmark)
   and `depth_reached`'s top tier moves, to a number Paul picks under 140.
@@ -444,8 +448,12 @@ row to close.
   nothing halves anything (MEASURED, §1.3). A §12 wording defect, recorded; N1
   decides the sentence.
 - ⚠ **`C.GAME_VERSION` is `"0.0.10"` while `STATUS.md`'s header says 0.0.11**
-  (MEASURED, grep). Whether the close bumps the constant is Paul's; a planning
-  session writes no code.
+  (MEASURED, grep). ⚠ Worse: `log/CS014.md` and `log/CS015.md` BOTH record
+  0.0.11, and the constant has not moved since CS013. ⛔ **ANSWERED (Paul,
+  2026-09-23):** CS015 is **0.0.12** (its log row corrected in the answering
+  commit); **P1 sets `C.GAME_VERSION` to `"0.0.12"`**; the CS016 close bumps it
+  to **0.0.13**. No test pins the value (MEASURED, grep: four readers, each
+  compares against `C.GAME_VERSION` itself).
 - ⚠ **`_harness.js`'s `EXPORTS` counts 211 quoted names against `STATUS.md`'s
   212.** P1 records what it finds.
 

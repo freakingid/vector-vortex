@@ -9,12 +9,11 @@ and `STATUS.md` automatically, and nothing else unless the prompt names it.
 ⛔ **`ultrathink` appears inside the prompt text where it is wanted.** It is a
 per-turn lever, so it has to be in the pasted message.
 
-⛔ **§0 IS NOT YET ANSWERED.** `PLANNED-FEATURES-CS016.md` §0 carries thirteen
-calls, N1–N13, each with one recommendation. A prompt below that says "N3's
-answer" means whatever Paul wrote in the answer column; ⛔ **a phase that
-reaches an unanswered call stops** (`CLAUDE.md` rule 3). ⚠ **N12 decides the
-changeset's length**: CS016 if the pre-ship achievement pass lands here (four
-phases), CS017 if not (three — P3 below is dropped and P4 becomes P3).
+⛔ **§0 IS ANSWERED (Paul, 2026-09-23): every recommendation, as written.**
+`PLANNED-FEATURES-CS016.md` §0's answer column carries N1–N13; a prompt below
+that says "N3's answer" means what that column says, and ⛔ **a phase re-opens
+none of it**. N12 answered CS016, so the changeset is **four phases** and P3
+stands. N2 took all five candidate rows (8–12).
 
 **Baseline:** CS015 closed at `bea33c8`; CS016 is planned on top of it.
 - `node build.js` → 25 modules + 3 inlined kit, **827,351 bytes** (808.0 KB).
@@ -63,9 +62,9 @@ Plan §2 has the argument. In short:
 
 | Before | What | Whose |
 |---|---|---|
-| **P1** | §0's answer column filled for N1, N2, N3, N4, N5, N11, N13 | Paul |
-| P2 | N6, N7, N8, N9, N10 answered | Paul |
-| P3 | N12 answered CS016, with its three numbers (`depth_reached`'s top tier; `dives_done`'s fact or tiers; `week_lean_well` cut or its par) and the two new rows' names and notes | Paul |
+| **P1** | §0's answer column filled for N1, N2, N3, N4, N5, N11, N13 | ✅ answered 2026-09-23 |
+| P2 | N6, N7, N8, N9, N10 answered | ✅ answered 2026-09-23 |
+| P3 | N12 answered CS016, with its three numbers (`depth_reached`'s top tier; `dives_done`'s fact or tiers; `week_lean_well` cut or its par) and the two new rows' names and notes | ✅ answered 2026-09-23 |
 | P4 | `../coinless-kit` present beside this repo — `test-cs011-p5.js` and `test-cs012-p3.js` SKIP LOUDLY without it; ⛔ a close cannot skip | ✅ MEASURED present, 2026-09-20 |
 
 ### ⛔ The re-records — none
@@ -134,8 +133,9 @@ precondition, never relaxed.**
 > lane, no schedule. ⛔ `GOLDEN_LANES` and `P1_DETERMINISM_HASH` do not move.
 >
 > **2. Record §0.1's findings in `STATUS.md` first**: §12's "half speed" names
-> nothing in the build; `C.GAME_VERSION` `"0.0.10"` against `STATUS.md`'s
-> 0.0.11 (Paul's); the `EXPORTS` count you find.
+> nothing in the build; the `EXPORTS` count you find. ⛔ **Set
+> `C.GAME_VERSION` to `"0.0.12"`** (Paul, 2026-09-23 — CS015 is 0.0.12; plan
+> §0.1); the CS016 close bumps it to `"0.0.13"`.
 >
 > **3. The module (N11).** `src/22-onboarding.js`, in `MANIFEST` directly
 > after `22-meta.js`: `promptScan(state, well, seen, queue)`,
@@ -341,7 +341,8 @@ precondition, never relaxed.**
 >
 > **2. The review.** Read every phase's `log/CS016.md` entry together;
 > compress; move what a later changeset must act on to `STATUS.md`'s reset and
-> the rest into the log's close entry with the version line.
+> the rest into the log's close entry with the version line — **0.0.13**, and
+> `C.GAME_VERSION` bumped to `"0.0.13"` in the same commit.
 >
 > **3. The close.** `STATUS.md` reset for CS017 (ship); `ROADMAP.md`'s CS016 row
 > to shipped with "What CS016 deliberately left"; `DECISIONS.md` gains one
