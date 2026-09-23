@@ -113,7 +113,7 @@ worst, 64 of 64 runs. N1 is the call that decides which sentence the GDD keeps.
 | N9 | **What ends it, and what the player sees** | **Any device input or named action ends it and does nothing else**; so does its game over and `C.ATTRACT_LENGTH`. It draws the board, the HUD and one line, `C.ATTRACT_LINE` ⚠, in the prompt band. Music is the mode's track through the unchanged `musicStateFor()` | **As recommended** |
 | N10 | **The idle timer and the title's live menu** | **Title only**, `C.ATTRACT_IDLE` 20 (MEASURED: already in `C`, read by nothing), counting simulation `dt` on title steps with the struct at rest and no named action. §1.2 V1 MEASURED: no closed test idles 20 s on the title | **Title only** |
 | N11 | **Where the code lives** | **One new module, `src/22-onboarding.js`, after `22-meta.js`** — top-level functions a soak can stub; `23-main.js` wires them. `22-meta.js` stays the only file that calls storage | **`src/22-onboarding.js`** |
-| N12 | **The pre-ship achievement pass: CS016 or CS017** | **CS016, as its own phase (P3)** — the pool-length change is free only before ship and CS017 IS ship. Three threshold calls surfaced; ⛔ **every number is Paul's** | **CS016, P3.** `depth_reached` tiers **[10, 25, 99]**; `dives_done` re-aimed to `cleanDives`, name `CLEAN DIVES`, tiers **[5, 20, 50]** kept; **`week_lean_well` cut** (pool 19); `week_token_trio` **`TOKEN TRIO`** / "TAKE THREE TOKENS IN ONE WELL", `week_thorn_gone` **`THORN CLEARED`** / "SHOOT A THORN DOWN TO NOTHING" |
+| N12 | **The pre-ship achievement pass: CS016 or CS017** | **CS016, as its own phase (P3)** — the pool-length change is free only before ship and CS017 IS ship. Three threshold calls surfaced; ⛔ **every number is Paul's** | **CS016, P3.** `depth_reached` tiers **[10, 25, 99]**; `dives_done` re-aimed to `cleanDives`, name `CLEAN DIVES`, tiers **[5, 20, 50]** kept (⛔ **amended at P3, Paul: [5, 15, 25]** — 50 MEASURED past the front door's reach of 44); **`week_lean_well` cut** (pool 19); `week_token_trio` **`TOKEN TRIO`** / "TAKE THREE TOKENS IN ONE WELL", `week_thorn_gone` **`THORN CLEARED`** / "SHOOT A THORN DOWN TO NOTHING" |
 | N13 | **GDD §19 has no onboarding row** | **P1 adds one** under Core, from §12 of this plan, so the close has something to close | **Yes** — P1 adds the row |
 
 ### N1 — the four-second promise, measured
@@ -412,7 +412,8 @@ Paul's within the ≤ 20 / ≤ 60 budgets.
 **The three threshold calls — ⛔ every number is Paul's; this plan names the
 shape only.** ⛔ **ANSWERED 2026-09-23 (§0's table): `depth_reached` [10, 25,
 99]; `dives_done` → `cleanDives`, `CLEAN DIVES`, [5, 20, 50]; `week_lean_well`
-cut.**
+cut.** ⛔ **AMENDED AT P3 (Paul, 2026-09-23): `dives_done` [5, 15, 25]** —
+`cleanDives` MEASURED 44 at most over the four passes, so 50 failed the gate.
 - **`depth_reached`'s top tier collides with `dim_band`** (both read `level`,
   both at 65; MEASURED reach 140). Recommend `dim_band` keeps 65 (a landmark)
   and `depth_reached`'s top tier moves, to a number Paul picks under 140.

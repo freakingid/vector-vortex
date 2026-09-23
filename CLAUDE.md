@@ -507,7 +507,7 @@ flat object the game builds at the seat** from `state` and `state.tally`;
 `20-achievements.js` reads neither. ⛔ **An unlock pays nothing.**
 
 ⛔ **AN ACHIEVEMENT `id` IS SAVE DATA; ITS THRESHOLD, `name` AND `note` ARE NOT**
-(GDD §15.5). The table is `C.ACHIEVEMENTS` — 23 lifetime rows, an 18-row weekly
+(GDD §15.5). The table is `C.ACHIEVEMENTS` — 23 lifetime rows, a 19-row weekly
 POOL, `perWeek` 5 — and ⛔ **a row is ONE fact `>=` ONE threshold**, so a
 CONJUNCTION is a quantity gated to 0 by its other half and an AT-MOST or a
 WITHOUT is a 0/1 fact with `at: 1`, both built in `facts()`. ⛔ **A per-well

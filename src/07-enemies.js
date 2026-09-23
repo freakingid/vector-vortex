@@ -959,6 +959,8 @@ class Thorn extends Enemy {
     if (this.depth <= 0) {
       this.depth = 0;
       this.dead = true;
+      // ⛔ WRITE-ONLY (CS016 P3, N12): its own `dead` edge, never a kill line.
+      state.tally.thornsDestroyed++;
     }
   }
 

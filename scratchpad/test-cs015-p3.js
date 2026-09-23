@@ -1,6 +1,6 @@
 // test-cs015-p3.js — CS015 P3: the id table and the surface (GDD 10.5, 15.5,
 // 17 item 10, 18; plan §5, A1-A, A5-A, A8, A10-A, R9).
-//  1. The table's shape: 23 lifetime + 18 weekly, ids unique and non-empty, one
+//  1. The table's shape: 23 lifetime + 19 weekly, ids unique and non-empty, one
 //     of tiers/at, no tiered weekly row, every mode a real mode or null, and
 //     every name and note inside the MEASURED draw budget.
 //  2. ⛔ THE VOCABULARY, AS AN ASSERTION OVER THE TABLE, and by SUBSTRING —
@@ -56,17 +56,22 @@ const MONOTONIC = ["          if (reached > (held.lifetimeTiers[row.id] || 0)) {
 // this`, PER ROW — plan §1.3 found one row (`purge_wide`) no board reached and
 // it was CUT, and an aggregate assertion would have hidden it.
 // ⚠ Passes C and D exist because the soaks' driver holds the trigger and
-// spends the Purge on every well, which is the WORST case for three rows:
-// `leanClear`, `purgeHeldRun` and `purgeSavedClears` all read 0 under it.
+// spends the Purge on every well, which is the WORST case for two rows:
+// `purgeHeldRun` and `purgeSavedClears` both read 0 under it.
+// ⛔ RE-MEASURED WHOLE AT CS016 P3 (N12), by the same four passes rebuilt from
+// this header (CS015's probe was a throwaway): +`cleanDives`, +`wellTokens`,
+// +`wellThornsCleared`; `leanClear` and `divesCompleted` left with their rows.
+// Every fact the two builds share read identically before and after P3's edit.
 const REACH = {
-  carrierSplits: 259, cleanStreak: 44, clearOnLastLife: 1, comboPeak: 8,
-  deathlessWells: 57, deepFirstClear: 81, divesCompleted: 59, extraLives: 11,
-  jumpKills: 21, kills: 1100, leanClear: 1, level: 140, lives: 6,
-  lowStartLevel: 42, mimicKills: 21, noThornDeathRun: 1, openCleanClear: 1,
-  openWellsCleared: 20, purgeHeldRun: 1, purgeSavedClears: 59, quietClear: 1,
-  rimSweepKills: 4, ringSetsTaken: 13, ringsTaken: 126, score: 1818410,
-  startDepth: 81, thornChips: 164, tokenKinds: 5, wardenCleanWell: 1,
-  wellCarrierSplits: 9, wellRings: 15, wellsCleared: 60, wellsSeen: 16,
+  carrierSplits: 258, cleanDives: 44, cleanStreak: 55, clearOnLastLife: 1,
+  comboPeak: 8, deathlessWells: 59, deepFirstClear: 81, extraLives: 8,
+  jumpKills: 21, kills: 1153, level: 141, lives: 6, lowStartLevel: 42,
+  mimicKills: 24, noThornDeathRun: 1, openCleanClear: 1, openWellsCleared: 25,
+  purgeHeldRun: 1, purgeSavedClears: 59, quietClear: 1, rimSweepKills: 8,
+  ringSetsTaken: 18, ringsTaken: 162, score: 1824715, startDepth: 81,
+  thornChips: 186, tokenKinds: 5, wardenCleanWell: 1, wellCarrierSplits: 9,
+  wellRings: 11, wellThornsCleared: 7, wellTokens: 4, wellsCleared: 61,
+  wellsSeen: 16,
 };
 
 // ---------------------------------------------------------------------------
@@ -132,8 +137,10 @@ const X0 = build();
   H.eq(LIFE().filter(r => Array.isArray(r.tiers)).length, 9, "nine of them are tiered");
   H.eq(defs.perWeek, 5, "⛔ five weekly rows live in any one week (GDD 15.5)");
   H.assert(POOL().length >= defs.perWeek, `the pool is at least perWeek long (${POOL().length})`);
-  H.assert(Number.isFinite(defs.wellShotPar) && defs.wellShotPar > 0,
-           "⛔ the one weekly row with a free parameter keeps it in C (wellShotPar)");
+  // ⛔ REWRITTEN IN PLACE AT CS016 P3: the one row with a free parameter,
+  // `week_lean_well`, was CUT with its par (N12) — so no parameter remains.
+  H.assert(!("wellShotPar" in defs) && !POOL().some(r => r.id === "week_lean_well"),
+           "⛔ no weekly row carries a free parameter: the shot par left with its row (CS016 P3, N12)");
 
   const ids = ROWS().map(r => r.id);
   H.eq(new Set(ids).size, ids.length, "⛔ every id is unique ACROSS BOTH TABLES: one id is one achievement");
@@ -412,12 +419,14 @@ function quiet(X, level, mode) {
   // A8's table. They stay — P2's facts object is its shipping shape, not P3's
   // to trim — and the SET is pinned here so a phase that adds a FACT without a
   // row, or a row without a fact, moves this line and says why.
+  // ⛔ MOVED AT CS016 P3: `dives_done` was re-aimed at `cleanDives` (N12), so
+  // `divesCompleted` is a fifth unread counter — handed over, not trimmed.
   const unused = [...union].filter(k => k !== "mode" && !named.has(k)).sort();
-  H.eq(J(unused), J(["deaths", "purgesSpent", "shotsFired", "thornDeaths"]),
-       "⛔ exactly CS007's four unread counters are handed over without a row");
+  H.eq(J(unused), J(["deaths", "divesCompleted", "purgesSpent", "shotsFired", "thornDeaths"]),
+       "⛔ exactly CS007's five unread counters are handed over without a row");
 
   // ⛔ TRAP 3: the split between the seats is the point.
-  const perWell = ["wellRings", "wellCarrierSplits", "leanClear", "openCleanClear",
+  const perWell = ["wellRings", "wellCarrierSplits", "wellTokens", "wellThornsCleared", "openCleanClear",
                    "quietClear", "wardenCleanWell", "clearOnLastLife", "cleanStreak", "deepFirstClear"];
   const perRun = ["purgeHeldRun", "noThornDeathRun"];
   for (const k of perWell) {
@@ -433,7 +442,7 @@ function quiet(X, level, mode) {
   H.assert(Object.keys(end[0].f).every(k => k === "mode" || Number.isFinite(end[0].f[k])),
            "and at the run's end");
   // The 0/1 facts really are 0/1.
-  for (const k of perWell.concat(perRun).filter(n => /^(lean|open|quiet|warden|clearOn|purgeHeld|noThorn)/.test(n))) {
+  for (const k of perWell.concat(perRun).filter(n => /^(open|quiet|warden|clearOn|purgeHeld|noThorn)/.test(n))) {
     const vals = seen.filter(s => k in s.f).map(s => s.f[k]);
     H.assert(vals.every(v => v === 0 || v === 1), `⛔ ${k} is a 0/1 fact, because "fewer than" has no >= form (${J(vals)})`);
   }

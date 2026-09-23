@@ -1201,19 +1201,16 @@ const C = {
   // a top tier set at a bot's ceiling is what dropped `purge_wide` (plan A8).
   ACHIEVEMENTS: {
     perWeek: 5,           // ⛔ the rotation's width (GDD 15.5's "5 weekly")
-    // ⚠ The ONE weekly row with a free parameter, and it is a tunable rather
-    // than a threshold the table can own: `leanClear` is 0/1 because "no more
-    // than N" has no `>=` form (22-meta.js). MEASURED over 579 cleared wells in
-    // three front-door probe passes: the fewest shots any well was cleared on
-    // is 106 and the median is ~185, so 120 is about the leanest tenth.
-    wellShotPar: 120,
+    // ⛔ NO SHOT PAR: CS016 P3 cut `week_lean_well` and its `wellShotPar` (N12;
+    // Paul, 2026-09-23) — the only par ever MEASURED came from a driver that
+    // holds the trigger, and no honest number exists without a playtest.
     lifetime: [
       // -- the nine tiered rows: a run's best, banked ------------------------
       { id: "wells_cleared",   name: "WELLS CLEARED",     mode: null,        fact: "wellsCleared",     tiers: [5, 20, 50],
         note: "WELLS CLEARED IN ONE RUN" },
       { id: "kills_total",     name: "ENEMIES DESTROYED", mode: null,        fact: "kills",            tiers: [50, 300, 900],
         note: "ENEMIES DESTROYED IN ONE RUN" },
-      { id: "depth_reached",   name: "DEEPEST LEVEL",     mode: null,        fact: "level",            tiers: [10, 25, 65],
+      { id: "depth_reached",   name: "DEEPEST LEVEL",     mode: null,        fact: "level",            tiers: [10, 25, 99],   // ⛔ not 65: that is dim_band (N12)
         note: "THE DEEPEST LEVEL ONE RUN REACHED" },
       { id: "score_run",       name: "BEST RUN SCORE",    mode: null,        fact: "score",            tiers: [25000, 200000, 1200000],
         note: "THE HIGHEST SCORE ONE RUN REACHED" },
@@ -1221,8 +1218,11 @@ const C = {
         note: "THORN SEGMENTS CHIPPED AWAY IN ONE RUN" },
       { id: "deathless_wells", name: "DEATHLESS WELLS",   mode: null,        fact: "deathlessWells",   tiers: [5, 20, 48],
         note: "WELLS CLEARED WITHOUT DYING, IN ONE RUN" },
-      { id: "dives_done",      name: "DIVES COMPLETED",   mode: null,        fact: "divesCompleted",   tiers: [5, 20, 50],
-        note: "DIVES FLOWN TO THE END, IN ONE RUN" },
+      // ⛔ RE-AIMED AT CS016 P3 (N12): `divesCompleted` was wells_cleared - 1 by
+      // construction. The id is save data and stays; the fact and name are not.
+      // Tiers Paul's at P3: 50 was MEASURED past the front door's reach of 44.
+      { id: "dives_done",      name: "CLEAN DIVES",       mode: null,        fact: "cleanDives",       tiers: [5, 15, 25],
+        note: "DIVES FLOWN IN ONE RUN WITH NO THORN DEATH" },
       { id: "rings_taken",     name: "RINGS TAKEN",       mode: "overdrive", fact: "ringsTaken",       tiers: [10, 40, 100],
         note: "RINGS TAKEN IN ONE RUN" },
       { id: "purge_saver",     name: "PURGE UNSPENT",     mode: null,        fact: "purgeSavedClears", tiers: [1, 5, 25],
@@ -1265,8 +1265,6 @@ const C = {
     weekly: [
       { id: "week_five_wells",     name: "FIVE WELLS IN A RUN", mode: null,        fact: "wellsCleared",      at: 5,
         note: "CLEAR FIVE WELLS IN ONE RUN" },
-      { id: "week_lean_well",      name: "A LEAN CLEAR",        mode: null,        fact: "leanClear",         at: 1,
-        note: "CLEAR A WELL WITHOUT WASTING SHOTS" },
       { id: "week_low_start_deep", name: "DEEP FROM DEPTH 1",   mode: null,        fact: "lowStartLevel",     at: 20,
         note: "REACH LEVEL 20 ON A RUN STARTED AT DEPTH 1" },
       { id: "week_clean_streak",   name: "THREE CLEAN WELLS",   mode: null,        fact: "cleanStreak",       at: 3,
@@ -1299,6 +1297,12 @@ const C = {
         note: "CLEAR A WELL WITH NO PURGE SPENT AND NO DEATH" },
       { id: "week_no_thorn_death", name: "NO THORN DEATH",      mode: null,        fact: "noThornDeathRun",   at: 1,
         note: "END A RUN WITHOUT LOSING A CRAFT TO A THORN" },
+      // ⛔ CS016 P3 (N12; Paul's names and notes): the two rows CS015 P3 had no
+      // fact for, each on one new `tally` counter through the per-well window.
+      { id: "week_token_trio",     name: "TOKEN TRIO",          mode: "overdrive", fact: "wellTokens",        at: 3,
+        note: "TAKE THREE TOKENS IN ONE WELL" },
+      { id: "week_thorn_gone",     name: "THORN CLEARED",       mode: null,        fact: "wellThornsCleared", at: 1,
+        note: "SHOOT A THORN DOWN TO NOTHING" },
     ],
   },
 

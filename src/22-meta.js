@@ -394,8 +394,8 @@ const Meta = (function () {
   //     TABLE still owns the 20 it is compared against;
   //   an AT-MOST or a WITHOUT is a 0/1 fact with `at: 1`, because "fewer than"
   //     has no `>=` form. Each is structural — the last life, a charge unspent,
-  //     a well with no death — never a tuned number, with one exception named
-  //     at `leanClear` below.
+  //     a well with no death — never a tuned number. ⛔ CS016 P3 CUT the one
+  //     exception, the shot par (N12: no honest number exists for it).
   //
   // ⛔ THE TWO SEATS SEE DIFFERENT FACTS, AND THE MODULE'S SKIP IS THE GUARD:
   // a fact that is not a finite number is skipped rather than compared, so the
@@ -417,10 +417,8 @@ const Meta = (function () {
       // ⛔ EVERY FACT HERE HAS A ROW. A fact nobody names is a skip the table
       // can never spend, so it is dead weight rather than a spare part.
       wellRings: d("ringsTaken"), wellCarrierSplits: d("carrierSplits"),
-      // ⚠ THE ONE WEEKLY ROW WITH A FREE PARAMETER (GDD 15.5's "without firing
-      // more than N shots"): N is C.ACHIEVEMENTS.wellShotPar, a tunable like any
-      // other and ⛔ not save data.
-      leanClear: d("shotsFired") <= C.ACHIEVEMENTS.wellShotPar ? 1 : 0,
+      // CS016 P3 (N12): tokens taken and Thorns shot to nothing in this window.
+      wellTokens: d("tokensCollected"), wellThornsCleared: d("thornsDestroyed"),
       openCleanClear: d("openWellsCleared") >= 1 && deathless ? 1 : 0,
       quietClear: d("purgeSavedClears") >= 1 && deathless ? 1 : 0,
       wardenCleanWell: d("jumpKills") >= 1 && deathless ? 1 : 0,
@@ -448,8 +446,10 @@ const Meta = (function () {
       mimicKills: t.mimicKills, carrierSplits: t.carrierSplits,
       ringsTaken: t.ringsTaken, ringSetsTaken: t.ringSetsTaken,
       tokenKinds: bitCount(t.tokenKindsMask),
-      // A conjunction, gated to 0 by its other half (above).
+      // Conjunctions, each gated to 0 by its other half (above). `cleanDives`
+      // is CS016 P3's (N12): the dives of a run no Thorn has killed in.
       lowStartLevel: state.startDepth === 1 ? state.level : 0,
+      cleanDives: t.thornDeaths === 0 ? t.divesCompleted : 0,
     }, extra);
   }
 

@@ -153,6 +153,8 @@ function updateTokens(state, well, dt) {
       // has taken, one bit per key of C.TOKEN_WEIGHTS in its ORDER — at the
       // pickup, never in collectToken(): the effect side names no weight.
       state.tally.tokenKindsMask |= 1 << Object.keys(C.TOKEN_WEIGHTS).indexOf(t.kind);
+      // ⛔ WRITE-ONLY (CS016 P3, N12): how many, beside which kinds.
+      state.tally.tokensCollected++;
       collectToken(state, t);
       gone++;
     }

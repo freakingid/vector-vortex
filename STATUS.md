@@ -1,7 +1,7 @@
 # Vector Vortex — STATUS
-Version: 0.0.12 · Changeset: **CS016 P2 landed 2026-09-23** · next: **CS016 P3**
-(the pre-ship achievement pass) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 ·
-Tokens: 5/5 effects · Achievements: 23 lifetime + 18 weekly
+Version: 0.0.12 · Changeset: **CS016 P3 landed 2026-09-23** · next: **CS016 P4**
+(the fourteenth soak, the review, the close) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 ·
+Tokens: 5/5 effects · Achievements: 23 lifetime + 19 weekly
 
 ## Phase ledger
 
@@ -16,6 +16,7 @@ did.
 | Planning | 2026-09-20 — `PLANNED-FEATURES-CS016.md` and `IMPLEMENTATION-PHASES-CS016.md` written at `bea33c8`; §0 answered by Paul 2026-09-23: every recommendation, N2 rows 8–12 all in, N12 in CS016 (four phases) |
 | P1 | 2026-09-23 — `src/22-onboarding.js`, `C.PROMPTS` (12 rows) and the band, the `onboarding` key v1, GDD §12 restated, §19's Onboarding row; `test-cs016-p1.js` (159); 79/79 green |
 | P2 | 2026-09-23 — attract mode: `attractDrive()`, the title idle clock, the demo's skips and endings, six `C.ATTRACT_*` constants; GDD §12, a `CLAUDE.md` rule; `test-cs016-p2.js` (251); 80/80 green |
+| P3 | 2026-09-23 — the pre-ship achievement pass: two `tally` counters, two per-well facts, `cleanDives`, two pool rows, `week_lean_well` cut, `depth_reached` [10, 25, 99], `dives_done` [5, 15, 25]; `REACH` re-measured; `NEXT-STEPS.md`'s entry deleted; GDD §15.5; `test-cs016-p3.js` (67); 81/81 green |
 
 **P1 — the prompts, the band and the onboarding key.** Built N1–N5, N11, N13
 as answered; nothing re-opened. `promptScan()` / `promptStep()` / `drawPrompt()`
@@ -51,12 +52,26 @@ Two calls inside the answers: `C.ATTRACT_PURGE_EVERY` 5.2 s ⚠ (N6 named no N),
 and `C.ATTRACT_SEED` **1** ⚠ (measured over ten seeds). One `SKIPPED-PLAYTESTS.md`
 entry (legible as a demo; silent on a fresh load).
 
+**P3 — the pre-ship achievement pass.** Built N12 as answered, with one amendment:
+⛔ **`cleanDives` MEASURED 44 at most** over `REACH`'s four passes, against the
+answered top tier of 50, so the row failed the per-row gate. That was reported
+and not lowered. ✅ **Paul, 2026-09-23: `dives_done` [5, 15, 25]** (the plan's
+§0 is amended to match). Rows appended at the pool's end. ⛔ **One text Paul did not
+write**: `dives_done`'s note, now "DIVES FLOWN IN ONE RUN WITH NO THORN DEATH",
+because the old note described the old fact. ⚠ Paul's to reword. §11's P3 edit
+landed as predicted (`REACH` re-measured in full). ⛔ **Three closed edits the
+table did not name** (findings, each forced by an answer, each rewritten in
+place): `test-cs015-p3.js`'s `wellShotPar` assertion (the par left with its row),
+its pinned unread-fact set (+`divesCompleted`), and its per-well list
+(`leanClear` → the two new facts). `test-cs015-p1.js` and `-p4.js`: none.
+`P1_DETERMINISM_HASH`, `GOLDEN_LANES`, kill lines: unmoved.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (26 modules + 3 inlined kit,
-  **831.2 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
+  **832.4 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
   fails the build.
-- `node scratchpad/run-all.js`: **80 files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **81 files, all green, zero skips.**
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
   ⛔ A timeout is not a red — re-run the file alone before treating it as one.
 - **CS001–CS015 are closed; each has a `log/CS0##.md`.** ⛔ **The Classic roster
@@ -159,18 +174,15 @@ phase reads the plan's §0 answers, not this block.
   screen says a ring is worth going to) and ⚠ **CS015's achievements** — there
   is no toast (A1), so an unlock is HEARD (`unlock`) and never seen until the
   player opens the screen.
-- ⛔ **A PRE-SHIP ACHIEVEMENT PASS IS OWED, CS016 OR CS017, SPECIFIED IN
-  `NEXT-STEPS.md`** (Paul, 2026-09-20). ⛔ **No `id` moves in it.** Plan §9's two
-  weekly rows that had no fact — *collect three tokens in one well*, *chip a
-  Thorn to nothing in one pass* — each owe ONE new `tally` counter (tokens
-  collected; Thorns destroyed) and one pool row; and three threshold calls,
-  ⚠ every one Paul's: `depth_reached`'s top tier collides with `dim_band`,
-  `dives_done` is MEASURED `wells_cleared - 1` with the same tiers, and
-  `wellShotPar` 120 came from a trigger-holding driver. ⛔ **Adding a pool row
-  reshuffles which five a week shows (the walk reads the LENGTH), so it is free
-  only while no player has a save.** ⚠ A counter added at a kill line owes
-  `tallyKill()`'s rule and the five pinned kill-line strings.
-- ⛔ **THE IDS ARE SAVE DATA**: 23 lifetime and 18 weekly, never renamed; a
+- ✅ **The pre-ship achievement pass shipped at P3** (GDD §15.5). ⛔ **After
+  ship the pool's LENGTH is frozen too**: the rotation walks it, so a row
+  added or cut reshuffles every week's five against live saves.
+- ⛔ **`REACH`'S PROBE IS NOT IN THE REPOSITORY.** CS015's four passes were a
+  throwaway, and P3 rebuilt them from `test-cs015-p3.js`'s header
+  (`log/CS016.md` has the recipe). The rebuild reproduced CS015's figures to
+  within a few percent. The next re-measure rebuilds it again unless Paul wants
+  it kept as a tool.
+- ⛔ **THE IDS ARE SAVE DATA**: 23 lifetime and 19 weekly, never renamed; a
   threshold, a `name` and a `note` are not. `achievements` is **v1**, "lifetime"
   is one run banked (`lifetimeTiers` is monotonic); ⚠ real totals stay possible
   as an ADDITIVE v2, new ids beside these.
@@ -179,8 +191,9 @@ phase reads the plan's §0 answers, not this block.
   `SEAT_END` and `-p4.js`'s `SEATS_OUT` (two), each in the build exactly once.
 - ⛔ **The per-well window and the clean streak move ABOVE the eligibility
   gate**, or a bench run hands the next well a doubled delta; both are re-minted
-  by `runStarted()`. ⚠ **Four facts have no row** — `deaths`, `purgesSpent`,
-  `shotsFired`, `thornDeaths` — and `test-cs015-p3.js` pins that exact set.
+  by `runStarted()`. ⚠ **Five facts have no row** — `deaths`, `divesCompleted`,
+  `purgesSpent`, `shotsFired`, `thornDeaths` — and `test-cs015-p3.js` pins that
+  exact set.
 - ⛔ **THE MENU SHAPES A SCREEN HAS TO FIT INTO**: the title has **five rows**
   (PLAY, OPTIONS, SCORES, PROFILE, ACHIEVEMENTS), game over **three lines**, and
   ⛔ **OPTIONS HAS ELEVEN ROWS WITH A SEVEN-ROW WINDOW** — a row goes before
@@ -229,7 +242,7 @@ phase reads the plan's §0 answers, not this block.
   ONE**; order a price table's branches subclass-first. ⚠ **THE MIMIC IS ON
   PROBATION AND CUTS IN ONE ROW** (GDD §21 #6) — ⚠ and `mimic_kill` is a shipped
   id, unearnable for new players if it goes. ⛔ `test-registry.js`: `enemies` 9,
-  `enemyKinds` 13, `state` **28** keys, `tally` **21** counters inside one.
+  `enemyKinds` 13, `state` **28** keys, `tally` **23** counters inside one.
 - ⚠ **`RING_POINTS`, `RING_ARC_LANES`, `RING_LANE_STEP` and the five visual
   values are PROVISIONAL**; ⛔ **`DIVE_TIME_OD` 4.0 and `DIVE_RINGS_MAX` 6 are
   NOT** (a ceiling may only come DOWN).
@@ -246,7 +259,7 @@ phase reads the plan's §0 answers, not this block.
   is a no-op where the thing does not exist. ⛔ **Repairs are the DRIVER or the
   FIXTURE (playing longer), never the build, a lowered level or a relaxed
   assertion.** ⚠ **That driver holds fire and spends the Purge**, so it cannot
-  reach `week_lean_well`, `week_purge_held` or `purge_saver`'s upper tiers.
+  reach `week_purge_held` or `purge_saver`'s upper tiers.
 - ⛔ **A CLOCK READ IS A MOVER.** Every closed front-door soak but the thirteenth
   fakes `Date.now` per CALL and RESTARTS on a time seed, so a phase that adds a
   clock reader plays those sessions differently (CS015 P2 repaired
@@ -349,9 +362,9 @@ phase reads the plan's §0 answers, not this block.
 - ✅ **`CLAUDE.md` is 36,926 bytes** against its 50 KB ceiling. ⚠ The valve and
   the ban on standing sweeps stand.
 
-## Next up — CS016 P3
+## Next up — CS016 P4
 
-The pre-ship achievement pass (N12 and Paul's three numbers), from
-`IMPLEMENTATION-PHASES-CS016.md`'s P3 prompt. ⛔ A new counter at the clear edge
-sits inside or beside P2's `if (!attract)` block — a demo's `tally` is its own
-`state`, but nothing a demo does may reach a seat.
+The fourteenth soak, the review and the close, from
+`IMPLEMENTATION-PHASES-CS016.md`'s P4 prompt. ⛔ A new FILE, never a widened
+closed soak. ⛔ The close bumps `C.GAME_VERSION` to `"0.0.13"` and indexes
+CS016's calls in `DECISIONS.md`, P3's amended `dives_done` tiers among them.

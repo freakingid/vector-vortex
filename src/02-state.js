@@ -381,13 +381,20 @@ function newState() {
     //                      taken, beside `divesCompleted`
     //   tokenKindsMask     collectToken() — ⚠ a BITMASK over C.TOKEN_WEIGHTS'
     //                      key order; the fact is its bit count
+    //
+    // ⛔ CS016 P3's TWO (N12, the pre-ship pass), each for one weekly row:
+    //   tokensCollected    updateTokens()'s pickup, beside `tokenKindsMask`
+    //   thornsDestroyed    Thorn.chip()'s own `dead` edge — ⛔ NOT a kill line:
+    //                      a Thorn dies inside its own onShot, so tallyKill()
+    //                      is not its seat, and the Purge and the Dive's
+    //                      termination set `dead` without a chip
     tally: {
       deaths: 0, wellsCleared: 0, purgesSpent: 0, divesCompleted: 0,
       thornDeaths: 0, shotsFired: 0, kills: 0, spawnBlockedTicks: 0,
       thornChips: 0, deathlessWells: 0, purgeSavedClears: 0, openWellsCleared: 0,
       wellsSeenMask: 0, extraLives: 0, rimSweepKills: 0, jumpKills: 0,
       mimicKills: 0, carrierSplits: 0, ringsTaken: 0, ringSetsTaken: 0,
-      tokenKindsMask: 0,
+      tokenKindsMask: 0, tokensCollected: 0, thornsDestroyed: 0,
     },
   };
 }
