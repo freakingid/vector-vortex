@@ -1314,8 +1314,9 @@ const C = {
 
   // ---- Build / debug ------------------------------------------------------
   // ⚠ 0.0.2 was never written here (log/CS006.md), and 0.0.11 never was either:
-  // CS015 is 0.0.12 (Paul, 2026-09-23; log/CS016.md, P1), CS016 0.0.13.
-  GAME_VERSION:         "0.0.13",
+  // CS015 is 0.0.12 (Paul, 2026-09-23; log/CS016.md, P1), CS016 0.0.13, and
+  // CS017 — ship — 1.0.0 (plan S8, Paul 2026-09-23).
+  GAME_VERSION:         "1.0.0",
   // ⛔ THE DEBUG BENCH'S ONE SWITCH (CS017 P2; plan S7-B, Paul 2026-09-23). It
   // gates the EIGHT bench bindings in 23-main.js's ACTION_KEYS — the six spawn
   // digits `1`–`6`, `0` (spawnRow) and `w` (cycleWell) — and nothing else.

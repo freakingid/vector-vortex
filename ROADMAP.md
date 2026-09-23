@@ -29,7 +29,9 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS014** | ✅ **Shipped 2026-09-20.** The ring-flight Dive, hard-capped at 4 s / 6 rings: a fourth mode flag `rings` that is the whole gate AND the whole cut, `diveTime()` over `C.DIVE_TIME_OD`, six rings laid rim-first on a lattice of the well and constants alone, a take pass that is a lane match inside a depth crossing, `C.RING_POINTS` unmultiplied — and **the Dive's visual, in BOTH modes**, plus `ringTake` / `ringMiss` and the twelfth soak. Three phases, as planned | §5, §7, §13, §14.5, §19 |
 | **CS015** | ✅ **Shipped 2026-09-20.** Achievements, local-only: `createAchievements()` in `20-achievements.js` as kit-achievements' draft (the table handed over as data, the clock injected), the `achievements` key v1 per profile, the UTC ISO week and a stride-walk rotation, thirteen write-only `tally` counters and two seats (the clear edge and the run's end) behind the one gate, **the id table — 23 lifetime ids and 18 weekly, save data from P3 on and every row MEASURED reachable** — the ACHIEVEMENTS screen off the title and OPTIONS, the `unlock` sound, and the thirteenth soak. Four phases, as planned | §10.5, §15.5, §17 items 10 and 12, §19 |
 | **CS016** | ✅ **Shipped 2026-09-23.** Onboarding: GDD §12's four-second promise MEASURED against level 1 and restated to what ships (no base, lane or schedule moved); **twelve first-run prompts** — §12's seven and five rows CS013–CS015 left owing — once per profile in a band under every rim, from `src/22-onboarding.js`'s board-read triggers, on a new `onboarding` key written only at the seats that already write; **attract mode**, the title idled 20 s into a fixed-seed Overdrive demo that opens no run and moves no storage byte; the **pre-ship achievement pass** (two counters, two pool rows, one cut, two re-aimed tiers, `tools/reach-probe.js`); and the fourteenth soak. Four phases, as planned | §10.4, §12, §15.1, §15.5, §17 items 10 and 12, §19 |
-| **CS017** | Ship: performance budget on both targets, device matrix, 100-run soak, legal sweep, acceptance-criteria sweep | §17, §18, §19 |
+| **CS017** | ✅ **Shipped 2026-09-23 — 1.0.0.** Ship, with no playtest: GDD §17's budget restated to the worst board the build can produce and MEASURED by `tools/perf-probe.js` (headless Chromium, frame cost and bytes per `draw()` as data), the canvas work gated by counter, every allocating expression on the draw path removed; the debug bench behind `C.DEBUG_KEYS` (off in the shipped build) and traverse-and-stop asserted per device; the Mimic KEPT on a measurement; the legal sweep (the package scanned clean; the repository goes private, Paul's); §19's six rows each given an at-ship verdict block, every hardware half a skipped playtest; the itch script's zip fallback; `C.GAME_VERSION` 1.0.0; and the fifteenth soak, §17 item 12's hundred runs in one file. Four phases, as planned | §14.6, §17, §18, §19, §21 #6 |
+
+⛔ **CS017 CLOSES THE ROADMAP** (Paul's S14): no CS018 row is written. Post-ship work starts from `STATUS.md`'s carried tasks and `NEXT-STEPS.md`, under a new plan.
 
 ⛔ **The sequence above has been renumbered +1 twice, and the second time is the
 current one.** The first landed with CS004's split (2026-08-30):
@@ -53,7 +55,7 @@ left CS011 for a new **CS015**, so onboarding became CS016 and ship CS017. The
 sweep read every live `CS015` / `CS016` pointer and every "achievements are
 CS011's" pointer. `log/` and `archive/` were not swept, for the same reason.
 
-**CS001 through CS016 are closed.** Their narratives are in `log/CS0##.md`;
+**CS001 through CS017 are closed; the game shipped at 1.0.0.** Their narratives are in `log/CS0##.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -512,6 +514,43 @@ the achievement pool's LENGTH is frozen with its ids. Still unowned: the pad-onl
 silence, the VOICE bus, the Surger tone's 1.106 peak, the whole palette and the
 HUD sizes, F1 and F2.
 
+**What CS017 shipped against the row.** ⛔ **Every hardware clause was split in
+two, and only the half a machine can measure was claimed**: the budget board's
+frame cost (4.3 ms p50 at 1× CPU, ~18 ms at 4×, software raster) and bytes per
+`draw()` are `tools/perf-probe.js`'s DATA, the suite holds the canvas WORK at
+156 strokes and 8 text calls by counter, and "60 fps on a 2019 laptop and a
+2021 phone", traverse-and-stop by hand, the two other browsers and every "by
+ear" are `SKIPPED-PLAYTESTS.md` entries. ⛔ **§17's allocation sentence met a
+`CLAUDE.md` invariant and lost**: it is scoped to the draw path, where every
+allocating expression is gone (four sites, then `wellBandColor()`'s loop, then
+the HUD and game-over strings, both by Paul's addenda). ⛔ **No key a player can
+press voids a run**: the bench's eight bindings exist only in a flagged build,
+and a sweep found one closed file that had gone VACUOUS without going red. The
+Mimic is KEPT: for a player who trusts their own shots, a reflection kills less
+often per instance than a Weaver bolt or a Warden. GDD §19 carries an at-ship
+block per row — 45 clauses, none ✗ at the close — and **§17 item 12's hundred
+runs were met in one file for the first time**, all sixteen wells played.
+⛔ **No simulation line moved in any phase**: `P1_DETERMINISM_HASH` 1229033515
+and `GOLDEN_LANES` stand, as they have since CS009.
+
+⚠ **What CS017 deliberately left.** **Nothing was tuned** — not the glow's two
+passes (the lever if a phone ever measures slow, S4-C), not the director's
+weights (S11), not the Mimic's dodge in the soaks' driver and `attractDrive()`,
+which MEASURED worse than no dodge for a bot. **The engine's own allocation**
+under `entityPoints()` (~5 KB a budget frame, V8's boxed doubles) is recorded,
+not chased (S3-B). **Ten coverage gaps the §19 sweep named** stay open —
+§17 item 7's loop one short, `pulse`'s A→B→C, the stick at one deflection,
+the shot's throat fade, no `dist/`-vs-`src/` slice, `TZ` unpinned, level 1's
+first seconds measured once, `INT_*` / `FILTER_*` unpinned — because new
+coverage belongs in a new changeset's file. **Paul's, outside the repo**: the
+repository made private, the itch page's copy, the upload. **Carried, and
+none of it ship's** (S13): Paul's one lab session (`drive` and five cues), the
+kit backports, the pad-only silence, the VOICE bus, the Surger tone's 1.106
+peak, the palette and HUD sizes, `glow-lab`'s audition, F1, F2, the four
+unreachable entity cases, and whether the headroom gate should bound the
+limiter's input. ⛔ **Frozen at ship**: the 23 lifetime and 19 weekly
+achievement ids and the pool's length.
+
 ---
 
 ## Why this order
@@ -619,7 +658,7 @@ modes, so cutting the rings leaves a Classic dive that still reads as a flight.
 | #1 Dim band (§3.7) | Keep as specced: levels 65–80 at `DIM_BAND_ALPHA` 0.18, lanes lighting on occupancy, shot travel and Surger charge. Spend no tuning time on it — the renderer handles lane occupancy anyway, so the band is a few lines on top of work already required. Re-audition only if telemetry ever shows a player past level 65. | CS001 P3 — **shipped** |
 | #4 Achievements | Local-only. The evaluator returns a payload-shaped object from day one, so server-backing later is wiring rather than a rewrite. | CS015 (moved from CS011, Paul's M4) |
 | #5 Aggregate telemetry | Strictly local CSV export. Nothing is posted anywhere. It is a tuning instrument and explicitly not anti-cheat; a destination adds a privacy surface for no tuning benefit. | CS007 P4 — **shipped**; ⛔ persistence is CS011's |
-| #6 Mimic | Build it. ~100 lines against an existing shot path, and the probation verdict needs a playtest rather than an argument. Cut it in CS017, without ceremony, if it reads cheap. | CS013, verdict in CS017 |
+| #6 Mimic | Build it. ~100 lines against an existing shot path, and the probation verdict needs a playtest rather than an argument. Cut it in CS017, without ceremony, if it reads cheap. | CS013; ✅ **KEPT at CS017** (S6, on a measurement — the playtest stays skipped) |
 | #7 Track count | Three at launch: `title`, `pulse`, `drive`. `deep` and `rush` are new table entries with no code change, so they are post-ship content, not a scope cut. | `title`, `pulse`: CS009 — **shipped**. `drive`: **CS012** (Paul's A5, 2026-09-16) |
 
 ---

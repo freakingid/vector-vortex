@@ -1,404 +1,262 @@
 # Vector Vortex — STATUS
-Version: 0.0.13 · Changeset: **CS017 P3 landed 2026-09-23** · next: **P4** (§0 answered) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
-Tracks: 3/5 · Tokens: 5/5 effects · Achievements: 23 lifetime + 19 weekly ·
-Prompts: 12
+Version: **1.0.0 — SHIPPED** · CS017 closed 2026-09-23 · **no changeset in flight; the ROADMAP is closed** (Paul's S14) ·
+Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 · Tokens: 5/5 effects ·
+Achievements: 23 lifetime + 19 weekly (**frozen**) · Prompts: 12
+
+## What this file is now
+
+⛔ **A POST-SHIP FILE.** CS001–CS017 are closed, each with a `log/CS0##.md`;
+CS017's ledger, phase entries, review and **this file's pre-close text,
+verbatim**, are in `log/CS017.md`. There is no plan in flight and no next
+phase. ⛔ **Post-ship work is a PATCH, and a patch is a changeset**: a planning
+session first (`PLANNED-FEATURES-CS018.md` + `IMPLEMENTATION-PHASES-CS018.md`),
+then build phases, then a close — `CLAUDE.md`'s three session kinds, unchanged.
+Its own `STATUS.md` ledger starts here, under "Phase ledger".
+
+⚠ **PAUL'S, OUTSIDE THE REPO, BEFORE THE ITCH PAGE GOES LIVE** (S10, S12):
+make `github.com/freakingid/vector-vortex` **private** (it is PUBLIC, and 8 live
+documents name the original on ~38 lines); write the itch page's copy (no file
+here can scan it — GDD §18.6); run `bash package-for-itch.sh` and upload
+`dist/vector-vortex-itch.zip` (untracked; ~287 KB; three files, scanned clean).
 
 ## Phase ledger
 
-⛔ **CS016's ledger, reasoning, mutation records, the fourteenth soak and the
-CLOSE REVIEW moved to `log/CS016.md`.** This file is reset for CS017 and carries
-only what a CS017 session must act on. ⛔ `log/` is not session context: pull one
-file in only when a question genuinely needs project history, and say that you
-did.
-
-| Phase | Landed |
+| Changeset | Landed |
 |---|---|
-| Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14; ✅ **§0 answered 2026-09-23 — every recommendation**; S9 keeps the current credits |
-| P1 | ✅ 2026-09-23 — the budget, measured: `tools/perf-probe.js`; the four draw-path allocators cached (+`C.PROMPT_FADE_STEPS`); `test-cs017-p1.js` (counter gate 156 strokes / 8 text calls, five sites mutation-checked, played-session hash); GDD §17's budget restated; ⚠ three more draw-path allocators found — `wellBandColor()`'s loop rewritten (Paul's S3 addendum), the HUD text and game-over lines cached (second addendum, after P2) |
-| P2 | ✅ 2026-09-23 — the bench behind `C.DEBUG_KEYS` (`false` ships; the eight bindings only in a flagged build, the bench's functions kept); V3's 17 closed repairs, exactly; `test-cs017-p2.js` (the eight unbound and inert in the shipped build, bound in a flagged one; traverse-and-stop per device on a closed and an open well); GDD §9.5, §10.5, §19 Core; `w` stays bindable (S7 addendum, Paul) |
-| P3 | ✅ 2026-09-23 — the verdicts and the sweeps: the Mimic KEPT (S6); credits unchanged (S9); S10-B, nothing in the repo; §19 Audio's sweep clause restated (S11); the itch script's zip fallback, packaged (S12); four `SKIPPED-PLAYTESTS.md` entries; **GDD §19's six at-ship blocks, 45 clauses: 31 ✅, 14 ◐, one ✗ (item 12, P4's)**; `test-cs003-p2.js`'s vacuous pass repaired |
+| — | none in flight |
 
-**Planning (2026-09-23).** Measured at `867ebd1`: suite 82 green, 0 skips,
-282 s; every number the phases build on is in the plan's §1. Findings below,
-under "What CS017 must act on".
+## Working / verified (MEASURED at the CS017 close)
 
-**P1 (2026-09-23).** S1a, S2, S3-A, S4-A built as answered; no closed file
-edited, `EXPORTS` 218. `tools/perf-probe.js` (Node + headless Chromium, no
-npm) reads boot health, bytes per `draw()` and uncapped frame cost; the
-counter gate (156 strokes, 8 text calls) did not move with the fixes, and a
-played session hashes identically against the old lines. S3's rule is met
-whole after two addenda (below). Reasoning, numbers and mutants: `log/CS017.md`.
-
-**P2 (2026-09-23).** S7-B and S1 (c) built as answered. ⛔ **The bench is no
-longer a shipped surface**: `C.DEBUG_KEYS` `false` leaves the eight bench keys
-unbound (they reach neither the struct nor a named action), so no key a player
-can press voids a run's eligibility; `t`, `e`, `p`, Escape are bound in both
-builds. Flag off, **17 closed files red — V3's set exactly**; each repaired by
-a `mutate` flipping the flag (13 files) or, in `test-cs016-p2.js`, the three
-bench enders rewritten in place as "unbound, the demo runs on".
-`test-cs002-p1.js`'s list still presses `w`; its hash reads **1764508517**
-before and after. `test-cs008-p7.js`'s unread red was the flag, through
-`reservedKey()` — and a finding (below). `test-cs017-p2.js`, 125 assertions,
-~0.1 s, eight mutants red. `EXPORTS` 218, no harness edit. Reasoning, the red
-set and the mutants: `log/CS017.md`.
-
-**P3 (2026-09-23).** S6-A, S9, S10-B, S11-A, S12-A built as answered; `src/`
-moved by comments only. GDD §19's sweep was written from the suite, every
-cited line printed from its file: **31 ✅, 14 ◐, one ✗** (§17 item 12, P4's
-soak). ⚠ **Found: `test-cs003-p2.js` passed VACUOUSLY since P2** — its trap
-presses `w`, which P2 unbound, and a repair set measured by "goes red" cannot
-see a file that stays green. Repaired in P2's form (the flag by `mutate`) with
-a fixture that every press changed the well (red without it: 0 of 18); no
-other file presses a bench key unflagged (grep). ⚠ Ten coverage gaps recorded,
-not fixed (new coverage belongs in a new file): below. ✅ **Taken for P4
-(rule 3)**: the fifteenth soak also asserts all sixteen wells played (plan §6).
-The package: 287,446 B, three files, scanned clean. perf-probe this phase:
-4.3 ms p50 at 1×, 17.8 / 34.2 ms p50 / p95 at 4×, boot healthy. Reasoning and
-the findings in full: `log/CS017.md`.
-
-## Working / verified
-
-- `node build.js` produces `dist/vector-vortex.html` (26 modules + 3 inlined kit,
-  **836.7 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
-  fails the build.
-- `node scratchpad/run-all.js`: **84 files, all green, zero skips** (273 s, P3).
-  ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
-  ⛔ A timeout is not a red — re-run the file alone before treating it as one.
-- **CS001–CS016 are closed; each has a `log/CS0##.md`.** ⛔ **The Classic roster
-  is complete at six and GDD §6.2's variants at three**; ⛔ **all five of GDD
-  §4.5's death conditions are live in BOTH modes.**
-- **CS012–CS014 shipped OVERDRIVE WHOLE, CS015 ACHIEVEMENTS WHOLE and CS016
-  ONBOARDING WHOLE** (2026-09-17 … 09-23). What a phase must still obey is below
-  and in `CLAUDE.md`; the narrative is `log/CS012–016.md`.
-- ✅ **GDD §19's OVERDRIVE, META AND ONBOARDING ROWS ARE MET, every item**
-  (Onboarding's, added by CS016 P1, closed at the CS016 close). ⚠ **Audio's "filter sweep audible end to end" is
-  the document's one remaining ✗** and it is Paul's D6: the highest reading ever
-  measured is **0.6860** (CS013 P5).
-- ⛔ **FOURTEEN SOAKS, EACH PROVING A DIFFERENT THING** — `-cs003-p5` …
-  `-cs007-p5`, then `-cs008-p8`, `-cs009-p6`, `-cs010-p5`, `-cs011-p6`,
-  `-cs012-p6`, `-cs013-p5`, `-cs014-p3`, `-cs015-p4`, `-cs016-p4`. ⛔ **A new
-  changeset's is a FIFTEENTH file, never a widened one.**
-- ⛔ **`test-cs006-p5.js` carries the count-based no-draw rule**, a function of
-  the LEVEL: `spawnEnemy`'s 1 plus `pickSpawnLane`'s `[1, C.SPAWN_LANE_TRIES]`.
-- ⛔ **`GOLDEN_LANES`' first SIXTEEN entries are the ORIGINAL `9ebd27b`
-  recording** (`test-cs004-p1.js`), held by a prefix assertion; CS008 P1
-  appended `2, 5`. ⛔ **Any other move is a defect, not a baseline.**
-- ⛔ **`P1_DETERMINISM_HASH` is the one baseline that moves, and it is
-  CROSS-FILE** (`test-cs006-p2.js` runs `test-cs005-p5.js` in a child process).
-  It stands at **1229033515**, unmoved through CS009–CS016. ⛔ Re-record once
-  per change, one named cause at the assertion.
-- ⛔ **On a boundary rider the LATTICE is where §17 item 3 stands, not the speed
-  bound** (`RATIONALE.md#boundary-lattice`).
-- ⛔ **`AudioSys.ctx` is null until a key, click or lifted touch**, and every
-  audio entry point returns early on it. `buildGame({ audio: true })` installs
-  the recording fake. ⛔ **A gesture is a DOM event**: `G.input.keyDown()` is not
-  one, so a test wanting audio attaches `fakeTarget()`s and fires `keydown`.
-  ⚠ So a fresh load's demo is SILENT: the gesture that opens audio ends it.
-- ⛔ **A seat writes no `state` and draws nothing.** ⛔ The headroom gate
-  (`test-cs009-p5.js`, ⚠ provisional) is D16's limiter-curve model — 0.450
-  against `pulse` 0.3512, `title` 0.3408, `drive` 0.3505 — and holds only at the
-  rendered settings, so `test-cs010-p1.js` pins `C.MUSIC_LIMIT` to D2's literals.
-- ⚠ **SETTLED — MUSIC IS STRUCK, NEVER SWELLED** (Paul, 2026-09-16). ✅ The lab
-  picks are ported for `title` and `pulse`; ⚠ `pulse` loops at 72 s, `drive` 62.6.
-- ⛔ **Read GDD §6.5 before adding an entity.** NINE contract fields (plus
-  `points()`), the wiring points, the Dive — and ⛔ **neither a token nor a RING
-  is on that table**: no contract field, no `ENEMY_KINDS` row, its own home.
-- `tools/music-lab.html` and `tools/sfx-lab.html` are the porting sources for
-  `17-audio-tracks.js` and `C.SFX`, bound to the build by text identity;
-  `well-lab` (⛔ the visual audition has not happened) and `feel-lab` complete
-  the set; `reach-probe.js` and `perf-probe.js` are Node tools (data, never a
-  gate; `run-all.js` runs neither). ⛔ **A new `SFX_KILL_PITCH` voice is a THREE-file edit**: `C`, BLOCK
-  SFX and the `PITCH_*` tables. ⛔ **`C.SFX` is 28 events, `C.SFX_KILL_PITCH`
-  11 voices**; a new event owes the lab a brief, an A label, 1–2 alternates and
-  an in-context sequence, and is ONE line starting `    name:`. **Four** lab
-  copies of `C` are pinned to the build (`test-cs010-p3.js`, `-cs014-p2.js`'s
-  `LAB.dive`).
-
-## Known issues
-
-### What CS017 must act on
-
-⛔ **CS017 is SHIP, PLANNED, and §0 is ANSWERED** (Paul, 2026-09-23, every recommendation; `PLANNED-FEATURES-CS017.md`). ⚠ **S10 is Paul's own action: make the GitHub repo private before the itch page goes live.**
-Reasoning for everything CS016 built is in `log/CS016.md`; the rules are in
-`CLAUDE.md`.
-
-⚠ **Found by the planning session (2026-09-23), not worked around** — each
-has a §0 call or a note in the plan:
-- ⚠ **The GitHub repo is PUBLIC** and 8 live files name the original or its
-  maker on 38 lines (GDD §18.1 says "docs"); the shipped package and `README.md`
-  are clean (S10).
-- ✅ Closed: the itch script's `zip` (P3, S12), the stray bench digit (P2,
-  S7-B), §17's "full particles" and "no per-frame allocation" (P1, S2/S3).
-- ⚠ **The soaks' MimicShot dodge — and `attractDrive()`'s port of it — measured
-  WORSE than no dodge for a bot** (0.274 against 0.125 kills per reflection).
-  No call; recorded.
-- ⚠ **`package.json` says `"0.0.1"`** (P4, S8). ✅ §19's six rows carry an
-  at-ship block (P3).
-- ⚠ **Start Depth options are odd** (1, 3 … 29): a driver asking for an even
-  depth silently gets row −1, i.e. level 1.
-
-- ⛔ **A CLOSED FILE CAN GO VACUOUS WITHOUT GOING RED** (P3, `test-cs003-p2.js`):
-  a change that unbinds, stubs or gates something a closed file DRIVES needs a
-  grep for the file's presses, not only the red set.
-- ⚠ **§19's gaps at ship (P3 sweep; each ◐ in its block, none fixed)**: §17
-  item 7's loop stops at n = 199; no played session asserted on all sixteen
-  wells (P4 takes it); `pulse`'s A→B→C never asserted; the stick's
-  proportionality at one deflection; the shot's throat-zone fade (a known gap
-  in `test-cs002-p3.js`); no `dist/`-vs-`src/` comparison; `TZ` unpinned for
-  the week key; level 1's first seconds measured once (CS016); `INT_*` and
-  `FILTER_*` values unpinned; CS016's Onboarding block says "fifteen enders"
-  (twelve since P2) and "mutation-checked in both files" (p2 only) —
-  corrected in the at-ship block, the CS016 block left as history.
-- ⚠ **SETTLED — `w` IS BINDABLE IN THE SHIPPED BUILD** (Paul, S7 addendum,
-  after P2): `reservedKey()` refuses every digit and every key in force, and
-  `w` is neither. ⚠ A profile that binds `w` loads its KEYBOARD page as
-  defaults in a flagged build (dev only).
-- ⛔ **A FLAGGED BUILD IS A MUTATE** of `  DEBUG_KEYS:           false,`, by
-  literal, in 14 files: re-spacing that line rewrites all fourteen in place.
-- ⚠ **For the close's doc pass**: GDD §15.6 still says the `t`/`e` keys "stay
-  until CS017's debug-key decision" (decided: they stay bound).
-- ✅ **The Mimic is KEPT** (P3, S6; GDD §14.6's table, §21 #6): the row,
-  `C.MIMIC_*`, prompt row 11 and `mimic_kill` stand. ⚠ Three suite comments
-  still say "on probation" (`test-cs012-p4.js:50`, `-p6.js:61`,
-  `test-registry.js:20`) — the close's doc pass. ✅ The budget's three
-  measurements (P1) and the bench (P2, `C.DEBUG_KEYS` ships false) are closed.
-- ✅ **S3's "no allocating expression on the draw path" IS MET WHOLE** (P1 and
-  both addenda): budget board **6,001 / 4,979** B, empty **1,228 / 131**
-  (perf-probe, after 300 draws / steady).
-- ⛔ **`test-cs017-p1.js` PINS S2's BOARD AT 156 STROKES AND 8 TEXT CALLS A
-  `draw()`**: a renderer change that draws more on that board rewrites
-  `BUDGET_*` in place with the cause named — a counter, never a clock. Its NINE
-  mutants pin `const out = points._screen;` …, `drawPoly(ctx, _shotPair,
-  false);`, `ctx.font = textFont(size);`, ` : promptFadeColor(a);`,
-  `wellBandColor()`'s indexed `for` line, the three HUD cache lines and game
-  over's `if (screen === SCREENS.gameover &&` guard.
-- ⚠ **`tools/perf-probe.js`'s bytes are the JIT's as much as the source's**
-  (8,196 B after 300 draws, 7,076 after 5,000, same board): quote a reading
-  with its warm-up; each board needs its own page. ⚠ GDD §16.4's `tools/` line
-  does not list it yet (the close's doc pass).
-- ⛔ **`C.GAME_VERSION` is `"0.0.13"` AND IS PINNED BY LITERAL in
-  `test-cs016-p1.js:120`**: a bump rewrites that assertion in place (MEASURED red
-  at the CS016 close). Ship's number is Paul's.
-- ⛔ **AFTER SHIP THE ACHIEVEMENT IDS AND THE POOL'S LENGTH ARE FROZEN**: 23
-  lifetime and 19 weekly ids, never renamed; the rotation walks the pool by
-  length, so a row added or cut reshuffles every week's five against live saves.
-  A threshold, a `name` and a `note` are not save data. ⚠ Real totals stay
-  possible as an ADDITIVE v2, new ids beside these.
-- ⛔ **`REACH` IS MEASURED BY `tools/reach-probe.js`** (~30 s, four passes):
-  replace `REACH` WHOLE from its output; an unreached row is reported to Paul,
-  never lowered.
-- ⛔ **A TEST THAT IDLES 20 s AT REST ON THE TITLE ENTERS THE DEMO** (`"play"`
-  under a `Game`-closure flag): a soak that parks on the title presses something
-  inside 20 s or expects `"play"`. ⛔ `Date.now` / `performance.now` keep their
-  four readers (the time seed, `nowMs()`, a score row's `ts`, the achievements
-  clock).
-- ⛔ **THE PROMPT BAND IS ARITHMETIC** (plan K2): `PROMPT_Y` 636 sits 6 px under
-  the lowest rim and above the mirrored lives rectangle; a change to
-  `HUD_MARGIN`, `HUD_ICON_SIZE`, `WELL_RADIUS`, `PROMPT_SIZE` or a prompt's length
-  re-derives it, and `test-cs016-p1.js` asserts the clearance.
-- ⛔ **`attractDrive()` IS A PORT OF THE SOAKS' HUNTER** (plan K5): a roster or
-  rule change the soaks' driver learns must be taught to it too.
-- ⚠ **SETTLED — A PROMPT CAN BE MARKED SEEN AND NEVER DRAWN, AND THAT IS
-  ACCEPTED** (Paul, 2026-09-23, after the CS016 close): a row is marked on its
-  trigger step and `startGame()` empties the queue (N4), so a row still queued
-  at a RESTART or a QUIT is lost for that profile. Do not "fix" it.
-- ⚠ **A mouse move during a demo DEATH FREEZE is drained and lost** (`frame()`'s
-  freeze branch samples without `update()`); a held button or a named action
-  still ends it. The shipped demo dies nowhere (MEASURED, ten seeds).
-- ⛔ **`SEAT_EDGE` (`test-cs015-p2.js`) MATCHES BY INDENTATION LUCK**:
-  `Meta.clearEdge();` sits at eight spaces inside the demo's `if (!attract)`
-  block and the pinned six-space string is its suffix, once. A phase that
-  re-indents that block moves the pin.
-- ⛔ **A PHASE THAT EDITS EITHER ACHIEVEMENT SEAT MOVES SEVEN MUTATE STRINGS**:
-  `test-cs015-p2.js`'s `SEAT_EDGE` / `SEAT_END`, `-p3.js`'s `SEAT_CLEAR` /
-  `SEAT_END`, `-p4.js`'s `SEATS_OUT` (two) and `test-cs016-p3.js`'s
-  `SEAT_CLEAR`, each in the build exactly once — ⚠ and `tools/reach-probe.js`
-  mutates the line above each seat (`const win = wellWindow();`,
-  `const ok = eligible();`).
-- ⛔ **The per-well window and the clean streak move ABOVE the eligibility
-  gate**, or a bench run hands the next well a doubled delta; both are re-minted
-  by `runStarted()`. ⚠ **Five facts have no row** — `deaths`, `divesCompleted`,
-  `purgesSpent`, `shotsFired`, `thornDeaths` — and `test-cs015-p3.js` pins that
-  exact set.
-- ⛔ **THE MENU SHAPES A SCREEN HAS TO FIT INTO**: the title has **five rows**
-  (PLAY, OPTIONS, SCORES, PROFILE, ACHIEVEMENTS), game over **three lines**, and
-  ⛔ **OPTIONS HAS ELEVEN ROWS WITH A SEVEN-ROW WINDOW** — a row goes before
-  BACK, never above TELEMETRY. ⛔ **A LABEL IS ≤ 20 CHARACTERS BESIDE A
-  FOUR-CHARACTER DETAIL AND A SCREEN GETS TWO INFO LINES** (MEASURED, CS015 P3).
-  ⛔ **SCORES' rows are MODE, VIEW (module only), the entries, BACK**, rebuilt on
-  entry / MODE / VIEW / a board's answer and never in `draw()`; ⛔ **the entry
-  mode is the last run STARTED this session** (`lastRunMode`, which a demo never
-  writes). ⛔ **NAME steps in place of the menu model**; ⚠ there Space, Z and X
-  type. ⛔ **The ACHIEVEMENTS screen is SCORES' shape**, BACK returns to
-  whichever door, and ⛔ **no seventh HUD rectangle** — centre-top is
-  Overdrive's combo readout, centre-bottom the prompt band.
-- ⛔ **NINE TEXTS IN `22-meta.js`, `23-main.js` AND `lib/kit-leaderboard/` ARE
-  PINNED BY A CLOSED CS011 `mutate`** — grep `test-cs011-*.js` for `mutate:`
-  before editing those files. ⛔ **kit-leaderboard cannot be inlined.**
-- ⛔ **`Game.reset()` restores the controls and the sound rows, writes nothing,
-  and leaves the screen on play**; a RELOAD test builds again over the same `Map`.
-  ⛔ **A chosen level is reached from START DEPTH**, never `w`.
-- ⛔ **`progress` IS v2 AND PER MODE**: `noteCleared()` writes the pair and
-  `levelRecord(mode)` defaults to `state.mode`; the mode list is
-  `Object.keys(C.MODE_FLAGS)`, so ⛔ **a feature is a FIELD IN THE ROWS, never a
-  new top-level mode key.** ⛔ **A row-shape change bumps that key's version and
-  supplies a `migrate`** — `migrateProgress` is the worked example.
-- ⛔ **THE BOOT BLOCK RUNS INSIDE THE HARNESS**: `Meta.boot()` writes `profiles`
-  in every build. ⚠ **A `Store.set` spy sees only `p0`'s writes**, and ⛔ **`p0`'s
-  scope IS the root store**, so a per-profile `remove(key)` there must never name
-  a root key. ⛔ **NO TELEMETRY WRITE FROM A PLAY STEP**; a settings save runs
-  in `update()` on a menu step, and the clear edge writes `progress`,
-  `achievements` and `onboarding` on a play step, legally.
-
-### The entities and the Dive, as shipped (compressed; full text `log/CS015.md`)
-
-- ⛔ **FOUR KILL SITES AND FIVE KILL LINES, ALL IN `09-collision.js`**
-  (`:160`, `:286`, `:498`, `:512`, `:565`). ⛔ **A phase that edits a kill line
-  repairs `test-cs012-p4.js`'s six `COMBO_OUT` strings, its two `mutantRed`
-  shot-kill strings, `-p6.js`'s, and `test-cs014-p1.js`'s count of four.**
-- ⛔ **`startDive()` DOES FIVE THINGS** — `resetDive()` (which empties the ring
-  set), the `anchored` filter, `resetJump()`, `resetTokens()` and `layRings()`
-  last; ⛔ **a repeated dive re-lays the set**, and a Warden and a `MimicShot`
-  never survive into one. ⛔ **A dive pays exactly one thing, a ring**, spends
-  zero draws, and `diveDrawDepth()` is the renderer's whole knowledge of it.
-- ⛔ **AN `aloft` ENTITY IS INVISIBLE TO THE SHOT PASS AND VISIBLE TO EVERYTHING
-  ELSE**; ⛔ a new reader that excludes one says so itself.
-- ⛔ **THE REAVER IS A `Vaulter` SUBCLASS AND THE `MimicShot` A `WeaverBolt`
-  ONE**; order a price table's branches subclass-first. ⚠ **THE MIMIC IS KEPT
-  (CS017 S6) AND STILL CUTS IN ONE ROW** (GDD §21 #6). ⛔ `test-registry.js`: `enemies` 9,
+- `node build.js` → `dist/vector-vortex.html`, 26 modules + 3 inlined kit,
+  **836.8 KB**; `MANIFEST` checked both ways; a missing `KIT_INLINE` file fails
+  the build.
+- `node scratchpad/run-all.js` → **85 files, all green, zero skips**
+  (319 s, `/usr/bin/time`). ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load
+  can trip it.** ⛔ A timeout is not a red — re-run the file alone first — but
+  ⛔ a close cannot carry one. The slowest file is `test-cs014-p3.js` (37.6 s at planning, `867ebd1`),
+  then the fifteenth soak (~35 s alone).
+- ⛔ **Zero skips needs `../coinless-kit`**: `test-cs011-p5.js` (at `f0b0eb2`)
+  and `test-cs012-p3.js` (at `e2efed5`, ⛔ never `f8d34f3`) read its
+  `registry.js` and SKIP LOUDLY without it.
+- ⛔ **`P1_DETERMINISM_HASH` 1229033515** (cross-file: `test-cs006-p2.js` runs
+  `test-cs005-p5.js` in a child process) — unmoved CS009–CS017; re-record once
+  per change, one named cause at the assertion. ⛔ **`GOLDEN_LANES`' first
+  SIXTEEN entries are the `9ebd27b` recording** (+`2, 5`, CS008); any other move
+  is a defect.
+- ⛔ **FIFTEEN SOAKS, EACH PROVING A DIFFERENT THING** — `-cs003-p5` …
+  `-cs007-p5`, `-cs008-p8`, `-cs009-p6`, `-cs010-p5`, `-cs011-p6`, `-cs012-p6`,
+  `-cs013-p5`, `-cs014-p3`, `-cs015-p4`, `-cs016-p4`, **`-cs017-p4`** (§17 item
+  12's hundred runs, 50 per mode, all sixteen wells). ⛔ **A new changeset's is a
+  SIXTEENTH file, never a widened one.**
+- ✅ **GDD §19: every row carries an "at ship" verdict block (CS017 P3, P4) and
+  no clause is ✗.** The ◐ clauses name their missing half: a skipped playtest
+  (`SKIPPED-PLAYTESTS.md`, CS009–CS017) or a coverage gap (below).
+- `_harness.js` `EXPORTS` **218**; `test-registry.js` `enemies` 9,
   `enemyKinds` 13, `state` **28** keys, `tally` **23** counters inside one.
-- ⚠ **`RING_POINTS`, `RING_ARC_LANES`, `RING_LANE_STEP` and the five visual
-  values are PROVISIONAL**; ⛔ **`DIVE_TIME_OD` 4.0 and `DIVE_RINGS_MAX` 6 are
-  NOT** (a ceiling may only come DOWN).
-- ⚠ **Unowned, none reachable by the suite's drivers:** a second Purge preferring
-  a bolt or a reflection above 0.95; a run STARTING past 99; a rim Vaulter and an
-  aloft Warden hunting the CONTINUOUS lane; a biggest-Purge of six.
+  `C.SFX` 28 events, `C.SFX_KILL_PITCH` 11 voices; kill sites / lines 4 / 5.
+- ✅ **`CLAUDE.md` is 38,741 bytes** against its 50 KB ceiling; the valve and
+  the ban on standing sweeps stand.
+
+## ⛔ What a patch must obey
+
+The rules are `CLAUDE.md`'s; these are the facts a patch trips over.
+
+### Frozen at ship
+
+- ⛔ **THE ACHIEVEMENT IDS AND THE POOL'S LENGTH**: 23 lifetime and 19 weekly
+  ids, `perWeek` 5, never renamed; the rotation walks the pool BY LENGTH, so a
+  row added or cut reshuffles every week's five against live saves. A
+  threshold, a `name` and a `note` are not save data. ⚠ Real totals stay
+  possible as an ADDITIVE v2, new ids beside these. ⛔ **`REACH` is measured by
+  `tools/reach-probe.js`** (~30 s): replace it WHOLE from its output; an
+  unreached row is reported to Paul, never lowered.
+- ⛔ **The save keyspace** (`CLAUDE.md`'s table): `settings` v1, `progress` v2,
+  `achievements` v1, `scores` (root), `telemetry` v1 (`TELEMETRY_FIELDS` 29,
+  moving with `TELEMETRY_KINDS`, `telemetryRow()` and the version),
+  `onboarding` v1. ⛔ A row-shape change bumps the version and supplies a pure
+  `migrate` — `migrateProgress` is the worked example — never a new key name.
+- ⛔ **The boards**: `C.LEADERBOARD_GAME_IDS` `vector-vortex` /
+  `vector-vortex-overdrive`, registered with seven `statsFields`. ⛔ Read the
+  Worker's registered `statsFields` before sending a stats key. ⛔ `C.GAME_ID` is
+  the SAVE keyspace and nothing else.
+- ⛔ **`C.GAME_VERSION` is `"1.0.0"` AND IS PINNED BY LITERAL in
+  `test-cs016-p1.js:120`**: a patch's bump rewrites that assertion in place;
+  `package.json`'s `version` moves with it.
+
+### The build and its switches
+
+- ⛔ **`C.DEBUG_KEYS` ships `false`**: the eight bench bindings (`1`–`6`, `0`,
+  `w`) exist only in a flagged build, so no key a player can press voids a
+  run's eligibility; `t`, `e`, `p`, Escape are bound in both. ⛔ **A FLAGGED
+  BUILD IS A `mutate` of `  DEBUG_KEYS:           false,`, by literal, in 18
+  files** (MEASURED at the close, grep) — re-spacing that line rewrites all
+  eighteen in place. ⚠ **SETTLED — `w` is bindable in the shipped build**
+  (Paul, S7 addendum); a profile that binds it loads its KEYBOARD page as
+  defaults in a flagged dev build (dev only).
+- ⛔ **A CLOSED FILE CAN GO VACUOUS WITHOUT GOING RED** (CS017 P3,
+  `test-cs003-p2.js`): a change that unbinds, stubs or gates something a closed
+  file DRIVES needs a grep for the file's presses, not only the red set.
+- ⛔ **`test-cs017-p1.js` PINS THE BUDGET BOARD AT 156 STROKES AND 8 TEXT CALLS
+  a `draw()`**: a renderer change that draws more rewrites `BUDGET_*` in place
+  with the cause named — a counter, never a clock. Its nine mutants pin
+  `const out = points._screen;`, `drawPoly(ctx, _shotPair, false);`,
+  `ctx.font = textFont(size);`, ` : promptFadeColor(a);`, `wellBandColor()`'s
+  indexed `for`, the three HUD cache lines and game over's
+  `if (screen === SCREENS.gameover &&` guard. ⛔ **No allocating expression on
+  the DRAW path** (GDD §17); the step path's `.filter()` is the invariant.
+- ⛔ **THE PROMPT BAND IS ARITHMETIC**: `PROMPT_Y` 636 sits 6 px under the
+  lowest rim; a change to `HUD_MARGIN`, `HUD_ICON_SIZE`, `WELL_RADIUS`,
+  `PROMPT_SIZE` or a prompt's length re-derives it (`test-cs016-p1.js`).
+- ⛔ **THE MENU SHAPES**: the title has five rows, game over three lines,
+  OPTIONS eleven rows in a seven-row window (a row goes before BACK, never above
+  TELEMETRY); a label ≤ 20 characters beside a four-character detail, TWO info
+  lines a screen; the credits ≤ 7 lines of ≤ 66 characters, each passing the
+  SUBSTRING vocabulary scan.
+- ⛔ **`attractDrive()` IS A PORT OF THE SOAKS' HUNTER**: a roster or rule
+  change the soaks' driver learns is taught to it too. ⚠ Its Mimic dodge — the
+  soaks' too — MEASURED worse than no dodge for a bot (0.274 against 0.125
+  kills per reflection); no call was made.
+- ⚠ **SETTLED — a prompt can be marked seen and never drawn** (Paul,
+  2026-09-23): `startGame()` empties the queue. Do not "fix" it.
+- ⚠ **A mouse move during a demo DEATH FREEZE is drained and lost**; the
+  shipped demo dies nowhere (MEASURED, ten seeds).
+
+### Pinned text — grep before editing
+
+- ⛔ **A PHASE THAT EDITS EITHER ACHIEVEMENT SEAT MOVES SEVEN `mutate`
+  STRINGS**: `test-cs015-p2.js`'s `SEAT_EDGE` / `SEAT_END`, `-p3.js`'s
+  `SEAT_CLEAR` / `SEAT_END`, `-p4.js`'s `SEATS_OUT` (two), `test-cs016-p3.js`'s
+  `SEAT_CLEAR` — ⚠ and `tools/reach-probe.js` mutates the line above each seat.
+  ⛔ **`SEAT_EDGE` MATCHES BY INDENTATION LUCK**: `Meta.clearEdge();` sits at
+  eight spaces inside the demo's `if (!attract)` block.
+- ⛔ **A PHASE THAT EDITS A KILL LINE** repairs `test-cs012-p4.js`'s six
+  `COMBO_OUT` strings and two `mutantRed` shot-kill strings, `-p6.js`'s, and
+  `test-cs014-p1.js`'s count of four (`09-collision.js:160, 286, 498, 512,
+  565`). ⛔ **ITEM 8 PRICES A RING AND A BOUNTY PER STEP** in five files: a new
+  payout owes all five a term. ⛔ **`gddPoints()` has seven copies**; order a
+  price table's branches subclass-first.
+- ⛔ **NINE TEXTS IN `22-meta.js`, `23-main.js` AND `lib/kit-leaderboard/` ARE
+  PINNED BY A CLOSED CS011 `mutate`** — grep `test-cs011-*.js` for `mutate:`.
+- ⛔ **AN EDIT TO `16-audio-engine.js`, `17-audio-tracks.js`, `C.MUSIC_LIMIT`,
+  `C.LAYER_THRESHOLD`, `C.LAYER_CROSSFADE` OR `C.FILTER_*` IS A THREE-FILE
+  EDIT** (both labs). ⛔ **A new `SFX_KILL_PITCH` voice is too** (`C`, BLOCK
+  SFX, the `PITCH_*` tables); a new `C.SFX` event owes the lab a brief, an A
+  label, 1–2 alternates and an in-context sequence. ⚠ **Every kit `VERSION`
+  bump is a closed-file edit** — four files pin `AUDIO_VERSION`.
 
 ### Test hazards
 
 - ⛔ **A CLOSED OVERDRIVE PLAY AT L11+ OWES ITS DRIVER FOUR THINGS**: jump at
-  anything `aloft`; **never target** a `MimicShot` and steer away within a lane;
-  **go to** a hovering token; ⛔ **steer to a ring in reach during a dive** —
-  "in reach" from the depth model and `C.KEY_SPEED_MAX`, never a constant. ⛔ Each
-  is a no-op where the thing does not exist. ⛔ **Repairs are the DRIVER or the
-  FIXTURE (playing longer), never the build, a lowered level or a relaxed
-  assertion.** ⚠ **That driver holds fire and spends the Purge**, so it cannot
-  reach `week_purge_held` or `purge_saver`'s upper tiers.
-- ⛔ **A CLOCK READ IS A MOVER.** Every closed front-door soak but the last two
-  fakes `Date.now` per CALL and RESTARTS on a time seed, so a phase that adds a
-  clock reader plays those sessions differently (CS015 P2 repaired
-  `test-cs013-p5.js`'s driver for exactly this). ⛔ **`test-cs015-p4.js` and
-  `-cs016-p4.js` fake WALL time** (the frame clock plus a base) — MEASURED, under
-  a per-call fake a stubbed twin diverges at the first RESTART for no reason the
-  board owns.
-- ⛔ **A STAGED RECORD CAN MASK A WRITE** (CS016 P4, MEASURED by its own
-  mutant): a zero-bytes claim over a demo is vacuous if the profile's Start
-  Depth record already sits above the demo's clears, because `noteCleared()`
-  then writes nothing. Stage records AFTER a no-write window, and assert the
-  precondition. ⛔ **"Fires nothing" is PROBED off the real `promptScan()`** with
-  one row unseen and a scratch queue — never a copy of a trigger.
-- ⛔ **A DIVE'S LENGTH IS A PROPERTY, NEVER A STEP COUNT** (`1/60` is not
-  binary). ⛔ **A run that ends inside a dive leaves `dive.active` TRUE until the
-  RESTART press.** ⛔ **`state.tally`, the per-well window and the clean streak
-  are re-minted by `startGame()`.** ⛔ **A kill site's reading and `state.dive`
-  are read AT THE CALL**: the dive's end is `nextWell()` → `enterWell()` →
-  `resetDive()` on ONE step.
-- ⛔ **THREE OVERDRIVE FIXTURES ARE SEED-FRAGILE**: `-cs012-p2`'s `SOAK_SEED`,
-  `-cs012-p4`'s seed **59** and `-cs012-p6`'s `OD_CLOCK` 7927. ⛔ **Anything that
-  changes how long an Overdrive BEAT lasts is as much a mover as a draw.**
-- ⛔ **`gddPoints()` HAS SEVEN COPIES AND THE COUNT IS NOT WHAT DECIDES** —
-  whether that copy's board can KILL the entity does; ⛔ `instanceof` is PER
-  BUILD. ⛔ **ITEM 8 PRICES A RING AND A BOUNTY PER STEP** in `-cs012-p4`, `-p6`,
-  `-cs013-p2`, `-p5`, `-cs014-p3`: a new payout owes all five a term.
-- ⛔ **A MUTATION RUN THAT THROWS IS A DEFECT IN THE TEST**: guard the reads,
-  report a COUNT and one index, ⛔ assert the string is in the build exactly once
-  BEFORE asserting red. ⚠ **A closed test may pin the literal text of a line a
-  later phase changes** — ⛔ pin only the ARGUMENT the claim is about.
-- ⛔ **A TEST THAT BOUNDS `state.shots` READS THE CAP IN FORCE off
-  `state.powers`**; MEASURED, 24 IS reached. ⛔ **A STAGED DEATH IN AN OVERDRIVE
-  FIXTURE MUST CLEAR `state.powers.ward` OR SET UP TWO HITS.** ⛔
-  **`state.shots.push` CANNOT BE INTERCEPTED**; `tally.shotsFired` is honest.
-- ⛔ **MODE IS `OVERDRIVE`, THEN `CLASSIC`, BOTH ENABLED** — ⛔ a driver wanting
-  a Classic run steps ONE row down; ⛔ **START DEPTH is built for `pendingMode`.**
-  ⛔ **A REPLAY THAT OUTLIVES ITS GAME OVER MEETS A LIVE MENU** — stop pressing
-  at the stop; ⛔ a driver starting at the title spends two live steps first;
-  ⛔ **a fire-holder has no death path on levels 1–4 and never spends a Ward**;
-  ⛔ **a menu press is an EDGE** — release every held key first.
-- ⛔ **A `Profiles.select()` STAGED ON A PLAY SCREEN LOOKS LIKE A PLAY-STEP WRITE**
-  to a `Store.set` spy (`beforeChange` writes `telemetry` and now `onboarding`).
-  In the game a switch is a menu action: stage it off play (`test-cs016-p1.js`).
-  ⛔ **A played session now stores `onboarding`** (per profile, at the clear
-  edge or the run's end); a new "every stored key" assertion must allow it.
-- ⛔ **`test-cs008-p4.js` scans the WHOLE built file, comments included**: no
-  `fillRect`/`strokeRect`, one `.fillText(`/`.strokeText(` site;
-  `test-cs008-p6.js`'s vocabulary scan is a SUBSTRING scan (only `webkit` is
-  excepted from "web"). `test-cs002-p1.js` bans `e.key`, `.touches`,
-  `getGamepads`, `clientX` and `addEventListener` outside `04-input.js` — ⚠ and
-  `20-achievements.js`'s banner slice holds the three inlined kit bodies.
-  ⚠ **Strip comments before grepping a function's source.**
-- ⛔ **CS009 TRAPS IN AUDIO CODE**: no "atari" (write "the original's"); never
-  `.key` after an identifier ending in `e`; no `21-`/`22-` banner at a comment
-  line's start; no platform RNG; never `audioFrame()` inside `frame()`.
-  ⛔ **THE DIRECTOR runs BEFORE `setState()`**; a new `heat(` call turns
-  `test-cs007-p2.js` red (use `heatT()`); `19-sfx.js`'s code may not name
-  `state`; ⛔ **`setState()` before the first gesture is DROPPED.**
-- ⛔ **AN EDIT TO `16-audio-engine.js` OR `17-audio-tracks.js` IS A THREE-FILE
-  EDIT** (both labs), as is one to `C.MUSIC_LIMIT`, `C.LAYER_THRESHOLD`,
-  `C.LAYER_CROSSFADE` or `C.FILTER_*`. ⚠ **EVERY KIT `VERSION` BUMP IS A
-  CLOSED-FILE EDIT** — four files pin `AUDIO_VERSION` by literal.
-- ⚠ **`_harness.js`**: `{ stub }` rebinds a named top-level function to a no-op;
-  `{ spy }` counts calls with optional `.before`/`.after`; `{ mutate }` throws
-  unless its string is in the build exactly once. ⛔ **A function inside `Game`'s
-  closure cannot be reached this way**, `Game.update` and `Meta`'s seats
-  included. ⚠ **An added `EXPORTS` row is a design decision a plan's §11 owes a
-  line** (**218** at the CS016 close).
-- ⚠ **TWO TESTS READ coinless-kit's `registry.js`** and each SKIPS LOUDLY without
-  it: `-cs011-p5` (at `f0b0eb2`), `-cs012-p3` (at `e2efed5`, ⛔ never `f8d34f3`).
-  ⛔ **No close can carry a skip.**
+  anything `aloft`; never target a `MimicShot`; go to a hovering token; steer to
+  a ring in reach during a dive. ⛔ Repairs are the DRIVER or the FIXTURE, never
+  the build, a lowered level or a relaxed assertion. ⚠ That driver holds fire
+  and spends the Purge.
+- ⛔ **A CLOCK READ IS A MOVER.** `Date.now` / `performance.now` have four
+  readers (the time seed, `nowMs()`, a score row's `ts`, the achievements
+  clock). Closed soaks before `-cs015-p4` fake `Date.now` per CALL;
+  `-cs015-p4`, `-cs016-p4` and `-cs017-p4` fake WALL time.
+- ⛔ **A TEST THAT IDLES 20 s AT REST ON THE TITLE ENTERS THE DEMO.**
+  ⛔ **A STAGED RECORD CAN MASK A WRITE**: stage Start Depth records after a
+  no-write window and assert the precondition. ⚠ **Start Depth options are
+  ODD** (1, 3 … 29 at a record of 30): choose by ROW; an even value is row −1.
+- ⛔ **MODE IS `OVERDRIVE`, THEN `CLASSIC`**; START DEPTH is built for
+  `pendingMode`; a driver starting at the title spends two live steps first; a
+  menu press is an EDGE — release every held key first; a replay that outlives
+  its game over meets a live menu. ⛔ A fire-holder has no death path on levels
+  1–4 and never spends a Ward.
+- ⛔ **A DIVE'S LENGTH IS A PROPERTY, NEVER A STEP COUNT**; a run ending inside
+  a dive leaves `dive.active` true until the RESTART press. ⛔ **Three Overdrive
+  fixtures are seed-fragile** (`-cs012-p2`'s `SOAK_SEED`, `-cs012-p4`'s seed
+  59, `-cs012-p6`'s `OD_CLOCK` 7927); anything that changes an Overdrive BEAT's
+  length is a mover.
+- ⛔ **A TEST THAT BOUNDS `state.shots` READS THE CAP IN FORCE** off
+  `state.powers` (24 is reached). ⚠ **A `Shot`'s `depth` is a METHOD**
+  (`depth()`); an entity's is a field. ⛔ A staged death in an Overdrive fixture
+  clears `state.powers.ward` or sets up two hits.
+- ⛔ **A MUTATION RUN THAT THROWS IS A DEFECT IN THE TEST**: assert the string
+  is in the build exactly once before asserting red; pin only the ARGUMENT a
+  claim is about.
+- ⛔ **`test-cs008-p4.js` and `-p6.js` scan the WHOLE built file, comments
+  included** (no `fillRect` / `strokeRect`, one text site; vocabulary by
+  SUBSTRING, only `webkit` excepted from "web"); `test-cs002-p1.js` bans raw
+  input reads outside `04-input.js`. ⛔ **Audio code**: no "atari", no platform
+  RNG, never `audioFrame()` inside `frame()`; a new `heat(` call is red (use
+  `heatT()`); `setState()` before the first gesture is dropped.
+- ⛔ **`AudioSys.ctx` is null until a key, click or lifted touch**; a gesture is
+  a DOM event, not `G.input.keyDown()`. ⛔ **The boot block runs inside the
+  harness**; a `Store.set` spy sees only `p0`'s writes, and `p0`'s scope IS the
+  root store. ⛔ A `Profiles.select()` staged on a play screen looks like a
+  play-step write.
+- ⚠ **`_harness.js`**: `{ stub }`, `{ spy }` (`.before` / `.after`),
+  `{ mutate }` (throws unless its string is in the build exactly once); a
+  function inside `Game`'s closure cannot be reached this way. An added
+  `EXPORTS` row is a design decision a plan owes a line.
 
-## Open questions (blocking)
+### The entities and the Dive, as shipped
 
-- None.
+- ⛔ **`startDive()` DOES FIVE THINGS** — `resetDive()`, the `anchored` filter,
+  `resetJump()`, `resetTokens()`, `layRings()` last; a repeated dive re-lays
+  the set; a dive pays exactly one thing, a ring, and spends zero draws.
+- ⛔ **AN `aloft` ENTITY IS INVISIBLE TO THE SHOT PASS AND VISIBLE TO EVERYTHING
+  ELSE.** ⛔ The Reaver is a `Vaulter` subclass and the `MimicShot` a
+  `WeaverBolt` one. ✅ The Mimic is KEPT (S6) and still cuts in ONE ROW.
+- ⚠ **`RING_POINTS`, `RING_ARC_LANES`, `RING_LANE_STEP` and the five dive
+  visual values are PROVISIONAL**; `DIVE_TIME_OD` 4.0 and `DIVE_RINGS_MAX` 6
+  are not (a ceiling may only come DOWN).
+- ⛔ **Read GDD §6.5 before adding an entity** — nine contract fields, the
+  wiring points, the Dive; neither a token nor a ring is on that table.
 
-## Carried tasks
+## Carried tasks — none of them ship's (S13)
 
-- ⛔ **ONE LAB SESSION COVERS ALL OF IT, when Paul wants it**: `drive`'s tiers,
-  gains and tempo (PASS marks) **and the FIVE unauditioned cues** — `ringTake`,
-  `ringMiss`, the Surger tone, the Warden's fuse and `unlock` (candidate A;
-  alternates "square bell pair", "triangle step up"). Its own commit; it
+- ⛔ **ONE LAB SESSION, when Paul wants it**: `drive`'s tiers, gains and tempo
+  (PASS marks) and the FIVE unauditioned cues — `ringTake`, `ringMiss`, the
+  Surger tone, the Warden's fuse and `unlock` (candidate A). Its own commit; it
   rewrites `test-cs012-p1.js`'s "no tier" and "no audition mark" assertions in
-  place. ⛔ **Nothing waits on it**; ⛔ **a re-pick is ported verbatim from the
-  lab, never hand-tuned in `C`.**
-- ✅ **`C.CREDITS_LINES` stay the current two** (Paul, S9; P3 moved nothing).
-- ✅ **Both boards are registered and deployed** (coinless-kit `e2efed5`), same
-  seven `statsFields`. ⛔ **Read the Worker's registered `statsFields` before
-  sending a stats key**; `C.GAME_ID` is the SAVE keyspace.
-- Backport kit-input (0.8.0), kit-menu (0.1.0), kit-fx, kit-audio (**0.4.0**) and
-  kit-leaderboard (0.2.1, `lib/`) — each a separate manual step. `createScores`
-  is kit-scores' draft, `createAchievements` kit-achievements' (⚠ its screen is
-  the game's wrapper, not the module's).
+  place. ⛔ A re-pick is ported verbatim from the lab, never hand-tuned in `C`.
+- **Backports**, each a separate manual step: kit-input 0.8.0, kit-menu 0.1.0,
+  kit-fx, kit-audio 0.4.0, kit-leaderboard 0.2.1 (`lib/`); `createScores` is
+  kit-scores' draft, `createAchievements` kit-achievements' (⚠ its screen is
+  the game's wrapper).
+- **The unowned list** (plan §0.2's table, carried with its reasons):
+
+| Item | Why it was left |
+|---|---|
+| The pad-only silence (a pad press is not a user activation) | a platform rule; a line on the itch page is Paul's |
+| The VOICE bus — an OPTIONS slider no recipe routes to | removing the row changes OPTIONS' pinned eleven-row shape: a design call for a patch |
+| The Surger tone's 1.106 sample peak | a recipe changes only by a port from `tools/sfx-lab.html` — the lab session |
+| The enemy / menu palette and the HUD sizes (⚠ provisional) | tuning, in `SKIPPED-PLAYTESTS.md` |
+| `glow-lab.html` — ⚠ **not in `tools/`** (MEASURED, `ls`), though `CLAUDE.md`'s tools list names it | never built; the audition is Paul's |
+| F1 — the combo readout covers 10 of 233 rim lane-centres | accepted (CS013) |
+| F2 — the lifted rim point off-screen on five lanes at the Jump's apex | accepted (CS013); a `JUMP_LIFT` or well change moves `PROMPT_Y`'s arithmetic |
+| The four unreachable entity cases (a second Purge on a bolt or a reflection above 0.95; a run starting past 99; a rim Vaulter / aloft Warden on the continuous lane; a biggest-Purge of six) | no board reaches them; a patch that makes one reachable owns it |
+
+- ⚠ **The ten coverage gaps GDD §19's sweep named** (each ◐ in its block):
+  §17 item 7's loop stops at n = 199; `pulse`'s A→B→C never asserted; the
+  stick's proportionality at one deflection; the shot's throat-zone fade
+  (`test-cs002-p3.js`'s known gap); no `dist/`-vs-`src/` comparison; `TZ`
+  unpinned for the week key; level 1's first seconds measured once (CS016);
+  `INT_*` and `FILTER_*` values unpinned. ⛔ New coverage goes in a new
+  changeset's file, never a closed one.
 - ⚠ **`CLAUDE.md` carries no telemetry rule**; whether it earns one is Paul's.
-  ⛔ **`TELEMETRY_FIELDS` is frozen at 29 and `telemetry` at v1**, and it,
-  `TELEMETRY_KINDS`, `telemetryRow()` and the version move together.
-- ⚠ **Unowned:** the pad-only silence, the VOICE bus, the Surger tone's 1.106
-  sample peak, the enemy / menu palette and the HUD sizes,
-  `tools/glow-lab.html`'s visual audition, F1 and F2, and whether the headroom
-  gate should bound the limiter's INPUT (Paul's call).
-- ✅ **A close indexes its changeset's calls in `DECISIONS.md`**, a pointer and
-  never the writeup; ✅ **the index is complete through CS016.**
-- ✅ **`CLAUDE.md` is 38,741 bytes** against its 50 KB ceiling. ⚠ The valve and
-  the ban on standing sweeps stand.
 
-## Next up — CS017 P4 (the fifteenth soak, the version, the review, the close)
+## The tools
 
-Paste `IMPLEMENTATION-PHASES-CS017.md`'s P4 prompt. ⛔ **Paul's standing rule
-(2026-09-23): a call that carries a recommendation is TAKEN and recorded for
-him to reverse; only a call with none stops** (`CLAUDE.md` rule 3). ✅ **Taken
-at P3 for P4**: the fifteenth soak's non-vacuity also asserts all sixteen
-wells played (plan §6, P3 addendum). ⛔ When it lands, GDD §19 Quality's ✗
-(§17 item 12) and Core's ◐ ("render and play") move — P4 edits those two
-at-ship lines in place. ⚠ **S10 is Paul's action, outside the repo**: the
-GitHub repository goes private before the itch page goes live; the zip is
-`dist/vector-vortex-itch.zip` (untracked, rebuilt by `package-for-itch.sh`).
-⛔ `../coinless-kit` must be present for the close (zero skips);
-`tools/perf-probe.js` needs Chromium (Playwright's cache holds one here).
+- **`tools/perf-probe.js`** — Node + headless Chromium over the shipped
+  `file://` build (`CHROME_BIN`, else Playwright's cache, else exit 2 with the
+  reason): boot health, bytes per `draw()` (after 300 draws and at steady
+  state) and uncapped frame cost at CPU throttle. DATA, never a gate;
+  `run-all.js` never runs it; ~27 s. At the CS017 close: budget board **6,001 /
+  4,979 B**, empty **1,228 / 131 B**; **4.3 ms p50 at 1×, ~18 ms at 4×**
+  (software raster; raster-bound). ⚠ Its bytes are the JIT's as much as the
+  source's: quote a reading with its warm-up; each board needs its own page.
+- **`tools/reach-probe.js`** — the measurement behind `test-cs015-p3.js`'s
+  `REACH` (above).
+- `tools/music-lab.html`, `sfx-lab.html` (the porting sources, pinned by text
+  identity), `well-lab.html` (⚠ its visual audition has not happened),
+  `feel-lab.html`, `serve-lan.js`.
+
+## Open questions (not blocking)
+
+- ⚠ **Should the headroom gate (`test-cs009-p5.js`, D16's limiter-curve model,
+  ⚠ provisional) also bound the limiter's INPUT?** Paul's call since CS012; it
+  cannot catch a louder track (red needs an input of 152.8). Unanswered at ship.

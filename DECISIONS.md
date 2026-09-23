@@ -776,3 +776,20 @@ more bars of music at 120 BPM, or deciding the mix call in CS010.
   - After P3, Paul, 2026-09-23: `REACH` is measured by **`tools/reach-probe.js`**, the P3 probe kept as a design instrument — replace `REACH` whole from its output, report an unreached row, never lower it: `log/CS016.md`, P3.
 - ⚠ **A prompt marked seen and never drawn is ACCEPTED**, Paul, 2026-09-23, after the CS016 close: a row still queued when `startGame()` empties the queue (N4) is lost for that profile, and that does not matter. PREDICTED from two asserted behaviours, never MEASURED on a played board: `log/CS016.md`, P4.
 - ⛔ **A call that carries a recommendation is TAKEN, not asked**, Paul, 2026-09-23, after CS017 P2: built and recorded in the plan, `STATUS.md` and the session's last message for him to reverse; only a call with no recommendation stops. `CLAUDE.md` rule 3 amended (`RATIONALE.md#session-rules`); the first two taken this way are CS017's S7 and second S3 addenda (`log/CS017.md`).
+- CS017's ship calls (S1–S14), Paul, 2026-09-23: every recommendation, S9 keeping the current credits, `archive/PLANNED-FEATURES-CS017.md` §0; the built answers are GDD §17's budget, §19's six at-ship blocks, §14.6 and §21 #6, and the fifteenth soak. One line each:
+  - S1 — A: every hardware clause split into a MEASURED headless half and a skipped half (`SKIPPED-PLAYTESTS.md`, CS017 P1–P3).
+  - S2 — the budget board is the worst the build can produce: 16 enemies, 24 shots, 2 tokens, the readout, a fading prompt, a death's fragments; "full particles" dropped.
+  - S3 — A: the four draw-path allocators fixed and the rule restated to "no allocating expression on the DRAW path"; the step path's `.filter()` stands.
+  - S4 — A: frame cost REPORTED by `tools/perf-probe.js`, never gated; the suite gates the WORK by counter (`test-cs017-p1.js`).
+  - S5 — A: ONE new file, the fifteenth soak, 100 runs, under 60 s alone (`test-cs017-p4.js`, ~35 s).
+  - S6 — A: the Mimic KEPT; its probation closed on a measurement; the ask stays skipped.
+  - S7 — B: the eight bench bindings behind `C.DEBUG_KEYS`, `false` shipped.
+  - S8 — `C.GAME_VERSION` `"1.0.0"`, `package.json` aligned.
+  - S9 — the credits stay the current two lines.
+  - S10 — B: Paul makes the GitHub repository private before the itch page goes live; nothing in the repo moves.
+  - S11 — A: §19 Audio's sweep clause restated to what ships; nothing rescaled (D6).
+  - S12 — A: `package-for-itch.sh` falls back to `python3 -m zipfile -c`.
+  - S13 — ship owns none of the unowned list; each item carried with its reason to the post-ship `STATUS.md`.
+  - S14 — CS017 closes the ROADMAP; no CS018 row.
+  - ⚠ After P1, Paul, 2026-09-23: `wellBandColor()` walks `C.BAND_COLORS` by index (S3 addendum); after P2, the HUD's three strings and game over's lines are cached per value (S3's second addendum), and `w` stays bindable in the shipped build (S7 addendum): `log/CS017.md`, P1 and P2.
+  - ⚠ Taken at P3 under rule 3, for P4: the fifteenth soak also asserts all sixteen wells played (plan §6): `log/CS017.md`, P3 and P4.

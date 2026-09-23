@@ -16,9 +16,8 @@ const COUNTS = {
   enemies: 9,       // GDD 6.1, 6.4 — raise as enemies land. CS005 P3: the
                     // Surger, which completes the Classic roster. CS012 P2: the
                     // Reaver, Overdrive's first. CS013 P3: the Warden,
-                    // Overdrive's second. CS013 P4: the Mimic, its third and
-                    // ⚠ the one ON PROBATION — GDD 21 #6's verdict is CS017's,
-                    // and cutting it moves this number back to 8
+                    // Overdrive's second. CS013 P4: the Mimic, its third —
+                    // KEPT at CS017 S6 (GDD 21 #6), the probation closed
   // ⛔ NOT THE SAME NUMBER AS `enemies`, AND FROM CS004 P3 ON IT IS LARGER.
   // `enemies` counts GDD 6.1's ROSTER ROWS; this counts ENEMY_KINDS rows
   // (08-spawner.js), and the two stopped coinciding twice over:

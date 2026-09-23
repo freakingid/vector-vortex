@@ -58,7 +58,7 @@ const GDD = { thornChip: 5, weaver: 50, carrier: 100, vaulter: 150, surger: 200,
 function gddPoints(Z, e) {
   if (e instanceof Z.Reaver) return GDD.reaver;      // before Vaulter: it extends it
   if (e instanceof Z.Warden) return GDD.warden;      // CS013 P3: GDD §7's 500, killed by a jump
-  if (e instanceof Z.Mimic) return GDD.mimic;        // CS013 P4: GDD §7's 400, ⚠ on probation
+  if (e instanceof Z.Mimic) return GDD.mimic;        // CS013 P4: GDD §7's 400, KEPT (CS017 S6)
   if (e instanceof Z.Vaulter) return GDD.vaulter;
   if (e instanceof Z.Carrier) return GDD.carrier;
   if (e instanceof Z.Weaver) return GDD.weaver;
