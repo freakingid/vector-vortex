@@ -9,7 +9,7 @@ and `STATUS.md` automatically, and nothing else unless the prompt names it.
 ⛔ **`ultrathink` appears inside the prompt text where it is wanted.** It is a
 per-turn lever, so it has to be in the pasted message.
 
-⛔ **§0: S1–S4 ANSWERED (Paul, 2026-09-23, every recommendation); S5–S14 open.** `PLANNED-FEATURES-CS017.md` §0
+⛔ **§0 IS ANSWERED (Paul, 2026-09-23): every recommendation, S1–S14; S9 keeps the current credits.** `PLANNED-FEATURES-CS017.md` §0
 carries S1–S14, each with one recommendation and an empty answer column. A
 prompt below that says "S3's answer" means what that column says once Paul
 fills it, and ⛔ **a phase re-opens none of it**; ⛔ **a phase that needs an
@@ -68,9 +68,9 @@ Plan §2 has the argument. In short:
 | Before | What | Whose |
 |---|---|---|
 | **P1** | S1, S2, S3, S4 answered | ✅ answered 2026-09-23 |
-| P2 | S7 answered | Paul |
-| P3 | S6, S9 (**the credits lines themselves**), S10, S11, S12, S13 answered | Paul |
-| P4 | S5, S8, S14 answered; `../coinless-kit` present — `test-cs011-p5.js` and `test-cs012-p3.js` SKIP LOUDLY without it; ⛔ a close cannot skip | Paul / MEASURED present 2026-09-23 |
+| P2 | S7 answered | ✅ answered 2026-09-23 |
+| P3 | S6, S9, S10, S11, S12, S13 answered | ✅ answered 2026-09-23 (S9: keep the current two lines) |
+| P4 | S5, S8, S14 answered; `../coinless-kit` present — `test-cs011-p5.js` and `test-cs012-p3.js` SKIP LOUDLY without it; ⛔ a close cannot skip | ✅ answered 2026-09-23 / MEASURED present 2026-09-23 |
 
 ### ⛔ The re-records — none
 

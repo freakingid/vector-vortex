@@ -1,6 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.13 · Changeset: **CS017 planned 2026-09-23** · next: **P1 (S1–S4 answered); Paul
-answers S5–S14 before P2–P4** · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
+Version: 0.0.13 · Changeset: **CS017 planned 2026-09-23** · next: **P1** (§0 answered) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
 Tracks: 3/5 · Tokens: 5/5 effects · Achievements: 23 lifetime + 19 weekly ·
 Prompts: 12
 
@@ -14,7 +13,7 @@ did.
 
 | Phase | Landed |
 |---|---|
-| Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14; ✅ S1–S4 answered (every recommendation), ⚠ **S5–S14 open** |
+| Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14; ✅ **§0 answered 2026-09-23 — every recommendation**; S9 keeps the current credits |
 
 **Planning (2026-09-23).** Measured at `867ebd1`: suite 82 green, 0 skips, 282 s
 (slowest file 37.6 s). The shipped file boots and plays from `file://` in
@@ -88,7 +87,7 @@ below, under "What CS017 must act on".
 
 ### What CS017 must act on
 
-⛔ **CS017 is SHIP and it is PLANNED; §0 is UNANSWERED** (`PLANNED-FEATURES-CS017.md`).
+⛔ **CS017 is SHIP, PLANNED, and §0 is ANSWERED** (Paul, 2026-09-23, every recommendation; `PLANNED-FEATURES-CS017.md`). ⚠ **S10 is Paul's own action: make the GitHub repo private before the itch page goes live.**
 Reasoning for everything CS016 built is in `log/CS016.md`; the rules are in
 `CLAUDE.md`.
 
@@ -334,11 +333,10 @@ has a §0 call or a note in the plan:
 - ✅ **`CLAUDE.md` is 38,311 bytes** against its 50 KB ceiling. ⚠ The valve and
   the ban on standing sweeps stand.
 
-## Next up — Paul answers CS017 §0, then P1 (the budget)
+## Next up — CS017 P1 (the budget)
 
-⛔ **§0 of `PLANNED-FEATURES-CS017.md` is unanswered**: S1–S14, one
-recommendation each. P1 needs S1–S4; P2 S7; P3 S6, S9 (the credits lines
-themselves), S10–S13; P4 S5, S8, S14. ⛔ A phase that reaches an unanswered
-call stops. Then `IMPLEMENTATION-PHASES-CS017.md`'s P1 prompt. ⛔
-`../coinless-kit` must be present for the close (zero skips); P1's tool needs
-Chromium (Playwright's cache holds one here).
+✅ **§0 is answered** (Paul, 2026-09-23, every recommendation; S9 keeps the
+current two credits lines). Paste `IMPLEMENTATION-PHASES-CS017.md`'s P1 prompt.
+⚠ **S10 is Paul's action, outside the repo**: the GitHub repository goes private
+before the itch page goes live. ⛔ `../coinless-kit` must be present for the
+close (zero skips); P1's tool needs Chromium (Playwright's cache holds one here).
