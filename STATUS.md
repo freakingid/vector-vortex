@@ -110,12 +110,10 @@ is in `log/CS016.md`; the rules are in `CLAUDE.md`.
   re-derives it, and `test-cs016-p1.js` asserts the clearance.
 - ⛔ **`attractDrive()` IS A PORT OF THE SOAKS' HUNTER** (plan K5): a roster or
   rule change the soaks' driver learns must be taught to it too.
-- ⚠ **A PROMPT CAN BE MARKED SEEN AND NEVER DRAWN** (CS016 P4, PREDICTED from
-  two asserted behaviours): a row is marked on its trigger step and
-  `startGame()` empties the queue (N4), so a row still queued at a RESTART or a
-  QUIT is lost for that profile. MEASURED: a deep Start Depth queues eight lines
-  (32 s); the fourteenth soak still drew all twelve on both profiles. A
-  skipped-playtest ask, not a defect; whether it matters is Paul's.
+- ⚠ **SETTLED — A PROMPT CAN BE MARKED SEEN AND NEVER DRAWN, AND THAT IS
+  ACCEPTED** (Paul, 2026-09-23, after the CS016 close): a row is marked on its
+  trigger step and `startGame()` empties the queue (N4), so a row still queued
+  at a RESTART or a QUIT is lost for that profile. Do not "fix" it.
 - ⚠ **A mouse move during a demo DEATH FREEZE is drained and lost** (`frame()`'s
   freeze branch samples without `update()`); a held button or a named action
   still ends it. The shipped demo dies nowhere (MEASURED, ten seeds).

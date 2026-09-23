@@ -937,10 +937,10 @@ close's.
   about its thing?** MEASURED at Classic Start Depth 15: eight rows fire in the
   first 14 s, so the queue holds 32 s of lines and the Thorn's draws 14.1 s after
   the first Thorn, the unlock's 14.4 s after the unlock — by then the board may
-  have moved on. (2) **Is a line lost at a game over missed?** `startGame()`
-  empties the queue (N4), so a row that fires behind others late in a run is
-  marked seen and may never be drawn; the soak's runs drew all twelve, which is
-  a property of its board, not a guarantee. (3) The P1 and P2 entries' asks
+  have moved on. (2) ~~Is a line lost at a game over missed?~~ ✅ Answered
+  without a playtest: Paul, 2026-09-23 — a row marked seen and never drawn
+  (still queued when `startGame()` empties the queue) does not matter
+  (`DECISIONS.md`). (3) The P1 and P2 entries' asks
   (the band's readability, K13's `—` and `·` glyphs, the demo read as a demo and
   its silence on a fresh load) — this sitting is where they would be judged
   together.
