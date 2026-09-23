@@ -1,6 +1,6 @@
 # Vector Vortex — STATUS
-Version: 0.0.13 · Changeset: **CS017 planned 2026-09-23** · next: **Paul
-answers `PLANNED-FEATURES-CS017.md` §0, then P1** · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
+Version: 0.0.13 · Changeset: **CS017 planned 2026-09-23** · next: **P1 (S1–S4 answered); Paul
+answers S5–S14 before P2–P4** · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
 Tracks: 3/5 · Tokens: 5/5 effects · Achievements: 23 lifetime + 19 weekly ·
 Prompts: 12
 
@@ -14,7 +14,7 @@ did.
 
 | Phase | Landed |
 |---|---|
-| Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14, ⚠ **§0 unanswered** |
+| Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14; ✅ S1–S4 answered (every recommendation), ⚠ **S5–S14 open** |
 
 **Planning (2026-09-23).** Measured at `867ebd1`: suite 82 green, 0 skips, 282 s
 (slowest file 37.6 s). The shipped file boots and plays from `file://` in
