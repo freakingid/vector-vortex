@@ -58,7 +58,7 @@ answered top tier of 50, so the row failed the per-row gate. That was reported
 and not lowered. ✅ **Paul, 2026-09-23: `dives_done` [5, 15, 25]** (the plan's
 §0 is amended to match). Rows appended at the pool's end. ⛔ **One text Paul did not
 write**: `dives_done`'s note, now "DIVES FLOWN IN ONE RUN WITH NO THORN DEATH",
-because the old note described the old fact. ⚠ Paul's to reword. §11's P3 edit
+because the old note described the old fact. ✅ Paul keeps it. §11's P3 edit
 landed as predicted (`REACH` re-measured in full). ⛔ **Three closed edits the
 table did not name** (findings, each forced by an answer, each rewritten in
 place): `test-cs015-p3.js`'s `wellShotPar` assertion (the par left with its row),
@@ -177,11 +177,12 @@ phase reads the plan's §0 answers, not this block.
 - ✅ **The pre-ship achievement pass shipped at P3** (GDD §15.5). ⛔ **After
   ship the pool's LENGTH is frozen too**: the rotation walks it, so a row
   added or cut reshuffles every week's five against live saves.
-- ⛔ **`REACH`'S PROBE IS NOT IN THE REPOSITORY.** CS015's four passes were a
-  throwaway, and P3 rebuilt them from `test-cs015-p3.js`'s header
-  (`log/CS016.md` has the recipe). The rebuild reproduced CS015's figures to
-  within a few percent. The next re-measure rebuilds it again unless Paul wants
-  it kept as a tool.
+- ⛔ **`REACH` IS MEASURED BY `tools/reach-probe.js`** (Paul, 2026-09-23, after
+  P3): `node tools/reach-probe.js` runs the four passes (~30 s), prints the table,
+  the rows it did not reach, and the drift against the shipped `REACH`. It
+  reproduces P3's `REACH` exactly. ⛔ A design instrument, not a test: replace
+  `REACH` WHOLE from its output, and report an unreached row to Paul, never
+  lower it. ⛔ The close indexes this call in `DECISIONS.md`.
 - ⛔ **THE IDS ARE SAVE DATA**: 23 lifetime and 19 weekly, never renamed; a
   threshold, a `name` and a `note` are not. `achievements` is **v1**, "lifetime"
   is one run banked (`lifetimeTiers` is monotonic); ⚠ real totals stay possible

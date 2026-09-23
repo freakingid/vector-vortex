@@ -46,7 +46,8 @@ const MONOTONIC = ["          if (reached > (held.lifetimeTiers[row.id] || 0)) {
 // ⛔ MEASURED — the front door's reach, per FACT (plan §1.3's method, re-run at
 // this phase's own build). Four passes of the closed soaks' four-clause hunter,
 // 40,000 steps each, over Classic Start Depth 1 / 9 / 81 and Overdrive 1 / 9 /
-// 17 / 81, driven through Game.frame() from startGame():
+// 17 / 81, driven through Game.frame() from startGame() — since CS016,
+// `node tools/reach-probe.js` (it prints this table and the unreached rows):
 //   pass A  the soaks' driver as it stands — fire held, the Purge spent
 //   pass B  the same, re-run against the shipped thresholds
 //   pass C  AIMED: fire only with a target in lane, and the Purge never spent

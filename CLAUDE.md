@@ -729,6 +729,8 @@ Standalone HTML, **not shipped code**; drift in one can only produce a bad previ
 - **`tools/well-lab.html`** (wells, perspective), **`glow-lab.html`** (line
   weight, glow, readability), **`feel-lab.html`** (input feel; LAN via
   `npm run serve`).
+- **`tools/reach-probe.js`** — Node; ⛔ the measurement behind
+  `test-cs015-p3.js`'s `REACH`, which is replaced whole from its output.
 
 `RATIONALE.md#tools`.
 
