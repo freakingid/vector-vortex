@@ -119,6 +119,16 @@ const _promptRgb = (function () {
   return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)).join(",");
 })();
 
+// The fade's colour for an alpha, one string per 1/C.PROMPT_FADE_STEPS, built
+// on first use and cached (GDD 17's budget; CS017 P1, S3-A): a fade used to
+// build one rgba() string on every frame of it.
+const _promptFade = [];
+function promptFadeColor(a) {
+  const k = Math.round(a * C.PROMPT_FADE_STEPS);
+  return _promptFade[k] ||
+    (_promptFade[k] = "rgba(" + _promptRgb + "," + (k / C.PROMPT_FADE_STEPS).toFixed(3) + ")");
+}
+
 // The head's alpha: 1, then a linear fade over the last C.PROMPT_FADE.
 // A reading of the clock, never a clock of its own.
 function promptAlpha(queue) {
@@ -136,7 +146,7 @@ function drawPrompt(ctx, queue) {
   if (queue.rows.length === 0) return;
   const a = promptAlpha(queue);
   if (!(a > 0)) return;
-  const color = a >= 1 ? C.PROMPT_COLOR : "rgba(" + _promptRgb + "," + a.toFixed(3) + ")";
+  const color = a >= 1 ? C.PROMPT_COLOR : promptFadeColor(a);
   drawText(ctx, queue.rows[0].text, C.WORLD_W / 2, C.PROMPT_Y, C.PROMPT_SIZE, color, "center");
 }
 

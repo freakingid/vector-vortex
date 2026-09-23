@@ -985,6 +985,10 @@ const C = {
   PROMPT_COLOR:         "#FFFFFF",  // ⚠ provisional, HUD_COLOR's white; #RRGGBB (the fade parses it)
   PROMPT_TIME:          4.0,        // s a prompt holds the band. ⚠ provisional (N4)
   PROMPT_FADE:          0.5,        // s, the draw-time fade at the end of that. ⚠ provisional
+  // ⛔ The fade's colour is one string per 1/PROMPT_FADE_STEPS of alpha, built
+  // on first use and cached (GDD 17's budget; CS017 P1, S3-A) — a draw-path
+  // granularity, not a look: 100 steps over half a second is finer than a frame.
+  PROMPT_FADE_STEPS:    100,
 
   // ---- Text and the HUD (GDD 10.2, 10.4) — CS008 P4 ------------------------
   // ⛔ drawText() (13-render-well.js) is the ONE text path in the build. Its

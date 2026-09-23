@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: 0.0.13 · Changeset: **CS017 planned 2026-09-23** · next: **P1** (§0 answered) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
+Version: 0.0.13 · Changeset: **CS017 P1 landed 2026-09-23** · next: **P2** (§0 answered) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
 Tracks: 3/5 · Tokens: 5/5 effects · Achievements: 23 lifetime + 19 weekly ·
 Prompts: 12
 
@@ -14,6 +14,7 @@ did.
 | Phase | Landed |
 |---|---|
 | Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14; ✅ **§0 answered 2026-09-23 — every recommendation**; S9 keeps the current credits |
+| P1 | ✅ 2026-09-23 — the budget, measured: `tools/perf-probe.js`; the four draw-path allocators cached (+`C.PROMPT_FADE_STEPS`); `test-cs017-p1.js` (counter gate 156 strokes / 8 text calls, four sites mutation-checked, played-session hash); GDD §17's budget restated; ⚠ three more draw-path allocators found (Paul's call) |
 
 **Planning (2026-09-23).** Measured at `867ebd1`: suite 82 green, 0 skips, 282 s
 (slowest file 37.6 s). The shipped file boots and plays from `file://` in
@@ -26,12 +27,25 @@ non-dodging bot (below the Weaver bolt's 0.194). Stand-ins: Mimic cut 6 files
 red, the seven bench keys unbound 14, plus `w` 17, version bump 1. Findings
 below, under "What CS017 must act on".
 
+**P1 (2026-09-23).** S1a, S2, S3-A, S4-A built as answered; no closed file
+edited, `EXPORTS` 218. `tools/perf-probe.js` (Node + headless Chromium, no npm):
+boot healthy from `file://`; budget board **8,200 → 6,184 B** a `draw()` after
+300 draws, **6,929 → 5,059** at steady state; empty board 1,856 → 213 steady;
+uncapped **4.3 ms p50 at 1×, 18.1 at 4×**, unmoved (raster-bound). ⚠ Bytes are
+JIT-dependent — the tool reads each board in its own page, twice. The counter
+gate (156 strokes, 8 text calls) was read off `ed8474d` before the fixes and
+did not move; a played Overdrive session hashes identically against the four
+old lines. ⚠ **Finding, Paul's call**: S3's restated rule is not met whole —
+the HUD's text, `wellBandColor()`'s `for…of` and the game-over lines still
+build per frame (below). Reasoning, the before/after and mutation records:
+`log/CS017.md`.
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (26 modules + 3 inlined kit,
-  **832.4 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
+  **834.0 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
   fails the build.
-- `node scratchpad/run-all.js`: **82 files, all green, zero skips** (~290 s).
+- `node scratchpad/run-all.js`: **83 files, all green, zero skips** (288 s, P1).
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
   ⛔ A timeout is not a red — re-run the file alone before treating it as one.
 - **CS001–CS016 are closed; each has a `log/CS0##.md`.** ⛔ **The Classic roster
@@ -76,7 +90,8 @@ below, under "What CS017 must act on".
 - `tools/music-lab.html` and `tools/sfx-lab.html` are the porting sources for
   `17-audio-tracks.js` and `C.SFX`, bound to the build by text identity;
   `well-lab` (⛔ the visual audition has not happened) and `feel-lab` complete
-  the set. ⛔ **A new `SFX_KILL_PITCH` voice is a THREE-file edit**: `C`, BLOCK
+  the set; `reach-probe.js` and `perf-probe.js` are Node tools (data, never a
+  gate; `run-all.js` runs neither). ⛔ **A new `SFX_KILL_PITCH` voice is a THREE-file edit**: `C`, BLOCK
   SFX and the `PITCH_*` tables. ⛔ **`C.SFX` is 28 events, `C.SFX_KILL_PITCH`
   11 voices**; a new event owes the lab a brief, an A label, 1–2 alternates and
   an in-context sequence, and is ONE line starting `    name:`. **Four** lab
@@ -118,7 +133,24 @@ has a §0 call or a note in the plan:
   cap is **24**; `drawShot()` allocating per call (F4); and ⚠ `drawPrompt()`
   building one `rgba()` string per frame of a prompt's last `PROMPT_FADE`
   (`drawText()` owns `globalAlpha`). ⛔ **The seven debug spawn actions ship
-  until CS017** (Paul's H5).
+  until CS017** (Paul's H5). ✅ **P1 closed the budget's three** (§17 restated
+  to 24 shots; `drawShot()` and `drawPrompt()` cached).
+- ⚠ **FOUND BY P1 — S3's "no allocating expression on the draw path" is NOT
+  met whole, and which way it closes is PAUL'S CALL** (GDD §17 says so): the
+  HUD's `hudScoreText()` / `hudLevelText()` (twice a play frame) and
+  `hudComboText()`, ~70 B; `wellBandColor()`'s `for (const band of …)`, twice a
+  frame, ~40 B; `Game.draw()`'s three game-over lines, every game-over frame.
+  Cache them too (a renderer edit, like P1's) or narrow §17's wording to the
+  four. ⛔ Nothing was touched: P1's prompt froze the rest of the renderer.
+- ⛔ **`test-cs017-p1.js` PINS S2's BOARD AT 156 STROKES AND 8 TEXT CALLS A
+  `draw()`**: a renderer change that draws more on that board rewrites
+  `BUDGET_*` in place with the cause named — a counter, never a clock. Its four
+  mutants pin `const out = points._screen;` …, `drawPoly(ctx, _shotPair,
+  false);`, `ctx.font = textFont(size);` and ` : promptFadeColor(a);`.
+- ⚠ **`tools/perf-probe.js`'s bytes are the JIT's as much as the source's**
+  (8,196 B after 300 draws, 7,076 after 5,000, same board): quote a reading
+  with its warm-up; each board needs its own page. ⚠ GDD §16.4's `tools/` line
+  does not list it yet (the close's doc pass).
 - ⛔ **`C.GAME_VERSION` is `"0.0.13"` AND IS PINNED BY LITERAL in
   `test-cs016-p1.js:120`**: a bump rewrites that assertion in place (MEASURED red
   at the CS016 close). Ship's number is Paul's.
@@ -333,10 +365,11 @@ has a §0 call or a note in the plan:
 - ✅ **`CLAUDE.md` is 38,311 bytes** against its 50 KB ceiling. ⚠ The valve and
   the ban on standing sweeps stand.
 
-## Next up — CS017 P1 (the budget)
+## Next up — CS017 P2 (the bench and the devices)
 
 ✅ **§0 is answered** (Paul, 2026-09-23, every recommendation; S9 keeps the
-current two credits lines). Paste `IMPLEMENTATION-PHASES-CS017.md`'s P1 prompt.
+current two credits lines). Paste `IMPLEMENTATION-PHASES-CS017.md`'s P2 prompt.
+⚠ **P1's allocation finding is open for Paul** (above); P2 does not depend on it.
 ⚠ **S10 is Paul's action, outside the repo**: the GitHub repository goes private
 before the itch page goes live. ⛔ `../coinless-kit` must be present for the
-close (zero skips); P1's tool needs Chromium (Playwright's cache holds one here).
+close (zero skips); `tools/perf-probe.js` needs Chromium (Playwright's cache holds one here).

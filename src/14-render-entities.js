@@ -23,11 +23,13 @@
 // it and CS004 P5 removed it. `src/` is concatenated into the shipped artifact,
 // so a comment here is a string in dist/vector-vortex.html.
 
-// Preallocated projection scratch — one point per end of the streak. Like
-// screenPos() and skimmerPoints(), this makes drawShot() non-reentrant; it is
-// a leaf call, so that is fine.
+// Preallocated projection scratch — one point per end of the streak, and the
+// pair drawPoly() is handed (CS017 P1, S3-A: it was a fresh array per shot).
+// Like screenPos() and skimmerPoints(), this makes drawShot() non-reentrant;
+// it is a leaf call, so that is fine.
 const _shotHead = { x: 0, y: 0 };
 const _shotTail = { x: 0, y: 0 };
+const _shotPair = [_shotHead, _shotTail];
 
 // 1 at/above READABILITY_DEPTH; below it, fades linearly to 0 at the throat.
 function shotAlpha(depth) {
@@ -49,7 +51,7 @@ function drawShot(ctx, well, lane, depth, pierce) {
   const tail = depth + C.SHOT_LEN > 1 ? 1 : depth + C.SHOT_LEN;
   screenPos(well, lane, depth, _shotHead);
   screenPos(well, lane, tail, _shotTail);
-  drawPoly(ctx, [_shotHead, _shotTail], false);
+  drawPoly(ctx, _shotPair, false);
   glowStroke(ctx, pierce ? C.TOKEN_COLOR : C.SKIMMER_COLOR, laneLineWidth(depth), shotAlpha(depth));
 }
 

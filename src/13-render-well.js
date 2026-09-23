@@ -58,13 +58,20 @@ function glowStroke(ctx, color, width, alpha) {
 // polyline, so text is the single sanctioned exception to "drawPoly +
 // glowStroke only"; the glow is still GDD 10.2's two passes under `lighter`,
 // wide-and-dim then bright, and never shadowBlur. `y` is the TOP of the text.
+// ⛔ The font string is built ONCE PER SIZE and cached (GDD 17's budget;
+// CS017 P1, S3-A): the HUD sets it several times a frame, on every frame.
+const _textFonts = {};
+function textFont(size) {
+  return _textFonts[size] || (_textFonts[size] = size + "px " + C.TEXT_FONT_FAMILY);
+}
+
 function drawText(ctx, str, x, y, size, color, align) {
   const prevOp = ctx.globalCompositeOperation;
   const prevAlpha = ctx.globalAlpha;
   const prevWidth = ctx.lineWidth;
 
   ctx.globalCompositeOperation = "lighter";
-  ctx.font = size + "px " + C.TEXT_FONT_FAMILY;
+  ctx.font = textFont(size);
   ctx.textAlign = align || "left";
   ctx.textBaseline = "top";
   ctx.strokeStyle = color;
@@ -121,13 +128,22 @@ function wellBaseAlpha(level) {
 // screen space via C.WELL_CX/CY/RADIUS — the same mapping screenPos uses, but
 // applied to a whole polygon at once for the rim/throat rings, which sit at a
 // single depth and so need no per-point perspective easing.
+//
+// ⛔ No per-frame allocation (GDD 17's budget; CS017 P1, S3-A): the screen
+// points land in a scratch cached on the INPUT array, non-enumerable — the
+// pattern wellThroat() and entityScratch() use. Every frame calls this twice,
+// menus included. The array is SHARED: copy out of it to keep it, and one
+// input array is non-reentrant, which a leaf call never needs.
 function projectPoly(points) {
-  const out = new Array(points.length);
+  if (!points._screen) {
+    const pts = new Array(points.length);
+    for (let i = 0; i < points.length; i++) pts[i] = { x: 0, y: 0 };
+    Object.defineProperty(points, "_screen", { value: pts, enumerable: false });
+  }
+  const out = points._screen;
   for (let i = 0; i < points.length; i++) {
-    out[i] = {
-      x: C.WELL_CX + points[i].x * C.WELL_RADIUS,
-      y: C.WELL_CY + points[i].y * C.WELL_RADIUS,
-    };
+    out[i].x = C.WELL_CX + points[i].x * C.WELL_RADIUS;
+    out[i].y = C.WELL_CY + points[i].y * C.WELL_RADIUS;
   }
   return out;
 }

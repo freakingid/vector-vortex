@@ -1034,6 +1034,10 @@ const C = {
   PROMPT_COLOR:         "#FFFFFF",  // ⚠ provisional, HUD_COLOR's white; #RRGGBB (the fade parses it)
   PROMPT_TIME:          4.0,        // s a prompt holds the band. ⚠ provisional (N4)
   PROMPT_FADE:          0.5,        // s, the draw-time fade at the end of that. ⚠ provisional
+  // ⛔ The fade's colour is one string per 1/PROMPT_FADE_STEPS of alpha, built
+  // on first use and cached (GDD 17's budget; CS017 P1, S3-A) — a draw-path
+  // granularity, not a look: 100 steps over half a second is finer than a frame.
+  PROMPT_FADE_STEPS:    100,
 
   // ---- Text and the HUD (GDD 10.2, 10.4) — CS008 P4 ------------------------
   // ⛔ drawText() (13-render-well.js) is the ONE text path in the build. Its
@@ -7852,13 +7856,20 @@ function glowStroke(ctx, color, width, alpha) {
 // polyline, so text is the single sanctioned exception to "drawPoly +
 // glowStroke only"; the glow is still GDD 10.2's two passes under `lighter`,
 // wide-and-dim then bright, and never shadowBlur. `y` is the TOP of the text.
+// ⛔ The font string is built ONCE PER SIZE and cached (GDD 17's budget;
+// CS017 P1, S3-A): the HUD sets it several times a frame, on every frame.
+const _textFonts = {};
+function textFont(size) {
+  return _textFonts[size] || (_textFonts[size] = size + "px " + C.TEXT_FONT_FAMILY);
+}
+
 function drawText(ctx, str, x, y, size, color, align) {
   const prevOp = ctx.globalCompositeOperation;
   const prevAlpha = ctx.globalAlpha;
   const prevWidth = ctx.lineWidth;
 
   ctx.globalCompositeOperation = "lighter";
-  ctx.font = size + "px " + C.TEXT_FONT_FAMILY;
+  ctx.font = textFont(size);
   ctx.textAlign = align || "left";
   ctx.textBaseline = "top";
   ctx.strokeStyle = color;
@@ -7915,13 +7926,22 @@ function wellBaseAlpha(level) {
 // screen space via C.WELL_CX/CY/RADIUS — the same mapping screenPos uses, but
 // applied to a whole polygon at once for the rim/throat rings, which sit at a
 // single depth and so need no per-point perspective easing.
+//
+// ⛔ No per-frame allocation (GDD 17's budget; CS017 P1, S3-A): the screen
+// points land in a scratch cached on the INPUT array, non-enumerable — the
+// pattern wellThroat() and entityScratch() use. Every frame calls this twice,
+// menus included. The array is SHARED: copy out of it to keep it, and one
+// input array is non-reentrant, which a leaf call never needs.
 function projectPoly(points) {
-  const out = new Array(points.length);
+  if (!points._screen) {
+    const pts = new Array(points.length);
+    for (let i = 0; i < points.length; i++) pts[i] = { x: 0, y: 0 };
+    Object.defineProperty(points, "_screen", { value: pts, enumerable: false });
+  }
+  const out = points._screen;
   for (let i = 0; i < points.length; i++) {
-    out[i] = {
-      x: C.WELL_CX + points[i].x * C.WELL_RADIUS,
-      y: C.WELL_CY + points[i].y * C.WELL_RADIUS,
-    };
+    out[i].x = C.WELL_CX + points[i].x * C.WELL_RADIUS;
+    out[i].y = C.WELL_CY + points[i].y * C.WELL_RADIUS;
   }
   return out;
 }
@@ -8019,11 +8039,13 @@ function isLaneLit(s) {
 // it and CS004 P5 removed it. `src/` is concatenated into the shipped artifact,
 // so a comment here is a string in dist/vector-vortex.html.
 
-// Preallocated projection scratch — one point per end of the streak. Like
-// screenPos() and skimmerPoints(), this makes drawShot() non-reentrant; it is
-// a leaf call, so that is fine.
+// Preallocated projection scratch — one point per end of the streak, and the
+// pair drawPoly() is handed (CS017 P1, S3-A: it was a fresh array per shot).
+// Like screenPos() and skimmerPoints(), this makes drawShot() non-reentrant;
+// it is a leaf call, so that is fine.
 const _shotHead = { x: 0, y: 0 };
 const _shotTail = { x: 0, y: 0 };
+const _shotPair = [_shotHead, _shotTail];
 
 // 1 at/above READABILITY_DEPTH; below it, fades linearly to 0 at the throat.
 function shotAlpha(depth) {
@@ -8045,7 +8067,7 @@ function drawShot(ctx, well, lane, depth, pierce) {
   const tail = depth + C.SHOT_LEN > 1 ? 1 : depth + C.SHOT_LEN;
   screenPos(well, lane, depth, _shotHead);
   screenPos(well, lane, tail, _shotTail);
-  drawPoly(ctx, [_shotHead, _shotTail], false);
+  drawPoly(ctx, _shotPair, false);
   glowStroke(ctx, pierce ? C.TOKEN_COLOR : C.SKIMMER_COLOR, laneLineWidth(depth), shotAlpha(depth));
 }
 
@@ -14063,6 +14085,16 @@ const _promptRgb = (function () {
   return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)).join(",");
 })();
 
+// The fade's colour for an alpha, one string per 1/C.PROMPT_FADE_STEPS, built
+// on first use and cached (GDD 17's budget; CS017 P1, S3-A): a fade used to
+// build one rgba() string on every frame of it.
+const _promptFade = [];
+function promptFadeColor(a) {
+  const k = Math.round(a * C.PROMPT_FADE_STEPS);
+  return _promptFade[k] ||
+    (_promptFade[k] = "rgba(" + _promptRgb + "," + (k / C.PROMPT_FADE_STEPS).toFixed(3) + ")");
+}
+
 // The head's alpha: 1, then a linear fade over the last C.PROMPT_FADE.
 // A reading of the clock, never a clock of its own.
 function promptAlpha(queue) {
@@ -14080,7 +14112,7 @@ function drawPrompt(ctx, queue) {
   if (queue.rows.length === 0) return;
   const a = promptAlpha(queue);
   if (!(a > 0)) return;
-  const color = a >= 1 ? C.PROMPT_COLOR : "rgba(" + _promptRgb + "," + a.toFixed(3) + ")";
+  const color = a >= 1 ? C.PROMPT_COLOR : promptFadeColor(a);
   drawText(ctx, queue.rows[0].text, C.WORLD_W / 2, C.PROMPT_Y, C.PROMPT_SIZE, color, "center");
 }
 

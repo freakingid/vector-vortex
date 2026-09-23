@@ -731,6 +731,8 @@ Standalone HTML, **not shipped code**; drift in one can only produce a bad previ
   `npm run serve`).
 - **`tools/reach-probe.js`** — Node; ⛔ the measurement behind
   `test-cs015-p3.js`'s `REACH`, which is replaced whole from its output.
+- **`tools/perf-probe.js`** — Node + headless Chromium over `file://`; ⛔ GDD
+  §17's bytes and frame cost, as data never a gate; no Chromium exits nonzero.
 
 `RATIONALE.md#tools`.
 
