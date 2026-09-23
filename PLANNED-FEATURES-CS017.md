@@ -220,6 +220,15 @@ nothing and reword — leaves 1.6 KB on every menu frame that three lines remove
 short-lived garbage is a young-generation scavenge every few seconds, each
 sub-millisecond. The tool records it; nothing here claims otherwise.
 
+⛔ **S3 addendum — ANSWERED (Paul, 2026-09-23, after P1).** P1 found three
+more draw-path allocators S3 did not name (`STATUS.md`, `log/CS017.md`). ONE
+is decided: **`wellBandColor()`'s `for (const band of C.BAND_COLORS)` becomes
+an indexed loop — a rewrite, not a cache** (the function is pure, so no state
+and no hash moves), asserted as P1's four are, by an observable its old line
+fails (no array iterator is taken). ⚠ **Still open, Paul's**: the HUD's
+score / level / combo strings and the game-over screen's three lines — cache
+them, or narrow §17's rule to the sites fixed.
+
 ### S4 — the number that stands for "60 fps"
 
 MEASURED (§1.4), the budget board live, `--disable-gpu` (software raster):

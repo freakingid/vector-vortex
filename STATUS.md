@@ -14,7 +14,7 @@ did.
 | Phase | Landed |
 |---|---|
 | Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14; ✅ **§0 answered 2026-09-23 — every recommendation**; S9 keeps the current credits |
-| P1 | ✅ 2026-09-23 — the budget, measured: `tools/perf-probe.js`; the four draw-path allocators cached (+`C.PROMPT_FADE_STEPS`); `test-cs017-p1.js` (counter gate 156 strokes / 8 text calls, four sites mutation-checked, played-session hash); GDD §17's budget restated; ⚠ three more draw-path allocators found (Paul's call) |
+| P1 | ✅ 2026-09-23 — the budget, measured: `tools/perf-probe.js`; the four draw-path allocators cached (+`C.PROMPT_FADE_STEPS`); `test-cs017-p1.js` (counter gate 156 strokes / 8 text calls, five sites mutation-checked, played-session hash); GDD §17's budget restated; ⚠ three more draw-path allocators found — `wellBandColor()`'s loop rewritten (Paul's S3 addendum), the HUD text and game-over lines still Paul's call |
 
 **Planning (2026-09-23).** Measured at `867ebd1`: suite 82 green, 0 skips, 282 s
 (slowest file 37.6 s). The shipped file boots and plays from `file://` in
@@ -29,21 +29,21 @@ below, under "What CS017 must act on".
 
 **P1 (2026-09-23).** S1a, S2, S3-A, S4-A built as answered; no closed file
 edited, `EXPORTS` 218. `tools/perf-probe.js` (Node + headless Chromium, no npm):
-boot healthy from `file://`; budget board **8,200 → 6,184 B** a `draw()` after
-300 draws, **6,929 → 5,059** at steady state; empty board 1,856 → 213 steady;
+boot healthy from `file://`; budget board **8,200 → 6,055 B** a `draw()` after
+300 draws, **6,929 → 5,014** at steady state; empty board 1,856 → 170 steady;
 uncapped **4.3 ms p50 at 1×, 18.1 at 4×**, unmoved (raster-bound). ⚠ Bytes are
 JIT-dependent — the tool reads each board in its own page, twice. The counter
 gate (156 strokes, 8 text calls) was read off `ed8474d` before the fixes and
 did not move; a played Overdrive session hashes identically against the four
-old lines. ⚠ **Finding, Paul's call**: S3's restated rule is not met whole —
-the HUD's text, `wellBandColor()`'s `for…of` and the game-over lines still
-build per frame (below). Reasoning, the before/after and mutation records:
+old lines. ⚠ **Finding**: S3's restated rule was not met whole; Paul chose
+the indexed loop for `wellBandColor()` (S3 addendum, done), and the HUD's text
+and the game-over lines are still his call (below). Reasoning, the before/after and mutation records:
 `log/CS017.md`.
 
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (26 modules + 3 inlined kit,
-  **834.0 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
+  **834.3 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
   fails the build.
 - `node scratchpad/run-all.js`: **83 files, all green, zero skips** (288 s, P1).
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
@@ -136,17 +136,18 @@ has a §0 call or a note in the plan:
   until CS017** (Paul's H5). ✅ **P1 closed the budget's three** (§17 restated
   to 24 shots; `drawShot()` and `drawPrompt()` cached).
 - ⚠ **FOUND BY P1 — S3's "no allocating expression on the draw path" is NOT
-  met whole, and which way it closes is PAUL'S CALL** (GDD §17 says so): the
-  HUD's `hudScoreText()` / `hudLevelText()` (twice a play frame) and
-  `hudComboText()`, ~70 B; `wellBandColor()`'s `for (const band of …)`, twice a
-  frame, ~40 B; `Game.draw()`'s three game-over lines, every game-over frame.
-  Cache them too (a renderer edit, like P1's) or narrow §17's wording to the
-  four. ⛔ Nothing was touched: P1's prompt froze the rest of the renderer.
+  met whole; what is left is PAUL'S CALL** (GDD §17 says so): the HUD's
+  `hudScoreText()` / `hudLevelText()` (twice a play frame) and
+  `hudComboText()`, ~70 B; `Game.draw()`'s three game-over lines, every
+  game-over frame. Cache them (a renderer edit) or narrow §17's wording to
+  the sites fixed. ✅ The third, `wellBandColor()`'s `for…of`, is an indexed
+  loop (Paul, S3 addendum in the plan; asserted in `test-cs017-p1.js`).
 - ⛔ **`test-cs017-p1.js` PINS S2's BOARD AT 156 STROKES AND 8 TEXT CALLS A
   `draw()`**: a renderer change that draws more on that board rewrites
-  `BUDGET_*` in place with the cause named — a counter, never a clock. Its four
+  `BUDGET_*` in place with the cause named — a counter, never a clock. Its five
   mutants pin `const out = points._screen;` …, `drawPoly(ctx, _shotPair,
-  false);`, `ctx.font = textFont(size);` and ` : promptFadeColor(a);`.
+  false);`, `ctx.font = textFont(size);`, ` : promptFadeColor(a);` and
+  `wellBandColor()`'s indexed `for` line.
 - ⚠ **`tools/perf-probe.js`'s bytes are the JIT's as much as the source's**
   (8,196 B after 300 draws, 7,076 after 5,000, same board): quote a reading
   with its warm-up; each board needs its own page. ⚠ GDD §16.4's `tools/` line
@@ -369,7 +370,8 @@ has a §0 call or a note in the plan:
 
 ✅ **§0 is answered** (Paul, 2026-09-23, every recommendation; S9 keeps the
 current two credits lines). Paste `IMPLEMENTATION-PHASES-CS017.md`'s P2 prompt.
-⚠ **P1's allocation finding is open for Paul** (above); P2 does not depend on it.
+⚠ **What is left of P1's allocation finding (the HUD text, the game-over
+lines) is open for Paul** (above); P2 does not depend on it.
 ⚠ **S10 is Paul's action, outside the repo**: the GitHub repository goes private
 before the itch page goes live. ⛔ `../coinless-kit` must be present for the
 close (zero skips); `tools/perf-probe.js` needs Chromium (Playwright's cache holds one here).

@@ -7909,10 +7909,14 @@ function wellBandColor(level, rng) {
     const i = Math.min(palette.length - 1, Math.floor(r * palette.length));
     return palette[i];
   }
-  for (const band of C.BAND_COLORS) {
-    if (level <= band.hi) return band.color;
+  // ⛔ An indexed loop, never `for…of` (GDD 17's budget; CS017 P1, S3
+  // addendum): this runs several times a frame, and a `for…of` takes an array
+  // iterator on every call that the engine does not always optimise away.
+  const bands = C.BAND_COLORS;
+  for (let i = 0; i < bands.length; i++) {
+    if (level <= bands[i].hi) return bands[i].color;
   }
-  return C.BAND_COLORS[C.BAND_COLORS.length - 1].color;
+  return bands[bands.length - 1].color;
 }
 
 // GDD 3.7 — the dim band. Levels 65-80 render at DIM_BAND_ALPHA; everything

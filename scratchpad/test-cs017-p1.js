@@ -4,14 +4,15 @@
 //      enemies, 24 shots, 2 tokens, the combo at ×4, a prompt mid-fade, a
 //      death's fragments — issues exactly the strokes and text calls MEASURED
 //      at the HEAD before the fixes (ed8474d). A counter, never a clock.
-//   2. THE FOUR DRAW-PATH SITES ALLOCATE NOTHING, each by an observable the old
+//   2. THE FIVE DRAW-PATH SITES ALLOCATE NOTHING, each by an observable the old
 //      line fails: projectPoly() hands drawPoly the SAME arrays every frame;
 //      drawShot() one pair for every shot; drawText()'s font is built once per
 //      size (a string has no identity, so the probe changes C.TEXT_FONT_FAMILY
 //      after the first build and the cached string must not move); a fade's
-//      colour is built once per 1/C.PROMPT_FADE_STEPS (no toFixed on a warm one).
+//      colour is built once per 1/C.PROMPT_FADE_STEPS (no toFixed on a warm one);
+//      wellBandColor() takes no array iterator (S3 addendum, Paul).
 //   3. THE DRAW PATH WRITES NO STATE: a played Overdrive session through
-//      Game.frame() hashes identically, frame by frame, with the four old lines.
+//      Game.frame() hashes identically, frame by frame, with the five old lines.
 // ⚠ Node cannot measure the BYTES (the harness canvas is a Proxy that boxes
 // every double it stores): tools/perf-probe.js does, in Chromium (plan §1.3).
 "use strict";
@@ -49,6 +50,8 @@ const OLD = {
   drawShot:    ["  drawPoly(ctx, _shotPair, false);", "  drawPoly(ctx, [_shotHead, _shotTail], false);"],
   drawText:    ["  ctx.font = textFont(size);", "  ctx.font = size + \"px \" + C.TEXT_FONT_FAMILY;"],
   drawPrompt:  [" : promptFadeColor(a);", " : \"rgba(\" + _promptRgb + \",\" + a.toFixed(3) + \")\";"],
+  wellBandColor: ["  for (let i = 0; i < bands.length; i++) {\n    if (level <= bands[i].hi) return bands[i].color;",
+                  "  for (const band of bands) {\n    if (level <= band.hi) return band.color;"],
 };
 
 // ---------------------------------------------------------------------------
@@ -102,7 +105,7 @@ function countDraw(X) {
 }
 
 // ---------------------------------------------------------------------------
-// The four probes. Each takes a build and returns { ok, why }; a mutant must
+// The five probes. Each takes a build and returns { ok, why }; a mutant must
 // return ok false. ⛔ Every read is guarded: a probe that throws is a defect.
 // ---------------------------------------------------------------------------
 const PROBES = {
@@ -173,6 +176,19 @@ const PROBES = {
       q.rows.length = 0; q.t = 0;
     }
   },
+  // A `for…of` over an array calls Array.prototype[Symbol.iterator]; an
+  // indexed loop does not. Every band level and one past the table.
+  wellBandColor(X) {
+    const proto = Array.prototype, iter = proto[Symbol.iterator];
+    let calls = 0;
+    const colors = [];
+    try {
+      proto[Symbol.iterator] = function () { calls++; return iter.apply(this, arguments); };
+      for (let level = 1; level <= X.C.BAND_RNG_LEVEL + 1; level++) colors.push(X.wellBandColor(level, 0.5));
+    } finally { proto[Symbol.iterator] = iter; }
+    const ok = calls === 0 && colors.every(c => typeof c === "string" && c.length > 0);
+    return { ok, why: `${calls} array iterators over ${colors.length} levels`, colors };
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -234,6 +250,9 @@ const HEAD_MUTATE = Object.values(OLD);
   const rimOld = PROBES.projectPoly(Y).rim, rimNew = fixed.projectPoly.rim;
   H.assert(rimOld && rimNew && JSON.stringify(rimOld) === JSON.stringify(rimNew),
            "⛔ the cached rim projects to exactly the HEAD's screen points");
+  const bandOld = PROBES.wellBandColor(Y).colors, bandNew = fixed.wellBandColor.colors;
+  H.assert(bandOld.length > 0 && JSON.stringify(bandOld) === JSON.stringify(bandNew),
+           `⛔ the indexed loop answers exactly the HEAD's colour at every level 1..${C.BAND_RNG_LEVEL + 1}`);
 }
 
 function hashState(st, q) {
