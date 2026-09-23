@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: **1.0.0 — SHIPPED** · CS017 closed 2026-09-23 · **no changeset in flight; the ROADMAP is closed** (Paul's S14) ·
+Version: **1.0.0 — SHIPPED** · CS017 closed 2026-09-23 · **CS018 (1.0.1) PLANNED — P1 next** ·
 Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 · Tokens: 5/5 effects ·
 Achievements: 23 lifetime + 19 weekly (**frozen**) · Prompts: 12
 
@@ -7,11 +7,11 @@ Achievements: 23 lifetime + 19 weekly (**frozen**) · Prompts: 12
 
 ⛔ **A POST-SHIP FILE.** CS001–CS017 are closed, each with a `log/CS0##.md`;
 CS017's ledger, phase entries, review and **this file's pre-close text,
-verbatim**, are in `log/CS017.md`. There is no plan in flight and no next
-phase. ⛔ **Post-ship work is a PATCH, and a patch is a changeset**: a planning
-session first (`PLANNED-FEATURES-CS018.md` + `IMPLEMENTATION-PHASES-CS018.md`),
-then build phases, then a close — `CLAUDE.md`'s three session kinds, unchanged.
-Its own `STATUS.md` ledger starts here, under "Phase ledger".
+verbatim**, are in `log/CS017.md`. ⛔ **Post-ship work is a PATCH, and a patch
+is a changeset**: a planning session first, then build phases, then a close —
+`CLAUDE.md`'s three session kinds, unchanged. **CS018 is planned**
+(`PLANNED-FEATURES-CS018.md` + `IMPLEMENTATION-PHASES-CS018.md`); its ledger
+starts under "Phase ledger".
 
 ⚠ **PAUL'S, OUTSIDE THE REPO, BEFORE THE ITCH PAGE GOES LIVE** (S10, S12):
 make `github.com/freakingid/vector-vortex` **private** (it is PUBLIC, and 8 live
@@ -23,7 +23,21 @@ here can scan it — GDD §18.6); run `bash package-for-itch.sh` and upload
 
 | Changeset | Landed |
 |---|---|
-| — | none in flight |
+| CS018 planning | 2026-09-23 — 1.0.1: the ten §19 coverage gaps, the VOICE row, the version; two phases |
+
+**CS018 planning (2026-09-23).** Planned at `43e07f2` (85 files, zero skips,
+308.8 s). Ten calls, Q1–Q10, each with one recommendation that STANDS unless
+Paul answers (plan §0). **P1** closes the ten gaps in `test-cs018-p1.js` and
+moves no `dist/` byte; **P2** cuts OPTIONS' VOICE VOLUME row (V1 MEASURED: five
+closed files red, all label lists, settings shapes or row-index navigation;
+`test-cs009-p3.js` throws at `:227`, so its VOICE block is PREDICTED), sets
+`C.GAME_VERSION` 1.0.1 (V2: one red, `test-cs016-p1.js:121`) and closes.
+⚠ **Hazards found (plan §0.1)**: `build.js` injects the script with a STRING
+replacement, so a `$&`, `$$`, `` $` `` or `$'` in any module would be silently
+rewritten in `dist/` (none today — Q6 fixes it in P1); the "ten coverage
+gaps" below were nine (P4 closed one) — Q1's tenth is the page's markup;
+GDD §11.7's `pulse` "an octave up" does not match the table (Q8);
+`CLAUDE.md` names a `glow-lab.html` that was never built (Q9).
 
 ## Working / verified (MEASURED at the CS017 close)
 
