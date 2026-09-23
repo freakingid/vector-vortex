@@ -231,6 +231,13 @@ function nextWell() {
 //
 // ⛔ NOTHING HERE VALIDATES opts. The list a player picks from is
 // startDepthOptions() (22-meta.js); this is the mechanism under it.
+//
+// ⛔ `opts.attract` IS THE DEMO (GDD 12; CS016 P2, N7, N8): the same run, with
+// NO START SEAT and no `lastRunMode`. `run` stays null in Meta, so eligible()
+// reads false at every seat it guards — the local top 10, both boards, both
+// achievement seats and the unlock sound — with no new term in the ONE gate,
+// and runOpen() is false, so frame()'s 'died' seat is inert. Nothing in
+// `state` says it is a demo: Game's closure holds that flag.
 // ⛔ THE LAST RUN STARTED THIS SESSION, for SCORES' entry mode (CS012 P3, O10).
 // Not in `state`: startGame() rewrites that, and quitToTitle() puts "classic"
 // back, so the mode a player just played would be lost by the time they reach
@@ -246,13 +253,14 @@ function startGame(seed, opts) {
   state.level = state.startDepth;
   state.wellIndex = (state.level - 1) % WELLS.length;
   enterWell();
-  lastRunMode = state.mode;
+  const demo = !!(opts && opts.attract);
+  if (!demo) lastRunMode = state.mode;
   // ⛔ A RUN'S PROMPTS BELONG TO THE RUN (GDD 12; CS016 P1, N4): the queue is
   // emptied here and a death keeps it. Outside `state`; writes none.
   promptReset(promptQueue);
   // ⛔ THE RUN'S START SEAT (CS011 P3, plan R7), last. It opens the run's meta
   // record outside `state` and drops one still open; it writes no `state`.
-  Meta.runStarted();
+  if (!demo) Meta.runStarted();
 }
 
 // ---------------------------------------------------------------------------
@@ -398,6 +406,17 @@ const Game = (function () {
   // caller today, for C.HIT_STOP_DEATH; anything else that wants to freeze the
   // simulation calls hitStop() rather than growing a second one.
   let hitStopLeft = 0;
+
+  // ⛔ ATTRACT MODE (GDD 12; CS016 P2, N6–N10), and ⛔ NONE OF IT IS ON `state`
+  // (plan §8): the demo is screen "play" with this flag, never a screen value.
+  // The flag's seats are all SKIPS of seats that write no `state` — the start
+  // seat, the telemetry sample, the prompt scan, the clear edge's record, unlock
+  // and marks — plus the driver, the ending and the demo's line. `attractIdle`
+  // is the title's idle clock, simulation dt at rest; `acted` says a named
+  // action arrived on this step (runAction(), inside input.sample()).
+  let attract = false;
+  let attractIdle = 0;
+  let acted = false;
 
   // ⛔ Counter-based, never wall-clock — frame-budget gates in the suite read
   // these (CLAUDE.md, Test rules).
@@ -566,6 +585,12 @@ const Game = (function () {
   // not announce itself — it shows up as an input that works everywhere except
   // one screen. The listener is gone; this is the only route in.
   function runAction(name) {
+    acted = true;
+    // ⛔ IN THE DEMO, ANY NAMED ACTION ENDS IT AND DOES NOTHING ELSE (N9): no
+    // pause, no bench spawn or well cycle, no telemetry toggle or export, and
+    // autoPause writes nothing. The screen is play, never pause, so the
+    // 'quit' seat cannot fire; the title's entry step latches what is held.
+    if (attract) { endAttract(); return; }
     // ⛔ THE BENCH FLAG (CS011 P3, plan R8; Paul's M6): a bench spawn or a well
     // cycle IN PLAY makes the run ineligible for both boards. `t` and `e` touch
     // no simulation and leave it eligible.
@@ -1447,6 +1472,8 @@ const Game = (function () {
     Object.assign(state, newState());
     state.screen = "title";
     hitStopLeft = 0;
+    // ⛔ THE DEMO'S ONE ENDING, whatever ended it (CS016 P2, N9).
+    attract = false;
   }
 
   function menuAction(name, screen) {
@@ -1570,9 +1597,40 @@ const Game = (function () {
   // The scan's one wrapper, at both of update()'s seats: the fired id is MARKED
   // in Meta's closure (22-meta.js), which writes nothing here. ⛔ promptScan()
   // is the top-level function a soak stubs; this wrapper then marks nothing.
+  // ⛔ NOT IN THE DEMO (N9): a demo teaches nothing and marks nothing seen.
   function scanPrompts(well) {
+    if (attract) return;
     const id = promptScan(state, well, Meta.promptsSeen(), promptQueue);
     if (typeof id === "string") Meta.promptSeen(id);
+  }
+
+  // ⛔ THE DEMO'S START (N7, N10): the title's idle clock reached ATTRACT_IDLE.
+  function startAttract() {
+    attractIdle = 0;
+    startGame(C.ATTRACT_SEED, { mode: C.ATTRACT_MODE, startDepth: C.ATTRACT_DEPTH, attract: true });
+    attract = true;
+  }
+
+  // ⛔ THE DEVICES' READING OF THIS STEP IS READ FIRST (N6, N9): a rotate or
+  // a held button is the player, and ends the demo on this step. Otherwise the
+  // driver overwrites the four fields; the struct stays the one input (GDD 9.5).
+  function attractInput() {
+    const s = state.input;
+    if (s.rotate !== 0 || s.fire || s.purge || s.jump) { endAttract(); return; }
+    attractDrive(state, WELLS[state.wellIndex], s);
+  }
+
+  // ⛔ AN ENDING INSIDE A STEP KEEPS THE STEP'S STRUCT (CS016 P2; MEASURED red
+  // without it): the step that ends the demo is the title's ENTRY step, and
+  // quitToTitle() re-mints `state` from newState(), struct included — so the
+  // entry step would latch an at-rest struct and the held Fire that ended the
+  // demo would confirm PLAY on the next step. The devices' reading stays the
+  // struct, and the entry step latches what is held. An ending at frame()'s
+  // seat needs none of this: the next step samples before its entry step.
+  function endAttract() {
+    const held = state.input;
+    quitToTitle();
+    state.input = held;
   }
 
   function nowMs() {
@@ -1587,7 +1645,10 @@ const Game = (function () {
     syncScreen();
     // ⛔ ABOVE THE STOP, DELIBERATELY. This is the one input path (GDD 9.5), and
     // the menus below read the struct it writes.
-    input.sample(dt, state.input);
+    // ⛔ AND IN THE DEMO THE DRIVER WRITES IT, AFTER the sample (CS016 P2, N6):
+    // attractInput() reads what the devices wrote before overwriting it.
+    acted = false;
+    input.sample(dt, state.input); if (attract) attractInput();
     // ⛔ AND AGAIN, BECAUSE A PAUSE ARRIVES INSIDE sample() (CS008 P6). This makes
     // the pausing step the pause menu's ENTRY step, so a Fire the player was
     // holding in play does not confirm RESUME on the same step. A no-op on
@@ -1628,6 +1689,16 @@ const Game = (function () {
       if (state.screen === "title") refreshTitleLine();
       if (state.screen === "achievements") refreshAchievementNote();
       if (state.screen === "profileName") refreshNameLines();
+      // ⛔ THE IDLE CLOCK, TITLE ONLY (N10): simulation dt while the struct is
+      // at rest and no named action arrived; anything else zeroes it. ⛔ Never
+      // a clock read — Date.now and performance.now keep their four readers.
+      const s = state.input;
+      if (state.screen === "title" && !acted && s.rotate === 0 && !s.fire && !s.purge && !s.jump) {
+        attractIdle += dt;
+      } else {
+        attractIdle = 0;
+      }
+      if (attractIdle >= C.ATTRACT_IDLE) startAttract();
       return;
     }
 
@@ -1652,7 +1723,8 @@ const Game = (function () {
     // stopped run stops logging. A row is therefore the simulation as this step
     // BEGINS, with state.time already advanced — one call site, and the two
     // returns below cannot silently halve the coverage.
-    Telemetry.sample(state);
+    // ⛔ NOT IN THE DEMO (CS016 P2, N8): a demo must not fill the profile's ring.
+    if (!attract) Telemetry.sample(state);
 
     const well = WELLS[state.wellIndex];
 
@@ -1772,12 +1844,18 @@ const Game = (function () {
       if (!well.closed) state.tally.openWellsCleared++;
       sfx("wellClear");
       clearBonuses(state);
-      levelRecord().noteCleared(state.level);
-      Meta.clearEdge();
-      // ⛔ The prompts' marks are written HERE, a play step that already writes,
-      // and at the other three seats saveTelemetry() uses — never on a bare
-      // play step (test-cs015-p2.js; 22-meta.js).
-      Meta.savePrompts();
+      // ⛔ NOT IN THE DEMO (CS016 P2, N8): noteCleared() is the ONE writer
+      // outside the gate (MEASURED, plan §1.5), and a demo has no business
+      // moving Meta's window and streak or writing marks. The demo still
+      // dives, and the tally and the bonuses are `state` a demo owns.
+      if (!attract) {
+        levelRecord().noteCleared(state.level);
+        Meta.clearEdge();
+        // ⛔ The prompts' marks are written HERE, a play step that already writes,
+        // and at the other three seats saveTelemetry() uses — never on a bare
+        // play step (test-cs015-p2.js; 22-meta.js).
+        Meta.savePrompts();
+      }
       startDive(state);
     }
   }
@@ -1822,7 +1900,9 @@ const Game = (function () {
     // Dive and BEFORE the tokens and everything that moves — an airborne craft
     // reaches y 666 and goes OVER the line, never under it. In play and pause
     // only; the bag is read, never written.
-    if (state.screen === "play" || state.screen === "pause") drawPrompt(ctx, promptQueue);
+    // ⛔ IN THE DEMO THE BAND CARRIES ITS ONE LINE INSTEAD (CS016 P2, N9).
+    if (attract) drawAttractLine(ctx);
+    else if (state.screen === "play" || state.screen === "pause") drawPrompt(ctx, promptQueue);
     // ⛔ TOKENS ABOVE THE WELL AND BELOW EVERYTHING ELSE (GDD 14.1, 1.1 P2;
     // CS013 T4, T10): a gift is never drawn over a threat. Read off the token's
     // own fields; nothing here draws a random value.
@@ -1981,6 +2061,11 @@ const Game = (function () {
     // play step, so its storage writes are legal. Once per run: runEnded() closes
     // it.
     if (state.screen === "gameover" && Meta.runOpen()) Meta.runEnded("died");
+    // ⛔ THE DEMO'S TWO OTHER ENDINGS (CS016 P2, N9), at the same seat and before
+    // the draw: its game over, at once and with no game-over screen, and its
+    // length in simulation seconds. Its run was never open, so the seat above
+    // is inert for it.
+    if (attract && (state.screen === "gameover" || state.time >= C.ATTRACT_LENGTH)) quitToTitle();
 
     audioFrame();
     draw();
@@ -2107,6 +2192,8 @@ const Game = (function () {
     syncedScreen = null;
     audioRunLive = false;
     rimGlow = 0;
+    attract = false;
+    attractIdle = 0;
     resetControls();
     resetSound();
     stats.frames = 0; stats.ticks = 0; stats.lastSteps = 0; stats.accumulator = 0;

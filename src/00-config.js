@@ -938,6 +938,20 @@ const C = {
   READABILITY_DEPTH:    0.25,   // ⛔ nothing opaque drawn below this depth
   ATTRACT_IDLE:         20,     // s before attract mode
 
+  // ---- Attract mode (GDD 12; CS016 P2, N6–N10) ------------------------------
+  // The demo is a real run the player did not ask for: startGame() under
+  // `attract: true`, driven by attractDrive() (22-onboarding.js). ⛔ A FIXED
+  // SEED, so the demo is the same run on every load of a build; it spends
+  // state.rng as any run does and the next real run rebuilds the stream.
+  // ⛔ The idle clock is SIMULATION dt on title steps at rest — never a clock
+  // read. ⛔ ATTRACT_LENGTH is simulation seconds of the demo (state.time).
+  ATTRACT_SEED:         1,            // ⚠ provisional (N7): five kinds, tokens, two dives and no death in 45 s, MEASURED
+  ATTRACT_MODE:         "overdrive",  // N7: the default highlight, and the mode with something to show
+  ATTRACT_DEPTH:        5,            // ⚠ provisional (N7): six kinds and a token by 45 s, MEASURED
+  ATTRACT_LENGTH:       45,           // s. ⚠ provisional (N7)
+  ATTRACT_PURGE_EVERY:  5.2,          // s between the driver's Purge presses. ⚠ provisional (N6's "every N s")
+  ATTRACT_LINE:         "DEMO — PRESS ANY KEY",   // ⚠ Paul's text (N9); the prompt band, ≤ 36 characters
+
   // ---- The first-run prompts (GDD 12; CS016 P1, N2–N4) ----------------------
   // ⛔ DATA ONLY: { id, text } in GDD 12's order and nothing else — no trigger,
   // no class name, no level. A trigger is a board read that names a class, and

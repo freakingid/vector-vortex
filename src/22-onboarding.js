@@ -7,6 +7,9 @@
 //   promptStep(queue, dt)                 the queue's count-up clock
 //   drawPrompt(ctx, queue)                the line, through drawText()
 // and the queue's bag, `promptQueue`. 23-main.js calls them at their seats.
+// Since CS016 P2, attract mode's driver too (N6): attractDrive(state, well,
+// out), the demo's four-field struct, and drawAttractLine(ctx), its one line
+// in the same band. The demo's gates and its ending are 23-main.js's.
 //
 // ⛔ NOTHING HERE IS ON `state`, AND NOTHING HERE WRITES IT (plan §8). The scan
 // reads the board and spends no draw, reads no clock and writes no `state`;
@@ -135,4 +138,94 @@ function drawPrompt(ctx, queue) {
   if (!(a > 0)) return;
   const color = a >= 1 ? C.PROMPT_COLOR : "rgba(" + _promptRgb + "," + a.toFixed(3) + ")";
   drawText(ctx, queue.rows[0].text, C.WORLD_W / 2, C.PROMPT_Y, C.PROMPT_SIZE, color, "center");
+}
+
+// ---------------------------------------------------------------------------
+// ATTRACT MODE'S DRIVER (GDD 12; CS016 P2, N6)
+// ---------------------------------------------------------------------------
+//
+// ⛔ THE SOAKS' HUNTER, PORTED (test-cs014-p3.js's four clauses), plus a
+// periodic Purge ⚠. Update() calls it AFTER input.sample() on an attract step,
+// once the devices' own reading of that step has been read and found at rest,
+// and it OVERWRITES the four fields: the struct stays the simulation's one
+// input (GDD 9.5). ⛔ It is not a device — no listener, no device read — and
+// it writes the struct and NOTHING ELSE: no `state` field, no bag of its own,
+// no draw, no clock. Every answer is a reading of this step's board, so the
+// demo is a function of the seed alone.
+//
+// In priority order, each a NO-OP where its entity does not exist:
+//   ring     in a dive, the next unresolved ring IN REACH — the descent falls
+//            1 -> 0 over diveTime() - DIVE_GRACE and the rim axis covers
+//            KEY_SPEED_MAX lanes a second, so a ring is in reach when its near
+//            edge (RING_ARC_LANES in) is inside that. An unreachable one is
+//            skipped, not chased.
+//   dodge    a MimicShot within a lane is a thing to LEAVE, never a target —
+//            unless a Ward is on, which takes the hit.
+//   collect  a hovering token, the nearest.
+//   hunt     the deepest live non-projectile enemy; a Thorn only with a Lance.
+// and, beside the steering, jump at anything aloft in the craft's lane (no
+// Ward on), fire held, and one Purge press every ATTRACT_PURGE_EVERY seconds
+// of the run. The steer is the keyboard's top speed, never faster.
+function attractDrive(state, well, out) {
+  out.rotate = 0;
+  out.fire = false;
+  out.purge = false;
+  out.jump = false;
+  const sk = state.skimmer;
+  if (!sk || sk.dead) return;
+
+  let ringD = null;
+  if (state.dive.active && state.dive.rings.length > 0) {
+    const span = diveTime() - C.DIVE_GRACE;
+    for (let n = 0; n < state.dive.rings.length; n++) {
+      const r = state.dive.rings[n];
+      if (r.taken !== null) continue;
+      const dd = laneDelta(well, sk.lane, r.lane);
+      const reach = Math.max(0, state.dive.depth - r.depth) * span * C.KEY_SPEED_MAX;
+      if (Math.abs(dd) - C.RING_ARC_LANES <= reach) { ringD = dd; break; }
+    }
+  }
+
+  let dodge = null, token = null, best = null, aloft = false;
+  for (let n = 0; n < state.enemies.length; n++) {
+    const e = state.enemies[n];
+    if (e.dead) continue;
+    if (e.aloft && laneHit(well, e.lane, sk.lane)) aloft = true;
+    if (e instanceof MimicShot) {
+      if (state.powers.ward) continue;
+      const dd = laneDelta(well, sk.lane, e.lane);
+      if (Math.abs(dd) <= 1 && (dodge === null || Math.abs(dd) < Math.abs(dodge))) dodge = dd;
+      continue;
+    }
+    if (e instanceof WeaverBolt) continue;
+    if (e.anchored && !state.powers.lance) continue;
+    if (best === null || e.depth > best.depth) best = e;
+  }
+  for (let n = 0; n < state.tokens.length; n++) {
+    const t = state.tokens[n];
+    if (t.dead || t.depth < C.TOKEN_HOVER_DEPTH) continue;
+    const dd = laneDelta(well, sk.lane, t.lane);
+    if (token === null || Math.abs(dd) < Math.abs(token)) token = dd;
+  }
+
+  // A dodge is a FULL push away rather than a delta, so a shot in the craft's
+  // own lane (delta 0) still moves it.
+  const top = C.KEY_SPEED_MAX * C.FIXED_DT;
+  let d = 0;
+  if (ringD !== null) d = ringD;
+  else if (dodge !== null) d = dodge > 0 ? -top : top;
+  else if (token !== null) d = token;
+  else if (best !== null) d = laneDelta(well, sk.lane, best.lane);
+  out.rotate = d > top ? top : d < -top ? -top : d;
+
+  out.fire = true;
+  out.jump = aloft && !state.powers.ward;
+  out.purge = state.time >= C.ATTRACT_PURGE_EVERY && state.time % C.ATTRACT_PURGE_EVERY < C.FIXED_DT;
+}
+
+// ⛔ THE DEMO'S ONE LINE, IN THE PROMPT BAND AND THROUGH drawText() (N9) —
+// drawPrompt()'s seat and geometry, never a row of C.PROMPTS: a demo teaches
+// nothing and marks nothing seen. Reads nothing and writes nothing.
+function drawAttractLine(ctx) {
+  drawText(ctx, C.ATTRACT_LINE, C.WORLD_W / 2, C.PROMPT_Y, C.PROMPT_SIZE, C.PROMPT_COLOR, "center");
 }

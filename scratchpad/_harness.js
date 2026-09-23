@@ -348,6 +348,9 @@ function buildGame(opts = {}) {
     // top-level functions so a soak can stub or spy each — the scan, the
     // queue's clock and the line — plus the queue's bag and its one reset.
     "promptScan", "promptStep", "drawPrompt", "promptQueue", "promptReset",
+    // attract mode's driver (22-onboarding.js, CS016 P2, N6), so a soak can
+    // stub it for the never-idle twin or spy the demo's struct.
+    "attractDrive",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of

@@ -566,6 +566,18 @@ submitted; do not invent a trigger to fill the enum.
 `services/leaderboard/src/registry.js` before sending a stats key.** An
 unregistered key flags every row it posts.
 
+### Attract mode
+
+⛔ **THE DEMO IS A RUN WITH NO START SEAT, NOT A SCREEN** (GDD §12):
+`state.screen` stays `"play"` and a `Game`-closure flag marks it, never `state`.
+`run` stays null, so `Meta.eligible()` reads false with no new term; the
+telemetry sample, the prompt scan and the clear edge's `noteCleared()` /
+`clearEdge()` / `savePrompts()` skip on the flag, and ⛔ **the store's bytes do
+not move** (`test-cs016-p2.js`). ⛔ **`attractDrive()` writes the struct AFTER
+`input.sample()`, once the devices' reading is read, and writes nothing else.**
+⛔ **Any named action ends it and does nothing else**; an ending inside a step
+keeps the step's struct.
+
 ---
 
 ## Kit modules and extraction
@@ -694,7 +706,8 @@ src/00-config.js       C — every tunable; THE HEAT CLOCK (heat, 7 accessors);
                        prompts' seen set (promptSeen() marks, savePrompts())
     22-onboarding.js   the first-run prompts (GDD 12): promptScan() (every
                        trigger; no draw, clock or `state` write), promptStep(),
-                       drawPrompt(), the queue bag. ⛔ Calls no storage
+                       drawPrompt(), the queue bag; attractDrive(), the
+                       demo's struct. ⛔ Calls no storage
     23-main.js         loop, state machine, well lifecycle, respawn
 ```
 

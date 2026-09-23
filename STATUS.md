@@ -1,6 +1,6 @@
 # Vector Vortex — STATUS
-Version: 0.0.12 · Changeset: **CS016 P1 landed 2026-09-23** · next: **CS016 P2**
-(attract mode) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 ·
+Version: 0.0.12 · Changeset: **CS016 P2 landed 2026-09-23** · next: **CS016 P3**
+(the pre-ship achievement pass) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 ·
 Tokens: 5/5 effects · Achievements: 23 lifetime + 18 weekly
 
 ## Phase ledger
@@ -15,6 +15,7 @@ did.
 |---|---|
 | Planning | 2026-09-20 — `PLANNED-FEATURES-CS016.md` and `IMPLEMENTATION-PHASES-CS016.md` written at `bea33c8`; §0 answered by Paul 2026-09-23: every recommendation, N2 rows 8–12 all in, N12 in CS016 (four phases) |
 | P1 | 2026-09-23 — `src/22-onboarding.js`, `C.PROMPTS` (12 rows) and the band, the `onboarding` key v1, GDD §12 restated, §19's Onboarding row; `test-cs016-p1.js` (159); 79/79 green |
+| P2 | 2026-09-23 — attract mode: `attractDrive()`, the title idle clock, the demo's skips and endings, six `C.ATTRACT_*` constants; GDD §12, a `CLAUDE.md` rule; `test-cs016-p2.js` (251); 80/80 green |
 
 **P1 — the prompts, the band and the onboarding key.** Built N1–N5, N11, N13
 as answered; nothing re-opened. `promptScan()` / `promptStep()` / `drawPrompt()`
@@ -33,12 +34,29 @@ function's own fourth caller is the TELEMETRY toggle, not the clear edge.
 `C.GAME_VERSION` is `"0.0.12"`. One `SKIPPED-PLAYTESTS.md` entry (legibility,
 glyphs, durations).
 
+**P2 — attract mode.** Built N6–N10 as answered; nothing re-opened. The demo is
+`"play"` under a `Game`-closure flag; `startGame(…, { attract: true })` skips
+`runStarted()` and `lastRunMode`, so `eligible()` is false with no new term; the
+telemetry sample, the prompt scan and the clear edge's `noteCleared()` /
+`clearEdge()` / `savePrompts()` skip on the flag. MEASURED: the store's bytes
+identical across a demo that clears, dies and reaches game over. The predicted
+closed edit (`EXPORTS` 217 → **218**) ⛔ **plus one FINDING**: `test-cs016-p1.js`'s
+module scan banned `state.time` module-wide, and the driver's periodic Purge
+reads it — rewritten in place to the prompt code, every other token still
+module-wide. `P1_DETERMINISM_HASH`, `GOLDEN_LANES` unmoved. ⛔ **One defect the plan predicted away** (N9's "the
+entry step latches what is held"): an ending inside a step re-minted
+`state.input` through `quitToTitle()`, so the ending Fire confirmed PLAY —
+MEASURED red, fixed by `endAttract()` keeping the step's struct (`log/CS016.md`).
+Two calls inside the answers: `C.ATTRACT_PURGE_EVERY` 5.2 s ⚠ (N6 named no N),
+and `C.ATTRACT_SEED` **1** ⚠ (measured over ten seeds). One `SKIPPED-PLAYTESTS.md`
+entry (legible as a demo; silent on a fresh load).
+
 ## Working / verified
 
 - `node build.js` produces `dist/vector-vortex.html` (26 modules + 3 inlined kit,
-  **821.1 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
+  **831.2 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
   fails the build.
-- `node scratchpad/run-all.js`: **79 files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **80 files, all green, zero skips.**
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
   ⛔ A timeout is not a red — re-run the file alone before treating it as one.
 - **CS001–CS015 are closed; each has a `log/CS0##.md`.** ⛔ **The Classic roster
@@ -113,17 +131,26 @@ phase reads the plan's §0 answers, not this block.
   CS016 close bumps it to `"0.0.13"`.** ✅ `_harness.js`'s `EXPORTS` was **212**
   at `51d86bf` (MEASURED by evaluating the array; the plan's 211 was the
   miscount) and is **217** after P1.
-- ✅ `C.ATTRACT_IDLE` is in `C` (20) and read by nothing; ✅ no closed test
-  idles 20 s on the title (a throwing timer left the suite green).
-- ⛔ **FOR P2 — THE PROMPTS ARE LIVE ON EVERY PLAY STEP**: `scanPrompts()` in
-  `update()` (two seats: after the filters, and the Dive's branch) and
-  `drawPrompt()` in `draw()` on play and pause. ⛔ **A demo must fire, mark and
-  draw no prompt** (plan readings), so P2's attract gate covers `scanPrompts()`
-  and its line takes the band in place of `drawPrompt()`'s. ⛔ `Meta.savePrompts()`
-  sits at the clear edge and `autoPause` in `23-main.js` and in `runEnded()` /
-  `beforeChange` in Meta — a demo reaches the clear edge, and N8's
-  `Meta.clearEdge()` skip must take the `savePrompts()` beside it too, or the
-  store's bytes move.
+- ✅ **Attract mode shipped at P2** (GDD §12; `CLAUDE.md`, Attract mode).
+  ⛔ **A test that idles 20 s at rest on the TITLE now enters a demo** — no
+  closed test does; a new soak that parks on the title must press something
+  inside 20 s or expect `"play"`. ⛔ **`Date.now` / `performance.now` still
+  have their four readers.**
+- ⚠ **FINDING for Paul — "PRESS ANY KEY" is not quite true**: N9's two readings
+  are the struct and a named action, and an UNBOUND key (`q`, Enter, Tab)
+  reaches neither, so it does not end the demo. `onGesture` sees every key but
+  would be a third ending the answer did not name. Surfaced, not built: the
+  line's text or a third ending is Paul's.
+- ⚠ **A mouse move during a demo DEATH FREEZE is drained and lost** (`frame()`'s
+  freeze branch samples without `update()`); a held button or a named action
+  still ends it. The shipped demo dies nowhere (MEASURED, ten seeds).
+- ✅ **The prompts are live on every play step but a demo's**: `scanPrompts()`
+  (two seats) returns at once under the attract flag, and the band carries
+  `C.ATTRACT_LINE` in place of `drawPrompt()` (P2).
+- ⛔ **`SEAT_EDGE` (`test-cs015-p2.js`) still matches BY INDENTATION LUCK**:
+  `Meta.clearEdge();` now sits at eight spaces inside P2's `if (!attract)`
+  block and the pinned six-space string is its suffix, once. A phase that
+  re-indents that block moves the pin.
 - ⚠ **`drawPrompt()` builds one `rgba()` string per frame during a prompt's last
   `PROMPT_FADE`** (`drawText()` owns `globalAlpha`) — CS017's allocation
   measurement (F4) may count it.
@@ -323,8 +350,9 @@ phase reads the plan's §0 answers, not this block.
 - ✅ **`CLAUDE.md` is 36,926 bytes** against its 50 KB ceiling. ⚠ The valve and
   the ban on standing sweeps stand.
 
-## Next up — CS016 P2
+## Next up — CS016 P3
 
-Attract mode (N6–N10), from `IMPLEMENTATION-PHASES-CS016.md`'s P2 prompt. ⛔ Read
-"FOR P2" under "What CS016 must act on" first: the prompts' two scan seats and
-the clear edge's `savePrompts()` are new gates for the demo.
+The pre-ship achievement pass (N12 and Paul's three numbers), from
+`IMPLEMENTATION-PHASES-CS016.md`'s P3 prompt. ⛔ A new counter at the clear edge
+sits inside or beside P2's `if (!attract)` block — a demo's `tally` is its own
+`state`, but nothing a demo does may reach a seat.

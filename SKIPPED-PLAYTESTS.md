@@ -907,3 +907,25 @@ close's.
   `C.PROMPT_SIZE` (⛔ `PROMPT_Y` and the size re-derive the band's clearance,
   asserted in `test-cs016-p1.js`), and any row's `text` (≤ 36 characters).
   ⛔ Never a trigger's level or a heat-clock base.
+
+## CS016 P2 — attract mode: does it read as a demo, and is it heard?
+
+- **What Paul would have done:** open the build fresh from `file://`, touch
+  nothing for twenty seconds, watch the demo to its end, then play a run, quit,
+  and leave the title idle again; once on a desktop, once on a phone.
+- **What we were trying to learn:** (1) **is a demo legible AS a demo** — the
+  board and the HUD are exactly a run's, and one white line in the prompt band
+  (`DEMO — PRESS ANY KEY`) is all that says otherwise; (2) ⚠ **a fresh load's
+  demo is SILENT** (plan K6): the browser opens audio only on a key, click or
+  lifted touch, and that gesture ends the demo — only a demo entered after a
+  played session has music; whether that silence reads as broken is a human
+  call; (3) **does the driver look like a player** — it steers at the keyboard's
+  top speed, holds fire and spends a Purge every 5.2 s; (4) **is 45 s at Start
+  Depth 5 the right showcase** (MEASURED on the shipped seed: two clears, two
+  ring flights with every ring taken, tokens, Vaulter / Weaver / Thorn / Reaver
+  / Carrier, no death); (5) ⚠ **"ANY KEY" is not quite true**: an unbound key
+  (`q`, Enter, Tab) reaches neither the struct nor a named action and does not
+  end the demo (`STATUS.md`).
+- **Knobs:** `C.ATTRACT_SEED`, `C.ATTRACT_DEPTH`, `C.ATTRACT_LENGTH`,
+  `C.ATTRACT_PURGE_EVERY`, `C.ATTRACT_LINE` (≤ 36 characters) and
+  `C.ATTRACT_IDLE`. ⛔ Never `C.ATTRACT_MODE` without Paul, and never a gate.

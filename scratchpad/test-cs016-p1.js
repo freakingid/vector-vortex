@@ -488,15 +488,23 @@ for (const id of ids(A.C)) {
 }
 
 // The module's slice: no storage, no draw, no clock, no device token.
+// ⛔ REWRITTEN IN PLACE AT CS016 P2: the module gained attract mode's driver,
+// whose periodic Purge reads the run's SIMULATION clock (N6's "every N s").
+// The claim is the one this block always made — THE PROMPTS read no clock —
+// so `state.time` is checked over the prompt code above the driver's banner,
+// and every other token over the whole module, the driver included.
 {
   const src = script();
   const i = src.indexOf("// 22-onboarding.js\n"), j = src.indexOf("// 23-main.js\n");
-  H.assert(i > 0 && j > i, "fixture: the module's banner slice is found");
-  const code = src.slice(i, j).split("\n").map(l => l.replace(/\/\/.*$/, "")).join("\n");
-  for (const bad of ["Store", "Profiles", "scope(", "localStorage", "rng(", "Date.now", "performance", "state.time"]) {
+  const k = src.indexOf("// ATTRACT MODE'S DRIVER", i);
+  H.assert(i > 0 && j > i && k > i && k < j, "fixture: the module's banner slice and the driver's banner are found");
+  const strip = t => t.split("\n").map(l => l.replace(/\/\/.*$/, "")).join("\n");
+  const code = strip(src.slice(i, j)), prompts = strip(src.slice(i, k));
+  for (const bad of ["Store", "Profiles", "scope(", "localStorage", "rng(", "Date.now", "performance"]) {
     H.assert(!code.includes(bad), `⛔ 22-onboarding.js's code never names ${bad}`);
   }
-  H.assert(/function promptScan\(/.test(code) && /state\.enemies/.test(code), "non-vacuity: the slice holds the scan");
+  H.assert(!prompts.includes("state.time"), "⛔ 22-onboarding.js's prompt code never names state.time");
+  H.assert(/function promptScan\(/.test(prompts) && /state\.enemies/.test(prompts), "non-vacuity: the slice holds the scan");
 }
 
 // ===========================================================================
