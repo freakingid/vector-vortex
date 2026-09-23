@@ -326,7 +326,8 @@ H.eq(work.X._env.storageReads, 0, "⛔ no enumeration read across the session (l
   H.eq(id, "p1", "fixture: SOAK is p1");
   // ⛔ REPAIRED IN PLACE AT CS015 P1: `achievements` is a declared per-profile
   // key (GDD 15.1). The claim is unchanged — every stored key is declared.
-  const declared = new RegExp(`^${NS.replace(/\./g, "\\.")}(profiles|scores|(p1\\.)?(settings|progress|telemetry|achievements))$`);
+  // ⛔ And again at CS016 P1: `onboarding` is a declared per-profile key.
+  const declared = new RegExp(`^${NS.replace(/\./g, "\\.")}(profiles|scores|(p1\\.)?(settings|progress|telemetry|achievements|onboarding))$`);
   const keys = [...work.store.keys()];
   const stray = keys.filter(k => !declared.test(k));
   H.eq(J(stray), "[]", `⛔ every stored key is declared (${J(keys)})`);

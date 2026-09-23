@@ -483,6 +483,7 @@ never enumerates it** — no store `keys()`, `scopes()`, `clear()` or `usage()`,
 | `achievements` | Per-profile — **v1**, `{ lifetimeUnlocked, lifetimeTiers, weeklyUnlocked, weekKey }`, arrays not Sets, ⛔ **no `migrate`** |
 | `scores` | Root, shared across profiles |
 | `telemetry` | Per-profile, lazy |
+| `onboarding` | Per-profile — **v1**, `{ seen: [ids] }`, ⛔ **no `migrate`**; MARKED on a trigger step, ⛔ **WRITTEN only at the clear edge, `runEnded()`, `autoPause` and `beforeChange`** (`test-cs015-p2.js`) |
 
 ⛔ **A row-shape change bumps that key's version and supplies a `migrate`, never a
 new key name.** ⛔ **A `migrate` is pure, never calls back into the store**, and
@@ -689,7 +690,11 @@ src/00-config.js       C — every tunable; THE HEAT CLOCK (heat, 7 accessors);
                        Meta (eligible() — the ONE gate; the achievement facts,
                        the per-well window, both seats, the ONE sfx("unlock")
                        seat and achievements(), the screen's reader),
-                       createScores, levelRecord(), startDepthOptions()
+                       createScores, levelRecord(), startDepthOptions(); the
+                       prompts' seen set (promptSeen() marks, savePrompts())
+    22-onboarding.js   the first-run prompts (GDD 12): promptScan() (every
+                       trigger; no draw, clock or `state` write), promptStep(),
+                       drawPrompt(), the queue bag. ⛔ Calls no storage
     23-main.js         loop, state machine, well lifecycle, respawn
 ```
 

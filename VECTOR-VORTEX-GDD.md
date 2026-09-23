@@ -1147,6 +1147,8 @@ Score top-left, lives bottom-left, level and band top-right, Purge charge bottom
 
 ⛔ **MEASURED at CS012 P4 — the centre-top band is 76.29 px tall, and that is what sets `HUD_COMBO_Y`.** The Fan well's throat zone (§10.3) reaches **y 76.29** and its x span 504.6–775.4 straddles the centre, so the whole readout must clear it. `HUD_COMBO_Y` (6) + `HUD_COMBO_SIZE` (56) + 2 × `HUD_COMBO_PAD` (4) is 70, leaving **6.29 px**. ⛔ That is why the readout does NOT sit at `HUD_MARGIN` 24 like the four corners: at 24 the 56 px em box alone breaches the Fan. ⛔ **An art pass that raises `HUD_COMBO_SIZE` re-derives that sum.** ⚠ O8 measured and accepted that a centre-top combo sits inside the undrawn top-centre pause target (640, 84, r 56); the two corner touch buttons are clear.
 
+⛔ **Shipped, CS016 P1 — the prompt band** (§12): one centred `drawText()` line at `PROMPT_Y` 636, under every rim (lowest rim point y 630) and above the mirrored lives rectangle (y 678), in play and pause only, drawn after the well and the Dive's rungs and BEFORE the tokens, enemies, shots and craft — an airborne craft reaches y 666 and goes over it. No rectangle and no HUD edit; `test-cs016-p1.js` asserts its clearance of the throat zone, every rim and every HUD rectangle arithmetically, as `test-cs008-p4.js` does.
+
 ⛔ **H4 (Paul, 2026-09-13; shipped CS008 P5, extended P6): the HUD draws wherever a run is on screen — play (the Dive included), pause, game over, and Options (with its sub-pages) opened from pause — and not on title, mode, Start Depth or the title's Options**, where no run exists, so it would show a stale or default score. `runOnScreen()` in `23-main.js` is the one predicate. Options-from-pause is Paul's call (2026-09-13, after P6): a run exists there, and hiding the HUD over a still-drawn board would read as a different state.
 
 ### 10.5 Screens and menus
@@ -1473,21 +1475,31 @@ Every entry point is `if (!AudioSys.ctx) return;`-guarded, headless-safe.
 
 ## 12. Onboarding
 
-Level 1 is the Ring, non-vaulting Vaulters at half speed, three at a time. Within four seconds, a player who does nothing sees a death; one who moves and fires kills something. Both teach.
+Level 1 is the Ring: Vaulters at the level-1 rate of the one heat clock (`VAULT_CLIMB` 0.18, `climbMult(1)` exactly 1), released one every `SPAWN_INTERVAL` 1.6 s, three at a time. ⛔ **MEASURED at CS016 planning, both modes, 64 front-door runs** (`PLANNED-FEATURES-CS016.md` §1.3): **a player who moves and fires kills something within three seconds** (median 2.38 s, worst 2.68 s, 64 of 64); **a player who does nothing loses a craft between seven and twelve seconds** (never before 6.883 s — the first Vaulter leaves the throat at 1.600 s and needs 5.283 s to reach the rim). Both teach, and the first prompt is what turns the passive player into the active one. ⛔ **Both floors are heat-clock bases** (`SPAWN_INTERVAL`, `VAULT_CLIMB` = `CLIMB_MAX_BASE`, which the respawn guarantee reads), so no first-well-only rate exists to make the passive half faster (Paul's N1-A, 2026-09-23).
 
-Non-modal prompts, once per profile, in the well's line style, never pausing:
+⛔ **Shipped, CS016 P1 — non-modal prompts, once per profile, in the well's line style, never pausing.** `C.PROMPTS` is `{ id, text }` and nothing else; every trigger is a board read in `promptScan()` (`22-onboarding.js`), one branch per id, by `instanceof`. Rows 8–12 are Paul's answer to N2 (2026-09-23).
 
-| Trigger | Prompt |
-|---|---|
-| First frame | `ROTATE — FIRE DOWN THE LANE` |
-| First Carrier | `IT CARRIES TWO` |
-| First Thorn | `THORNS BLOCK THE DIVE` |
-| First Drifter | `SOLID = ARMOURED · OPEN = VULNERABLE` |
-| First Surger | `ITS LANE GOES LIVE` |
-| First open well | `NO WRAP — THE ENDS ARE WALLS` |
-| First Purge | `ONE PER WELL` |
+| # | id | Trigger (what the scan reads) | Prompt |
+|---|---|---|---|
+| 1 | `rotate` | the profile's first play step | `ROTATE — FIRE DOWN THE LANE` |
+| 2 | `carrier` | a live `Carrier` | `IT CARRIES TWO` |
+| 3 | `thorn` | a live `Thorn` | `THORNS BLOCK THE DIVE` |
+| 4 | `drifter` | a live `Drifter` | `SOLID = ARMOURED · OPEN = VULNERABLE` |
+| 5 | `surger` | a live `Surger` | `ITS LANE GOES LIVE` |
+| 6 | `openWell` | a play step in a well with `closed` false | `NO WRAP — THE ENDS ARE WALLS` |
+| 7 | `purge` | `purgeUses >= 1` — the first USE | `ONE PER WELL` |
+| 8 | `token` | a token on the board (Overdrive) | `A TOKEN — TOUCH IT TO TAKE IT` |
+| 9 | `rings` | a dive with rings laid (Overdrive) | `STEER — FLY THROUGH THE RINGS` |
+| 10 | `warden` | a live `Warden` | `IT FLIES — JUMP AT IT` |
+| 11 | `mimic` | a live `Mimic` (⚠ rides the probation, §21 #6) | `IT SENDS SHOTS BACK — LEAVE THE LANE` |
+| 12 | `unlock` | Meta has sounded an unlock since this profile was activated | `UNLOCKED — SEE ACHIEVEMENTS` |
 
-Attract mode after `ATTRACT_IDLE` (20 s).
+- **The scan** runs once per play step after the end-of-frame filters and before the spawner (so a Carrier that split this step is seen this step), and in the Dive's branch too, which is the only seat that sees row 9. ⛔ **It spends no draw, reads no clock, writes no `state`**, fires **at most one row per step, in table order**, and reads no board once every row is seen. A bench run fires prompts (eligibility gates rewards, not lessons).
+- **The queue** is a FIFO of one line at a time, each for `C.PROMPT_TIME` 4.0 s ⚠, its clock counting UP (§16.3) on play steps only — a pause holds it, a Dive runs it on — with a draw-time fade over the last `C.PROMPT_FADE` 0.5 s ⚠. `startGame()` empties it; a death keeps it. ⛔ **Nothing of it is on `state`**: a played Classic session hashes identically with `promptScan()` and `promptStep()` stubbed (`test-cs016-p1.js`). No sound.
+- **The band** is centre-bottom, in both modes (§10.4): `C.PROMPT_Y` 636, `C.PROMPT_SIZE` 28, `C.PROMPT_COLOR` ⚠, through `drawText()`. Every text is ≤ 36 characters, the band's MEASURED width.
+- **Once per profile** is the `onboarding` key (§15.1), `{ seen: [ids] }`, loaded at a profile's activation. ⛔ **An id is MARKED on its trigger step and WRITTEN only at the four seats that already write** — the clear edge, the run's end, `autoPause` and kit-profile's `beforeChange` — because no play step but the clear edge writes storage. ⚠ A tab closed mid-well repeats that well's lines once. A blocked store shows every prompt every session. An id is stored but is not save data in §15.5's sense: a renamed id costs one repeat of one line.
+
+Attract mode after `ATTRACT_IDLE` (20 s) — CS016 P2's.
 
 ---
 
@@ -1712,6 +1724,7 @@ reads an empty string as "use the default" and imports `afd_profiles_v1`.
 | `achievements` | Per-profile | Lifetime + weekly + tiers. ⛔ **v1 since CS015 P1**, `{ lifetimeUnlocked, lifetimeTiers, weeklyUnlocked, weekKey }` — arrays, never Sets, because a Set does not survive `JSON.stringify`. ⛔ **No `migrate`**: a new key has no origin version to read, and loading is known-value-else-default PER FIELD |
 | `scores` | Root store, shared across profiles | Records stamped `profileId`/`profileName` |
 | `telemetry` | Per-profile | ⛔ Lazy — untouched unless capture is on |
+| `onboarding` | Per-profile | ⛔ **v1 since CS016 P1**, `{ seen: [ids] }` — the first-run prompts already shown (§12). No `migrate`; known-value-else-default (an unknown id is dropped). ⛔ **Written only at the clear edge, the run's end, `autoPause` and `beforeChange`**, never on a bare play step |
 
 The profile roster itself (the root `profiles` key) is `kit-profile`'s, not ours.
 
@@ -1741,7 +1754,7 @@ field needs no migration — a saved value for a deleted field orphans harmlessl
 ⛔ **Shipped, CS011.** The roster screens are §10.5's PROFILE, a profile's page, DELETE and NAME (CS011 P4).
 - **`Profiles` in `22-meta.js` wraps kit-profile:** `scope()`, `current()`, `list()`, `select(id)`, `create(name)`, `rename(id, name)`, `remove(id)`, and `player()` for the leaderboard (P5). Only `select()` switches, apart from a `remove()` of the active profile, which switches inside the kit. Both run Meta's reset-then-load (P2).
 - **A new profile and SELECT are activations.** RENAME keeps the `id` and the `playerId`, and a score row keeps the name it was stamped with (§15.3).
-- ⛔ **Deleting a profile is kit-profile's `remove(id)`, then that profile's scope's `remove(key)` for each of `settings`, `progress`, `telemetry` and, since CS015 P1, `achievements`.** ⛔ **Never `clear()`:** it enumerates storage, and on `p0`, whose scope is the root store, it would take `scores` and `profiles` too. ⛔ **`achievements` joined at CS015 P1**, and `OWN_KEYS` still names neither root key.
+- ⛔ **Deleting a profile is kit-profile's `remove(id)`, then that profile's scope's `remove(key)` for each of `settings`, `progress`, `telemetry`, since CS015 P1, `achievements` and, since CS016 P1, `onboarding`.** ⛔ **Never `clear()`:** it enumerates storage, and on `p0`, whose scope is the root store, it would take `scores` and `profiles` too. ⛔ **`achievements` joined at CS015 P1**, and `OWN_KEYS` still names neither root key.
 - ⚠ **The kit goes first, the reverse of plan R12's wording** (MEASURED, `test-cs011-p4.js`'s mutation). The kit refuses the last profile (`last_profile`), and a refused delete must delete nothing; with the keys removed first, the refusal wiped the profile's settings and progress. Deleting the active profile switches inside the kit, where `beforeChange` writes the outgoing telemetry rows; with the keys first, that write outlived the delete. The kit's `scope(id)` still answers for a removed id.
 - **Deleting the active profile activates `roster[0]`** (the kit's rule), and the last profile cannot be deleted.
 
@@ -1965,7 +1978,7 @@ vector-vortex/
 ├── PLANNED-FEATURES-CS0##.md    # spec for what's being built now
 ├── IMPLEMENTATION-PHASES-CS0##.md
 ├── build.js                     # Node concat src/ → dist/; inlines lib/'s kit-names, kit-storage, kit-profile
-├── src/                         # numbered modules, concat order (07-enemies-overdrive.js follows 07-enemies.js)
+├── src/                         # numbered modules, concat order (07-enemies-overdrive.js follows 07-enemies.js; 22-onboarding.js follows 22-meta.js)
 ├── lib/                         # vendored coinless-kit modules + .NOTES.md; kit-leaderboard stays bridged
 ├── tools/                       # design instruments — music-lab, sfx-lab, well-lab, feel-lab
 ├── scratchpad/                  # tests: _harness.js, run-all.js, test-registry.js
@@ -2120,6 +2133,9 @@ Atari blocked Jeff Minter — co-creator of *Tempest 2000* — from shipping *Tx
 
 ⛔ **Meta at the CS015 close (2026-09-20).** Items unchanged since CS012 P3 keep the verdicts above.
 - ✅ **Met, since CS015 — achievements with monotonic tiers and UTC ISO weeks** (Paul's M4). ✗ → ✅. The `achievements` key is declared v1, per profile, removed with the profile and never enumerated (`test-cs015-p1.js`); `lifetimeTiers` only rises, proved by a mutation that lowers one (P1) and across a played session of both modes (`test-cs015-p4.js`); `weekKey` is an ISO year-week in UTC on eight boundaries including `2026-W53` and a Sunday 23:30 UTC (P1), and a week roll — the clock moved on eight days — empties `weeklyUnlocked` and keeps both lifetime stores, then a run in the new week writes the new week's key (P4); the five weekly are a function of the week alone and spend no draw (P1). §17 item 10 is met per row: all **41** ids — 23 lifetime, 18 weekly — are MEASURED reachable against four front-door passes, none throws on empty state, and tiers are monotonic (`test-cs015-p3.js`). The thirteenth soak plays both modes through the front door over a working store and hashes identically on every frame against both evaluator seats mutated out, and a reload holds every unlock the session earned (P4). ⚠ Two of plan §9's twenty weekly rows had no fact and were reported rather than shipped; they are owed before ship with one `tally` counter each (§15.5), which does not reopen this verdict. **⛔ This was the row's last ✗: the Meta row closes, every item met.**
+
+**Onboarding** (CS016 P1, N13) — the seven §12 prompts (and every row Paul answered) each fire once per profile from the shipped trigger, in the well's line style, never pausing, never covering `depth < 0.25` on any well; a new profile sees them again; attract mode starts after `ATTRACT_IDLE` at rest on the title, plays the shipped game unattended, ends on any input, and writes no storage byte, earns no score, submits nothing, evaluates nothing; level 1's first-seconds promise restated to what ships and MEASURED; a Classic session with the module stubbed out hashes identically.
+- **Met when:** P1's and P2's tests assert each clause, and P4's soak asserts them through the front door with the stubbed twin.
 
 **Quality** — all 12 test groups pass; 60 fps under budget on both targets; nothing obscures `depth < 0.25`; concat build behaviourally identical to `src/`; plays from `file://`; no Atari terminology anywhere including identifiers.
 

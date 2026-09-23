@@ -1,6 +1,6 @@
 # Vector Vortex — STATUS
-Version: 0.0.12 · Changeset: **CS016 planned 2026-09-20, §0 answered 2026-09-23** · next: **CS016 P1**
-(onboarding) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 ·
+Version: 0.0.12 · Changeset: **CS016 P1 landed 2026-09-23** · next: **CS016 P2**
+(attract mode) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 ·
 Tokens: 5/5 effects · Achievements: 23 lifetime + 18 weekly
 
 ## Phase ledger
@@ -14,13 +14,31 @@ did.
 | Phase | Landed |
 |---|---|
 | Planning | 2026-09-20 — `PLANNED-FEATURES-CS016.md` and `IMPLEMENTATION-PHASES-CS016.md` written at `bea33c8`; §0 answered by Paul 2026-09-23: every recommendation, N2 rows 8–12 all in, N12 in CS016 (four phases) |
+| P1 | 2026-09-23 — `src/22-onboarding.js`, `C.PROMPTS` (12 rows) and the band, the `onboarding` key v1, GDD §12 restated, §19's Onboarding row; `test-cs016-p1.js` (159); 79/79 green |
+
+**P1 — the prompts, the band and the onboarding key.** Built N1–N5, N11, N13
+as answered; nothing re-opened. `promptScan()` / `promptStep()` / `drawPrompt()`
+are top-level in `22-onboarding.js`; `Meta` owns the seen set (`promptsSeen()`,
+`promptSeen(id)`, `savePrompts()`, `unlocks()`), loaded in `activateSettings()`
+and written only at the clear edge, `runEnded()`, `autoPause` and
+`beforeChange`, and only when a mark is unsaved. Exactly the four predicted
+closed edits (two regexes, `OWN_KEYS`, `EXPORTS` 212 → **217**); the other 78
+files green untouched; `P1_DETERMINISM_HASH` and `GOLDEN_LANES` unmoved. A
+played Classic session hashes identically with the scan and the clock stubbed.
+⛔ **Two seats the plan's text did not name** (findings, `log/CS016.md`): the
+scan ALSO runs in the Dive's branch (row 9 reads `dive.active`, which the named
+seat never sees true), and `promptStep()` sits ABOVE the dive branch (N4: a dive
+runs the clock on). ⚠ "saveTelemetry()'s four seats" is the plan's list — the
+function's own fourth caller is the TELEMETRY toggle, not the clear edge.
+`C.GAME_VERSION` is `"0.0.12"`. One `SKIPPED-PLAYTESTS.md` entry (legibility,
+glyphs, durations).
 
 ## Working / verified
 
-- `node build.js` produces `dist/vector-vortex.html` (25 modules + 3 inlined kit,
-  **808.0 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
+- `node build.js` produces `dist/vector-vortex.html` (26 modules + 3 inlined kit,
+  **821.1 KB**); `MANIFEST` is checked both ways and a missing `KIT_INLINE` file
   fails the build.
-- `node scratchpad/run-all.js`: **78 files, all green, zero skips.**
+- `node scratchpad/run-all.js`: **79 files, all green, zero skips.**
   ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load can trip it.**
   ⛔ A timeout is not a red — re-run the file alone before treating it as one.
 - **CS001–CS015 are closed; each has a `log/CS0##.md`.** ⛔ **The Classic roster
@@ -83,19 +101,32 @@ phase reads the plan's §0 answers, not this block.
   and reaches the kill band at 6.883 s on every seed, so no passive player
   dies under 6.883 s (p50 8.5–8.7, max 11.4). The active half is met: a mover
   kills at 2.38 s median, 2.68 s worst, 64/64. ⛔ Both floors are heat-clock
-  bases — a phase does not make the sentence true; N1 decides the sentence.
+  bases — a phase does not make the sentence true. ✅ **§12 restated at P1**
+  (N1-A); no constant, lane or schedule moved.
   ⚠ **§12's "half speed" names nothing in the build** (`climbMult(1)` is 1).
 - ⛔ **`test-cs015-p2.js:431` PINS "no storage write on a play step that is
   not the clear edge", any key** (MEASURED red under a stand-in that wrote a
   new key at `startGame()`). A prompt's seen-flag is therefore MARKED on its
   trigger step and WRITTEN at `saveTelemetry()`'s four seats, never on a bare
   play step.
-- ⛔ **`C.GAME_VERSION` is `"0.0.10"`; P1 sets it to `"0.0.12"`** (Paul,
-  2026-09-23). `log/CS014.md` and `log/CS015.md` both recorded 0.0.11; CS015's
-  row is corrected to 0.0.12. The CS016 close bumps it to 0.0.13.
-  ⚠ `_harness.js`'s `EXPORTS` counts **211** quoted names, not 212.
+- ⛔ **`C.GAME_VERSION` is `"0.0.12"` since P1** (Paul, 2026-09-23); ⛔ **the
+  CS016 close bumps it to `"0.0.13"`.** ✅ `_harness.js`'s `EXPORTS` was **212**
+  at `51d86bf` (MEASURED by evaluating the array; the plan's 211 was the
+  miscount) and is **217** after P1.
 - ✅ `C.ATTRACT_IDLE` is in `C` (20) and read by nothing; ✅ no closed test
   idles 20 s on the title (a throwing timer left the suite green).
+- ⛔ **FOR P2 — THE PROMPTS ARE LIVE ON EVERY PLAY STEP**: `scanPrompts()` in
+  `update()` (two seats: after the filters, and the Dive's branch) and
+  `drawPrompt()` in `draw()` on play and pause. ⛔ **A demo must fire, mark and
+  draw no prompt** (plan readings), so P2's attract gate covers `scanPrompts()`
+  and its line takes the band in place of `drawPrompt()`'s. ⛔ `Meta.savePrompts()`
+  sits at the clear edge and `autoPause` in `23-main.js` and in `runEnded()` /
+  `beforeChange` in Meta — a demo reaches the clear edge, and N8's
+  `Meta.clearEdge()` skip must take the `savePrompts()` beside it too, or the
+  store's bytes move.
+- ⚠ **`drawPrompt()` builds one `rgba()` string per frame during a prompt's last
+  `PROMPT_FADE`** (`drawText()` owns `globalAlpha`) — CS017's allocation
+  measurement (F4) may count it.
 
 - ⛔ **GDD §12's four-second promise has four things to teach beyond the
   basics**: CS013's tokens and the Jump, CS014's steerable dive (nothing on
@@ -223,6 +254,11 @@ phase reads the plan's §0 answers, not this block.
   at the stop; ⛔ a driver starting at the title spends two live steps first;
   ⛔ **a fire-holder has no death path on levels 1–4 and never spends a Ward**;
   ⛔ **a menu press is an EDGE** — release every held key first.
+- ⛔ **A `Profiles.select()` STAGED ON A PLAY SCREEN LOOKS LIKE A PLAY-STEP WRITE**
+  to a `Store.set` spy (`beforeChange` writes `telemetry` and now `onboarding`).
+  In the game a switch is a menu action: stage it off play (`test-cs016-p1.js`).
+  ⛔ **A played session now stores `onboarding`** (per profile, at the clear
+  edge or the run's end); a new "every stored key" assertion must allow it.
 - ⛔ **`test-cs008-p4.js` scans the WHOLE built file, comments included**: no
   `fillRect`/`strokeRect`, one `.fillText(`/`.strokeText(` site;
   `test-cs008-p6.js`'s vocabulary scan is a SUBSTRING scan (only `webkit` is
@@ -287,8 +323,8 @@ phase reads the plan's §0 answers, not this block.
 - ✅ **`CLAUDE.md` is 36,926 bytes** against its 50 KB ceiling. ⚠ The valve and
   the ban on standing sweeps stand.
 
-## Next up — CS016 P1
+## Next up — CS016 P2
 
-⛔ **`PLANNED-FEATURES-CS016.md` §0 is answered (Paul, 2026-09-23): every
-recommendation, as written.** The pre-ship achievement pass (`NEXT-STEPS.md`)
-lands in CS016 as P3, so the changeset is four phases. `IMPLEMENTATION-PHASES-CS016.md` has the prompts.
+Attract mode (N6–N10), from `IMPLEMENTATION-PHASES-CS016.md`'s P2 prompt. ⛔ Read
+"FOR P2" under "What CS016 must act on" first: the prompts' two scan seats and
+the clear edge's `savePrompts()` are new gates for the demo.

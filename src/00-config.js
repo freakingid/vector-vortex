@@ -938,6 +938,40 @@ const C = {
   READABILITY_DEPTH:    0.25,   // ⛔ nothing opaque drawn below this depth
   ATTRACT_IDLE:         20,     // s before attract mode
 
+  // ---- The first-run prompts (GDD 12; CS016 P1, N2–N4) ----------------------
+  // ⛔ DATA ONLY: { id, text } in GDD 12's order and nothing else — no trigger,
+  // no class name, no level. A trigger is a board read that names a class, and
+  // it lives in promptScan() (22-onboarding.js), one branch per id. The ids are
+  // STORED (the profile's `onboarding` key) but are not save data in the
+  // achievements' sense: a renamed id costs one repeat of one line.
+  // ⛔ EVERY TEXT IS ≤ 36 CHARACTERS, the band's MEASURED width at PROMPT_SIZE
+  // (a centred 36-character line is 625 px), and clears the vocabulary scan.
+  // Rows 8–12 are Paul's answer to N2 (2026-09-23), in the recommended texts.
+  PROMPTS: [
+    { id: "rotate",   text: "ROTATE — FIRE DOWN THE LANE" },
+    { id: "carrier",  text: "IT CARRIES TWO" },
+    { id: "thorn",    text: "THORNS BLOCK THE DIVE" },
+    { id: "drifter",  text: "SOLID = ARMOURED · OPEN = VULNERABLE" },
+    { id: "surger",   text: "ITS LANE GOES LIVE" },
+    { id: "openWell", text: "NO WRAP — THE ENDS ARE WALLS" },
+    { id: "purge",    text: "ONE PER WELL" },
+    { id: "token",    text: "A TOKEN — TOUCH IT TO TAKE IT" },
+    { id: "rings",    text: "STEER — FLY THROUGH THE RINGS" },
+    { id: "warden",   text: "IT FLIES — JUMP AT IT" },
+    { id: "mimic",    text: "IT SENDS SHOTS BACK — LEAVE THE LANE" },
+    { id: "unlock",   text: "UNLOCKED — SEE ACHIEVEMENTS" },
+  ],
+  // ⛔ THE BAND IS CENTRE-BOTTOM, UNDER EVERY RIM, IN BOTH MODES (N3; MEASURED,
+  // plan §1.4): the rims' lowest point is y 630 and the mirrored lives
+  // rectangle starts at y 678, so a 28 px line fits with its top edge in
+  // 631–650. ⛔ A HUD-size or WELL_RADIUS change re-derives PROMPT_Y
+  // (test-cs016-p1.js asserts the clearance arithmetically).
+  PROMPT_Y:             636,        // px, the line's top edge (textBaseline "top")
+  PROMPT_SIZE:          28,         // px
+  PROMPT_COLOR:         "#FFFFFF",  // ⚠ provisional, HUD_COLOR's white; #RRGGBB (the fade parses it)
+  PROMPT_TIME:          4.0,        // s a prompt holds the band. ⚠ provisional (N4)
+  PROMPT_FADE:          0.5,        // s, the draw-time fade at the end of that. ⚠ provisional
+
   // ---- Text and the HUD (GDD 10.2, 10.4) — CS008 P4 ------------------------
   // ⛔ drawText() (13-render-well.js) is the ONE text path in the build. Its
   // glow reuses GLOW_WIDE_W / GLOW_WIDE_ALPHA below, so nothing here is a
@@ -1255,7 +1289,9 @@ const C = {
   },
 
   // ---- Build / debug ------------------------------------------------------
-  GAME_VERSION:         "0.0.10",  // ⚠ 0.0.2 was never written here — see log/CS006.md
+  // ⚠ 0.0.2 was never written here (log/CS006.md), and 0.0.11 never was either:
+  // CS015 is 0.0.12 (Paul, 2026-09-23; log/CS016.md, P1).
+  GAME_VERSION:         "0.0.12",
   // ⛔ THE SAVE KEYSPACE, AND NOTHING ELSE (kit-storage: coinless.<GAME_ID>.<key>).
   // ⛔ Never change it: every stored key would be orphaned. The online boards are
   // LEADERBOARD_GAME_IDS above, one per mode (CS012 P3).

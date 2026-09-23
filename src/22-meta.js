@@ -10,9 +10,10 @@
 //
 // WHAT A PROFILE KEEPS (CS011 P2): `settings` (23-main.js's CONTROLS, KEYBOARD,
 // GAMEPAD and sound rows), `progress` (the Start Depth record, ⛔ v2 and PER MODE
-// since CS012 P3), `telemetry` (the ring's rows) and, since CS015 P1,
-// `achievements` (the unlock store, GDD 15.5). ⛔ The telemetry capture switch is
-// never stored.
+// since CS012 P3), `telemetry` (the ring's rows), since CS015 P1,
+// `achievements` (the unlock store, GDD 15.5) and, since CS016 P1, `onboarding`
+// (the first-run prompts already shown, GDD 12). ⛔ The telemetry capture switch
+// is never stored.
 //
 // THE RUN AND THE LOCAL TOP 10 (CS011 P3): `scores` (root), written through
 // createScores() below, the future kit-scores (src/22-meta.NOTES.md).
@@ -47,8 +48,8 @@ const Profiles = (function () {
   // ⛔ THE DECLARED PER-PROFILE KEYS, which a delete removes BY NAME (plan R12).
   // Never `scores` or `profiles`: those are root keys, and `p0`'s scope IS the
   // root store. ⛔ `achievements` joined at CS015 P1 — a profile's unlocks go
-  // with the profile.
-  const OWN_KEYS = ["settings", "progress", "telemetry", "achievements"];
+  // with the profile — and `onboarding` at CS016 P1.
+  const OWN_KEYS = ["settings", "progress", "telemetry", "achievements", "onboarding"];
   return {
     // kit-profile's rename notice and kit-names' length, for NAME (R13, R14).
     NAME_CHANGE_NOTICE: KitProfile.NAME_CHANGE_NOTICE,
@@ -249,6 +250,7 @@ const Meta = (function () {
   function activateSettings() {
     hooks.resetSettings();
     hooks.applySettings(Profiles.scope().get("settings", null));
+    loadPrompts();
   }
 
   // ⛔ ON EVERY CHANGE (plan R10): an adjust step that moved a value, a toggle, a
@@ -276,6 +278,51 @@ const Meta = (function () {
     if (!booted) return;
     Telemetry.restore(Profiles.scope().get("telemetry", null));
   }
+
+  // ---- the first-run prompts (GDD 12; CS016 P1, N5-A) ----
+  //
+  // ⛔ ONCE PER PROFILE, AND THE SEEN SET LIVES HERE, never on `state`: the
+  // scan (22-onboarding.js) reads it and the simulation cannot. `onboarding` v1
+  // is { seen: [ids] }, loaded known-value-else-default at activateSettings()'s
+  // seat — so a switch empties it, then reads the incoming profile's.
+  // ⛔ MARKED ON THE TRIGGER STEP, WRITTEN ONLY AT saveTelemetry()'s SEATS — the
+  // clear edge, the run's end, autoPause and kit-profile's `beforeChange` —
+  // because test-cs015-p2.js pins "no storage write on a play step that is not
+  // the clear edge", any key. ⚠ A tab closed mid-well loses that well's marks
+  // and repeats those lines once; accepted (plan N5). A blocked store shows
+  // every prompt every session.
+  // ⛔ `unlocks` is what sounded() sounded since this profile was activated:
+  // the unlock row's one reading, reset with the set so a switch never hands
+  // one profile's unlock to another.
+  const seenPrompts = new Set();
+  let promptsDirty = false;
+  let unlockCount = 0;
+
+  function loadPrompts() {
+    seenPrompts.clear();
+    promptsDirty = false;
+    unlockCount = 0;
+    if (!booted) return;
+    const d = Profiles.scope().get("onboarding", null);
+    const ids = d !== null && typeof d === "object" && Array.isArray(d.seen) ? d.seen : [];
+    for (const id of ids) {
+      if (C.PROMPTS.some(r => r.id === id)) seenPrompts.add(id);
+    }
+  }
+  // The scan's reading. ⛔ Read-only there: promptSeen() is the one marker.
+  function promptsSeen() { return seenPrompts; }
+  function promptSeen(id) {
+    if (seenPrompts.has(id)) return;
+    seenPrompts.add(id);
+    promptsDirty = true;
+  }
+  // ⛔ Writes only when a mark is unsaved, and only from the four seats above.
+  function savePrompts() {
+    if (!booted || !promptsDirty) return;
+    promptsDirty = false;
+    Profiles.scope().set("onboarding", { seen: Array.from(seenPrompts) });
+  }
+  function unlocks() { return unlockCount; }
 
   // ---- the run (plan R6, R7, R8; CS011 P3) ----
   //
@@ -420,7 +467,7 @@ const Meta = (function () {
   // ⛔ Silent when nothing unlocked, which is the same test `evaluate()` makes
   // before it writes.
   function sounded(list) {
-    if (list !== null && list.length > 0) sfx("unlock");
+    if (list !== null && list.length > 0) { sfx("unlock"); unlockCount += list.length; }
     return list;
   }
 
@@ -480,6 +527,7 @@ const Meta = (function () {
     // own two facts are the run's closing ones, which mean nothing mid-run.
     if (booted && ok) sounded(Achievements.evaluate(facts(runEndFacts())));
     saveTelemetry();
+    savePrompts();
   }
 
   // What the SCORES screen lists; [] before boot.
@@ -506,7 +554,7 @@ const Meta = (function () {
   // is emptied too, and refilled from the incoming profile while capture is on
   // (the same read a capture turned on with an empty ring makes).
   function onProfileEvent(name, detail) {
-    if (name === "beforeChange") saveTelemetry();
+    if (name === "beforeChange") { saveTelemetry(); savePrompts(); }
     if (name === "change") {
       activateSettings();
       Telemetry.clear();
@@ -536,6 +584,8 @@ const Meta = (function () {
         // known-value-else-default per field. ⛔ A later SHAPE change bumps
         // this version and supplies one — never a new key name.
         achievements: { version: 1 },
+        // ⛔ v1 AND NO migrate, for the same reason (CS016 P1, N5-A): { seen: [ids] }.
+        onboarding: { version: 1 },
       },
     });
     // ⛔ `modes` are state.mode's two values. Both lists are shown from CS012 P3,
@@ -583,6 +633,7 @@ const Meta = (function () {
     boot, saveSettings, saveTelemetry, loadTelemetry,
     runStarted, benchUsed, eligible, runOpen, runEnded, scores, lastPlace,
     clearEdge, achievements,
+    promptsSeen, promptSeen, savePrompts, unlocks,
   };
 })();
 

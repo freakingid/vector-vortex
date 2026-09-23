@@ -987,6 +987,40 @@ const C = {
   READABILITY_DEPTH:    0.25,   // ⛔ nothing opaque drawn below this depth
   ATTRACT_IDLE:         20,     // s before attract mode
 
+  // ---- The first-run prompts (GDD 12; CS016 P1, N2–N4) ----------------------
+  // ⛔ DATA ONLY: { id, text } in GDD 12's order and nothing else — no trigger,
+  // no class name, no level. A trigger is a board read that names a class, and
+  // it lives in promptScan() (22-onboarding.js), one branch per id. The ids are
+  // STORED (the profile's `onboarding` key) but are not save data in the
+  // achievements' sense: a renamed id costs one repeat of one line.
+  // ⛔ EVERY TEXT IS ≤ 36 CHARACTERS, the band's MEASURED width at PROMPT_SIZE
+  // (a centred 36-character line is 625 px), and clears the vocabulary scan.
+  // Rows 8–12 are Paul's answer to N2 (2026-09-23), in the recommended texts.
+  PROMPTS: [
+    { id: "rotate",   text: "ROTATE — FIRE DOWN THE LANE" },
+    { id: "carrier",  text: "IT CARRIES TWO" },
+    { id: "thorn",    text: "THORNS BLOCK THE DIVE" },
+    { id: "drifter",  text: "SOLID = ARMOURED · OPEN = VULNERABLE" },
+    { id: "surger",   text: "ITS LANE GOES LIVE" },
+    { id: "openWell", text: "NO WRAP — THE ENDS ARE WALLS" },
+    { id: "purge",    text: "ONE PER WELL" },
+    { id: "token",    text: "A TOKEN — TOUCH IT TO TAKE IT" },
+    { id: "rings",    text: "STEER — FLY THROUGH THE RINGS" },
+    { id: "warden",   text: "IT FLIES — JUMP AT IT" },
+    { id: "mimic",    text: "IT SENDS SHOTS BACK — LEAVE THE LANE" },
+    { id: "unlock",   text: "UNLOCKED — SEE ACHIEVEMENTS" },
+  ],
+  // ⛔ THE BAND IS CENTRE-BOTTOM, UNDER EVERY RIM, IN BOTH MODES (N3; MEASURED,
+  // plan §1.4): the rims' lowest point is y 630 and the mirrored lives
+  // rectangle starts at y 678, so a 28 px line fits with its top edge in
+  // 631–650. ⛔ A HUD-size or WELL_RADIUS change re-derives PROMPT_Y
+  // (test-cs016-p1.js asserts the clearance arithmetically).
+  PROMPT_Y:             636,        // px, the line's top edge (textBaseline "top")
+  PROMPT_SIZE:          28,         // px
+  PROMPT_COLOR:         "#FFFFFF",  // ⚠ provisional, HUD_COLOR's white; #RRGGBB (the fade parses it)
+  PROMPT_TIME:          4.0,        // s a prompt holds the band. ⚠ provisional (N4)
+  PROMPT_FADE:          0.5,        // s, the draw-time fade at the end of that. ⚠ provisional
+
   // ---- Text and the HUD (GDD 10.2, 10.4) — CS008 P4 ------------------------
   // ⛔ drawText() (13-render-well.js) is the ONE text path in the build. Its
   // glow reuses GLOW_WIDE_W / GLOW_WIDE_ALPHA below, so nothing here is a
@@ -1304,7 +1338,9 @@ const C = {
   },
 
   // ---- Build / debug ------------------------------------------------------
-  GAME_VERSION:         "0.0.10",  // ⚠ 0.0.2 was never written here — see log/CS006.md
+  // ⚠ 0.0.2 was never written here (log/CS006.md), and 0.0.11 never was either:
+  // CS015 is 0.0.12 (Paul, 2026-09-23; log/CS016.md, P1).
+  GAME_VERSION:         "0.0.12",
   // ⛔ THE SAVE KEYSPACE, AND NOTHING ELSE (kit-storage: coinless.<GAME_ID>.<key>).
   // ⛔ Never change it: every stored key would be orphaned. The online boards are
   // LEADERBOARD_GAME_IDS above, one per mode (CS012 P3).
@@ -13090,9 +13126,10 @@ const Telemetry = (function () {
 //
 // WHAT A PROFILE KEEPS (CS011 P2): `settings` (23-main.js's CONTROLS, KEYBOARD,
 // GAMEPAD and sound rows), `progress` (the Start Depth record, ⛔ v2 and PER MODE
-// since CS012 P3), `telemetry` (the ring's rows) and, since CS015 P1,
-// `achievements` (the unlock store, GDD 15.5). ⛔ The telemetry capture switch is
-// never stored.
+// since CS012 P3), `telemetry` (the ring's rows), since CS015 P1,
+// `achievements` (the unlock store, GDD 15.5) and, since CS016 P1, `onboarding`
+// (the first-run prompts already shown, GDD 12). ⛔ The telemetry capture switch
+// is never stored.
 //
 // THE RUN AND THE LOCAL TOP 10 (CS011 P3): `scores` (root), written through
 // createScores() below, the future kit-scores (src/22-meta.NOTES.md).
@@ -13127,8 +13164,8 @@ const Profiles = (function () {
   // ⛔ THE DECLARED PER-PROFILE KEYS, which a delete removes BY NAME (plan R12).
   // Never `scores` or `profiles`: those are root keys, and `p0`'s scope IS the
   // root store. ⛔ `achievements` joined at CS015 P1 — a profile's unlocks go
-  // with the profile.
-  const OWN_KEYS = ["settings", "progress", "telemetry", "achievements"];
+  // with the profile — and `onboarding` at CS016 P1.
+  const OWN_KEYS = ["settings", "progress", "telemetry", "achievements", "onboarding"];
   return {
     // kit-profile's rename notice and kit-names' length, for NAME (R13, R14).
     NAME_CHANGE_NOTICE: KitProfile.NAME_CHANGE_NOTICE,
@@ -13329,6 +13366,7 @@ const Meta = (function () {
   function activateSettings() {
     hooks.resetSettings();
     hooks.applySettings(Profiles.scope().get("settings", null));
+    loadPrompts();
   }
 
   // ⛔ ON EVERY CHANGE (plan R10): an adjust step that moved a value, a toggle, a
@@ -13356,6 +13394,51 @@ const Meta = (function () {
     if (!booted) return;
     Telemetry.restore(Profiles.scope().get("telemetry", null));
   }
+
+  // ---- the first-run prompts (GDD 12; CS016 P1, N5-A) ----
+  //
+  // ⛔ ONCE PER PROFILE, AND THE SEEN SET LIVES HERE, never on `state`: the
+  // scan (22-onboarding.js) reads it and the simulation cannot. `onboarding` v1
+  // is { seen: [ids] }, loaded known-value-else-default at activateSettings()'s
+  // seat — so a switch empties it, then reads the incoming profile's.
+  // ⛔ MARKED ON THE TRIGGER STEP, WRITTEN ONLY AT saveTelemetry()'s SEATS — the
+  // clear edge, the run's end, autoPause and kit-profile's `beforeChange` —
+  // because test-cs015-p2.js pins "no storage write on a play step that is not
+  // the clear edge", any key. ⚠ A tab closed mid-well loses that well's marks
+  // and repeats those lines once; accepted (plan N5). A blocked store shows
+  // every prompt every session.
+  // ⛔ `unlocks` is what sounded() sounded since this profile was activated:
+  // the unlock row's one reading, reset with the set so a switch never hands
+  // one profile's unlock to another.
+  const seenPrompts = new Set();
+  let promptsDirty = false;
+  let unlockCount = 0;
+
+  function loadPrompts() {
+    seenPrompts.clear();
+    promptsDirty = false;
+    unlockCount = 0;
+    if (!booted) return;
+    const d = Profiles.scope().get("onboarding", null);
+    const ids = d !== null && typeof d === "object" && Array.isArray(d.seen) ? d.seen : [];
+    for (const id of ids) {
+      if (C.PROMPTS.some(r => r.id === id)) seenPrompts.add(id);
+    }
+  }
+  // The scan's reading. ⛔ Read-only there: promptSeen() is the one marker.
+  function promptsSeen() { return seenPrompts; }
+  function promptSeen(id) {
+    if (seenPrompts.has(id)) return;
+    seenPrompts.add(id);
+    promptsDirty = true;
+  }
+  // ⛔ Writes only when a mark is unsaved, and only from the four seats above.
+  function savePrompts() {
+    if (!booted || !promptsDirty) return;
+    promptsDirty = false;
+    Profiles.scope().set("onboarding", { seen: Array.from(seenPrompts) });
+  }
+  function unlocks() { return unlockCount; }
 
   // ---- the run (plan R6, R7, R8; CS011 P3) ----
   //
@@ -13500,7 +13583,7 @@ const Meta = (function () {
   // ⛔ Silent when nothing unlocked, which is the same test `evaluate()` makes
   // before it writes.
   function sounded(list) {
-    if (list !== null && list.length > 0) sfx("unlock");
+    if (list !== null && list.length > 0) { sfx("unlock"); unlockCount += list.length; }
     return list;
   }
 
@@ -13560,6 +13643,7 @@ const Meta = (function () {
     // own two facts are the run's closing ones, which mean nothing mid-run.
     if (booted && ok) sounded(Achievements.evaluate(facts(runEndFacts())));
     saveTelemetry();
+    savePrompts();
   }
 
   // What the SCORES screen lists; [] before boot.
@@ -13586,7 +13670,7 @@ const Meta = (function () {
   // is emptied too, and refilled from the incoming profile while capture is on
   // (the same read a capture turned on with an empty ring makes).
   function onProfileEvent(name, detail) {
-    if (name === "beforeChange") saveTelemetry();
+    if (name === "beforeChange") { saveTelemetry(); savePrompts(); }
     if (name === "change") {
       activateSettings();
       Telemetry.clear();
@@ -13616,6 +13700,8 @@ const Meta = (function () {
         // known-value-else-default per field. ⛔ A later SHAPE change bumps
         // this version and supplies one — never a new key name.
         achievements: { version: 1 },
+        // ⛔ v1 AND NO migrate, for the same reason (CS016 P1, N5-A): { seen: [ids] }.
+        onboarding: { version: 1 },
       },
     });
     // ⛔ `modes` are state.mode's two values. Both lists are shown from CS012 P3,
@@ -13663,6 +13749,7 @@ const Meta = (function () {
     boot, saveSettings, saveTelemetry, loadTelemetry,
     runStarted, benchUsed, eligible, runOpen, runEnded, scores, lastPlace,
     clearEdge, achievements,
+    promptsSeen, promptSeen, savePrompts, unlocks,
   };
 })();
 
@@ -13821,6 +13908,148 @@ function startDepthOptions(mode) {
   const top = Math.min(C.START_DEPTH_CAP, snapped);
   for (let d = out[out.length - 1] + 2; d <= top; d += 2) out.push(d);
   return out;
+}
+
+// ==========================================================================
+// 22-onboarding.js
+// ==========================================================================
+// 22-onboarding.js — the first-run prompts (GDD 12). CS016 P1 (plan N2–N5, N11).
+//
+// Non-modal lines, once per PROFILE, drawn in the prompt band under every rim
+// and never pausing anything. Three top-level functions, so a soak can stub or
+// spy each by name (a function inside Game's closure cannot be reached):
+//   promptScan(state, well, seen, queue)  the triggers — one branch per id
+//   promptStep(queue, dt)                 the queue's count-up clock
+//   drawPrompt(ctx, queue)                the line, through drawText()
+// and the queue's bag, `promptQueue`. 23-main.js calls them at their seats.
+//
+// ⛔ NOTHING HERE IS ON `state`, AND NOTHING HERE WRITES IT (plan §8). The scan
+// reads the board and spends no draw, reads no clock and writes no `state`;
+// the queue and its clock are this file's bag; the seen set is Meta's. So a
+// session with promptScan() and promptStep() stubbed hashes identically, step
+// for step (test-cs016-p1.js), and the simulation can branch on none of it.
+//
+// ⛔ THIS FILE CALLS NO STORAGE. Meta (22-meta.js) owns the seen set: it loads
+// it at a profile's activation, MARKS an id in its closure (promptSeen) and
+// WRITES only at saveTelemetry()'s seats (savePrompts), because no play step
+// but the clear edge may write (test-cs015-p2.js). ⛔ And no device token: the
+// input path is 04-input.js's alone (test-cs002-p1.js scans this slice).
+//
+// ⛔ THE IDS ARE STORED BUT ARE NOT SAVE DATA IN THE ACHIEVEMENTS' SENSE: a
+// renamed id costs a player one repeat of one line, so they are chosen for
+// readability, not permanence. C.PROMPTS is { id, text } and nothing else;
+// every trigger is code, here (plan §7).
+//
+// It is game glue, not kit-shaped: it reads `state` by design and is on no
+// extraction list.
+
+// The queue: rows of C.PROMPTS in trigger order, the head showing, and the
+// head's clock, counting UP from 0 (GDD 16.3). One line at a time, each for
+// the full C.PROMPT_TIME. startGame() empties it — a run's prompts belong to
+// the run — and a death keeps it.
+const promptQueue = { rows: [], t: 0 };
+
+function promptReset(queue) {
+  queue.rows.length = 0;
+  queue.t = 0;
+}
+
+// Whether any live entity on the board is an instance of `Kind`. Read after
+// the end-of-frame filters, so every entry is alive.
+function promptBoardHas(list, Kind) {
+  for (let i = 0; i < list.length; i++) if (list[i] instanceof Kind) return true;
+  return false;
+}
+
+// ⛔ THE TRIGGERS, ONE BRANCH PER ID, AND EVERY ONE A BOARD READ (plan §7):
+// the class by instanceof, never a kind string. An id with no branch here
+// never fires (a row added to C with no trigger is a row that waits).
+function promptFires(id, state, well) {
+  switch (id) {
+    // The profile's first play step. Once per profile makes "first frame" and
+    // "the first run's first frame" the same step.
+    case "rotate":   return true;
+    case "carrier":  return promptBoardHas(state.enemies, Carrier);
+    case "thorn":    return promptBoardHas(state.enemies, Thorn);
+    case "drifter":  return promptBoardHas(state.enemies, Drifter);
+    case "surger":   return promptBoardHas(state.enemies, Surger);
+    // Any play step in an open well — a Start Depth 9 run sees it in its first.
+    case "openWell": return !well.closed;
+    // The first USE, when "one per well" means something.
+    case "purge":    return state.purgeUses >= 1;
+    // N2's rows 8–12 (Paul, 2026-09-23). Rows 8–11 read something only an
+    // Overdrive run's schedule ever releases, so none needs a mode test.
+    case "token":    return state.tokens.length > 0;
+    case "rings":    return state.dive.active && state.dive.rings.length > 0;
+    case "warden":   return promptBoardHas(state.enemies, Warden);
+    case "mimic":    return promptBoardHas(state.enemies, Mimic);
+    // An unlock is HEARD and never seen (GDD 10.5, no toast); this line says
+    // where to look, once per profile, in either mode. Meta counts what
+    // sounded() sounded since the profile was activated.
+    case "unlock":   return Meta.unlocks() > 0;
+  }
+  return false;
+}
+
+// ⛔ ONE FIRE PER STEP, IN TABLE ORDER: the first unseen row whose trigger
+// holds joins the queue and its id is returned for Meta to mark; two rows true
+// on one step fire on consecutive steps. null when nothing fired.
+// ⛔ ONCE EVERY ROW IS SEEN IT READS NO BOARD AT ALL — the size test comes
+// first, and an unseen row is the only thing that reaches promptFires().
+// `seen` is Meta.promptsSeen(), read-only here; it holds known ids only.
+function promptScan(state, well, seen, queue) {
+  const rows = C.PROMPTS;
+  if (seen.size >= rows.length) return null;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (seen.has(row.id)) continue;
+    if (promptFires(row.id, state, well)) {
+      queue.rows.push(row);
+      return row.id;
+    }
+  }
+  return null;
+}
+
+// ⛔ ON PLAY STEPS ONLY, a dive's included: a pause holds the line and a dive
+// runs it on. Counts UP; the head leaves on the step its clock reaches
+// C.PROMPT_TIME, and the next row starts from 0.
+function promptStep(queue, dt) {
+  if (queue.rows.length === 0) return;
+  queue.t += dt;
+  if (queue.t >= C.PROMPT_TIME) {
+    queue.rows.shift();
+    queue.t = 0;
+  }
+}
+
+// C.PROMPT_COLOR as its three channels, parsed once, for the fade's rgba().
+// drawText() sets its own globalAlpha for the glow's two passes, so a fade is
+// carried in the colour rather than in the context.
+const _promptRgb = (function () {
+  const h = C.PROMPT_COLOR.replace("#", "");
+  return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)).join(",");
+})();
+
+// The head's alpha: 1, then a linear fade over the last C.PROMPT_FADE.
+// A reading of the clock, never a clock of its own.
+function promptAlpha(queue) {
+  const left = C.PROMPT_TIME - queue.t;
+  if (C.PROMPT_FADE > 0 && left < C.PROMPT_FADE) return left > 0 ? left / C.PROMPT_FADE : 0;
+  return 1;
+}
+
+// ⛔ THE LINE, CENTRED IN THE BAND, THROUGH drawText() AND NOTHING ELSE — no
+// rectangle, no fill, no HUD edit (GDD 10.2, 10.4). Game.draw() calls it after
+// the well and the Dive's rungs and BEFORE the tokens, enemies, shots and
+// craft: an airborne craft reaches y 666 and goes OVER the line (GDD 1.1 P2).
+// Reads the bag and writes nothing.
+function drawPrompt(ctx, queue) {
+  if (queue.rows.length === 0) return;
+  const a = promptAlpha(queue);
+  if (!(a > 0)) return;
+  const color = a >= 1 ? C.PROMPT_COLOR : "rgba(" + _promptRgb + "," + a.toFixed(3) + ")";
+  drawText(ctx, queue.rows[0].text, C.WORLD_W / 2, C.PROMPT_Y, C.PROMPT_SIZE, color, "center");
 }
 
 // ==========================================================================
@@ -14075,6 +14304,9 @@ function startGame(seed, opts) {
   state.wellIndex = (state.level - 1) % WELLS.length;
   enterWell();
   lastRunMode = state.mode;
+  // ⛔ A RUN'S PROMPTS BELONG TO THE RUN (GDD 12; CS016 P1, N4): the queue is
+  // emptied here and a death keeps it. Outside `state`; writes none.
+  promptReset(promptQueue);
   // ⛔ THE RUN'S START SEAT (CS011 P3, plan R7), last. It opens the run's meta
   // record outside `state` and drops one still open; it writes no `state`.
   Meta.runStarted();
@@ -14424,7 +14656,7 @@ const Game = (function () {
     }
     // ⛔ The page going hidden is a telemetry seat (CS011 P2, plan R17). After the
     // pause, so a hidden run's step is a pause step, never a play step.
-    if (name === "autoPause") { pauseRun(); Meta.saveTelemetry(); }
+    if (name === "autoPause") { pauseRun(); Meta.saveTelemetry(); Meta.savePrompts(); }
 
     // The debug bench. ⚠ THE ⚠ TEMPORARY MARKER THAT USED TO OPEN THIS LINE IS
     // GONE, and CS007 P3 is where it stopped being true — see DEBUG_SPAWN_ACTIONS
@@ -15392,6 +15624,14 @@ const Game = (function () {
     menu.reset();
   }
 
+  // The scan's one wrapper, at both of update()'s seats: the fired id is MARKED
+  // in Meta's closure (22-meta.js), which writes nothing here. ⛔ promptScan()
+  // is the top-level function a soak stubs; this wrapper then marks nothing.
+  function scanPrompts(well) {
+    const id = promptScan(state, well, Meta.promptsSeen(), promptQueue);
+    if (typeof id === "string") Meta.promptSeen(id);
+  }
+
   function nowMs() {
     if (typeof performance !== "undefined" && performance && performance.now) return performance.now();
     return Date.now();
@@ -15485,7 +15725,18 @@ const Game = (function () {
     // dive too and the frozen board stays on screen (GDD 4.4).
     // ⛔ And below `const well`, because the dive reads the OUTGOING well —
     // nextWell() is called at its end, never before it.
-    if (state.dive.active) { updateDive(state, well, dt); return; }
+    //
+    // ⛔ THE PROMPT CLOCK, ABOVE THE DIVE BRANCH (GDD 12; CS016 P1, N4): it
+    // counts up on every play step, so a pause holds a line and a dive runs it
+    // on. ⛔ AND THE SCAN RUNS IN THE DIVE BRANCH TOO: the ring flight's row
+    // reads `state.dive.active`, which the scan's seat below never sees true.
+    // Neither writes `state`; a step reaches exactly one scan.
+    promptStep(promptQueue, dt);
+    if (state.dive.active) {
+      updateDive(state, well, dt);
+      scanPrompts(WELLS[state.wellIndex]);
+      return;
+    }
 
     // ⛔ THE DEATH AFTERMATH, BEFORE ANYTHING MOVES. Reaching this line with a
     // dead craft means the freeze killSkimmer() started has ended (or a
@@ -15543,6 +15794,10 @@ const Game = (function () {
     // pass left alive — and BEFORE the spawner and the clear edge, so a Bounty
     // or a Recharge taken on the clear step is paid before the bonuses.
     updateTokens(state, well, dt);
+    // ⛔ THE FIRST-RUN PROMPTS (GDD 12; CS016 P1), AFTER THE FILTERS AND BEFORE
+    // THE SPAWNER, so a Carrier that split this step is seen this step. It
+    // reads the board, spends no draw, reads no clock and writes no `state`.
+    scanPrompts(well);
     updateSpawner(state, well, dt);
 
     // ⛔ A CLEARED WELL ENTERS THE DIVE (GDD 5). It does NOT call nextWell():
@@ -15576,6 +15831,10 @@ const Game = (function () {
       clearBonuses(state);
       levelRecord().noteCleared(state.level);
       Meta.clearEdge();
+      // ⛔ The prompts' marks are written HERE, a play step that already writes,
+      // and at the other three seats saveTelemetry() uses — never on a bare
+      // play step (test-cs015-p2.js; 22-meta.js).
+      Meta.savePrompts();
       startDive(state);
     }
   }
@@ -15616,6 +15875,11 @@ const Game = (function () {
         if (r.taken === null) drawRing(ctx, well, r.lane, r.depth, state.dive.depth);
       }
     }
+    // ⛔ THE PROMPT BAND (GDD 12, 10.4; CS016 P1, N3): after the well and the
+    // Dive and BEFORE the tokens and everything that moves — an airborne craft
+    // reaches y 666 and goes OVER the line, never under it. In play and pause
+    // only; the bag is read, never written.
+    if (state.screen === "play" || state.screen === "pause") drawPrompt(ctx, promptQueue);
     // ⛔ TOKENS ABOVE THE WELL AND BELOW EVERYTHING ELSE (GDD 14.1, 1.1 P2;
     // CS013 T4, T10): a gift is never drawn over a threat. Read off the token's
     // own fields; nothing here draws a random value.

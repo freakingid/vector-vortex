@@ -291,12 +291,14 @@ function mutant(from, to, label, read) {
 // ⛔ The delete mutation builds through deleted(), which owns its own Map, so it
 // is run directly rather than through mutant()'s single-read shape.
 {
-  const KEYS = 'const OWN_KEYS = ["settings", "progress", "telemetry", "achievements"];';
+  // ⛔ REPAIRED IN PLACE AT CS016 P1: `onboarding` joined OWN_KEYS. The claim —
+  // a delete without `achievements` leaves it behind — is unchanged.
+  const KEYS = 'const OWN_KEYS = ["settings", "progress", "telemetry", "achievements", "onboarding"];';
   const count = occurrences(KEYS);
   H.eq(count, 1, `⛔ fixture: OWN_KEYS' literal is in the build exactly once (count ${count})`);
   if (count === 1) {
     let d = null, why = "";
-    try { d = deleted({ mutate: [[KEYS, 'const OWN_KEYS = ["settings", "progress", "telemetry"];']] }); }
+    try { d = deleted({ mutate: [[KEYS, 'const OWN_KEYS = ["settings", "progress", "telemetry", "onboarding"];']] }); }
     catch (err) { why = err.message; }
     H.assert(d !== null && d.fixture && d.ok, `⛔ fixture: the mutant deleted a profile (${why})`);
     if (d !== null && d.fixture) {

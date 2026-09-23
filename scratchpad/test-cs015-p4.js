@@ -429,7 +429,8 @@ let beforeRoll = null;
 {
   H.eq(work.X._env.storageReads, 0, "⛔ no enumeration read across the working session (localStorage.length, key(i))");
   H.eq(stub.X._env.storageReads, 0, "and none across the stubbed twin");
-  const declared = new RegExp(`^${NS.replace(/\./g, "\\.")}(profiles|scores|(p\\d+\\.)?(settings|progress|telemetry|achievements))$`);
+  // ⛔ REPAIRED IN PLACE AT CS016 P1: `onboarding` is a declared per-profile key.
+  const declared = new RegExp(`^${NS.replace(/\./g, "\\.")}(profiles|scores|(p\\d+\\.)?(settings|progress|telemetry|achievements|onboarding))$`);
   for (const [name, m] of [["working", workStore], ["stubbed", stubStore]]) {
     const keys = [...m.keys()];
     const stray = keys.filter(k => !declared.test(k));

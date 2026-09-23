@@ -247,6 +247,9 @@ function startGame(seed, opts) {
   state.wellIndex = (state.level - 1) % WELLS.length;
   enterWell();
   lastRunMode = state.mode;
+  // ⛔ A RUN'S PROMPTS BELONG TO THE RUN (GDD 12; CS016 P1, N4): the queue is
+  // emptied here and a death keeps it. Outside `state`; writes none.
+  promptReset(promptQueue);
   // ⛔ THE RUN'S START SEAT (CS011 P3, plan R7), last. It opens the run's meta
   // record outside `state` and drops one still open; it writes no `state`.
   Meta.runStarted();
@@ -596,7 +599,7 @@ const Game = (function () {
     }
     // ⛔ The page going hidden is a telemetry seat (CS011 P2, plan R17). After the
     // pause, so a hidden run's step is a pause step, never a play step.
-    if (name === "autoPause") { pauseRun(); Meta.saveTelemetry(); }
+    if (name === "autoPause") { pauseRun(); Meta.saveTelemetry(); Meta.savePrompts(); }
 
     // The debug bench. ⚠ THE ⚠ TEMPORARY MARKER THAT USED TO OPEN THIS LINE IS
     // GONE, and CS007 P3 is where it stopped being true — see DEBUG_SPAWN_ACTIONS
@@ -1564,6 +1567,14 @@ const Game = (function () {
     menu.reset();
   }
 
+  // The scan's one wrapper, at both of update()'s seats: the fired id is MARKED
+  // in Meta's closure (22-meta.js), which writes nothing here. ⛔ promptScan()
+  // is the top-level function a soak stubs; this wrapper then marks nothing.
+  function scanPrompts(well) {
+    const id = promptScan(state, well, Meta.promptsSeen(), promptQueue);
+    if (typeof id === "string") Meta.promptSeen(id);
+  }
+
   function nowMs() {
     if (typeof performance !== "undefined" && performance && performance.now) return performance.now();
     return Date.now();
@@ -1657,7 +1668,18 @@ const Game = (function () {
     // dive too and the frozen board stays on screen (GDD 4.4).
     // ⛔ And below `const well`, because the dive reads the OUTGOING well —
     // nextWell() is called at its end, never before it.
-    if (state.dive.active) { updateDive(state, well, dt); return; }
+    //
+    // ⛔ THE PROMPT CLOCK, ABOVE THE DIVE BRANCH (GDD 12; CS016 P1, N4): it
+    // counts up on every play step, so a pause holds a line and a dive runs it
+    // on. ⛔ AND THE SCAN RUNS IN THE DIVE BRANCH TOO: the ring flight's row
+    // reads `state.dive.active`, which the scan's seat below never sees true.
+    // Neither writes `state`; a step reaches exactly one scan.
+    promptStep(promptQueue, dt);
+    if (state.dive.active) {
+      updateDive(state, well, dt);
+      scanPrompts(WELLS[state.wellIndex]);
+      return;
+    }
 
     // ⛔ THE DEATH AFTERMATH, BEFORE ANYTHING MOVES. Reaching this line with a
     // dead craft means the freeze killSkimmer() started has ended (or a
@@ -1715,6 +1737,10 @@ const Game = (function () {
     // pass left alive — and BEFORE the spawner and the clear edge, so a Bounty
     // or a Recharge taken on the clear step is paid before the bonuses.
     updateTokens(state, well, dt);
+    // ⛔ THE FIRST-RUN PROMPTS (GDD 12; CS016 P1), AFTER THE FILTERS AND BEFORE
+    // THE SPAWNER, so a Carrier that split this step is seen this step. It
+    // reads the board, spends no draw, reads no clock and writes no `state`.
+    scanPrompts(well);
     updateSpawner(state, well, dt);
 
     // ⛔ A CLEARED WELL ENTERS THE DIVE (GDD 5). It does NOT call nextWell():
@@ -1748,6 +1774,10 @@ const Game = (function () {
       clearBonuses(state);
       levelRecord().noteCleared(state.level);
       Meta.clearEdge();
+      // ⛔ The prompts' marks are written HERE, a play step that already writes,
+      // and at the other three seats saveTelemetry() uses — never on a bare
+      // play step (test-cs015-p2.js; 22-meta.js).
+      Meta.savePrompts();
       startDive(state);
     }
   }
@@ -1788,6 +1818,11 @@ const Game = (function () {
         if (r.taken === null) drawRing(ctx, well, r.lane, r.depth, state.dive.depth);
       }
     }
+    // ⛔ THE PROMPT BAND (GDD 12, 10.4; CS016 P1, N3): after the well and the
+    // Dive and BEFORE the tokens and everything that moves — an airborne craft
+    // reaches y 666 and goes OVER the line, never under it. In play and pause
+    // only; the bag is read, never written.
+    if (state.screen === "play" || state.screen === "pause") drawPrompt(ctx, promptQueue);
     // ⛔ TOKENS ABOVE THE WELL AND BELOW EVERYTHING ELSE (GDD 14.1, 1.1 P2;
     // CS013 T4, T10): a gift is never drawn over a threat. Read off the token's
     // own fields; nothing here draws a random value.

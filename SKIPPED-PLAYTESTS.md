@@ -888,3 +888,22 @@ close's.
   and never the pool's LENGTH after ship** (the rotation walks it by length).
   ⚠ The pre-ship pass in `NEXT-STEPS.md` already owns three threshold calls and
   the two unshipped weekly rows; this ask would inform it, not replace it.
+
+## CS016 P1 — the first-run prompts: do they read, and do they teach?
+
+- **What Paul would have done:** start a fresh profile in each mode, on a desktop
+  browser and a phone, and play the first few wells of each without reading
+  the GDD — once with hands off for ten seconds, once playing normally.
+- **What we were trying to learn:** (1) **does the band read** — a white
+  28 px line at y 636, centre-bottom, under every rim, over a board that can
+  be busy there (a craft on a bottom lane passes over it; plan §1.4, §1.6);
+  (2) **do the glyphs render** — the texts carry `—` and `·` (plan K13), and a
+  platform font without them draws a box, not a layout break; (3) **is 4.0 s
+  long enough, and a 0.5 s fade soft enough**, when a deep Start Depth queues
+  four lines in a first well (sixteen seconds of prompts); (4) **does the first
+  line turn a passive player into an active one** — the measured passive death
+  is 6.9–11.4 s, three seconds later than GDD §12 once promised (N1-A).
+- **Knobs:** `C.PROMPT_TIME`, `C.PROMPT_FADE`, `C.PROMPT_COLOR`,
+  `C.PROMPT_SIZE` (⛔ `PROMPT_Y` and the size re-derive the band's clearance,
+  asserted in `test-cs016-p1.js`), and any row's `text` (≤ 36 characters).
+  ⛔ Never a trigger's level or a heat-clock base.

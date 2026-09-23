@@ -344,6 +344,10 @@ function buildGame(opts = {}) {
     "createAchievements", "Achievements",
     // the online board's one surface (22-meta.js, CS011 P5)
     "Leaderboard",
+    // the first-run prompts (22-onboarding.js, CS016 P1, N11). ⛔ Three
+    // top-level functions so a soak can stub or spy each — the scan, the
+    // queue's clock and the line — plus the queue's bag and its one reset.
+    "promptScan", "promptStep", "drawPrompt", "promptQueue", "promptReset",
   ];
   // `opts.stub` rebinds named top-level functions to no-ops AFTER the script
   // has evaluated, so every internal caller reaches the stub. For a claim of

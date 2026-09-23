@@ -69,6 +69,7 @@ const MANIFEST = [
   "20-achievements.js",
   "21-telemetry.js",
   "22-meta.js",
+  "22-onboarding.js",
   "23-main.js",
 ];
 
