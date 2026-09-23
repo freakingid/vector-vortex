@@ -285,7 +285,8 @@ precondition, never relaxed.**
 > visit (the demo); per played step no exception, every lane / depth / score
 > finite, `enemies` ≤ `ENEMY_CAP`, `shots` ≤ the cap in force, `tokens` ≤
 > `MAX_TOKENS`; non-vacuity (both modes, a Mimic's level, a dive, distinct
-> death levels per mode). ⛔ **Time it alone before committing: under 60 s,**
+> death levels per mode, ⛔ **and all sixteen wells played** — P3 addendum,
+> plan §6). ⛔ **Time it alone before committing: under 60 s,**
 > or re-shape per S5 and record why. ⛔ A timeout is not a red — and a close
 > cannot carry one.
 >

@@ -26,7 +26,10 @@ const { COUNTS, hasKnob } = require("./test-registry.js");
 const SEED = 20260830;
 
 installSeed(SEED);
-const X = H.buildGame();
+// ⛔ CS017 P3 (plan S7-B, found by P3's §19 sweep): `w` is bound only in a
+// C.DEBUG_KEYS build, and the well-cycling trap below presses it, so this file
+// builds one: the precondition "a bench exists". Unflagged it passed VACUOUSLY.
+const X = H.buildGame({ mutate: [["  DEBUG_KEYS:           false,", "  DEBUG_KEYS:           true,"]] });
 const C = X.C;
 const G = X.Game;
 const DT = C.FIXED_DT;
@@ -310,15 +313,17 @@ H.assert(shapeOk, "shapeIndex holds for two full trips round the roster");
 // the bug this guards is a second route into a well existing at all.
 
 X.startGame(SEED);
-let strandOk = true, skimOk = true;
+let strandOk = true, skimOk = true, cycled = 0;
 for (let i = 0; i < X.WELLS.length + 2; i++) {
   // Fill the current well right up to the highest lane it has.
   const cur = X.WELLS[state.wellIndex];
   for (let k = 0; k < 4; k++) X.spawnEnemy("vaulter", cur.lanes - 1 - k, 0.2 + k * 0.1);
 
+  const was = state.wellIndex;
   G.input.keyDown("w");
   step(false);
   G.input.keyUp("w");
+  if (state.wellIndex !== was) cycled++;
 
   const well = X.WELLS[state.wellIndex];
   for (const e of state.enemies) {
@@ -326,6 +331,7 @@ for (let i = 0; i < X.WELLS.length + 2; i++) {
   }
   if (!(state.skimmer.lane >= 0 && state.skimmer.lane <= well.lanes - 1)) skimOk = false;
 }
+H.eq(cycled, X.WELLS.length + 2, "fixture: every \"w\" press changed the well (non-vacuous)");
 H.assert(strandOk, "⛔ no entity survives a well change on a lane the new well does not have");
 H.assert(skimOk, "the Skimmer is inside the new well's lane range after a cycle");
 

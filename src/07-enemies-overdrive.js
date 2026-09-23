@@ -338,7 +338,7 @@ class Warden extends Enemy {
 
 // ---------------------------------------------------------------------------
 // The Mimic (GDD 6.4, 14.6, 6.1, 6.3, 6.5, 12) — "reflects shots; vulnerable
-// only while firing". Overdrive L16+, 400 points. ⚠ ON PROBATION.
+// only while firing". Overdrive L16+, 400 points. KEPT (probation closed, CS017).
 // ---------------------------------------------------------------------------
 //
 // ⚠ PROBATION IS A REAL STATE AND THIS CLASS IS BUILT FOR IT (MI3; GDD 14.6,

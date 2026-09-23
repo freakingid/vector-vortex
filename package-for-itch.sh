@@ -30,6 +30,8 @@ cp "$HTML_FILE" "$STAGE_DIR/index.html"
 for f in "${LIB_FILES[@]}"; do mkdir -p "$STAGE_DIR/$(dirname "$f")"; cp "$f" "$STAGE_DIR/$f"; done
 
 mkdir -p "$OUT_DIR"; rm -f "$OUT_ZIP"
-( cd "$STAGE_DIR" && zip -q -r "$OUT_ZIP" index.html lib )
+# zip when present, else Python's standard library (CS017 S12: some machines lack zip).
+if command -v zip >/dev/null; then ( cd "$STAGE_DIR" && zip -q -r "$OUT_ZIP" index.html lib )
+else ( cd "$STAGE_DIR" && python3 -m zipfile -c "$OUT_ZIP" index.html lib ); fi
 
 echo "Packaged: $OUT_ZIP"; unzip -l "$OUT_ZIP"

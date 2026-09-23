@@ -665,6 +665,11 @@ facts P1–P3 produce, and splitting it from P3 leaves P3 a two-line phase.
    `ENEMY_CAP`, `shots` ≤ the cap in force, `tokens` ≤ `MAX_TOKENS`;
    non-vacuity (both modes reach the Mimic's level, both reach a dive, distinct
    death levels). ⛔ **MEASURED under 60 s before commit.**
+   ⛔ **P3 addendum (rule 3: a recommendation, TAKEN; Paul may reverse):**
+   non-vacuity also asserts **every one of the sixteen wells was played** across
+   the hundred runs — §19 Core's "all 16 wells render and play" has no played
+   carrier today (P3's sweep). PREDICTED reachable: Start Depths up to 29 put
+   runs on every well; if one is not, P4 reports it rather than widening.
 2. **S8** — `C.GAME_VERSION` `"1.0.0"`, `test-cs016-p1.js:120` rewritten in
    place, `package.json` aligned.
 3. **The close** — `log/CS017.md` compressed; `STATUS.md` reset post-ship

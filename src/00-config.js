@@ -313,15 +313,17 @@ const C = {
   // hue 222°, and clear of C.TOKEN_COLOR's warm 56° (O16, T10).
   WARDEN_COLOR:         "#477EFF",  // ⚠ provisional, the same standing as the palette
 
-  // ---- Mimic (GDD 6.4, 14.6; CS013 P4) — Overdrive only, ON PROBATION -----
+  // ---- Mimic (GDD 6.4, 14.6; CS013 P4) — Overdrive only, KEPT (CS017) -----
   // "Reflects shots; vulnerable only while firing" (GDD 14.6), and MI1's answer
   // to what that cycle is: ⛔ REFLECT-THEN-OPEN. Closed it is guarding — a shot
   // is consumed and SENT BACK ONCE as a MimicShot — and that reflection OPENS
   // it for MIMIC_OPEN_TIME, which is "firing" and is the window a second shot
   // kills it in (07-enemies-overdrive.js).
   //
-  // ⚠ ON PROBATION (GDD 14.6, 19, 21 #6): the verdict is CS017's, and
-  // ⛔ ONE SCHEDULE ROW IS THE WHOLE CUT (MI3) — remove
+  // ✅ THE PROBATION IS CLOSED — KEPT (Paul, CS017 S6; GDD 14.6, 19, 21 #6),
+  // on a measurement: for a bot that trusts its own shots a reflection kills
+  // 0.125 per instance, below the Weaver bolt's 0.194 and the Warden's 0.139.
+  // ⛔ ONE SCHEDULE ROW IS STILL THE WHOLE CUT (MI3) — remove
   // `{ level: 16, kind: "mimic" }` from SPAWN_SCHEDULE_OVERDRIVE below and no
   // Mimic and no MimicShot can reach a board.
   //
@@ -647,7 +649,7 @@ const C = {
   // the Warden at 11 and P4 the Mimic at 16. ⛔ `mimicShot` is NOT a row, for
   // `weaverBolt`'s reason: it enters through Mimic.onShot(), and a row for one
   // would put a reflected shot in the throat that nobody reflected.
-  // ⚠ THE MIMIC'S ROW IS THE WHOLE OF ITS PROBATION (MI3, GDD 14.6, 21 #6):
+  // ⛔ THE MIMIC'S ROW IS THE WHOLE OF IT (MI3, GDD 14.6, 21 #6; KEPT, CS017):
   // delete that one line and no Mimic and no MimicShot can reach any board.
   SPAWN_SCHEDULE_OVERDRIVE: [
     { level:  6, kind: "reaver" },

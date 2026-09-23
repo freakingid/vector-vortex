@@ -288,9 +288,10 @@ Closed, it consumes a shot and sends it back ONCE; that reflection alone OPENS i
 open, it reflects nothing. ⛔ **No `reflected` latch, no cooldown.** ⛔ **The
 opening is UNCONDITIONAL and `sfx("reflect")` is not.** ⛔ **`C.MIMIC_APEX` is
 BOUNDED, not tuned** — ≤ 0.4308 from the constants, shipped 0.40; raising it or
-`MIMIC_SHOT_RATIO` is red. ⚠ **The Mimic is ON PROBATION and cuts in ONE ROW**
-(GDD §21 #6), `{ level: 16, kind: "mimic" }` in `C.SPAWN_SCHEDULE_OVERDRIVE`; keep
-it that way. `RATIONALE.md#entity-phases`.
+`MIMIC_SHOT_RATIO` is red. ⚠ **SETTLED — the Mimic is KEPT; its probation is
+closed** (Paul, CS017 S6; GDD §21 #6). It still cuts in ONE ROW,
+`{ level: 16, kind: "mimic" }` in `C.SPAWN_SCHEDULE_OVERDRIVE`; keep it that way.
+`RATIONALE.md#entity-phases`.
 
 ⛔ **A PROJECTILE MAY BE A PARAMETER VARIANT.** `MimicShot extends WeaverBolt`
 over one overridable reader, `speed()`. ⛔ **`C.WEAVER_BOLT_SPEED` is named ONCE in

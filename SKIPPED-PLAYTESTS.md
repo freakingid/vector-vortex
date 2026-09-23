@@ -24,8 +24,10 @@ run. The shipped values stand as they are.
 session, and `levelRecord("overdrive").noteCleared(81)` does the same for
 Overdrive — ⛔ **the record is per mode since CS012 P3**, and a bare
 `levelRecord()` reads `state.mode`, which on the title is the LAST run's.
-`w` changes the well **shape**, not the level. Bench keys: `1`–`6` spawn one of
-each Classic kind in your lane, `0` spawns the full staggered row. `t` turns
+⛔ **The bench is bound only in a flagged build** (`C.DEBUG_KEYS` `true`; it
+ships `false`, CS017 P2): there `w` changes the well **shape**, not the level,
+`1`–`6` spawn one of each Classic kind in your lane, and `0` spawns the full
+staggered row. `t` turns
 telemetry capture on, and `e` prints the CSV to the console.
 
 ---
@@ -620,7 +622,9 @@ about a run rather than a rule.**
   the reflected shot, and the one-row cut).
 - ⛔ **THIS IS NOT A TUNING ASK. IT IS THE VERDICT GDD §14.6 AND §21 #6 RESERVE**
   — "build it, playtest it, **cut it without ceremony if it reads as cheap**" —
-  and CS017 is where the answer lands. Every other entry in this file asks
+  and CS017 is where the answer lands. ✅ **CS017 S6 (Paul, 2026-09-23):
+  KEPT, on a measurement** (GDD §14.6's verdict table) — the ask below still
+  stands, since the numbers are bots'. Every other entry in this file asks
   whether a shipped thing feels right; this one asks whether a shipped thing
   should exist.
 - **Would have done:** three sittings, all Overdrive, START DEPTH 17 (the first
@@ -947,3 +951,97 @@ close's.
 - **Knobs:** `C.PROMPT_TIME`, `C.PROMPT_FADE` and the row ORDER of `C.PROMPTS`
   (one fire per step, in table order). ⛔ Never a trigger's level, never the
   queue's reset at `startGame()` without Paul (N4), never a heat-clock base.
+
+---
+
+## CS017 — ship: the hardware halves of GDD §17 and §19
+
+⛔ **Plan S1-A: a machine measures what it can, headless, and these entries
+record what only a person on hardware could judge.** Halves ALREADY recorded
+are pointed at, not repeated: the airborne state's "unmistakable" — **CS012
+P5**; the Surger tone by ear over music at every tier — **CS009 P5, CS010 P5**;
+the filter sweep by ear — **CS013 P5** (its last bullet) and **CS012 P4**;
+storage and the meta screens in Firefox and Safari — **CS011 P6**; the limiter
+in three browsers — **CS010 P3**; the Mimic — **CS013 P4** (kept, CS017 S6).
+
+## CS017 P1 — the budget board at 60 fps on the two named devices
+
+- **What Paul would have done:** opened the shipped file from `file://` in
+  Chrome on a 2019 mid-range laptop and on a 2021 mid-range phone (over
+  `npm run serve` for the phone), played Overdrive from Start Depth 23 until
+  Spread was up and the board full, with the browser's frame-rate meter on,
+  and watched it through a busy moment and a death.
+- **What we were trying to learn:** GDD §17's "60 fps on a 2019 mid-range
+  laptop and a 2021 mid-range phone". `tools/perf-probe.js` measures the S2
+  budget board (16 enemies, 24 shots, 2 tokens, the readout, a fading prompt,
+  a death's fragments) in headless Chromium on an i7-9700 with SOFTWARE raster:
+  **4.3 ms p50 at 1× CPU, 17.8 ms p50 / 34.2 ms p95 at 4×** (CS017 P3). The
+  frame is raster-bound — the draw's script is 0.15 / 0.64 ms — so a real GPU
+  canvas may be far faster, and a phone's fill rate at its own pixel ratio may
+  be slower; 4× throttle is a stand-in for a phone, and it sits at 60 fps with
+  no headroom.
+- **Knobs:** the glow — `C.GLOW_WIDE_W`, `C.GLOW_WIDE_ALPHA`,
+  `C.GLOW_THIN_ALPHA` — and `C.LINE_W_RIM` / `C.LINE_W_THROAT` (fill cost
+  scales with stroke width; `tools/glow-lab.html` is where they are judged).
+  ⛔ **Never `C.ENEMY_CAP`, `C.SPREAD_SHOT_MAX` or `C.MAX_TOKENS`** — those are
+  the game, not the budget. ⛔ The suite's gate is a COUNTER (156 strokes,
+  8 text calls, `test-cs017-p1.js`) and moves only with the renderer.
+
+## CS017 P2 — traverse-and-stop and the proportional rim, by hand on every device
+
+- **What Paul would have done:** on a closed well (the Ring) and an open one
+  (the Vee), with a mouse, the keyboard held, the keyboard tapped, a phone's
+  thumb in the drag zone and a gamepad's stick: ten times each, whipped a
+  third of the way round to a lane he named aloud first, stopped, and counted
+  the stops that landed on it; then moved slowly across three lanes and said
+  whether the rim moved as far as his hand did.
+- **What we were trying to learn:** GDD §1.1 P1 — "whip a third of the way
+  around the well and stop exactly on a lane" — and §19 Core's "verified on
+  every device". `test-cs017-p2.js` proves it per device path with SCRIPTED
+  input (each comes to rest within `HIT_LANE_TOL` of the aimed centre after the
+  snap); a hand brings reaction time, overshoot, a stick's dead zone and a
+  thumb's jitter. Whether the snap assist grabs the NEIGHBOUR on a fast stop;
+  whether a tap is one lane every time; whether the stick's full deflection is
+  too slow to whip.
+- **Knobs:** `C.SNAP_IDLE_MS`, `C.SNAP_STRENGTH`, `C.SNAP_EPSILON`;
+  `C.MOUSE_SENS`, `C.TOUCH_SENS`, `C.GAMEPAD_SENS`, `C.GAMEPAD_DEADZONE`;
+  `C.KEY_TAP_MS`, `C.KEY_SPEED_MIN`, `C.KEY_SPEED_MAX`, `C.KEY_RAMP`. The
+  player's own CONTROLS sensitivity (×0.5–×2.0) is CS008 P7's entry.
+
+## CS017 P3 — the whole game from `file://` in Firefox and Safari
+
+- **What Paul would have done:** double-clicked the shipped file in Firefox and
+  Safari (desktop), and opened the itch zip's `index.html` in each: played a
+  Classic run and an Overdrive run to game over with the sound on, visited
+  every title row, and paused on a lost focus.
+- **What we were trying to learn:** §19 Quality's "plays from `file://`" is
+  MEASURED in headless Chromium only (`tools/perf-probe.js`'s boot: title,
+  mode, depth, play, the audio context open, zero exceptions and zero console
+  errors besides the bridge's two refusals — `EXTERNAL-FILES.md` rule 2). Playwright's
+  cache here holds Chromium alone. Whether the two-pass stroked glow (no
+  `shadowBlur` anywhere) costs the same outside Chromium; whether Safari opens the
+  audio context on the first key or click; whether the module bridge fails as
+  silently there; whether `—` and `·` render in each browser's canvas font
+  (CS016 K13). Storage in those browsers is CS011 P6's; the limiter is CS010
+  P3's.
+- **Knobs:** none in `C` for correctness — a browser that breaks is a defect,
+  and one that is only slow is the glow knobs above. A browser that cannot be
+  fixed is a line on the itch page (Paul's copy).
+
+
+## CS017 P3 — ten minutes of music, by ear: no audible drift
+
+- **What Paul would have done:** played ten unpaused minutes of an Overdrive
+  run from a deep Start Depth with the music up (the Jump's high-pass flicking
+  in and out) on laptop speakers and headphones, and listened for the beat smearing,
+  a layer slipping against the melody, or a stutter when the tab lost and
+  regained focus.
+- **What we were trying to learn:** GDD §19 Audio's "no audible drift over 10
+  minutes". `test-cs009-p1.js` proves every step lands within 1e-6 s of its
+  grid over ten minutes — on a synthetic track and the FAKE clock. A real
+  browser's audio clock, a throttled background tab and a frame hitch that
+  outruns `C.MUSIC_LOOKAHEAD` are what a person would hear and the fake cannot
+  produce.
+- **Knobs:** `C.MUSIC_LOOKAHEAD` (the only one; ⛔ never a timer — `CLAUDE.md`'s
+  Audio rules). A drift heard only on a lost focus is the auto-pause's, not the
+  scheduler's.
