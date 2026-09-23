@@ -1,6 +1,6 @@
 # Vector Vortex — STATUS
-Version: 0.0.13 · Changeset: **CS016 closed 2026-09-23** · next: **CS017
-planning** (ship) · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
+Version: 0.0.13 · Changeset: **CS017 planned 2026-09-23** · next: **Paul
+answers `PLANNED-FEATURES-CS017.md` §0, then P1** · Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive ·
 Tracks: 3/5 · Tokens: 5/5 effects · Achievements: 23 lifetime + 19 weekly ·
 Prompts: 12
 
@@ -14,7 +14,18 @@ did.
 
 | Phase | Landed |
 |---|---|
-| Planning | not yet — CS017 is SHIP (`ROADMAP.md`; GDD §17, §18, §19) |
+| Planning | ✅ 2026-09-23 — `PLANNED-FEATURES-CS017.md` + `IMPLEMENTATION-PHASES-CS017.md`: four phases (the budget; the bench and the devices; the verdicts and the sweeps; the fifteenth soak and the close), fourteen calls S1–S14, ⚠ **§0 unanswered** |
+
+**Planning (2026-09-23).** Measured at `867ebd1`: suite 82 green, 0 skips, 282 s
+(slowest file 37.6 s). The shipped file boots and plays from `file://` in
+headless Chromium with zero exceptions; the budget board (16 enemies, 24 shots,
+2 tokens) allocates 8.2 KB a `draw()` (6.2 KB with four draw-path fixes, V4 —
+suite green) and costs 4.4–4.7 ms a frame uncapped at 1× CPU, 18.4–20.1 ms at
+4×, raster-bound. A run to game over costs 0.19–1.02 s on average, so 100 fit one file.
+Mimic from Start Depth 17: a reflection kills 0.125 per instance for a
+non-dodging bot (below the Weaver bolt's 0.194). Stand-ins: Mimic cut 6 files
+red, the seven bench keys unbound 14, plus `w` 17, version bump 1. Findings
+below, under "What CS017 must act on".
 
 ## Working / verified
 
@@ -77,8 +88,29 @@ did.
 
 ### What CS017 must act on
 
-⛔ **CS017 is SHIP and it is NOT PLANNED.** Reasoning for everything CS016 built
-is in `log/CS016.md`; the rules are in `CLAUDE.md`.
+⛔ **CS017 is SHIP and it is PLANNED; §0 is UNANSWERED** (`PLANNED-FEATURES-CS017.md`).
+Reasoning for everything CS016 built is in `log/CS016.md`; the rules are in
+`CLAUDE.md`.
+
+⚠ **Found by the planning session (2026-09-23), not worked around** — each
+has a §0 call or a note in the plan:
+- ⚠ **The GitHub repo is PUBLIC** and 8 live files name the original or its
+  maker on 38 lines (GDD §18.1 says "docs"); the shipped package and `README.md`
+  are clean (S10).
+- ⚠ **`package-for-itch.sh` fails on this machine: `zip` is absent** (line 33;
+  `python3` is present). S12.
+- ⚠ **A stray bench digit silently voids a run's eligibility** — no row, no
+  submit, no achievement, nothing on screen (S7).
+- ⚠ **GDD §17's budget names "full particles"** (the build has none) **and "no
+  per-frame allocation"**, which the ⛔ end-of-frame `.filter()` invariant
+  contradicts on the step path (S2, S3).
+- ⚠ **The soaks' MimicShot dodge — and `attractDrive()`'s port of it — measured
+  WORSE than no dodge for a bot** (0.274 against 0.125 kills per reflection).
+  No call; recorded.
+- ⚠ **`package.json` says `"0.0.1"`**; §19's Core and Quality rows have never had
+  a verdict block; no test asserts GDD §9's traverse-and-stop.
+- ⚠ **Start Depth options are odd** (1, 3 … 29): a driver asking for an even
+  depth silently gets row −1, i.e. level 1.
 
 - ⛔ **CS017 OWES FOUR MEASUREMENTS AND ONE VERDICT**: the Mimic's probation
   verdict (GDD §21 #6) — ⚠ prompt row 11 (`mimic`) and the shipped id
@@ -302,12 +334,11 @@ is in `log/CS016.md`; the rules are in `CLAUDE.md`.
 - ✅ **`CLAUDE.md` is 38,311 bytes** against its 50 KB ceiling. ⚠ The valve and
   the ban on standing sweeps stand.
 
-## Next up — CS017 planning (ship)
+## Next up — Paul answers CS017 §0, then P1 (the budget)
 
-⛔ **A PLANNING session, not a build phase**: it writes
-`PLANNED-FEATURES-CS017.md` and `IMPLEMENTATION-PHASES-CS017.md`, measures
-everything measurable, marks every claim MEASURED or PREDICTED, names Paul's
-calls and writes no code. `ROADMAP.md`'s CS017 row is the scope: performance
-budget on both targets, device matrix, 100-run soak, legal sweep and
-acceptance-criteria sweep (GDD §17, §18, §19), plus "What CS017 must act on"
-above. ⛔ `../coinless-kit` must be present for its close (zero skips).
+⛔ **§0 of `PLANNED-FEATURES-CS017.md` is unanswered**: S1–S14, one
+recommendation each. P1 needs S1–S4; P2 S7; P3 S6, S9 (the credits lines
+themselves), S10–S13; P4 S5, S8, S14. ⛔ A phase that reaches an unanswered
+call stops. Then `IMPLEMENTATION-PHASES-CS017.md`'s P1 prompt. ⛔
+`../coinless-kit` must be present for the close (zero skips); P1's tool needs
+Chromium (Playwright's cache holds one here).
