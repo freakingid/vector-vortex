@@ -950,7 +950,7 @@ const C = {
   ATTRACT_DEPTH:        5,            // ⚠ provisional (N7): six kinds and a token by 45 s, MEASURED
   ATTRACT_LENGTH:       45,           // s. ⚠ provisional (N7)
   ATTRACT_PURGE_EVERY:  5.2,          // s between the driver's Purge presses. ⚠ provisional (N6's "every N s")
-  ATTRACT_LINE:         "DEMO — PRESS ANY KEY",   // ⚠ Paul's text (N9); the prompt band, ≤ 36 characters
+  ATTRACT_LINE:         "DEMO — PRESS FIRE",     // Paul, 2026-09-23 (N9): Fire ends it on every device and can never be unbound; ≤ 36 characters
 
   // ---- The first-run prompts (GDD 12; CS016 P1, N2–N4) ----------------------
   // ⛔ DATA ONLY: { id, text } in GDD 12's order and nothing else — no trigger,

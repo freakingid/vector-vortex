@@ -136,11 +136,10 @@ phase reads the plan's §0 answers, not this block.
   closed test does; a new soak that parks on the title must press something
   inside 20 s or expect `"play"`. ⛔ **`Date.now` / `performance.now` still
   have their four readers.**
-- ⚠ **FINDING for Paul — "PRESS ANY KEY" is not quite true**: N9's two readings
-  are the struct and a named action, and an UNBOUND key (`q`, Enter, Tab)
-  reaches neither, so it does not end the demo. `onGesture` sees every key but
-  would be a third ending the answer did not name. Surfaced, not built: the
-  line's text or a third ending is Paul's.
+- ✅ **`C.ATTRACT_LINE` is `DEMO — PRESS FIRE`** (Paul, 2026-09-23): an unbound
+  key reaches neither the struct nor a named action and does not end the demo,
+  so the line names the one input that ends it on every device and can never be
+  unbound. No third ending was built.
 - ⚠ **A mouse move during a demo DEATH FREEZE is drained and lost** (`frame()`'s
   freeze branch samples without `update()`); a held button or a named action
   still ends it. The shipped demo dies nowhere (MEASURED, ten seeds).
