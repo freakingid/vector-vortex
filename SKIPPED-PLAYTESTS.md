@@ -866,8 +866,8 @@ close's.
   — and open ACHIEVEMENTS at the start and the end of each sitting.
 - **What we were trying to learn:** three things every CS015 measurement was
   taken on a BOT to stand in for.
-  (1) **Do the week's five feel WEEKLY?** The pool is 18 rows and a week shows
-  five; the thirteenth soak's one bot session (eight runs) earned **three of
+  (1) **Do the week's five feel WEEKLY?** The pool is 19 rows since CS016 P3
+  (18 at the time) and a week shows five; the thirteenth soak's one bot session (eight runs) earned **three of
   W39's five** — `week_forty_kills` and `week_score_50k` in Classic,
   `week_full_set` in Overdrive. If most weeks'
   five fall in a sitting, the rotation is a checklist rather than a reason to
@@ -875,19 +875,18 @@ close's.
   player has nothing that week.
   (2) **Are the tiers reachable by a HUMAN, not a hunter?** Every threshold was
   set near half of what a four-clause bot reached in 40,000 steps (GDD §15.5,
-  Paul's rule after P2), and ⚠ `C.ACHIEVEMENTS.wellShotPar` 120 came from a
-  driver that HOLDS THE TRIGGER — a person who taps may find `week_lean_well`
-  free, and a person who dies more may never see `deathless_wells`' top tier.
+  Paul's rule after P2), and a person who dies more may never see
+  `deathless_wells`' top tier. (CS016 P3 cut `week_lean_well` and its
+  trigger-holding `wellShotPar`, so that half of this ask is moot.)
   (3) **Does the screen tell a player anything?** It is the only surface — no
   toast, by A1 — so an unlock is heard (`unlock`) and never seen until the
   player goes looking. Whether a player ever opens the screen, and whether the
   count line ("N OF 23 · WEEK …") means anything without onboarding, is
   CS016's question as much as this one's.
-- **Knobs:** every `tiers` / `at` threshold and `wellShotPar` in
-  `C.ACHIEVEMENTS`, `perWeek`, and every `name` and `note` — ⛔ **never an `id`,
-  and never the pool's LENGTH after ship** (the rotation walks it by length).
-  ⚠ The pre-ship pass in `NEXT-STEPS.md` already owns three threshold calls and
-  the two unshipped weekly rows; this ask would inform it, not replace it.
+- **Knobs:** every `tiers` / `at` threshold in `C.ACHIEVEMENTS`, `perWeek`, and
+  every `name` and `note` — ⛔ **never an `id`, and never the pool's LENGTH after
+  ship** (the rotation walks it by length). The pre-ship pass this ask would have
+  informed shipped at CS016 P3 on bot measurements (`tools/reach-probe.js`).
 
 ## CS016 P1 — the first-run prompts: do they read, and do they teach?
 
@@ -927,3 +926,24 @@ close's.
 - **Knobs:** `C.ATTRACT_SEED`, `C.ATTRACT_DEPTH`, `C.ATTRACT_LENGTH`,
   `C.ATTRACT_PURGE_EVERY`, `C.ATTRACT_LINE` (≤ 36 characters) and
   `C.ATTRACT_IDLE`. ⛔ Never `C.ATTRACT_MODE` without Paul, and never a gate.
+
+## CS016 P4 — the fourteenth soak's asks: does a whole first session teach?
+
+- **What Paul would have done:** make a new profile and play a first sitting the
+  way a stranger would — a deep Start Depth in Classic, then Overdrive — with
+  the prompts on, then leave the title and watch what comes up.
+- **What we were trying to learn:** the soak proves every line fires once and is
+  drawn; it cannot say whether the SEQUENCE teaches. (1) **Is a queued line still
+  about its thing?** MEASURED at Classic Start Depth 15: eight rows fire in the
+  first 14 s, so the queue holds 32 s of lines and the Thorn's draws 14.1 s after
+  the first Thorn, the unlock's 14.4 s after the unlock — by then the board may
+  have moved on. (2) **Is a line lost at a game over missed?** `startGame()`
+  empties the queue (N4), so a row that fires behind others late in a run is
+  marked seen and may never be drawn; the soak's runs drew all twelve, which is
+  a property of its board, not a guarantee. (3) The P1 and P2 entries' asks
+  (the band's readability, K13's `—` and `·` glyphs, the demo read as a demo and
+  its silence on a fresh load) — this sitting is where they would be judged
+  together.
+- **Knobs:** `C.PROMPT_TIME`, `C.PROMPT_FADE` and the row ORDER of `C.PROMPTS`
+  (one fire per step, in table order). ⛔ Never a trigger's level, never the
+  queue's reset at `startGame()` without Paul (N4), never a heat-clock base.

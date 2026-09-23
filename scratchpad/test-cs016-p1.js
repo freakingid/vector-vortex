@@ -116,7 +116,8 @@ const A = open();
     H.assert(Number.isFinite(C[k]) && C[k] > 0, `C.${k} is a positive number`);
   }
   H.assert(/^#[0-9A-Fa-f]{6}$/.test(C.PROMPT_COLOR), "C.PROMPT_COLOR is #RRGGBB (the fade parses it)");
-  H.eq(C.GAME_VERSION, "0.0.12", "⛔ C.GAME_VERSION is 0.0.12 (Paul, 2026-09-23; plan §0.1)");
+  // ⛔ REWRITTEN IN PLACE AT THE CS016 CLOSE: the close bumps it (plan §0.1).
+  H.eq(C.GAME_VERSION, "0.0.13", "⛔ C.GAME_VERSION is 0.0.13, CS016's close (Paul, 2026-09-23; plan §0.1)");
 }
 
 // ===========================================================================

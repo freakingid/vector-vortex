@@ -28,7 +28,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS013** | ✅ **Shipped 2026-09-20.** Overdrive's tokens and its remaining enemies: five tokens in their own array behind one `dropToken()` (one draw per Overdrive kill, a total no-op in Classic), Bounty and Recharge instant, Lance / Spread / Ward with their readers, the two GDD §14.1 tables kept apart, `collect` and `wardBreak`; the **Warden** — aloft as a PHASE, the ninth contract field, and the **jump strike**, the build's fourth kill site; the **Mimic** on probation with `MimicShot extends WeaverBolt`, cutting in one schedule row; and the eleventh soak. Five phases, as planned | §14.1, §14.6, §6.4, §6.5, §7, §8.1, §17, §19 |
 | **CS014** | ✅ **Shipped 2026-09-20.** The ring-flight Dive, hard-capped at 4 s / 6 rings: a fourth mode flag `rings` that is the whole gate AND the whole cut, `diveTime()` over `C.DIVE_TIME_OD`, six rings laid rim-first on a lattice of the well and constants alone, a take pass that is a lane match inside a depth crossing, `C.RING_POINTS` unmultiplied — and **the Dive's visual, in BOTH modes**, plus `ringTake` / `ringMiss` and the twelfth soak. Three phases, as planned | §5, §7, §13, §14.5, §19 |
 | **CS015** | ✅ **Shipped 2026-09-20.** Achievements, local-only: `createAchievements()` in `20-achievements.js` as kit-achievements' draft (the table handed over as data, the clock injected), the `achievements` key v1 per profile, the UTC ISO week and a stride-walk rotation, thirteen write-only `tally` counters and two seats (the clear edge and the run's end) behind the one gate, **the id table — 23 lifetime ids and 18 weekly, save data from P3 on and every row MEASURED reachable** — the ACHIEVEMENTS screen off the title and OPTIONS, the `unlock` sound, and the thirteenth soak. Four phases, as planned | §10.5, §15.5, §17 items 10 and 12, §19 |
-| **CS016** | Onboarding: first-run prompts, attract mode, the teach-in-four-seconds pass on level 1 | §12 |
+| **CS016** | ✅ **Shipped 2026-09-23.** Onboarding: GDD §12's four-second promise MEASURED against level 1 and restated to what ships (no base, lane or schedule moved); **twelve first-run prompts** — §12's seven and five rows CS013–CS015 left owing — once per profile in a band under every rim, from `src/22-onboarding.js`'s board-read triggers, on a new `onboarding` key written only at the seats that already write; **attract mode**, the title idled 20 s into a fixed-seed Overdrive demo that opens no run and moves no storage byte; the **pre-ship achievement pass** (two counters, two pool rows, one cut, two re-aimed tiers, `tools/reach-probe.js`); and the fourteenth soak. Four phases, as planned | §10.4, §12, §15.1, §15.5, §17 items 10 and 12, §19 |
 | **CS017** | Ship: performance budget on both targets, device matrix, 100-run soak, legal sweep, acceptance-criteria sweep | §17, §18, §19 |
 
 ⛔ **The sequence above has been renumbered +1 twice, and the second time is the
@@ -53,7 +53,7 @@ left CS011 for a new **CS015**, so onboarding became CS016 and ship CS017. The
 sweep read every live `CS015` / `CS016` pointer and every "achievements are
 CS011's" pointer. `log/` and `archive/` were not swept, for the same reason.
 
-**CS001 through CS013 are closed.** Their narratives are in `log/CS0##.md`;
+**CS001 through CS016 are closed.** Their narratives are in `log/CS0##.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -469,6 +469,49 @@ session. ⚠ The vocabulary scan became a substring scan along the way (Paul's
 call, before P3). Still unowned: the pad-only silence, the VOICE bus, the Surger
 tone's 1.106 peak, the whole palette and the HUD sizes, F1 and F2.
 
+**CS016 held as ONE changeset of four phases and shipped its row.** The prompts,
+the band and the key (P1), attract mode (P2), the pre-ship achievement pass (P3),
+the fourteenth soak, the review and the close (P4). Paul answered N1–N13 before
+P1 and took **every recommendation**, the fifth changeset running — all five
+candidate prompt rows in, and the achievement pass here rather than in ship —
+and made three calls mid-flight: the demo's line names Fire (P2),
+`dives_done`'s tiers came down to what the probe could reach (P3), and the
+probe was kept as `tools/reach-probe.js` (after P3).
+
+**What CS016 shipped against the row.** ⛔ **The headline promise was MEASURED
+false before planning began, and the sentence moved, not the game**: a mover
+kills inside three seconds (64 of 64), a passive player dies between 6.9 and
+11.4 s, and both floors are heat-clock bases, so GDD §12 now says exactly that
+(N1-A) and `GOLDEN_LANES` and `P1_DETERMINISM_HASH` never moved. ⛔ **Nothing of
+the changeset is on `state`**: the queue, its clock, the seen set, the idle clock
+and the demo's flag live in the module's bag, Meta's closure and `Game`'s
+closure, so a played session hashes identically with the module stubbed — in
+both modes, on every frame, in the fourteenth soak. ⛔ **The demo is a run with no
+start seat**: `run` stays null, the one gate reads false with no new term, and
+the store's bytes are identical across a demo that clears a well and dies.
+⛔ **Once per profile is a key written only where writes already happen**, which
+is what kept CS015's "no play-step write but the clear edge" pin untouched. The
+achievement pass landed while the pool's length was still free: 23 lifetime and
+19 weekly, every row MEASURED reachable by a probe that is now a tool. ⛔ **No
+baseline moved in any phase.** GDD §19's Onboarding row — added by P1 — closes
+met.
+
+⚠ **What CS016 deliberately left.** **Ship is CS017's**: the Mimic's verdict
+(and with it prompt row 11 and `mimic_kill`), the performance budget ("8 shots"
+against Spread's 24; `drawShot()` allocates per call, and `drawPrompt()` builds
+one `rgba()` string per frame of a fade), the seven debug spawn actions, the
+device matrix and the legal sweep. **Nothing was tuned**: `PROMPT_TIME`,
+`PROMPT_FADE`, `PROMPT_COLOR`, the demo's seed, depth, length and Purge period
+are ⚠ provisional, and every ask — the band's readability, K13's `—` and `·`
+glyphs, the demo read as a demo and its silence on a fresh load, and a deep
+Start Depth's eight-line queue — is in `SKIPPED-PLAYTESTS.md`. **No toast**
+(CS015's A1 stands): row 12 says where to look, once per profile. **No level-1
+retune and no spawn-lane weighting** (N1-A). **No sound, no screen value, no HUD
+rectangle, no kill line, no telemetry column and no kit edited.** ⛔ After ship
+the achievement pool's LENGTH is frozen with its ids. Still unowned: the pad-only
+silence, the VOICE bus, the Surger tone's 1.106 peak, the whole palette and the
+HUD sizes, F1 and F2.
+
 ---
 
 ## Why this order
@@ -652,7 +695,7 @@ module seam, named against CS012 for the same reason.
 | 3 | Telemetry ships with the heat clock, not with the other meta systems. ⚠ Since CS006's split that is the **new CS007**, not CS006 — the same pairing it always had, one row further down | It is a tuning instrument, and the tuning it serves is difficulty. An instrument built one changeset *before* the thing it measures ships with a column list that has to be edited the moment heat lands, and `TELEMETRY_FIELDS` and `push()` must be edited together (GDD §15.6). If difficulty tuning turns out to need nothing beyond `feel-lab`, move it back to CS011 with the other meta systems |
 | 4 | Meta (CS011) sits after audio, not before | Meta's only external dependency is the Worker registry entry, which Paul can make in parallel today. If that registration proves slow, move CS011 earlier |
 | 5 | Front of house (CS008) comes before audio | The audio director reads score, combo, lives and level; specifying it against a real HUD and a real game-over path is cheaper than against placeholders |
-| 6 | ⚠ **GDD §12's four-second promise is onboarding, and it is CS016's.** Settled 2026-08-30 | CS003 P5 flagged that this file and `STATUS.md` disagreed — this file read it as a spawner-tuning question for the level-flow changeset, `STATUS.md` read it as onboarding. `STATUS.md` wins: it needs spawn lanes weighted toward the player's lane, which is a *teaching* decision made against a first-run experience, not a difficulty curve. If CS007's heat pass finds it falls out of the spawner for free, take it there and note the move. ⚠ **It did not** — CS007 touched no spawn-lane selection at all, and `pickSpawnLane()` is unchanged since CS003 |
+| 6 | ✅ **Settled at CS016 — GDD §12's four-second promise was onboarding, and the SENTENCE moved.** Settled 2026-08-30; closed 2026-09-23 by Paul's N1-A: MEASURED false in its passive half, restated, and no spawn lane weighted | CS003 P5 flagged that this file and `STATUS.md` disagreed — this file read it as a spawner-tuning question for the level-flow changeset, `STATUS.md` read it as onboarding. `STATUS.md` wins: it needs spawn lanes weighted toward the player's lane, which is a *teaching* decision made against a first-run experience, not a difficulty curve. If CS007's heat pass finds it falls out of the spawner for free, take it there and note the move. ⚠ **It did not** — CS007 touched no spawn-lane selection at all, and `pickSpawnLane()` is unchanged since CS003 |
 | 7 | No changeset is reserved for refactoring | If the CS008 HUD and the CS011 meta screens end up duplicating layout code, propose a refactor changeset then — don't reserve time for a problem that may not appear |
 | 8 | `ROADMAP.md` is its own file, not a section of `DECISIONS.md`. Paul's call, 2026-08-30 | It needs editing every time a changeset is renumbered, and `DECISIONS.md` is append-only. Adding it means one row in `CLAUDE.md`'s document map and one in GDD §16.4, both on the "on demand only" read contract |
 | 9 | The enemy palette is chosen as a set in CS004 P1, all six Classic colours at once, all ⚠ provisional | Picking four now and two in CS005 guarantees a clash, and `C` already carries forward-looking constants. `tools/glow-lab.html` remains unbuilt and unowned; whichever changeset takes the art pass owns it |

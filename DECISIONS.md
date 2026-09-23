@@ -756,3 +756,21 @@ more bars of music at 120 BPM, or deciding the mix call in CS010.
   - A12 — the table is `C.ACHIEVEMENTS`, handed to the module as `defs` (`createScores`' seam).
   - ⚠ After P2, Paul, 2026-09-20: a "lifetime" row is ONE RUN, BANKED (`lifetimeTiers` is monotonic), so `achievements` stays v1; the weekly facts are built in `facts()` with no new `tally` field: `log/CS015.md`, P2.
   - ⚠ After P3, Paul, 2026-09-20: the 41-row table STANDS; ⛔ plan §9's two REPORTED weekly rows (three tokens in one well; a Thorn chipped to nothing) had no fact and go in BEFORE SHIP, CS016 or CS017, one `tally` counter and one pool row each (`NEXT-STEPS.md`); `unlock`'s audition is batched into `drive`'s lab session: `log/CS015.md`, P3.
+- CS016's onboarding calls (N1–N13), Paul, 2026-09-23: every recommendation, as written, plus N12's numbers, the two new rows' names and notes and the version fix, `archive/PLANNED-FEATURES-CS016.md` §0, answered after the planning session; the built answers are GDD §12's, §15.5's and §19's Onboarding row. One line each:
+  - N1 — A: GDD §12's four-second promise RESTATED to the measured shape; ⛔ no constant, spawn lane or schedule moved.
+  - N2 — §12's seven prompts plus all five candidate rows (token, rings, Warden, Mimic, first unlock), rows 8–12, with the recommended texts and triggers.
+  - N3 — the band is centre-bottom in both modes: `PROMPT_Y` 636, `PROMPT_SIZE` 28, through `drawText()`, under the tokens, enemies and craft.
+  - N4 — `PROMPT_TIME` 4.0 s, a 0.5 s draw-time fade, a FIFO of one line; `startGame()` empties the queue, a death keeps it.
+  - N5 — A: a new declared key, `onboarding` v1 `{ seen: [ids] }`, per profile; MARKED on the trigger step, WRITTEN only at the four seats that already write.
+  - N6 — A: a board-reading driver in the build, `attractDrive()`, writing the struct AFTER `input.sample()`.
+  - N7 — the demo is Overdrive at Start Depth 5, a fixed seed, 45 s, spending `state.rng` as any run does.
+  - N8 — `run` stays null (no `Meta.runStarted()`), so the ONE gate reads false with no new term; three explicit skips; no `lastRunMode` write.
+  - N9 — any device input or named action ends it and does nothing else; so do its game over and its length.
+  - N10 — the idle clock is TITLE ONLY, `ATTRACT_IDLE` 20 s of simulation time, ⛔ no clock read.
+  - N11 — one new module, `src/22-onboarding.js`, top-level functions a soak can stub; `22-meta.js` stays the one route to storage.
+  - N12 — the pre-ship achievement pass in CS016 (P3): `depth_reached` [10, 25, 99]; `dives_done` re-aimed to `cleanDives` (`CLEAN DIVES`); `week_lean_well` CUT (pool 19); `week_token_trio` and `week_thorn_gone` added.
+  - N13 — GDD §19 gains an Onboarding row (P1), closed met at the CS016 close.
+  - §0.1 — CS015 is **0.0.12** (its log row corrected); P1 set `C.GAME_VERSION` to it and the close bumped it to **0.0.13**.
+  - ⚠ After P2, Paul, 2026-09-23: `C.ATTRACT_LINE` reads `DEMO — PRESS FIRE`, not "ANY KEY" — an unbound key ends nothing, and no third ending was built: `log/CS016.md`, P2.
+  - ⚠ At P3, Paul, 2026-09-23: `dives_done`'s tiers are **[5, 15, 25]**, not the answered [5, 20, 50] — 50 was MEASURED past the four passes' reach of 44, reported and not lowered; the note "DIVES FLOWN IN ONE RUN WITH NO THORN DEATH" is kept: `log/CS016.md`, P3.
+  - After P3, Paul, 2026-09-23: `REACH` is measured by **`tools/reach-probe.js`**, the P3 probe kept as a design instrument — replace `REACH` whole from its output, report an unreached row, never lower it: `log/CS016.md`, P3.
