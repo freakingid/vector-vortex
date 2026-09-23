@@ -64,10 +64,13 @@ Code.
 1. **Read `STATUS.md` first**; update it at the end of the session.
 2. **One phase per session.** Build only what the prompt scopes. A small choice
    that would ease a later phase is noted, not taken.
-3. ⛔ **A build phase executes a reviewed plan and invents no design.** A design
-   call `PLANNED-FEATURES-CS0##.md` doesn't cover is **surfaced, not answered** and
-   not quietly read one way. ⛔ **A planning session too**: reading the code is not
-   authority to decide what the game does; a plan names the call and stops.
+3. ⛔ **A build phase executes a reviewed plan.** A design call
+   `PLANNED-FEATURES-CS0##.md` doesn't cover is **never quietly read one way**:
+   ⛔ **one that carries a recommendation is TAKEN** — built, and recorded in the
+   plan, `STATUS.md` and the session's last message for Paul to reverse;
+   ⛔ **one with none stops** and is surfaced. ⛔ **A planning session too**:
+   reading the code is not authority to decide what the game does; a plan names
+   each call with one recommendation, which stands unless Paul answers otherwise.
 3a. ⛔ **A planning session writes NO code** — no `src/`, test or fixture. It may
    and should *run* anything.
 3b. ⛔ **Every planning-doc claim is marked MEASURED** (naming the command and

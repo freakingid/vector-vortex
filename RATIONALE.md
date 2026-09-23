@@ -536,6 +536,10 @@ camelCase. "web" alone excepts `webkit`, the browser's `webkitAudioContext`.
   `DECISIONS.md`, 2026-08-31. "How many pointers does this renumber touch",
   "does this move that baseline", "does that closed test already assert the
   opposite" are each one command.
+- **Recommendations are taken (3)** — Paul, 2026-09-23 (`DECISIONS.md`): he
+  had agreed with almost every recommendation, and stopping for each one was
+  the slowest part of a phase. What stays is the recording: a taken call is
+  written where he reads it, so reversing one is an edit, never an archaeology.
 - **The doc, not the conversation (3c).** The plan and the build are separate
   sessions, and the gap between them is a check, not an inconvenience.
 - **Reasoning goes to `log/` as the phase goes.** `CLAUDE.md` once sent a phase's

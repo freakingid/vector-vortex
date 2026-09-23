@@ -391,8 +391,8 @@ has a §0 call or a note in the plan:
 ✅ **§0 is answered** (Paul, 2026-09-23, every recommendation; S9 keeps the
 current two credits lines). Paste `IMPLEMENTATION-PHASES-CS017.md`'s P3 prompt.
 ⛔ **Paul's standing rule (2026-09-23): a call that carries a recommendation
-is TAKEN and recorded for him to reverse; only a call with none stops.**
-⚠ It is not yet in `CLAUDE.md` rule 3 (offered, unanswered). ⚠ P3's §19
+is TAKEN and recorded for him to reverse; only a call with none stops**
+(`CLAUDE.md` rule 3, amended). ⚠ P3's §19
 sweep writes the Core row's hardware half (traverse-and-stop "on hardware") as
 a `SKIPPED-PLAYTESTS.md` entry; the headless half is `test-cs017-p2.js`.
 ⚠ **S10 is Paul's action, outside the repo**: the GitHub repository goes private
