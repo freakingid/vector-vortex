@@ -145,6 +145,63 @@ Phase 4
 Now is CS016 planning
 * Then they said:
 What you need to do next: answer the thirteen calls in the plan's §0 (N1–N13), each with a recommendation beside it. N1 (restate §12 vs. touch the spawner) and N12 (the achievement pass in CS016 or CS017, plus its three threshold numbers) shape the changeset; N2's five candidate prompt rows are yours to accept or drop. Also yours: C.GAME_VERSION reads 0.0.10 against STATUS's 0.0.11.
+(now asking for confirmation what to do next 9/23 959a)
+(Some changes were done in session "Plan thirteen calls and versin discrepancy)
+Phase 1
+Phase 2 (1033a)
+Phase 3 (1118a)
+Phase 4 (1232p)
+
+=====
+Now is CS017 planning
+Phase 1 after restart (210p)
+Phase 2 (302p)
+Phase 3 (404p)
+Phase 4 (509p)
+
+=====
+Now post-ship? We need to test the game.
+But, we can also proceed with a hardening of changeset cs018
+Changeset 18
+Phase 1 (844p)
+Phase 2 (907p)
+
+== Last session note ==
+I've recorded that 1.0.1 is not released and that the itch.io upload waits on your release tests. The release tests are now in their own file, RELEASE-TESTS.md, and none of them is skipped. Both changes are committed as cc28998; nothing was pushed.
+
+The note. STATUS.md now reads "1.0.1 — built, NOT RELEASED (release tests pending)". I also made four related changes:
+
+ROADMAP: the rows marked "Shipped" mean a changeset closed, not a public release.
+DECISIONS: a line records your decision.
+CLAUDE.md: the "Paul does NO playtests" rule now has one exception, the release tests. Without that, future sessions would keep putting them back on the skipped list.
+SKIPPED-PLAYTESTS.md: its header points to the new file.
+The release tests. I went through the 24 skipped entries that bear on release and grouped them into eleven tests you run by hand. Each says what to do and what counts as a pass:
+
+Test	What it checks
+R1	First cold play of both modes: every death explainable, prompts teach
+R2	Deep play (Start Depth 23): busy boards, airborne, ring flight, tokens, Mimic
+R3	Every screen with mouse, keyboard, gamepad and phone
+R4	Whip to a lane and stop on it, by hand, on every device
+R5	The Surger charge tone heard over music, on speakers, headphones and a phone
+R6	60 fps on a laptop and a phone
+R7	Chrome, Firefox, Safari and iOS Safari from file://; saves survive a reload
+R8	A private draft itch.io page: embed, sound, saves, tab switching
+R9	Online scores posted and read back
+R10	Name entry on each device
+R11	Ten minutes of music with no drift
+The original entries stay in SKIPPED-PLAYTESTS.md, marked "▶ RELEASE R#". They keep the list of settings a failure would change. The rest of that file is tuning and feel, and still doesn't block the release.
+
+More development work. Nothing is planned or queued: NEXT-STEPS.md is empty (I read it for this question). What's left:
+
+Whatever your release tests turn up. This is the likeliest real work. Each failure becomes a patch.
+Your audio lab session: audition the drive track and the five sound cues nobody has listened to yet.
+Kit backports to the shared coinless-kit repo. These are manual steps done outside this repo.
+Small known gaps: a player using only a gamepad gets no sound until a key, click or tap. The Surger tone peaks slightly above full scale. The colours and HUD sizes are provisional.
+Two open questions for you: whether the music-loudness test should also limit input levels, and whether CLAUDE.md needs a telemetry rule.
+I can also turn the eleven tests into a private web checklist you could tick through on your phone while testing.
+
+Your next step: run R1–R11 and write the results in RELEASE-TESTS.md. Upload the zip only when all eleven pass. Making the GitHub repository private and writing the itch page's text are still yours.
+
 
 
 

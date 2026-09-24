@@ -56,7 +56,7 @@ left CS011 for a new **CS015**, so onboarding became CS016 and ship CS017. The
 sweep read every live `CS015` / `CS016` pointer and every "achievements are
 CS011's" pointer. `log/` and `archive/` were not swept, for the same reason.
 
-**CS001 through CS018 are closed; the game shipped at 1.0.0 and is at 1.0.1.** Their narratives are in `log/CS0##.md`;
+**CS001 through CS018 are closed; the build is at 1.0.1.** ⛔ **"Shipped" in the rows above means the changeset closed, not a public release**: nothing has been uploaded, and the itch.io upload waits on `RELEASE-TESTS.md` (Paul, 2026-09-23). Their narratives are in `log/CS0##.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no

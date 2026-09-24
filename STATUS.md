@@ -1,5 +1,5 @@
 # Vector Vortex — STATUS
-Version: **1.0.1 — SHIPPED** · CS018 closed 2026-09-23 · **no changeset in flight** ·
+Version: **1.0.1 — built, NOT RELEASED** (release tests pending) · CS018 closed 2026-09-23 · **no changeset in flight** ·
 Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 · Tokens: 5/5 effects ·
 Achievements: 23 lifetime + 19 weekly (**frozen**) · Prompts: 12
 
@@ -11,6 +11,11 @@ verbatim**, are in `log/CS018.md`. ⛔ **Post-ship work is a PATCH, and a patch
 is a changeset**: a planning session first, then build phases, then a close —
 `CLAUDE.md`'s three session kinds, unchanged. The next patch's planning session
 adds its `ROADMAP.md` row and starts its ledger under "Phase ledger".
+
+⛔ **NOT RELEASED. Paul has not yet played the game (2026-09-23), and the itch.io
+upload waits on `RELEASE-TESTS.md`**: eleven by-hand tests, R1–R11, drawn from
+`SKIPPED-PLAYTESTS.md`'s ▶ RELEASE entries, none of them skipped. A FAIL becomes
+a patch changeset; the upload happens only when all eleven pass.
 
 ⚠ **PAUL'S, OUTSIDE THE REPO, BEFORE THE ITCH PAGE GOES LIVE** (CS017 S10, S12):
 make `github.com/freakingid/vector-vortex` **private** (it is PUBLIC, and 8 live

@@ -1,7 +1,11 @@
 # SKIPPED PLAYTESTS — Vector Vortex
 
-⛔ **Paul does no playtests (2026-09-16, `DECISIONS.md`).** This file is **not**
-a to-do list for him. It records the playtests a phase would have asked for,
+▶ **EXCEPT THE RELEASE TESTS (Paul, 2026-09-23).** An entry whose heading ends
+**▶ RELEASE R#** is NOT skipped: it is a release test in `RELEASE-TESTS.md`, which
+Paul runs by hand before the itch.io upload. The entry stays here for its knobs.
+
+⛔ **Paul does no playtests (2026-09-16, `DECISIONS.md`)** beyond those. This
+file is **not** a to-do list for him. It records the playtests a phase would have asked for,
 what they were meant to find out, and the knob that would move if one were ever
 run. The shipped values stand as they are.
 
@@ -37,7 +41,7 @@ telemetry capture on, and `e` prints the CSV to the console.
 These would have checked for a death or wrong move the player cannot account
 for.
 
-### CS005 P2 — Drifter states at a glance
+### CS005 P2 — Drifter states at a glance · ▶ RELEASE R1
 - **Would have done:** pressed `5` a few times, then `0`, and checked whether the
   armoured (closed, dim, thin) and crossing (open, bright, thick) Drifter states
   can be told apart in traffic.
@@ -45,13 +49,13 @@ for.
   suite proves the three visual channels differ; it cannot prove anyone reads them.
 - **Knobs:** `C.DRIFT_RIDE_ALPHA` and the ride/cross line-weight multipliers.
 
-### CS005 P3 — Surger fuse reads as a countdown
+### CS005 P3 — Surger fuse reads as a countdown · ▶ RELEASE R1
 - **Would have done:** pressed `6` and watched the fuse climb.
 - **Trying to learn:** whether it reads as "the charge is coming at me" and not
   just "that lane is bright".
 - **Knobs:** `C.SURGE_TELEGRAPH` (0.45 s).
 
-### CS005 P4 — Drifter Carrier vs Surger Carrier at throat depth
+### CS005 P4 — Drifter Carrier vs Surger Carrier at throat depth · ▶ RELEASE R1
 - **Would have done:** pressed `2` until all three cargoes appeared, and judged
   them at their smallest.
 - **Trying to learn:** whether the two cargoes can be told apart. They need
@@ -60,7 +64,7 @@ for.
 - **Knobs:** the Drifter glyph's shape, then `C.CARRIER_GLYPH_SIZE`, then stroking
   the glyph in the cargo's colour (an art call).
 
-### CS005 P5 (reachable since CS008 P5) — a six-kind board at level 23
+### CS005 P5 (reachable since CS008 P5) — a six-kind board at level 23 · ▶ RELEASE R2
 - **Would have done:** pressed `0` for the static row, then played from START DEPTH
   23, the first level with all seven schedule rows.
 - **Trying to learn:** whether six kinds arriving at once is readable at the
@@ -68,7 +72,7 @@ for.
 - **Knobs:** `C.ENEMY_CONCURRENT`, then `C.ENEMY_CAP` (16, the readability
   ceiling), then `C.SPAWN_SCHEDULE`.
 
-### CS006 P4 — lit lanes in the dim band at level 65
+### CS006 P4 — lit lanes in the dim band at level 65 · ▶ RELEASE R2
 - **Would have done:** started at level 65 and pressed `0`.
 - **Trying to learn:** whether a lane with something in it reads as "lit", and
   whether the dim well (0.18 alpha) still reads as a well rather than a
@@ -83,7 +87,7 @@ for.
 - **Knobs:** the two `throatOffset` values (in `03-wells.js`, the lab and GDD
   §3.4 together), then `C.THROAT_SCALE`.
 
-### CS006 P3 — the Dive feels like a breath
+### CS006 P3 — the Dive feels like a breath · ▶ RELEASE R1
 - **Would have done:** cleared a well with a Thorn standing and paid attention to
   the 2.6 s that followed.
 - **Trying to learn:** whether the Dive feels like a release with a small skill
@@ -95,7 +99,7 @@ for.
 
 ---
 
-### CS009 P5 — the Surger tone over `pulse`, on real hardware
+### CS009 P5 — the Surger tone over `pulse`, on real hardware · ▶ RELEASE R5
 - **Would have done:** played from START DEPTH 23 with `pulse` at default volumes,
   on laptop speakers, headphones and a phone. Pressed `6` in a busy moment and
   listened for the rising charge tone.
@@ -118,7 +122,7 @@ for.
 - **Knobs:** `C.HEAT_KNEE` (6.0), `C.HEAT_FULL_LEVEL` (99), then schedule rows
   (last resort; see `DIFFICULTY-NOTES.md`).
 
-### CS008 P1b (written at P8) — levels 1–4 still tense (K2)
+### CS008 P1b (written at P8) — levels 1–4 still tense (K2) · ▶ RELEASE R1
 - **Would have done:** played two runs from level 1, one holding fire the whole
   time and one firing only on purpose, with `t` and `e`.
 - **Trying to learn:** whether the first four wells still have pressure now that
@@ -189,7 +193,7 @@ for.
   (`C.HUD_PURGE_DIM_ALPHA`), and "LEVEL n" reads on every band, including the dim
   band.
 
-### CS008 P5, P6 — the screens on every device
+### CS008 P5, P6 — the screens on every device · ▶ RELEASE R3
 - **Would have done:** gone title → PLAY → CLASSIC → LEVEL 5 → die → RESTART → die
   → QUIT TO TITLE, then pause → OPTIONS → CREDITS → back, on a mouse, keyboard,
   gamepad and phone.
@@ -199,7 +203,7 @@ for.
   `C.MENU_ROTATE_STEP` 1.0 is too twitchy on the 41-row list. Whether ignoring
   presses during the death freeze reads as an unresponsive menu.
 
-### CS008 P7 — the Controls page on hardware
+### CS008 P7 — the Controls page on hardware · ▶ RELEASE R3
 - **Trying to learn:** whether ×0.5–×2.0 in ×0.1 steps is the right sensitivity
   range on a real mouse and phone (`C.SENS_MIN_MULT`, `C.SENS_MAX_MULT`,
   `C.SENS_STEP`), whether rebinding works on a real pad, and whether a refused
@@ -258,7 +262,7 @@ for.
   speakers.
 - **Knobs:** `title`'s `ground` gain (music-lab, COPY TABLE).
 
-### CS010 P5 — the Surger tone at every tier, by ear on hardware
+### CS010 P5 — the Surger tone at every tier, by ear on hardware · ▶ RELEASE R5
 - **Would have done:** played Start Depth 13 and 23 with `pulse` until `tick`
   (tier 3) was in, then waited for a Surger to telegraph over the C section, on
   laptop speakers, headphones and a phone; once more with a board thin enough
@@ -296,7 +300,7 @@ for.
   ⛔ The solo audition, PASS marks and tiers are Paul's lab work, not a
   playtest; they port as their own commit.
 
-### CS011 P4 — NAME on a pad, a phone and a keyboard
+### CS011 P4 — NAME on a pad, a phone and a keyboard · ▶ RELEASE R10
 - **Would have done:** named a new profile and renamed it on a gamepad (D-pad
   and stick), on a phone by drag and tap, and on a keyboard by typing; then
   deleted one.
@@ -308,7 +312,7 @@ for.
   order, `C.NOTICE_WRAP`; the cursor mark and the SPACE label in
   `refreshNameLines()`.
 
-### CS011 P5 — a real run posted and read back online
+### CS011 P5 — a real run posted and read back online · ▶ RELEASE R9
 - **Would have done:** served the build over `http://` with `lib/` beside it,
   played a Classic run to game over and one quit from pause, opened SCORES →
   VIEW → ONLINE, then played again offline and watched the title's queued line
@@ -321,7 +325,7 @@ for.
 - **Knobs:** `C.LEADERBOARD_BOARD_LIMIT`; the VIEW row's place and the entry
   view in `buildScoreRows()` / `toScores`; the state and hint strings there.
 
-### CS011 P6 — storage and the meta screens in Firefox and Safari (plan K4)
+### CS011 P6 — storage and the meta screens in Firefox and Safari (plan K4) · ▶ RELEASE R7, R8
 - **Would have done:** opened the built file by double-click and the itch.io
   upload in Firefox and Safari (desktop, and Safari on iOS); created a profile,
   moved a volume and a sensitivity, played a run to a local score, reloaded,
@@ -387,7 +391,7 @@ for.
   first row" (O10) — is the part most likely to surprise, and it is also the part
   a person would notice in one session and a test cannot judge.
 
-## CS012 P5 — the three airborne channels, the high-pass by ear, and the jump on touch
+## CS012 P5 — the three airborne channels, the high-pass by ear, and the jump on touch · ▶ RELEASE R2
 
 - **Changeset / phase:** CS012 P5 (the Jump).
 - **What Paul would have done:** three sittings. (1) An Overdrive run from
@@ -514,7 +518,7 @@ about a run rather than a rule.**
   out rescaling them, and a person listening to it would hear a filter that opens
   most of the way. It is a number recorded and left alone, not a playtest.
 
-## CS013 P1 — the tokens: the drop rate, the rise and hover, the pull, the glyphs and the gold
+## CS013 P1 — the tokens: the drop rate, the rise and hover, the pull, the glyphs and the gold · ▶ RELEASE R2
 
 - **Changeset / phase:** CS013 P1 (tokens: the drop, the life on the board,
   Bounty and Recharge).
@@ -616,7 +620,7 @@ about a run rather than a rule.**
   is bounded by `RESPAWN_INVULN` and is not freely tunable; "killable only by
   Jump", `blocksClear` and the L11 row are GDD 14.6's and W4/W5's, not knobs.
 
-## CS013 P4 — the Mimic: ⛔ THE PROBATION ASK — does a reflected shot read as cheap?
+## CS013 P4 — the Mimic: ⛔ THE PROBATION ASK — does a reflected shot read as cheap? · ▶ RELEASE R2
 
 - **Changeset / phase:** CS013 P4 (the Mimic and its `MimicShot` — reflect-then-open,
   the reflected shot, and the one-row cut).
@@ -751,7 +755,7 @@ close's.
   constant is on this list**: `C.DIVE_TIME` 2.6 and `C.DIVE_GRACE` 0.35 did not
   move and are not CS014's to move (plan R1).
 
-## CS014 P2 — the Dive you can see: does the descent READ as a flight, and is a miss audible?
+## CS014 P2 — the Dive you can see: does the descent READ as a flight, and is a miss audible? · ▶ RELEASE R2
 
 - **Changeset / phase:** CS014 P2 (the Dive's visual and the two audio seats).
 - **Would have done:** three sittings, all of them on the beat a run spends one
@@ -892,7 +896,7 @@ close's.
   ship** (the rotation walks it by length). The pre-ship pass this ask would have
   informed shipped at CS016 P3 on bot measurements (`tools/reach-probe.js`).
 
-## CS016 P1 — the first-run prompts: do they read, and do they teach?
+## CS016 P1 — the first-run prompts: do they read, and do they teach? · ▶ RELEASE R1
 
 - **What Paul would have done:** start a fresh profile in each mode, on a desktop
   browser and a phone, and play the first few wells of each without reading
@@ -931,7 +935,7 @@ close's.
   `C.ATTRACT_PURGE_EVERY`, `C.ATTRACT_LINE` (≤ 36 characters) and
   `C.ATTRACT_IDLE`. ⛔ Never `C.ATTRACT_MODE` without Paul, and never a gate.
 
-## CS016 P4 — the fourteenth soak's asks: does a whole first session teach?
+## CS016 P4 — the fourteenth soak's asks: does a whole first session teach? · ▶ RELEASE R1
 
 - **What Paul would have done:** make a new profile and play a first sitting the
   way a stranger would — a deep Start Depth in Classic, then Overdrive — with
@@ -964,7 +968,7 @@ the filter sweep by ear — **CS013 P5** (its last bullet) and **CS012 P4**;
 storage and the meta screens in Firefox and Safari — **CS011 P6**; the limiter
 in three browsers — **CS010 P3**; the Mimic — **CS013 P4** (kept, CS017 S6).
 
-## CS017 P1 — the budget board at 60 fps on the two named devices
+## CS017 P1 — the budget board at 60 fps on the two named devices · ▶ RELEASE R6
 
 - **What Paul would have done:** opened the shipped file from `file://` in
   Chrome on a 2019 mid-range laptop and on a 2021 mid-range phone (over
@@ -987,7 +991,7 @@ in three browsers — **CS010 P3**; the Mimic — **CS013 P4** (kept, CS017 S6).
   the game, not the budget. ⛔ The suite's gate is a COUNTER (156 strokes,
   8 text calls, `test-cs017-p1.js`) and moves only with the renderer.
 
-## CS017 P2 — traverse-and-stop and the proportional rim, by hand on every device
+## CS017 P2 — traverse-and-stop and the proportional rim, by hand on every device · ▶ RELEASE R4
 
 - **What Paul would have done:** on a closed well (the Ring) and an open one
   (the Vee), with a mouse, the keyboard held, the keyboard tapped, a phone's
@@ -1008,7 +1012,7 @@ in three browsers — **CS010 P3**; the Mimic — **CS013 P4** (kept, CS017 S6).
   `C.KEY_TAP_MS`, `C.KEY_SPEED_MIN`, `C.KEY_SPEED_MAX`, `C.KEY_RAMP`. The
   player's own CONTROLS sensitivity (×0.5–×2.0) is CS008 P7's entry.
 
-## CS017 P3 — the whole game from `file://` in Firefox and Safari
+## CS017 P3 — the whole game from `file://` in Firefox and Safari · ▶ RELEASE R7, R8
 
 - **What Paul would have done:** double-clicked the shipped file in Firefox and
   Safari (desktop), and opened the itch zip's `index.html` in each: played a
@@ -1029,7 +1033,7 @@ in three browsers — **CS010 P3**; the Mimic — **CS013 P4** (kept, CS017 S6).
   fixed is a line on the itch page (Paul's copy).
 
 
-## CS017 P3 — ten minutes of music, by ear: no audible drift
+## CS017 P3 — ten minutes of music, by ear: no audible drift · ▶ RELEASE R11
 
 - **What Paul would have done:** played ten unpaused minutes of an Overdrive
   run from a deep Start Depth with the music up (the Jump's high-pass flicking

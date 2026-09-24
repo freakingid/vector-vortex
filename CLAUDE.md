@@ -103,6 +103,7 @@ Code.
 | `ROADMAP.md` | Changeset sequence to ship | On demand |
 | `NEXT-STEPS.md` | Specified, unscheduled work | ⛔ **Only when a prompt names it** |
 | `SKIPPED-PLAYTESTS.md` | Playtests skipped by policy, and what each was for | **Never by default** |
+| `RELEASE-TESTS.md` | Paul's by-hand release tests; gate the itch.io upload | Planning a fix for a FAIL |
 | `log/CS0##.md` | Per-changeset narrative + version history | **Never by default** |
 | `archive/` | Spent planning docs | **Never by default** |
 
@@ -135,8 +136,9 @@ resets this file.
 
 ⛔ **Every entry starts its own paragraph (`\n\n`)** — verify after a shell append.
 
-⛔ **Paul does NO playtests (2026-09-16).** Nothing asks him to play, listen or
-look, and nothing waits on it. Something only a person could judge gets one
+⛔ **Paul does NO playtests (2026-09-16) — except `RELEASE-TESTS.md`**, which he
+runs by hand before any itch.io upload, and none is skipped (2026-09-23). A phase
+never asks him to play, listen or look, and nothing but the upload waits on it. Something only a person could judge gets one
 `SKIPPED-PLAYTESTS.md` entry (changeset, phase, what he would have done, what it
 was for, knobs) — never an entry here — and the shipped values stand.
 ⛔ **A lab in `tools/` is NOT a playtest**: building one for Paul is allowed, and

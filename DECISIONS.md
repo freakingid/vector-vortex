@@ -804,3 +804,4 @@ more bars of music at 120 BPM, or deciding the mix call in CS010.
   - Q8 — `pulse`'s sections asserted by the bassline's figure; GDD §11.7's B restated to the table.
   - Q9 — `CLAUDE.md`'s `glow-lab.html` line corrected: never built.
   - Q10 — two phases, P2 ending in the close; no sixteenth soak.
+- ⛔ **Release tests are NOT skipped**, Paul, 2026-09-23, after the CS018 close: he has not played the game, so 1.0.1 is not released. The itch.io upload waits on `RELEASE-TESTS.md` (R1–R11, by hand), drawn from `SKIPPED-PLAYTESTS.md`'s ▶ RELEASE entries. The 2026-09-16 no-playtest rule stands for everything else. `CLAUDE.md`'s STATUS-format rule is amended.
