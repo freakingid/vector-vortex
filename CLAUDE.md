@@ -730,9 +730,9 @@ Standalone HTML, **not shipped code**; drift in one can only produce a bad previ
 - **`tools/sfx-lab.html`** — ⛔ the porting source for every `C.SFX` recipe;
   ⛔ **the build ships the picked candidate, verbatim** (candidate A until Paul
   picks). Its BLOCK A, B and SFX are pinned (`test-cs009-p4.js`).
-- **`tools/well-lab.html`** (wells, perspective), **`glow-lab.html`** (line
-  weight, glow, readability), **`feel-lab.html`** (input feel; LAN via
-  `npm run serve`).
+- **`tools/well-lab.html`** (wells, perspective), **`feel-lab.html`** (input
+  feel; LAN via `npm run serve`). `glow-lab.html` was never built (`ROADMAP.md`
+  assumption 9).
 - **`tools/reach-probe.js`** — Node; ⛔ the measurement behind
   `test-cs015-p3.js`'s `REACH`, which is replaced whole from its output.
 - **`tools/perf-probe.js`** — Node + headless Chromium over `file://`; ⛔ GDD

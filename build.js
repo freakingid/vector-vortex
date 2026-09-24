@@ -155,6 +155,13 @@ function kitBlock() {
   }).join("");
 }
 
+// ⛔ The shell with its marker replaced by the script, through a FUNCTION
+// replacement (CS018 P1, plan Q6). A string replacement reads $&, $$, $` and
+// $' in the script as patterns and rewrites them in dist/ silently.
+function injectScript(shell, script) {
+  return shell.replace(MARKER, () => script);
+}
+
 function checkManifest() {
   const onDisk = fs.readdirSync(SRC).filter(f => f.endsWith(".js")).sort();
   const listed = [...MANIFEST].sort();
@@ -196,7 +203,7 @@ function build() {
   });
 
   const script = `<script>\n"use strict";\n${parts.join("")}\n</script>`;
-  const html = shell.replace(MARKER, script);
+  const html = injectScript(shell, script);
 
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, html, "utf8");
@@ -205,7 +212,8 @@ function build() {
   console.log(`built dist/vector-vortex.html  (${MANIFEST.length} modules + ${KIT_INLINE.length} kit, ${kb} KB)`);
 }
 
-module.exports = { MANIFEST, KIT_INLINE, KIT_INLINE_AFTER, kitNamespace, wrapKitModule, build };
+module.exports = { MANIFEST, KIT_INLINE, KIT_INLINE_AFTER, kitNamespace, wrapKitModule, kitBlock,
+                   injectScript, build };
 
 if (require.main !== module) return;
 
