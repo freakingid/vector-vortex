@@ -1,6 +1,6 @@
 {
   "name": "vector-vortex",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Vector Vortex - browser tube shooter. Zero runtime dependencies.",
   "license": "GPL-3.0",

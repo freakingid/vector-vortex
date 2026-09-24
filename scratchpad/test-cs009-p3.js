@@ -4,10 +4,12 @@
 // settings; audioFrame()'s seat in Game.frame(); with the recording fake,
 // driven through frame(), title plays `title`, play plays `pulse`, game over
 // fades to silence over C.MUSIC_FADE_OUT and RESTART starts `pulse` again; the
-// five rows (MASTER / MUSIC / SFX / VOICE VOLUME, MUSIC TRACK): setVol ramps,
-// clamps, every exit keeps the value, a held Purge stays on OPTIONS, a quit
-// keeps them and Game.reset() restores them; VOICE moves a bus with no input;
-// and no label overlaps its armed detail.
+// sound rows (MASTER / MUSIC / SFX VOLUME, MUSIC TRACK): setVol ramps, clamps,
+// every exit keeps the value, a held Purge stays on OPTIONS, a quit keeps them
+// and Game.reset() restores them; and no label overlaps its armed detail.
+// ⛔ REWRITTEN IN PLACE (CS018 P2, Q2-A): VOICE VOLUME was a fifth row moving a
+// bus with no input (A3). 1.0.1 cuts it; its claims now say the voice bus has no
+// row, sits at unity and is never moved.
 //
 // ⛔ TRAPS.
 //  1. The fake's clock is the test's: halfFrame() writes ctx.currentTime.
@@ -191,7 +193,7 @@ H.assert(M.state === "pulse" && M.trackGain === pulseGain, "⛔ pause and its OP
   halfFrame();
   H.eq(M.state, "title", "fixture: AUTO now resolves to `title`");
   const autoGain = M.trackGain;
-  right(8); press(FIRE); right(1); press(FIRE);
+  right(7); press(FIRE); right(1); press(FIRE);             // CS018 P2: MUSIC TRACK is row 7
   H.eq(detail("MUSIC TRACK"), "PULSE", "fixture: MUSIC TRACK set to PULSE");
   H.eq(M.state, "pulse", "⛔ a MUSIC TRACK change crossfades at once");
   H.assert(M.trackGain !== autoGain && gainLog(autoGain).some(a => a.v === 0.0001), "the old track is faded out");
@@ -237,12 +239,17 @@ H.eq(state.screen, "play", "fixture: RESTART");
 H.assert(M.state === "pulse" && M.trackGain !== null && M.trackGain !== liveGain, "⛔ RESTART starts `pulse` again");
 
 // ---------------------------------------------------------------------------
-// the five rows
+// the sound rows
 // ---------------------------------------------------------------------------
 
+// ⛔ REWRITTEN IN PLACE (CS018 P2, Q2-A): ROWS are the three volume rows; BUSES
+// stay the engine's four, so every "untouched" and "unity" claim still reads the
+// voice bus. Each assertion VOICE's row made is rewritten below, marked 1.0.1.
 function toOptions() { G.quitToTitle(); steps(2); right(1); press(FIRE); }
+const ROWS = ["master", "music", "sfx"];
 const BUSES = ["master", "music", "sfx", "voice"];
 const LABEL = { master: "MASTER VOLUME", music: "MUSIC VOLUME", sfx: "SFX VOLUME", voice: "VOICE VOLUME" };
+const shownAt = b => b === "voice" ? null : "100%";              // 1.0.1: no VOICE row to read
 
 toTitle();
 halfFrame();
@@ -250,10 +257,10 @@ toOptions();
 H.eq(state.screen, "options", "fixture: OPTIONS from the title");
 H.eq(M.state, "title", "OPTIONS from the title plays `title`");
 right(6);
-for (const b of BUSES) H.eq(detail(LABEL[b]), "100%", `${LABEL[b]} reads 100% at launch (A2)`);
+for (const b of BUSES) H.eq(detail(LABEL[b]), shownAt(b), b === "voice" ? "no VOICE VOLUME row at launch (1.0.1)" : `${LABEL[b]} reads 100% at launch (A2)`);
 H.eq(detail("MUSIC TRACK"), "AUTO", "MUSIC TRACK reads AUTO at launch");
 
-BUSES.forEach((bus, i) => {
+ROWS.forEach((bus, i) => {
   toTitle(); right(1); press(FIRE);
   right(4 + i);
   press(FIRE);
@@ -276,7 +283,29 @@ BUSES.forEach((bus, i) => {
   H.eq(state.screen, "options", `${LABEL[bus]}: and stays on OPTIONS`);
 });
 
-// ⛔ VOICE moves a bus with no input (A3).
+// VOICE's pass, rewritten (1.0.1): its old row, 4 + 3, is MUSIC TRACK now, and
+// nothing done there moves the voice bus.
+{
+  toTitle(); right(1); press(FIRE);
+  right(7);
+  press(FIRE);
+  H.eq(detail("MUSIC TRACK"), "‹AUTO›", "VOICE's old row: Fire arms MUSIC TRACK, the row after SFX VOLUME (1.0.1)");
+  noOverlap("MUSIC TRACK armed on VOICE's old row");
+  const n0 = gainLog(A.voice).length, v0 = rec.valueSets.length;
+  left(3);
+  H.eq(state.screen, "options", "VOICE's old row: rotate adjusts MUSIC TRACK, the cursor stays");
+  H.eq(detail("MUSIC TRACK"), "‹AUTO›", "VOICE's old row: three taps down clamp MUSIC TRACK at AUTO");
+  H.eq(A.vol.voice, 1, "⛔ the voice bus holds unity (1.0.1)");
+  H.eq(gainLog(A.voice).length - n0, 0, "⛔ and no setVol ramp reaches it (1.0.1)");
+  H.eq(gainLog(A.voice).length, 0, "⛔ nor ever has, this session (1.0.1)");
+  H.eq(rec.valueSets.slice(v0).filter(v => v.node === A.voice).length, 0, "never a bare .value set on it either");
+  for (const other of ["master", "music", "sfx"]) H.eq(A.vol[other], 1, `VOICE's old row: ${other} is untouched`);
+  press(FIRE);
+  H.eq(detail("MUSIC TRACK"), "AUTO", "VOICE's old row: Fire exits MUSIC TRACK and keeps AUTO");
+  H.eq(state.screen, "options", "VOICE's old row: and stays on OPTIONS");
+}
+
+// ⛔ The voice bus has no input (A3), and since 1.0.1 no row.
 H.eq(rec.connections.filter(c => c.to === A.voice).length, 0, "⛔ nothing is connected into the voice bus, all session");
 
 // Clamps, and every exit keeps the value.
@@ -305,7 +334,9 @@ H.eq(detail("MUSIC VOLUME"), "80%", "Escape keeps 80%");
 H.close(A.vol.music, 0.8, 1e-12, "and the music bus holds 0.8");
 
 // MUSIC TRACK: AUTO / PULSE / DRIVE (CS012 R10), clamped at both ends.
-right(3); press(FIRE);
+// ⛔ REPAIRED IN PLACE (CS018 P2): from MUSIC VOLUME, MUSIC TRACK is two rows on,
+// not three; three now opens ACHIEVEMENTS.
+right(2); press(FIRE);
 H.eq(detail("MUSIC TRACK"), "‹" + "AUTO›", "MUSIC TRACK arms");
 right(1);
 H.eq(detail("MUSIC TRACK"), "‹" + "PULSE›", "one step: PULSE");
@@ -321,22 +352,26 @@ H.eq(detail("MUSIC TRACK"), "PULSE", "Purge exits and keeps PULSE");
 
 // Survives quitToTitle(); resets on Game.reset().
 toOptions();
-right(8);
+right(7);                                                         // CS018 P2: MUSIC TRACK is row 7
 H.eq(detail("MASTER VOLUME"), "60%", "⛔ a quit to the title keeps MASTER 60%");
 H.eq(detail("MUSIC VOLUME"), "80%", "and MUSIC 80%");
-H.eq(detail("VOICE VOLUME"), "70%", "and VOICE 70%");
+H.assert(detail("VOICE VOLUME") === null && A.vol.voice === 1, "⛔ and no VOICE row to keep: the voice bus is at unity (1.0.1)");
 H.eq(detail("MUSIC TRACK"), "PULSE", "and MUSIC TRACK PULSE");
 H.close(A.vol.master, 0.6, 1e-12, "and the master bus");
 const before = BUSES.map(b => gainLog(A[b]).length);
 G.reset();
 for (const [i, b] of BUSES.entries()) {
-  H.eq(A.vol[b], 1, `⛔ Game.reset() restores ${b} to unity`);
+  H.eq(A.vol[b], 1, b === "voice" ? "⛔ Game.reset() leaves voice at unity (1.0.1)" : `⛔ Game.reset() restores ${b} to unity`);
   const a = gainLog(A[b]);
+  if (b === "voice") {
+    H.eq(a.length, before[i], "⛔ and never ramps the voice bus: nothing moved it (1.0.1)");
+    continue;
+  }
   H.assert(a.length > before[i] && a[a.length - 1].fn === "linearRampToValueAtTime" && a[a.length - 1].v === 1,
            `and ramps the ${b} bus back`);
 }
-clock = 0; G.frame(0); G.quitToTitle(); steps(2); right(1); press(FIRE); right(8);
-for (const b of BUSES) H.eq(detail(LABEL[b]), "100%", `after Game.reset(), ${LABEL[b]} reads 100%`);
+clock = 0; G.frame(0); G.quitToTitle(); steps(2); right(1); press(FIRE); right(7);
+for (const b of BUSES) H.eq(detail(LABEL[b]), shownAt(b), b === "voice" ? "after Game.reset(), still no VOICE VOLUME row (1.0.1)" : `after Game.reset(), ${LABEL[b]} reads 100%`);
 H.eq(detail("MUSIC TRACK"), "AUTO", "after Game.reset(), MUSIC TRACK reads AUTO");
 
 H.report();

@@ -242,7 +242,9 @@ function session(Y) {
     right: n => tap("ArrowRight", n), left: n => tap("ArrowLeft", n),
     detail: label => { const t = drawn(), i = t.indexOf(label); return i < 0 ? null : t[i + 1]; },
     boot: () => { G.frame(0); steps(2); },
-    toTrack: () => { G.quitToTitle(); steps(2); tap("ArrowRight", 1); press(" "); tap("ArrowRight", 8); },
+    // ⛔ REPAIRED IN PLACE (CS018 P2, Q2-A): VOICE VOLUME is cut, so MUSIC TRACK is
+    // OPTIONS' row 7, not 8. The fixture's precondition — the cursor on the row — holds.
+    toTrack: () => { G.quitToTitle(); steps(2); tap("ArrowRight", 1); press(" "); tap("ArrowRight", 7); },
   };
 }
 {

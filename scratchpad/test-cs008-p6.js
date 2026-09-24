@@ -333,8 +333,10 @@ tapRight(1); press(FIRE);
 H.eq(state.screen, "options", "OPTIONS opens from the title");
 H.eq(drawDeltas().hud, 0, "⛔ H4: the title's OPTIONS draws no HUD");
 const ROWS = ["TELEMETRY", "EXPORT", "CONTROLS", "CREDITS", "BACK"];
-const SOUND_ROWS = ["MASTER VOLUME", "MUSIC VOLUME", "SFX VOLUME", "VOICE VOLUME", "MUSIC TRACK"];
-// CS009 P3: ten rows outgrow the C.MENU_VISIBLE_ROWS window, so the list is read
+// ⛔ REWRITTEN IN PLACE (CS018 P2, Q2-A): VOICE VOLUME is cut at 1.0.1 — it moved
+// a bus nothing feeds. The claim, that CS009's sound rows are exactly these, holds.
+const SOUND_ROWS = ["MASTER VOLUME", "MUSIC VOLUME", "SFX VOLUME", "MUSIC TRACK"];
+// CS009 P3: the rows outgrow the C.MENU_VISIBLE_ROWS window, so the list is read
 // through a scroll of it, and the cursor comes back to TELEMETRY.
 const labels = [];
 const rowCount = ROWS.length + SOUND_ROWS.length;

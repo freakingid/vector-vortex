@@ -1,68 +1,36 @@
 # Vector Vortex — STATUS
-Version: **1.0.0 — SHIPPED** · CS017 closed 2026-09-23 · **CS018 (1.0.1) — P1 landed, P2 next** ·
+Version: **1.0.1 — SHIPPED** · CS018 closed 2026-09-23 · **no changeset in flight** ·
 Wells: 16/16 · Enemies: 6/6 Classic, 3/3 Overdrive · Tracks: 3/5 · Tokens: 5/5 effects ·
 Achievements: 23 lifetime + 19 weekly (**frozen**) · Prompts: 12
 
 ## What this file is now
 
-⛔ **A POST-SHIP FILE.** CS001–CS017 are closed, each with a `log/CS0##.md`;
-CS017's ledger, phase entries, review and **this file's pre-close text,
-verbatim**, are in `log/CS017.md`. ⛔ **Post-ship work is a PATCH, and a patch
+⛔ **A POST-SHIP FILE.** CS001–CS018 are closed, each with a `log/CS0##.md`;
+CS018's ledger, phase entries, review and **this file's pre-close text,
+verbatim**, are in `log/CS018.md`. ⛔ **Post-ship work is a PATCH, and a patch
 is a changeset**: a planning session first, then build phases, then a close —
-`CLAUDE.md`'s three session kinds, unchanged. **CS018 is planned**
-(`PLANNED-FEATURES-CS018.md` + `IMPLEMENTATION-PHASES-CS018.md`); its ledger
-starts under "Phase ledger".
+`CLAUDE.md`'s three session kinds, unchanged. The next patch's planning session
+adds its `ROADMAP.md` row and starts its ledger under "Phase ledger".
 
-⚠ **PAUL'S, OUTSIDE THE REPO, BEFORE THE ITCH PAGE GOES LIVE** (S10, S12):
+⚠ **PAUL'S, OUTSIDE THE REPO, BEFORE THE ITCH PAGE GOES LIVE** (CS017 S10, S12):
 make `github.com/freakingid/vector-vortex` **private** (it is PUBLIC, and 8 live
 documents name the original on ~38 lines); write the itch page's copy (no file
-here can scan it — GDD §18.6); run `bash package-for-itch.sh` and upload
-`dist/vector-vortex-itch.zip` (untracked; ~287 KB; three files, scanned clean).
+here can scan it — GDD §18.6); upload `dist/vector-vortex-itch.zip` — **the
+1.0.1 build, packaged at CS018's close** (untracked; 287,515 bytes; three files: `index.html` 856,880, `kit-leaderboard.js`, `kit-names.js`).
 
 ## Phase ledger
 
-| Changeset | Landed |
-|---|---|
-| CS018 planning | 2026-09-23 — 1.0.1: the ten §19 coverage gaps, the VOICE row, the version; two phases |
-| CS018 P1 | 2026-09-23 — the ten gaps in `test-cs018-p1.js`; `build.js`'s `injectScript()`; no `dist/` byte moved |
+None in flight. CS018 (1.0.1) closed 2026-09-23: the ten §19 coverage gaps
+carried (`test-cs018-p1.js`), `build.js`'s `$`-safe injection, OPTIONS' VOICE
+VOLUME row cut (`test-cs018-p2.js`), `C.GAME_VERSION` 1.0.1 — `log/CS018.md`.
 
-**CS018 planning (2026-09-23).** Planned at `43e07f2` (85 files, zero skips,
-308.8 s). Ten calls, Q1–Q10, each with one recommendation that STANDS unless
-Paul answers (plan §0). **P1** closes the ten gaps in `test-cs018-p1.js` and
-moves no `dist/` byte; **P2** cuts OPTIONS' VOICE VOLUME row (V1 MEASURED: five
-closed files red, all label lists, settings shapes or row-index navigation;
-`test-cs009-p3.js` throws at `:227`, so its VOICE block is PREDICTED), sets
-`C.GAME_VERSION` 1.0.1 (V2: one red, `test-cs016-p1.js:121`) and closes.
-✅ **Hazards found (plan §0.1) — all four FIXED at P1**: `build.js` injected
-the script with a STRING replacement, so a `$&`, `$$`, `` $` `` or `$'` in any
-module would have been rewritten in `dist/` (none was; Q6); the carried "ten
-coverage gaps" were nine — Q1's tenth is the page's markup (all ten carried);
-GDD §11.7's `pulse` "an octave up" did not match the table (restated, Q8);
-`CLAUDE.md` named a `glow-lab.html` that was never built (corrected, Q9).
-
-**CS018 P1 (2026-09-23).** Q1, Q4–Q9 taken as they stand.
-`scratchpad/test-cs018-p1.js`: G1–G10, 80 assertions, **1.97–2.68 s alone** (PREDICTED < 6 s). `build.js`
-injects through `injectScript()`, a FUNCTION replacement, and exports it and
-`kitBlock` (8 names); ⛔ `dist/` sha256 `702d9898…` identical before and after.
-No closed file edited (plan §8). Suite: **86 files, zero skips, exit 0, 391 s**
-(`/usr/bin/time`; +82 s over planning's run, a load effect — the new file costs
-~2 s). G7 MEASURED: first kill 2.15–2.58 s, first craft lost 6.900–10.88 s.
-⚠ **For P2 — `test-cs018-p1.js` READS `test-cs008-p6.js` BY TEXT** (G10): its
-`const WORDS = [ … ];` line, `WORDS.concat("…")` and the `w === "…" ? "…" : w`
-exception. P2's label-list repair there must leave those three forms intact.
-⚠ **New `mutate` pins**: `drawShot()`'s `glowStroke` line; `isoDayIndex()`'s
-and `isoWeekKey()`'s UTC lines; the `INT_ATTACK`, `INT_RELEASE`,
-`FILTER_MIN_HZ` and `FILTER_MAX_HZ` lines of `C`. G5 fixes `MANIFEST` at 26;
-G7 enters START DEPTH's first row. How each call was reasoned, and the one
-checker defect: `log/CS018.md`.
-
-## Working / verified (MEASURED at the CS017 close)
+## Working / verified (MEASURED at the CS018 close)
 
 - `node build.js` → `dist/vector-vortex.html`, 26 modules + 3 inlined kit,
-  **836.8 KB**; `MANIFEST` checked both ways; a missing `KIT_INLINE` file fails
+  **856,880 bytes** (836.8 KB, sha256 `57c3b3e0…`); `MANIFEST` checked both ways; a missing `KIT_INLINE` file fails
   the build.
-- `node scratchpad/run-all.js` → **85 files, all green, zero skips**
-  (319 s, `/usr/bin/time`). ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load
+- `node scratchpad/run-all.js` → **87 files, all green, zero skips**
+  (378 s, `/usr/bin/time`). ⚠ **`run-all.js` has a 120 s PER-FILE timeout and machine load
   can trip it.** ⛔ A timeout is not a red — re-run the file alone first — but
   ⛔ a close cannot carry one. The slowest file is `test-cs014-p3.js` (37.6 s at planning, `867ebd1`),
   then the fifteenth soak (~35 s alone).
@@ -70,7 +38,7 @@ checker defect: `log/CS018.md`.
   and `test-cs012-p3.js` (at `e2efed5`, ⛔ never `f8d34f3`) read its
   `registry.js` and SKIP LOUDLY without it.
 - ⛔ **`P1_DETERMINISM_HASH` 1229033515** (cross-file: `test-cs006-p2.js` runs
-  `test-cs005-p5.js` in a child process) — unmoved CS009–CS017; re-record once
+  `test-cs005-p5.js` in a child process) — unmoved CS009–CS018; re-record once
   per change, one named cause at the assertion. ⛔ **`GOLDEN_LANES`' first
   SIXTEEN entries are the `9ebd27b` recording** (+`2, 5`, CS008); any other move
   is a defect.
@@ -80,9 +48,10 @@ checker defect: `log/CS018.md`.
   12's hundred runs, 50 per mode, all sixteen wells). ⛔ **A new changeset's is a
   SIXTEENTH file, never a widened one.**
 - ✅ **GDD §19: every row carries an "at ship" verdict block (CS017 P3, P4) and
-  no clause is ✗.** The ◐ clauses name their missing half: a skipped playtest
-  (`SKIPPED-PLAYTESTS.md`, CS009–CS017) or a coverage gap — ✅ all ten carried
-  since CS018 P1 (GDD §19's "At 1.0.1" lines).
+  no clause is ✗.** The ten coverage gaps the at-ship sweep named are carried
+  (CS018 P1, `test-cs018-p1.js`), each in an "At 1.0.1" line under its row's
+  block; the at-ship blocks stay as history. A ◐ left names a skipped playtest
+  (`SKIPPED-PLAYTESTS.md`, CS009–CS017).
 - `_harness.js` `EXPORTS` **218**; `test-registry.js` `enemies` 9,
   `enemyKinds` 13, `state` **28** keys, `tally` **23** counters inside one.
   `C.SFX` 28 events, `C.SFX_KILL_PITCH` 11 voices; kill sites / lines 4 / 5.
@@ -111,9 +80,10 @@ The rules are `CLAUDE.md`'s; these are the facts a patch trips over.
   `vector-vortex-overdrive`, registered with seven `statsFields`. ⛔ Read the
   Worker's registered `statsFields` before sending a stats key. ⛔ `C.GAME_ID` is
   the SAVE keyspace and nothing else.
-- ⛔ **`C.GAME_VERSION` is `"1.0.0"` AND IS PINNED BY LITERAL in
-  `test-cs016-p1.js:120`**: a patch's bump rewrites that assertion in place;
-  `package.json`'s `version` moves with it.
+- ⛔ **`C.GAME_VERSION` is `"1.0.1"` AND IS PINNED BY LITERAL in
+  `test-cs016-p1.js:121`**: a patch's bump rewrites that assertion in place;
+  `package.json`'s `version` moves with it, and `bash package-for-itch.sh`
+  rebuilds the untracked zip.
 
 ### The build and its switches
 
@@ -140,8 +110,8 @@ The rules are `CLAUDE.md`'s; these are the facts a patch trips over.
   lowest rim; a change to `HUD_MARGIN`, `HUD_ICON_SIZE`, `WELL_RADIUS`,
   `PROMPT_SIZE` or a prompt's length re-derives it (`test-cs016-p1.js`).
 - ⛔ **THE MENU SHAPES**: the title has five rows, game over three lines,
-  OPTIONS eleven rows in a seven-row window (a row goes before BACK, never above
-  TELEMETRY); a label ≤ 20 characters beside a four-character detail, TWO info
+  OPTIONS **ten** rows in a seven-row window since 1.0.1 (a row goes before BACK,
+  never above TELEMETRY; `test-cs018-p2.js` pins the ten by label); a label ≤ 20 characters beside a four-character detail, TWO info
   lines a screen; the credits ≤ 7 lines of ≤ 66 characters, each passing the
   SUBSTRING vocabulary scan.
 - ⛔ **`attractDrive()` IS A PORT OF THE SOAKS' HUNTER**: a roster or rule
@@ -169,6 +139,18 @@ The rules are `CLAUDE.md`'s; these are the facts a patch trips over.
   price table's branches subclass-first.
 - ⛔ **NINE TEXTS IN `22-meta.js`, `23-main.js` AND `lib/kit-leaderboard/` ARE
   PINNED BY A CLOSED CS011 `mutate`** — grep `test-cs011-*.js` for `mutate:`.
+- ⛔ **SEVEN SOUND-SETTING LINES OF `23-main.js` ARE PINNED BY
+  `test-cs018-p2.js`'s `V100`** (the 1.0.0 build rebuilt as a mutant):
+  `SOUND_ROWS`' `sfx` row, OPTIONS' sound-row line, `VOL_BUSES`, `sound`'s
+  second line, `ADJUST.sfx`, `settingsSnapshot()`'s sound line and
+  `applySettings()`' field list. An edit to one rewrites `V100` in place.
+- ⛔ **`test-cs018-p1.js` PINS BY TEXT**: `test-cs008-p6.js`'s
+  `const WORDS = [ … ];` line, `WORDS.concat("…")` and the `w === "…" ? "…" : w`
+  exception (G10 reads the list from there — a repair of that file keeps all
+  three forms); `drawShot()`'s `glowStroke` line; `isoDayIndex()`'s and
+  `isoWeekKey()`'s UTC lines; the `INT_ATTACK`, `INT_RELEASE`, `FILTER_MIN_HZ`
+  and `FILTER_MAX_HZ` lines of `C`. G5 fixes `MANIFEST` at 26 modules; G7
+  enters START DEPTH's first row.
 - ⛔ **AN EDIT TO `16-audio-engine.js`, `17-audio-tracks.js`, `C.MUSIC_LIMIT`,
   `C.LAYER_THRESHOLD`, `C.LAYER_CROSSFADE` OR `C.FILTER_*` IS A THREE-FILE
   EDIT** (both labs). ⛔ **A new `SFX_KILL_PITCH` voice is too** (`C`, BLOCK
@@ -254,7 +236,6 @@ The rules are `CLAUDE.md`'s; these are the facts a patch trips over.
 | Item | Why it was left |
 |---|---|
 | The pad-only silence (a pad press is not a user activation) | a platform rule; a line on the itch page is Paul's |
-| The VOICE bus — an OPTIONS slider no recipe routes to | removing the row changes OPTIONS' pinned eleven-row shape: a design call for a patch |
 | The Surger tone's 1.106 sample peak | a recipe changes only by a port from `tools/sfx-lab.html` — the lab session |
 | The enemy / menu palette and the HUD sizes (⚠ provisional) | tuning, in `SKIPPED-PLAYTESTS.md` |
 | `glow-lab.html` — never built (`CLAUDE.md`'s tools list says so since CS018 P1) | the audition is Paul's |
@@ -262,6 +243,12 @@ The rules are `CLAUDE.md`'s; these are the facts a patch trips over.
 | F2 — the lifted rim point off-screen on five lanes at the Jump's apex | accepted (CS013); a `JUMP_LIFT` or well change moves `PROMPT_Y`'s arithmetic |
 | The four unreachable entity cases (a second Purge on a bolt or a reflection above 0.95; a run starting past 99; a rim Vaulter / aloft Warden on the continuous lane; a biggest-Purge of six) | no board reaches them; a patch that makes one reachable owns it |
 
+- **§19's other at-ship ⚠ notes** (CS018 plan §0.2, noted, not taken): the
+  10-minute drift measured on a synthetic track, not the shipped tables; the
+  Surger gate at all tiers open, not a per-tier loop; `playerId`'s "once" as
+  identity, no mint count; "never pausing" carried by the hash; CS016 P2's demo
+  gates mutation-checked in one file. Each is a one-line addition to a later
+  plan if Paul wants it.
 - ⚠ **`CLAUDE.md` carries no telemetry rule**; whether it earns one is Paul's.
 
 ## The tools

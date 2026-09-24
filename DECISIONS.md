@@ -793,3 +793,14 @@ more bars of music at 120 BPM, or deciding the mix call in CS010.
   - S14 — CS017 closes the ROADMAP; no CS018 row.
   - ⚠ After P1, Paul, 2026-09-23: `wellBandColor()` walks `C.BAND_COLORS` by index (S3 addendum); after P2, the HUD's three strings and game over's lines are cached per value (S3's second addendum), and `w` stays bindable in the shipped build (S7 addendum): `log/CS017.md`, P1 and P2.
   - ⚠ Taken at P3 under rule 3, for P4: the fifteenth soak also asserts all sixteen wells played (plan §6): `log/CS017.md`, P3 and P4.
+- CS018's patch calls (Q1–Q10), 2026-09-23: every recommendation taken as it stood (rule 3; no answer from Paul), `archive/PLANNED-FEATURES-CS018.md` §0; the narrative is `log/CS018.md`. One line each:
+  - Q1 — scope: the ten §19 coverage gaps, Q6's build fix, the VOICE row and the version; every other carried item stays carried.
+  - Q2 — A: OPTIONS' VOICE VOLUME row and the `voice` setting cut; kit-audio's bus kept at unity, fed and moved by nothing; `settings` stays v1, no `migrate`.
+  - Q3 — `C.GAME_VERSION` `"1.0.1"`, `package.json` aligned; the itch zip rebuilt (untracked).
+  - Q4 — level 1's carrier: 64 time-seeded front-door runs, a moving-and-firing proxy and a passive one (`test-cs018-p1.js` G7).
+  - Q5 — the week key re-run under `TZ=UTC`, `Pacific/Kiritimati` and `Pacific/Pago_Pago`, each child asserting its offset first.
+  - Q6 — A: the slice test AND `build.js`'s `injectScript()`, a function replacement; `dist/` byte-identical across the fix.
+  - Q7 — exactly the four values §19 names pinned: `INT_ATTACK`, `INT_RELEASE`, `FILTER_MIN_HZ`, `FILTER_MAX_HZ`.
+  - Q8 — `pulse`'s sections asserted by the bassline's figure; GDD §11.7's B restated to the table.
+  - Q9 — `CLAUDE.md`'s `glow-lab.html` line corrected: never built.
+  - Q10 — two phases, P2 ending in the close; no sixteenth soak.

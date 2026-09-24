@@ -73,16 +73,19 @@ const X1 = build({ store });
 const { C } = X1;
 const slots = m => { const o = {}; for (const a of ["left", "right", "fire", "purge", "jump"]) o[a] = [m[a][0] ?? null, m[a][1] ?? null]; return o; };
 const VOL = C.AUDIO_VOL_DEFAULT;
+// ⛔ REWRITTEN IN PLACE (CS018 P2, Q2-A): 1.0.1 cuts the VOICE row, so neither
+// shape holds a `voice`, and the menus no longer step through one. A 1.0.0 row's
+// `voice` is §2's two rewritten rows. Every other claim here is unchanged.
 const DEF = {
   controls: { mouse: 10, touch: 10, autofire: C.TOUCH_AUTOFIRE, mirror: C.INPUT_MIRROR,
               keys: slots(X1.INPUT_KEYS_DEFAULT), pad: slots({ fire: [0], jump: [4, 6], purge: [5, 7], left: [14], right: [15] }) },
-  sound: { master: VOL, music: VOL, sfx: VOL, voice: VOL, track: "auto" },
+  sound: { master: VOL, music: VOL, sfx: VOL, track: "auto" },
 };
 const GOOD = {
   controls: { mouse: 13, touch: 7, autofire: !C.TOUCH_AUTOFIRE, mirror: !C.INPUT_MIRROR,
               keys: { left: ["arrowleft", "a"], right: ["arrowright", "d"], fire: ["q", "z"], purge: ["shift", "x"], jump: ["arrowup", "c"] },
               pad: { left: [14, null], right: [15, null], fire: [0, null], purge: [5, 7], jump: [2, 6] } },
-  sound: { master: 7, music: 4, sfx: 9, voice: 2, track: "pulse" },
+  sound: { master: 7, music: 4, sfx: 9, track: "pulse" },
 };
 H.eq(J(held(X1)), J(DEF), "fixture: a first boot holds the shipped defaults");
 H.eq(store.has(NS + "settings"), false, "⛔ and a boot stores no settings");
@@ -113,8 +116,7 @@ H.eq(X1.state.screen, "options", "fixture: back on OPTIONS");
 S1.right(4); S1.adjust(-3);                     // MASTER 70%
 S1.right(1); S1.adjust(-6);                     // MUSIC 40%
 S1.right(1); S1.adjust(-1);                     // SFX 90%
-S1.right(1); S1.adjust(-8);                     // VOICE 20%
-S1.right(1); S1.adjust(1);                      // MUSIC TRACK PULSE
+S1.right(1); S1.adjust(1);                      // MUSIC TRACK PULSE (no VOICE row since 1.0.1)
 H.eq(J(held(X1)), J(GOOD), "fixture: every row moved off its default through the menus");
 H.eq(J(store.has(NS + "settings") && JSON.parse(store.get(NS + "settings"))), J({ v: 1, d: GOOD }),
      "⛔ `settings` v1 stores the plan's shape, track by name, and no capture switch");
@@ -159,8 +161,15 @@ S2.back(); S2.right(5); S2.ok(); S2.right(8);
 H.eq(S2.detail("JUMP 1"), "X", "row: GAMEPAD JUMP 1 is X");
 S2.back(); S2.back(); S2.right(8);
 for (const [label, want] of [["MASTER VOLUME", "70%"], ["MUSIC VOLUME", "40%"], ["SFX VOLUME", "90%"],
-                             ["VOICE VOLUME", "20%"], ["MUSIC TRACK", "PULSE"]]) {
+                             ["MUSIC TRACK", "PULSE"]]) {
   H.eq(S2.detail(label), want, `row: ${label} ${want}`);
+}
+// ⛔ REWRITTEN IN PLACE (CS018 P2, Q2-A): this was "row: VOICE VOLUME 20%". With SFX
+// and MUSIC TRACK both drawn, the row that sat between them is gone.
+{
+  const t = S2.drawn();
+  H.assert(t.includes("SFX VOLUME") && t.includes("MUSIC TRACK") && !t.includes("VOICE VOLUME"),
+           "row: no VOICE VOLUME between SFX VOLUME and MUSIC TRACK (1.0.1)");
 }
 H.eq(J(X2.startDepthOptions("classic")), J([1, 3, 5, 7, 9, 11, 13]), "⛔ a reload's Start Depth list reaches 13");
 // ⛔ REPAIRED IN PLACE AT CS012 P3 (O9): OVERDRIVE is MODE's first row, and the
@@ -193,7 +202,10 @@ const CASES = [
   ["controls.touch", 21, "above SENS_HI"], ["controls.touch", null, "null"],
   ["controls.autofire", "true", "a string"], ["controls.autofire", DEL, "missing"], ["controls.mirror", 1, "a number"],
   ["sound.master", 11, "above AUDIO_VOL_STEPS"], ["sound.music", -1, "negative"], ["sound.sfx", "9", "a string"],
-  ["sound.voice", 2.5, "not whole"], ["sound.voice", DEL, "missing"],
+  // ⛔ REWRITTEN IN PLACE (CS018 P2, Q2-A). These planted an invalid and a missing
+  // `voice`, each loading its default. 1.0.1 has no `voice`: a 1.0.0 row's, valid
+  // or not, is IGNORED and every other field loads (the loop's `voice` branch).
+  ["sound.voice", 2, "a 1.0.0 row's valid value"], ["sound.voice", 2.5, "a 1.0.0 row's invalid value"],
   // ⛔ REPAIRED IN PLACE (CS012 P1): this planted "drive", which CS012 R10 made a
   // choice. "title" names a track and is never a MUSIC TRACK choice.
   ["sound.track", "title", "not a choice"], ["sound.track", 1, "an index"], ["sound.track", DEL, "missing"],
@@ -214,6 +226,10 @@ for (const [path, value, why] of CASES) {
   const want = clone(GOOD);
   at(want, field, field.split(".").reduce((o, k) => o[k], DEF));
   const X = plantAndLoad(d);
+  if (field === "sound.voice") {
+    H.eq(J(held(X)), J(GOOD), `⛔ ${path} ${why}: ignored, every other field its stored value`);
+    continue;
+  }
   H.eq(J(held(X)), J(want), `⛔ ${path} ${why}: ${field} loads its default, every other field its stored value`);
   if (field === "controls.keys") {
     H.eq(J(X.Game.input.getBindings().fire), J(X.INPUT_KEYS_DEFAULT.fire), `  and the kit's keyboard map is the default`);

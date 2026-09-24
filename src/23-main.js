@@ -721,7 +721,6 @@ const Game = (function () {
     master: { label: "MASTER VOLUME", detail: "", enabled: true, action: "adjust", adjust: "master" },
     music:  { label: "MUSIC VOLUME",  detail: "", enabled: true, action: "adjust", adjust: "music" },
     sfx:    { label: "SFX VOLUME",    detail: "", enabled: true, action: "adjust", adjust: "sfx" },
-    voice:  { label: "VOICE VOLUME",  detail: "", enabled: true, action: "adjust", adjust: "voice" },
     track:  { label: "MUSIC TRACK",   detail: "", enabled: true, action: "adjust", adjust: "track" },
   };
   const SCREENS = {
@@ -765,7 +764,7 @@ const Game = (function () {
       { label: "EXPORT",   detail: "TO CONSOLE", enabled: true, action: "exportTelemetry" },
       { label: "CONTROLS", detail: "\u203A",     enabled: true, action: "toControls" },
       { label: "CREDITS",  detail: "\u203A",     enabled: true, action: "toCredits" },
-      SOUND_ROWS.master, SOUND_ROWS.music, SOUND_ROWS.sfx, SOUND_ROWS.voice, SOUND_ROWS.track,
+      SOUND_ROWS.master, SOUND_ROWS.music, SOUND_ROWS.sfx, SOUND_ROWS.track,
       // ⛔ CS015 P3's row goes BEFORE BACK and never above TELEMETRY, the same
       // rule the sound rows obey: MEASURED (plan §1.2, V1) it reddens nothing,
       // because no closed test navigates OPTIONS past the sound rows by index.
@@ -905,10 +904,12 @@ const Game = (function () {
   // (resetSound()) and writes nothing. `track` is stored by NAME.
   // A volume is whole steps, 0..C.AUDIO_VOL_STEPS, and its gain is linear,
   // steps / STEPS (plan §0). `track` indexes C.MUSIC_TRACK_CHOICES.
-  // ⛔ The VOICE row moves a bus nothing feeds (Paul's A3).
-  const VOL_BUSES = ["master", "music", "sfx", "voice"];
+  // ⛔ NO VOICE ROW SINCE 1.0.1 (CS018 P2, Q2-A; Paul's A3 shipped it at CS009). The
+  // `voice` bus is kit-audio's: 19-sfx.js builds it at unity, nothing feeds it and
+  // nothing here moves it, so it has no row, no `sound` field and no stored value.
+  const VOL_BUSES = ["master", "music", "sfx"];
   const sound = { master: C.AUDIO_VOL_DEFAULT, music: C.AUDIO_VOL_DEFAULT, sfx: C.AUDIO_VOL_DEFAULT,
-                  voice: C.AUDIO_VOL_DEFAULT, track: 0 };
+                  track: 0 };
   function resetSound() {
     for (const bus of VOL_BUSES) {
       sound[bus] = C.AUDIO_VOL_DEFAULT;
@@ -932,7 +933,6 @@ const Game = (function () {
     master: volAdjust("master"),
     music:  volAdjust("music"),
     sfx:    volAdjust("sfx"),
-    voice:  volAdjust("voice"),
     // A change in play is heard at once: audioFrame() resolves the setting
     // every frame, and setState() crossfades on a new name.
     track:  { lo: 0, hi: C.MUSIC_TRACK_CHOICES.length - 1, get: () => sound.track,
@@ -965,7 +965,7 @@ const Game = (function () {
     return {
       controls: { mouse: controls.mouse, touch: controls.touch, autofire: controls.autofire,
                   mirror: input.setting("inputMirror"), keys: pairs(controls.keys), pad: pairs(controls.pad) },
-      sound: { master: sound.master, music: sound.music, sfx: sound.sfx, voice: sound.voice,
+      sound: { master: sound.master, music: sound.music, sfx: sound.sfx,
                track: C.MUSIC_TRACK_CHOICES[sound.track] },
     };
   }
@@ -999,7 +999,7 @@ const Game = (function () {
     const obj = v => v !== null && typeof v === "object" ? v : {};
     const c = obj(obj(data).controls), snd = obj(obj(data).sound);
     const whole = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
-    for (const k of ["mouse", "touch", "master", "music", "sfx", "voice"]) {
+    for (const k of ["mouse", "touch", "master", "music", "sfx"]) {
       const v = k === "mouse" || k === "touch" ? c[k] : snd[k];
       if (whole(v, ADJUST[k].lo, ADJUST[k].hi)) ADJUST[k].set(v);
     }

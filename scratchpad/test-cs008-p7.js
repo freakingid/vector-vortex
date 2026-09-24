@@ -437,10 +437,12 @@ H.eq(state.screen, "controls", "fixture: back on CONTROLS, cursor on its first r
   H.eq(detail("TOUCH SENSITIVITY"), "×1.0", "and the rows show it");
   const slots = m => { const o = {}; for (const a of ["left", "right", "fire", "purge", "jump"]) o[a] = [m[a][0] ?? null, m[a][1] ?? null]; return o; };
   const vol = C.AUDIO_VOL_DEFAULT;
+  // ⛔ REWRITTEN IN PLACE (CS018 P2, Q2-A): 1.0.1 cuts the VOICE row and stores no
+  // `voice`. The claim — RESET stores the shipped defaults — holds.
   H.eq(JSON.stringify(X.Profiles.scope().get("settings", null)), JSON.stringify({
     controls: { mouse: 10, touch: 10, autofire: C.TOUCH_AUTOFIRE, mirror: C.INPUT_MIRROR,
                 keys: slots(X.INPUT_KEYS_DEFAULT), pad: slots({ fire: [0], jump: [4, 6], purge: [5, 7], left: [14], right: [15] }) },
-    sound: { master: vol, music: vol, sfx: vol, voice: vol, track: C.MUSIC_TRACK_CHOICES[0] } }),
+    sound: { master: vol, music: vol, sfx: vol, track: C.MUSIC_TRACK_CHOICES[0] } }),
        "⛔ RESET TO DEFAULTS stores the shipped defaults in the profile's settings (CS011 P2)");
 }
 

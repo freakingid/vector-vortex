@@ -116,9 +116,9 @@ const A = open();
     H.assert(Number.isFinite(C[k]) && C[k] > 0, `C.${k} is a positive number`);
   }
   H.assert(/^#[0-9A-Fa-f]{6}$/.test(C.PROMPT_COLOR), "C.PROMPT_COLOR is #RRGGBB (the fade parses it)");
-  // ⛔ REWRITTEN IN PLACE AT THE CS016 CLOSE (plan §0.1), and again at CS017 P4:
-  // ship's number (CS017 plan S8).
-  H.eq(C.GAME_VERSION, "1.0.0", "⛔ C.GAME_VERSION is 1.0.0, ship — CS017's close (Paul, 2026-09-23; CS017 plan S8)");
+  // ⛔ REWRITTEN IN PLACE AT THE CS016 CLOSE (plan §0.1), at CS017 P4 (ship's
+  // number, CS017 plan S8), and at CS018 P2: 1.0.1, the patch that cuts VOICE VOLUME.
+  H.eq(C.GAME_VERSION, "1.0.1", "⛔ C.GAME_VERSION is 1.0.1, the first patch — CS018 P2 (CS018 plan Q3)");
 }
 
 // ===========================================================================

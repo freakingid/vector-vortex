@@ -30,7 +30,7 @@ changesets is expected and cheap; editing a spec doc mid-flight is not.
 | **CS015** | ✅ **Shipped 2026-09-20.** Achievements, local-only: `createAchievements()` in `20-achievements.js` as kit-achievements' draft (the table handed over as data, the clock injected), the `achievements` key v1 per profile, the UTC ISO week and a stride-walk rotation, thirteen write-only `tally` counters and two seats (the clear edge and the run's end) behind the one gate, **the id table — 23 lifetime ids and 18 weekly, save data from P3 on and every row MEASURED reachable** — the ACHIEVEMENTS screen off the title and OPTIONS, the `unlock` sound, and the thirteenth soak. Four phases, as planned | §10.5, §15.5, §17 items 10 and 12, §19 |
 | **CS016** | ✅ **Shipped 2026-09-23.** Onboarding: GDD §12's four-second promise MEASURED against level 1 and restated to what ships (no base, lane or schedule moved); **twelve first-run prompts** — §12's seven and five rows CS013–CS015 left owing — once per profile in a band under every rim, from `src/22-onboarding.js`'s board-read triggers, on a new `onboarding` key written only at the seats that already write; **attract mode**, the title idled 20 s into a fixed-seed Overdrive demo that opens no run and moves no storage byte; the **pre-ship achievement pass** (two counters, two pool rows, one cut, two re-aimed tiers, `tools/reach-probe.js`); and the fourteenth soak. Four phases, as planned | §10.4, §12, §15.1, §15.5, §17 items 10 and 12, §19 |
 | **CS017** | ✅ **Shipped 2026-09-23 — 1.0.0.** Ship, with no playtest: GDD §17's budget restated to the worst board the build can produce and MEASURED by `tools/perf-probe.js` (headless Chromium, frame cost and bytes per `draw()` as data), the canvas work gated by counter, every allocating expression on the draw path removed; the debug bench behind `C.DEBUG_KEYS` (off in the shipped build) and traverse-and-stop asserted per device; the Mimic KEPT on a measurement; the legal sweep (the package scanned clean; the repository goes private, Paul's); §19's six rows each given an at-ship verdict block, every hardware half a skipped playtest; the itch script's zip fallback; `C.GAME_VERSION` 1.0.0; and the fifteenth soak, §17 item 12's hundred runs in one file. Four phases, as planned | §14.6, §17, §18, §19, §21 #6 |
-| **CS018** | **Planned 2026-09-23 — 1.0.1, the first post-ship patch.** GDD §19's ten open coverage gaps each given a carrier in one new file — §17 item 7's full 1..200, `pulse`'s A→B→C, the stick at every deflection, the shot's throat fade, `dist/` slice-identical to `src/` (and `build.js`'s `$`-unsafe injection fixed), the week key under three pinned time zones, level 1's first seconds re-measured, the four audio values §19 names, and the page's markup and package in the vocabulary scan; the VOICE VOLUME row cut from OPTIONS (kit-audio's bus stays, fed and moved by nothing); `C.GAME_VERSION` 1.0.1. Two phases, the second ending in the close | §9.4, §10.5, §11.1, §11.7, §12, §15.5, §17, §18, §19 |
+| **CS018** | ✅ **Shipped 2026-09-23 — 1.0.1, the first post-ship patch.** GDD §19's ten open coverage gaps each given a carrier in one new file — §17 item 7's full 1..200, `pulse`'s A→B→C, the stick at every deflection, the shot's throat fade, `dist/` slice-identical to `src/` (and `build.js`'s `$`-unsafe injection fixed), the week key under three pinned time zones, level 1's first seconds re-measured, the four audio values §19 names, and the page's markup and package in the vocabulary scan; the VOICE VOLUME row cut from OPTIONS (kit-audio's bus stays, fed and moved by nothing); `C.GAME_VERSION` 1.0.1. Two phases, as planned | §9.4, §10.5, §11.1, §11.7, §12, §15.5, §17, §18, §19 |
 
 ⛔ **CS017 CLOSED THE ROADMAP** (Paul's S14), and the sequence to ship ended there. ⛔ **Post-ship work is a PATCH, one row per changeset, added by its own planning session** (Paul's CS018 planning prompt, 2026-09-23) from `STATUS.md`'s carried tasks and `NEXT-STEPS.md`.
 
@@ -56,7 +56,7 @@ left CS011 for a new **CS015**, so onboarding became CS016 and ship CS017. The
 sweep read every live `CS015` / `CS016` pointer and every "achievements are
 CS011's" pointer. `log/` and `archive/` were not swept, for the same reason.
 
-**CS001 through CS017 are closed; the game shipped at 1.0.0.** Their narratives are in `log/CS0##.md`;
+**CS001 through CS018 are closed; the game shipped at 1.0.0 and is at 1.0.1.** Their narratives are in `log/CS0##.md`;
 `STATUS.md` carries only the changeset in flight. CS004's row above is what
 actually shipped — three enemies, the bolt, `splitLanes()`, the seventh contract
 field and the five-key debug bench — with ⚠ no introduction schedule and ⚠ no
@@ -551,6 +551,32 @@ peak, the palette and HUD sizes, `glow-lab`'s audition, F1, F2, the four
 unreachable entity cases, and whether the headroom gate should bound the
 limiter's input. ⛔ **Frozen at ship**: the 23 lifetime and 19 weekly
 achievement ids and the pool's length.
+
+**What CS018 shipped against the row.** ⛔ **Coverage and one row, and not a
+simulation line**: the ten §19 gaps each have a carrier in `test-cs018-p1.js`
+(80 assertions, ~2 s), every one ◐ → ✅ or its ⚠ closed in an at-1.0.1 line;
+`build.js` injects its script through a function, so a `$` in a module can no
+longer be rewritten in `dist/` — the fix moved no byte. OPTIONS lost VOICE
+VOLUME, the one row that changed nothing a player could hear: ten rows, a 1.0.0
+`settings` row loading whole but for its ignored `voice`, the bus still built
+and never moved (`test-cs018-p2.js`). Five closed files were repaired in place,
+the plan's five, with one navigation past V1's throw that it had not listed.
+⛔ `P1_DETERMINISM_HASH` 1229033515, `GOLDEN_LANES` and the fifteen soaks
+unmoved and unedited.
+
+⚠ **What CS018 deliberately left.** **Everything §0.2 carried**: Paul's lab
+session (`drive` and five cues), the kit backports, the pad-only silence, the
+Surger tone's 1.106 peak, the palette and HUD sizes, `glow-lab`'s audition, F1,
+F2, the four unreachable entity cases, the headroom question and whether
+`CLAUDE.md` earns a telemetry rule. **§19's other at-ship ⚠ notes** — the
+10-minute drift on a synthetic track, the Surger gate at all tiers open rather
+than per tier, `playerId`'s "once" as identity with no mint count, "never
+pausing" carried by the hash, CS016 P2's demo gates checked in one file — each
+a one-line addition to a later plan if Paul wants it. **kit-audio untouched**:
+its `voice` bus stays (Q2-C would have been a kit edit and four pins for no
+audible change). `test-cs007-p2.js`'s loop still stops at 199 — new coverage
+went in the new file. **Paul's, outside the repo**: the repository private, the
+itch page's copy, and uploading the 1.0.1 zip.
 
 ---
 
